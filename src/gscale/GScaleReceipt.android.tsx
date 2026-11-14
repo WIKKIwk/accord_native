@@ -1,9 +1,10 @@
 import { Button, Column, Host, Icon, IconButton, OutlinedButton, OutlinedTextField, RNHostView, Row, Shape, Switch, Text, TextButton,
   useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
-import { background, cornerRadius, defaultMinSize, fillMaxWidth, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { background, cornerRadius, defaultMinSize, fillMaxWidth, onGloballyPositioned, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
-import { useEffect, useMemo, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ComponentRef, type ReactNode } from 'react';
+import { Keyboard, KeyboardAvoidingView, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, View,
+  useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, GestureHandlerRootView, useNativeGesture, type PanGesture } from 'react-native-gesture-handler';
 import type { Session } from '../auth';
@@ -17,6 +18,10 @@ import { useGScaleText } from './useGScaleScreen';
 
 type Action = Extract<GScaleRow, { kind: 'action' }>;
 type Field = Extract<GScaleRow, { kind: 'field' }>;
+type FieldLayout = { x: number; y: number; width: number; height: number };
+type ReceiptKeyboardScroll = { focus(id: string, focused: boolean): void; layout(id: string, value: FieldLayout): void };
+const ReceiptKeyboardScrollContext = createContext<ReceiptKeyboardScroll | null>(null);
+const tabBarInset = 60, keyboardClearance = 12;
 const icons = {
   devices: require('../../assets/icons/gscale/add_link.xml'), connected: require('../../assets/icons/gscale/check_circle.xml'),
   expand: require('../../assets/icons/gscale/expand_more.xml'), warehouse: require('../../assets/icons/gscale/warehouse.xml'),
@@ -73,14 +78,16 @@ export function ReceiptPicker({ row }: { row: Action }) {
 
 export function ReceiptField({ row, grow = false }: { row: Field; grow?: boolean }) {
   const value = useNativeState(row.value), colors = useMaterialColors(), t = useGScaleText();
+  const keyboardScroll = useContext(ReceiptKeyboardScrollContext), fieldId = row.key ?? row.label;
   useEffect(() => { if (value.get() !== row.value) value.set(row.value); }, [row.value, value]);
   const suffix = row.key === 'width_text' ? 'mm' : row.key === 'length_text' ? 'm'
     : row.key === 'manual_duplicate_text' ? 'ta' : ['babina_text', 'manual_qty_text'].includes(row.key ?? '') ? 'kg' : undefined;
   return <OutlinedTextField value={value} enabled={!row.disabled} singleLine shape={rounded}
     colors={{ focusedContainerColor: colors.surface, unfocusedContainerColor: colors.surface }}
     keyboardOptions={{ keyboardType: row.key === 'manual_duplicate_text' ? 'number' : 'decimal' }}
-    onValueChange={row.change} onFocusChanged={row.focus}
-    modifiers={[grow ? weight(1) : fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID(`gscale-${row.key}`)]}>
+    onValueChange={row.change} onFocusChanged={focused => { row.focus?.(focused); keyboardScroll?.focus(fieldId, focused); }}
+    modifiers={[grow ? weight(1) : fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID(`gscale-${row.key}`),
+      onGloballyPositioned(layout => keyboardScroll?.layout(fieldId, layout))]}>
     <OutlinedTextField.Label><Text>{t(row.label)}</Text></OutlinedTextField.Label>
     {suffix ? <OutlinedTextField.Suffix><Text>{suffix}</Text></OutlinedTextField.Suffix> : null}
   </OutlinedTextField>;
@@ -171,10 +178,60 @@ function ReceiptScroll({ pagerGesture, refreshing, onRefresh, children }: {
   pagerGesture?: PanGesture; refreshing: boolean; onRefresh?: () => void; children: ReactNode;
 }) {
   const gesture = useNativeGesture(useMemo(() => ({ requireToFail: pagerGesture }), [pagerGesture]));
-  return <GestureDetector gesture={gesture}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}
-    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}>
-    {children}
-  </ScrollView></GestureDetector>;
+  const viewport = useRef<ComponentRef<typeof View>>(null), content = useRef<ComponentRef<typeof View>>(null);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const positions = useRef(new Map<string, { top: number; height: number }>()), focused = useRef<string | null>(null);
+  const scrollY = useRef(0), keyboardTop = useRef<number | null>(Keyboard.metrics()?.screenY ?? null);
+  const pending = useRef(false), dragging = useRef(false), timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reveal = useCallback(() => {
+    if (!focused.current || dragging.current) return;
+    pending.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      const id = focused.current, field = id ? positions.current.get(id) : null;
+      if (!id || !field || !viewport.current || !content.current) return;
+      viewport.current.measureInWindow((_x, viewportY, _width, viewportHeight) => {
+        content.current?.measureInWindow((_contentX, contentY) => {
+          if (!pending.current || focused.current !== id) return;
+          const top = contentY + field.top, bottom = top + field.height;
+          const visibleTop = viewportY + tabBarInset + keyboardClearance;
+          const visibleBottom = Math.min(viewportY + viewportHeight, keyboardTop.current ?? Infinity) - keyboardClearance;
+          const delta = bottom > visibleBottom ? bottom - visibleBottom : top < visibleTop ? top - visibleTop : 0;
+          pending.current = false;
+          if (delta) scroll.current?.scrollTo({ y: Math.max(0, scrollY.current + delta), animated: true });
+        });
+      });
+    }, 60);
+  }, []);
+  const keyboardScroll = useMemo<ReceiptKeyboardScroll>(() => ({
+    focus(id, isFocused) {
+      if (isFocused) { focused.current = id; reveal(); }
+      else if (focused.current === id) { focused.current = null; pending.current = false; }
+    },
+    layout(id, value) {
+      // Compose fields share one React Native host, so keep each field's offset within the scroll content.
+      content.current?.measureInWindow((_x, contentY) => {
+        positions.current.set(id, { top: value.y - contentY, height: value.height });
+        if (pending.current && focused.current === id) reveal();
+      });
+    },
+  }), [reveal]);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', event => { keyboardTop.current = event.endCoordinates.screenY; reveal(); });
+    const hide = Keyboard.addListener('keyboardDidHide', () => { keyboardTop.current = null; });
+    return () => { show.remove(); hide.remove(); if (timer.current) clearTimeout(timer.current); };
+  }, [reveal]);
+  return <View ref={viewport} onLayout={reveal} style={styles.scrollViewport}>
+    <GestureDetector gesture={gesture}><ScrollView ref={scroll} style={styles.scrollViewport} nestedScrollEnabled
+      keyboardShouldPersistTaps="always" keyboardDismissMode="none" contentContainerStyle={styles.content}
+      onScroll={event => { scrollY.current = event.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}
+      onScrollBeginDrag={() => { dragging.current = true; pending.current = false; }}
+      onScrollEndDrag={() => { dragging.current = false; }}
+      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}>
+      <View ref={content} collapsable={false} style={styles.scrollContent}><ReceiptKeyboardScrollContext.Provider value={keyboardScroll}>{children}</ReceiptKeyboardScrollContext.Provider></View>
+    </ScrollView></GestureDetector>
+  </View>;
 }
 
 type Props = { session: Session; title: string; section: 'control' | 'history'; onSelect(id: 'control' | 'history'): void;
@@ -184,6 +241,7 @@ type Props = { session: Session; title: string; section: 'control' | 'history'; 
 export function GScaleReceipt({ session, title, section, onSelect, control, history, connected, attention, refreshing, onRefresh, onDevices, onBack }: Props) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useGScaleText();
   return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
+    <KeyboardAvoidingView behavior="height" style={styles.scrollViewport}>
     <View style={styles.header}>
       <RoleHeaderButton icon="back" label={t('Orqaga')} tintColor={colors.onSurfaceVariant} onPress={onBack} />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }}>{title}</Text></Host>
@@ -202,11 +260,12 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
       </ReceiptScroll>}
     </OrdersWorkspace>
     <PreparationDock />
+    </KeyboardAvoidingView>
   </GestureHandlerRootView>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 }, full: { width: '100%' }, header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64, paddingHorizontal: 10 },
-  content: { paddingTop: 60, paddingHorizontal: 14, paddingBottom: 24, gap: 10, flexGrow: 1 },
+  root: { flex: 1 }, full: { width: '100%' }, scrollViewport: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64, paddingHorizontal: 10 },
+  content: { paddingTop: tabBarInset, paddingHorizontal: 14, paddingBottom: 24, flexGrow: 1 }, scrollContent: { gap: 10 },
   historyText: { flex: 1, padding: 10, gap: 4 }, historyTitle: { fontSize: 16, fontWeight: '500' },
 });

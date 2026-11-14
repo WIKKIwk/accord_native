@@ -22,7 +22,8 @@ function nodes(node, predicate) {
   return [...(predicate(node) ? [node] : []), ...nodes(node.props?.children, predicate)];
 }
 function fixture() {
-  const calls = [], gestures = [], effects = [];
+  const calls = [], gestures = [], effects = [], keyboardEvents = {};
+  let receiptContext;
   const action = (id, disabled = false, detail) => ({ kind: 'action', id, label: id, detail, disabled, press: () => calls.push(id) });
   const field = (key, value) => ({ kind: 'field', key, label: key, value, disabled: false,
     change: next => calls.push([key, next]), focus: value => calls.push(['focus', value]) });
@@ -32,11 +33,16 @@ function fixture() {
     useMaterialColors: () => ({ surface: 'surface', error: 'red', onError: 'white' }),
     useNativeState: value => ({ get: () => value, set: next => { value = next; } }) };
   const mocks = {
-    react: { useEffect: fn => effects.push(fn), useMemo: fn => fn(), useState: value => [value, () => {}] },
+    react: { createContext: value => { receiptContext = { value, Provider: 'ContextProvider' }; return receiptContext; },
+      useContext: context => context.value, useCallback: fn => fn, useEffect: fn => effects.push(fn),
+      useMemo: fn => fn(), useRef: value => ({ current: value }), useState: value => [value, () => {}] },
     '@expo/ui/jetpack-compose': native,
     '@expo/ui/jetpack-compose/modifiers': new Proxy({}, { get: (_, name) => value => ({ name, value }) }),
     'expo-router': { router: { navigate: route => calls.push(['navigate', route]) } },
     'react-native': { View: 'View', Text: 'NativeText', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl',
+      KeyboardAvoidingView: 'KeyboardAvoidingView', Keyboard: { metrics: () => undefined, addListener: (name, fn) => {
+        keyboardEvents[name] = fn; return { remove: () => { delete keyboardEvents[name]; } };
+      } },
       useWindowDimensions: () => ({ width: 400, fontScale: 1 }), StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     'react-native-gesture-handler': { GestureHandlerRootView: 'GestureHandlerRootView', GestureDetector: 'GestureDetector',
@@ -54,7 +60,7 @@ function fixture() {
     if (typeof node.type === 'function' && node.type !== outlined) return render(node.type(node.props));
     return { ...node, props: { ...node.props, children: render(node.props?.children) } };
   }
-  return { calls, gestures, effects, action, field, outlined, native, mocks, render, ...exports };
+  return { calls, gestures, effects, keyboardEvents, get receiptContext() { return receiptContext; }, action, field, outlined, native, mocks, render, ...exports };
 }
 
 test('receipt grouping retains every value, lock and callback in its original order', () => {
@@ -98,6 +104,7 @@ test('receipt reuses the pager and role dock with device, back, profile, history
     connected: false, attention: true, refreshing: false, onDevices: () => x.calls.push('devices'),
     onBack: () => x.calls.push('back'), onRefresh: () => x.calls.push('refresh') });
   assert.equal(tree.type, 'GestureHandlerRootView', 'the standalone receipt route must provide a root for its pager and scroll gestures');
+  assert.equal(nodes(tree, node => node.type === 'KeyboardAvoidingView')[0].props.behavior, 'height');
   assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
   const bar = nodes(tree, node => node.type === 'OrdersWorkspace')[0];
   assert.deepEqual(bar.props.tabs.map(tab => tab.name), ['Print', 'Print tarixi']);
@@ -111,6 +118,47 @@ test('receipt reuses the pager and role dock with device, back, profile, history
   assert.equal(x.gestures[0].requireToFail, pager);
   nodes(history, node => node.type === 'ScrollView')[0].props.refreshControl.props.onRefresh(); assert.equal(x.calls.at(-1), 'refresh');
   assert.equal(field.value, '5');
+});
+
+test('keyboard resize reveals the focused field and a manual drag can scroll without losing focus', async () => {
+  const x = fixture(), field = x.field('manual_qty_text', '5');
+  const page = x.GScaleReceipt({ session: {}, title: 'Homashyo kirimi', section: 'control', onSelect() {},
+    control: [{ rows: [x.action('gscale-device')] }, { rows: [field] }], history: [{ rows: [] }],
+    connected: true, attention: false, refreshing: false, onRefresh() {}, onDevices() {}, onBack() {} });
+  const bar = nodes(page, node => node.type === 'OrdersWorkspace')[0];
+  const pageElement = bar.props.children('control', { name: 'pager' });
+  const viewport = pageElement.type(pageElement.props);
+  const list = nodes(viewport, node => node.type === 'ScrollView')[0];
+  const content = nodes(list, node => node.type === 'View' && node.props.collapsable === false)[0];
+  const provider = nodes(content, node => node.type === 'ContextProvider')[0];
+  const positions = [], sizes = { viewport: 700, scroll: 0 };
+  viewport.props.ref.current = { measureInWindow: callback => callback(0, 100, 400, sizes.viewport) };
+  content.props.ref.current = { measureInWindow: callback => callback(0, 100 - sizes.scroll, 400, 1000) };
+  list.props.ref.current = { scrollTo: value => positions.push(value) };
+  const cleanup = x.effects.at(-1)();
+  x.receiptContext.value = provider.props.value;
+  const input = x.ReceiptField({ row: field });
+  input.props.modifiers.find(modifier => modifier.name === 'onGloballyPositioned').value({ x: 0, y: 700, width: 200, height: 50 });
+  input.props.onFocusChanged(true);
+  sizes.viewport = 400;
+  x.keyboardEvents.keyboardDidShow({ endCoordinates: { screenY: 500 } });
+  await new Promise(resolve => setTimeout(resolve, 90));
+  assert.deepEqual(positions, [{ y: 262, animated: true }]);
+  assert.equal(list.props.keyboardShouldPersistTaps, 'always');
+  assert.equal(list.props.nestedScrollEnabled, true);
+  list.props.onScroll({ nativeEvent: { contentOffset: { y: 262 } } }); sizes.scroll = 262;
+  viewport.props.onLayout(); list.props.onScrollBeginDrag();
+  x.keyboardEvents.keyboardDidShow({ endCoordinates: { screenY: 500 } });
+  await new Promise(resolve => setTimeout(resolve, 90));
+  assert.equal(positions.length, 1, 'a manual drag must not be overridden by a pending automatic scroll');
+  list.props.onScrollEndDrag(); input.props.onFocusChanged(false);
+  const upper = x.ReceiptField({ row: x.field('length_text', '12') });
+  upper.props.modifiers.find(modifier => modifier.name === 'onGloballyPositioned').value({ x: 0, y: 130, width: 200, height: 50 });
+  upper.props.onFocusChanged(true);
+  await new Promise(resolve => setTimeout(resolve, 90));
+  assert.deepEqual(positions[1], { y: 220, animated: true }, 'switching fields must reveal one hidden above the tab bar');
+  assert.deepEqual(x.calls, [['focus', true], ['focus', false], ['focus', true]]);
+  cleanup();
 });
 
 test('the preparation dashboard wires the receipt view to existing device, history and back actions', () => {
