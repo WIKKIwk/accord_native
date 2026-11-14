@@ -111,10 +111,10 @@ export function PreparationWarehouseScreen() {
   };
   const pickReceipt = () => {
     let selected: PreparationMaterial | null = null;
-    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={materials}
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={materials} close={sheet.close}
       subtitle={item => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
       choose={material => { selected = material; sheet.close(); }} />,
-    { dismissible: true, onDismiss: () => { if (selected) void receive(selected); } });
+    { dismissible: true, heightFraction: 0.66, onDismiss: () => { if (selected) void receive(selected); } });
   };
   const fabActions: RoleFabAction[] = [
     ...(warehouse && manual ? [

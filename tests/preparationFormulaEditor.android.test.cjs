@@ -159,20 +159,18 @@ test('seriyo picker reuses standard cards while preserving search, paging and th
   const calls = [], materials = [{ code: 'C1', name: 'First' }, { code: 'C2', name: 'Second' }];
   const ui = new Proxy({ usePreparationText: () => value => value }, { get: (object, key) => object[key] ?? key });
   const { PreparationSeriyoPicker } = load('PreparationSeriyoPicker.android.tsx', {
-    'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
-    'expo-symbols': { SymbolView: 'SymbolView' },
-    'react-native': { View: 'View', Text: 'Text', FlatList: 'FlatList', StyleSheet: { create: value => value } },
-    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, './PreparationUI.android': ui,
+    'react/jsx-runtime': jsx, '../shared/orders/PickerSheetContent': { PickerSheetContent: 'PickerSheetContent' },
+    './PreparationUI.android': ui,
     './usePreparationSeriyoPicker': { usePreparationSeriyoPicker: () => ({ items: materials,
-      setQuery: value => calls.push(['search', value]), loadMore: () => calls.push(['more']) }) },
+      hasMore: true, setQuery: value => calls.push(['search', value]), loadMore: () => calls.push(['more']) }) },
   });
-  const tree = PreparationSeriyoPicker({ materials, subtitle: () => 'Mavjud: 12 kg', choose: material => calls.push(['choose', material]) });
-  nodes(tree, node => node.type === 'PreparationField')[0].props.onChange('Second');
+  const tree = PreparationSeriyoPicker({ materials, subtitle: () => 'Mavjud: 12 kg', close: () => calls.push(['close']),
+    choose: material => calls.push(['choose', material]) });
+  assert.equal(tree.type, 'PickerSheetContent');
+  tree.props.onSearch('Second');
   assert.deepEqual(calls.at(-1), ['search', 'Second']);
-  const list = nodes(tree, node => node.type === 'FlatList')[0];
-  list.props.onEndReached(); assert.deepEqual(calls.at(-1), ['more']);
-  const row = list.props.renderItem({ item: materials[1], index: 1 }), card = row.type(row.props);
-  assert.equal(card.type, 'WorkerQueueCard');
-  assert.equal(nodes(card, node => node.type === 'Text' && node.props.children === 'Mavjud: 12 kg').length, 1);
-  card.props.onPress(); assert.equal(calls.at(-1)[1], materials[1]);
+  tree.props.onLoadMore(); assert.deepEqual(calls.at(-1), ['more']);
+  assert.equal(tree.props.items[1].subtitle, 'Mavjud: 12 kg');
+  tree.props.items[1].select(); assert.equal(calls.at(-1)[1], materials[1]);
+  tree.props.onClose(); assert.deepEqual(calls.at(-1), ['close']);
 });

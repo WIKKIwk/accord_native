@@ -149,6 +149,7 @@ test('native picker waits for its sheet to close before returning the selected o
     '../components/WorkerIconButton.android': { WorkerIconButton: 'WorkerIconButton' },
     '../components/WorkerOrderSheet.android': { WorkerOrderSheet: 'WorkerOrderSheet' },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    '../shared/orders/PickerSheetContent': { PickerSheetContent: 'PickerSheetContent' },
     './preparationOrderCandidateSearch': { preparationOrderCandidateLabel: value => value.order.map.title },
     './usePreparationInventoryOrderPicker': { usePreparationInventoryOrderPicker: () => ({ items: [order], input: '',
       setInput: value => calls.push(['search', value]), loadMore: () => calls.push(['more']) }) },
@@ -158,11 +159,10 @@ test('native picker waits for its sheet to close before returning the selected o
   const tree = PreparationInventoryOrderPicker({ candidates: [order], onClose: () => calls.push(['close']), onSelect: value => calls.push(['select', value]) });
   assert.equal(tree.props.fitContent, true); assert.equal(tree.props.dismissible, true);
   tree.props.sheetRef.current = { hide: () => { calls.push(['hide']); return hide; } };
-  const search = nodes(tree, node => node.type === 'TextInput')[0];
-  assert.equal(search.props.placeholder, 'Buyurtma qidiring'); search.props.onChangeText('PET');
-  const list = nodes(tree, node => node.type === 'FlatList')[0]; list.props.onEndReached();
-  const card = list.props.renderItem({ item: order, index: 0 });
-  card.props.onPress(); card.props.onPress();
+  const picker = nodes(tree, node => node.type === 'PickerSheetContent')[0];
+  assert.equal(picker.props.hint, 'Buyurtma qidiring'); picker.props.onSearch('PET');
+  picker.props.onLoadMore();
+  picker.props.items[0].select(); picker.props.items[0].select();
   assert.deepEqual(calls, [['search', 'PET'], ['more'], ['keyboard'], ['hide']]);
   resolveHide(); await tick();
   assert.deepEqual(calls.at(-1), ['select', order]);

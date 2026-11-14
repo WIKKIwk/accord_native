@@ -8,7 +8,7 @@ export type OrdersListProps<T = never> = {
   rows?: readonly T[];
   renderRow?: (row: T, index: number) => ReactNode;
   rowKey?: (row: T, index: number) => string;
-  onRefresh: () => Promise<void>;
+  onRefresh?: () => Promise<void>;
   active: boolean;
   pagerGesture?: PanGesture;
   headerOffset: SharedValue<number>;
@@ -16,4 +16,5 @@ export type OrdersListProps<T = never> = {
   topInset: number;
   onEndReached?: () => void;
   passthrough?: (item: ReactNode) => boolean;
+  keyboardShouldPersistTaps?: 'never' | 'always' | 'handled';
 };

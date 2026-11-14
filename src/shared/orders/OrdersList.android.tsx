@@ -7,7 +7,7 @@ import { OrderListItem } from './OrderListItem';
 import { WorkerOrderPalette } from '../../components/workerOrderPalette';
 import type { OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached }: OrdersListProps<T>) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshing, setRefreshing] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -47,6 +47,7 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     }
   );
   const refresh = useCallback(async () => {
+    if (!onRefresh) return;
     setRefreshing(true);
     try { await onRefresh(); } finally { setRefreshing(false); }
   }, [onRefresh]);
@@ -96,7 +97,8 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     onEndReached={onEndReached} onEndReachedThreshold={0.5}
     onContentSizeChange={(_width, height) => { contentHeight.set(height); }}
     onScroll={onScroll} scrollEventThrottle={16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
+    keyboardShouldPersistTaps={keyboardShouldPersistTaps}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
-    refreshControl={<RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} />}
+    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
     renderItem={renderItem} /></GestureDetector></WorkerOrderPalette.Provider>;
 }

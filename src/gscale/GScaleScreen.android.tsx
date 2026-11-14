@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { useNativeSheet } from '../nativeSheet';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { PickerSheetContent } from '../shared/orders/PickerSheetContent';
 import { DeviceSheet } from '../shared/printing/DeviceSheet';
 import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import { gscaleDashboardSections, type GScaleRow } from './gscaleScreenModel';
@@ -46,13 +47,20 @@ function DashboardRow({ row }: { row: GScaleRow }) {
   return <Action label={row.label} detail={row.detail} disabled={row.disabled} onPress={row.press} id={row.id} />;
 }
 
-function ChoiceSheet({ spec, close, session }: { spec: GScalePickerSpec; close(): void; session: NonNullable<ReturnType<typeof useGScaleSession>['session']> }) {
+function ChoiceSheet({ spec, close, session, preparation = false }: { spec: GScalePickerSpec; close(): void;
+  session: NonNullable<ReturnType<typeof useGScaleSession>['session']>; preparation?: boolean }) {
   const picker = useGScalePicker(spec, session), search = useNativeState(''), t = useGScaleText();
   const photo = (source: 'camera' | 'library') => { void picker.photoSearch(source).then(query => { if (query) search.set(query); }); };
   const choosePhoto = () => Alert.alert(t('Rasm orqali qidirish'), '', [
     { text: picker.photoLabels.take, onPress: () => photo('camera') },
     { text: picker.photoLabels.choose, onPress: () => photo('library') }, { text: t('Bekor qilish'), style: 'cancel' },
   ]);
+  if (preparation) return <PickerSheetContent title={t(spec.title)} hint={t(spec.hint)} closeLabel={t('Yopish')}
+    emptyLabel={t('Hech narsa topilmadi')} query={picker.query} onSearch={picker.setQuery} onClose={close}
+    items={picker.items.map(item => ({ ...item, select: () => { item.select(); close(); } }))}
+    loading={picker.loading} error={picker.error} retryLabel={t('Qayta urinish')} onRetry={picker.retry}
+    hasMore={picker.more} onLoadMore={picker.loadMore} photoLabel={t('Rasm orqali qidirish')}
+    onPhoto={spec.photoSearch ? choosePhoto : undefined} photoLoading={picker.photoLoading} photoError={picker.photoError} />;
   return <View style={{ minHeight: 400, padding: 16, gap: 10 }}><Label>{t(spec.title)}</Label>
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><OutlinedTextField value={search} singleLine onValueChange={picker.setQuery} modifiers={[fillMaxWidth()]}>
       <OutlinedTextField.Label><Text>{t(spec.hint)}</Text></OutlinedTextField.Label></OutlinedTextField></Host>
@@ -104,7 +112,11 @@ function Dashboard({ session, args, signOut }: { session: NonNullable<ReturnType
     });
     return () => subscription.remove();
   }, [signOut, t]);
-  const pick = (spec: GScalePickerSpec) => sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} />);
+  const pick = (spec: GScalePickerSpec) => {
+    const preparation = session.profile.role === 'tayyorlov_masteri';
+    sheet.open(<ChoiceSheet spec={spec} close={sheet.close} session={session} preparation={preparation} />,
+      preparation ? { dismissible: true, heightFraction: 0.66 } : undefined);
+  };
   const chooseApparatus = (options: Record<string, string>) => new Promise<string | null>(resolve => {
     const spec: GScalePickerSpec = { title: 'Apparat tanlang', hint: 'Qidirish', pageSize: 50,
       load: async query => Object.entries(options).filter(([key, value]) => `${key} ${value}`.toLowerCase().includes(query.toLowerCase()))

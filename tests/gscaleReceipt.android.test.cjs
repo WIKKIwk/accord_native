@@ -115,18 +115,24 @@ test('receipt reuses the pager and role dock with device, back, profile, history
 
 test('the preparation dashboard wires the receipt view to existing device, history and back actions', () => {
   const x = fixture(), sheets = [], session = { profile: { role: 'tayyorlov_masteri' }, imageCacheScope: 'scope' };
+  let pickerActions, photoOptions;
+  const picker = { items: [{ key: 'material', title: 'Mahsulot', select: () => x.calls.push('select') }], query: '',
+    setQuery: value => x.calls.push(['search', value]), loading: false, more: true, loadMore: () => x.calls.push('next'),
+    photoLoading: false, photoLabels: { take: 'Camera', choose: 'Library' }, photoSearch: async source => { x.calls.push(source); return ''; } };
   const screen = { role: 'tayyorlov_masteri', controlOnly: true, operator: { refreshArchive: () => x.calls.push('archive') },
     state: { device: { selection: null, needsAttention: true }, archiveLoading: false } };
   const { GScaleScreen } = load('GScaleScreen.android.tsx', { ...x.mocks,
     'expo-router': { router: { canGoBack: () => true, back: () => x.calls.push('back') }, Stack: { Screen: 'StackScreen' } },
     'expo-image': { Image: 'Image' }, 'expo-symbols': { SymbolView: 'SymbolView' },
-    'react-native': { ...x.mocks['react-native'], Platform: { OS: 'android' } },
+    'react-native': { ...x.mocks['react-native'], Platform: { OS: 'android' }, Alert: { alert: (_title, _message, options) => { photoOptions = options; } } },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'Security' },
     '../shared/appRoutes': { appRoutes: { gscaleMode: 'scale' }, canOpenRoute: () => true },
-    '../nativeSheet': { useNativeSheet: () => ({ open: (content, options) => sheets.push({ content, options }), close() {} }) },
+    '../nativeSheet': { useNativeSheet: () => ({ open: (content, options) => sheets.push({ content, options }), close: () => x.calls.push('close') }) },
+    '../shared/orders/PickerSheetContent': { PickerSheetContent: 'PickerSheetContent' },
     './GScaleReceipt.android': { GScaleReceipt: 'GScaleReceipt' },
-    './gscaleScreenModel': { gscaleDashboardSections: (_screen, section) => [{ title: section, rows: [] }] },
-    './useGScaleScreen': { useGScaleSession: () => ({ session, signOut() {} }), useGScaleScreen: () => screen, useGScaleText: () => value => value },
+    './gscaleScreenModel': { gscaleDashboardSections: (_screen, section, actions) => { pickerActions = actions; return [{ title: section, rows: [] }]; } },
+    './useGScaleScreen': { useGScaleSession: () => ({ session, signOut() {} }), useGScaleScreen: () => screen,
+      useGScalePicker: () => picker, useGScaleText: () => value => value },
   });
   const wrapper = GScaleScreen({ args: {} }), dashboard = nodes(wrapper, node => node.type?.name === 'Dashboard')[0];
   const tree = dashboard.type(dashboard.props), view = nodes(tree, node => node.type === 'GScaleReceipt')[0];
@@ -136,6 +142,17 @@ test('the preparation dashboard wires the receipt view to existing device, histo
   view.props.onDevices(); assert.equal(sheets.length, 1);
   assert.deepEqual(sheets[0].options, { fitContent: true, dismissible: true });
   view.props.onBack(); assert.equal(x.calls.at(-1), 'back');
+  pickerActions.pick({ title: 'Mahsulot tanlang', hint: 'Qidirish', photoSearch: true });
+  assert.deepEqual(sheets[1].options, { dismissible: true, heightFraction: 0.66 });
+  const choice = sheets[1].content.type(sheets[1].content.props);
+  assert.equal(choice.type, 'PickerSheetContent');
+  choice.props.onSearch('PE'); choice.props.onLoadMore(); choice.props.onPhoto(); photoOptions[0].onPress();
+  choice.props.items[0].select();
+  assert.deepEqual(x.calls.slice(-5), [['search', 'PE'], 'next', 'camera', 'select', 'close']);
+  session.profile.role = 'material_taminotchi';
+  pickerActions.pick({ title: 'Mahsulot tanlang', hint: 'Qidirish' });
+  assert.equal(sheets[2].options, undefined);
+  assert.notEqual(sheets[2].content.type(sheets[2].content.props).type, 'PickerSheetContent');
   screen.role = 'material_taminotchi';
   assert.equal(nodes(dashboard.type(dashboard.props), node => node.type === 'GScaleReceipt').length, 0);
 });

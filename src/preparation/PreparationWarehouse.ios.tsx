@@ -53,9 +53,9 @@ export function PreparationWarehouse() {
   };
   const pickReceipt = () => {
     let selected: Material | null = null;
-    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={items}
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={items} close={sheet.close}
       subtitle={item => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`}
-      choose={material => { selected = material; sheet.close(); }} />, { dismissible: true, onDismiss: () => { if (selected) receive(selected); } });
+      choose={material => { selected = material; sheet.close(); }} />, { dismissible: true, heightFraction: 0.66, onDismiss: () => { if (selected) receive(selected); } });
   };
   const manage = async (operation: () => Promise<void>) => {
     setManaging(true); try { await operation(); } finally { setManaging(false); }

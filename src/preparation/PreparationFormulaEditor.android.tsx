@@ -98,8 +98,8 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
   };
   const chooseMaterial = (index: number) => {
     let selected: PreparationMaterial | null = null;
-    sheet.open(<PreparationSeriyoPicker materials={state.materials} choose={material => { selected = material; sheet.close(); }} />,
-      { dismissible: true, onDismiss: () => {
+    sheet.open(<PreparationSeriyoPicker materials={state.materials} close={sheet.close} choose={material => { selected = material; sheet.close(); }} />,
+      { dismissible: true, heightFraction: 0.66, onDismiss: () => {
         if (!selected) return;
         const rows = state.controller.getSnapshot().rows;
         if (index < rows.length) state.controller.setRows(rows.map((row, i) => i === index ? { ...row, material: selected } : row));

@@ -7,7 +7,8 @@ const indexKey = (_row: unknown, index: number) => String(index);
 
 export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh }: OrdersListProps<T>) {
   const renderNativeRow = useCallback(({ item, index }: { item: T; index: number }) => <>{renderRow?.(item, index)}</>, [renderRow]);
-  return <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), scrollEdgeEffectStyle('soft', 'top'), refreshable(onRefresh)]}>
+  return <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), scrollEdgeEffectStyle('soft', 'top'),
+    ...(onRefresh ? [refreshable(onRefresh)] : [])]}>
     {children}
     {rows && renderRow ? <List.ForEach data={rows} keyExtractor={rowKey ?? indexKey}>{renderNativeRow}</List.ForEach> : null}
     {footer}

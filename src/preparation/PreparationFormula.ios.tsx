@@ -55,8 +55,8 @@ export function PreparationFormula() {
   const updateRow = (index: number, row: FormulaEditorRow) => controller.setRows(state.rows.map((old, i) => i === index ? row : old));
   const pickMaterial = (index: number) => {
     let selected: Material | null = null;
-    sheet.open(<PreparationSeriyoPicker materials={state.materials} choose={material => { selected = material; sheet.close(); }} />,
-      { dismissible: true, onDismiss: () => {
+    sheet.open(<PreparationSeriyoPicker materials={state.materials} close={sheet.close} choose={material => { selected = material; sheet.close(); }} />,
+      { dismissible: true, heightFraction: 0.66, onDismiss: () => {
         if (!selected) return;
         const rows = controller.getSnapshot().rows;
         if (index < rows.length) controller.setRows(rows.map((row, i) => i === index ? { ...row, material: selected } : row));

@@ -41,9 +41,9 @@ export function PreparationHomeScreen() {
     if (!warehouse) return;
     let selected: PreparationMaterial | null = null;
     const subtitle = (item: PreparationMaterial) => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`;
-    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={materials} subtitle={subtitle}
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={materials} subtitle={subtitle} close={sheet.close}
       searchText={item => `${item.name} ${subtitle(item)}`} choose={material => { selected = material; sheet.close(); }} />,
-    { dismissible: true, onDismiss: () => {
+    { dismissible: true, heightFraction: 0.66, onDismiss: () => {
       const material = selected;
       if (!material) return;
       void (async () => {

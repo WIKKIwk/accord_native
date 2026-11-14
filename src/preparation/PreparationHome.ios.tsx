@@ -35,9 +35,9 @@ export function PreparationHome() {
     if (mode === 'scale') { openScale(); return; }
     let selected: PreparationMaterial | null = null;
     const subtitle = (item: PreparationMaterial) => `Mavjud: ${preparationDisplay(preparationMaterialAvailable(item, warehouse))} kg`;
-    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={receivable} subtitle={subtitle}
+    sheet.open(<PreparationSeriyoPicker title="Homashyo tanlang" materials={receivable} subtitle={subtitle} close={sheet.close}
       searchText={item => `${item.name} ${subtitle(item)}`} choose={material => { selected = material; sheet.close(); }} />,
-    { dismissible: true, onDismiss: () => { if (selected) setReceipt(selected); } });
+    { dismissible: true, heightFraction: 0.66, onDismiss: () => { if (selected) setReceipt(selected); } });
   };
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: t('Tayyorlov masteri') }} />
     <PreparationList>
