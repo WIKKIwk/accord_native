@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useCallback, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
@@ -12,13 +12,15 @@ import { AdminTestTokenNotice } from './AdminTestTokenNotice';
 import { AdminShellProvider, useAdminShell } from './AdminShellContext';
 import { adminShellMayEnter } from './adminShellAccess';
 import { useAdminShellSession } from './useAdminShellSession';
+import { AdminOwnedNavigationProvider } from './AdminOwnedNavigationContext';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 function AdminTabs() {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+  const pathname = usePathname(), ownedDock = pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/');
   const showActivity = !!shell.activityBinding && !!shell.destination(appRoutes.adminActivity, 'ios');
-  return <NativeTabs>
+  return <NativeTabs hidden={ownedDock}>
     <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
       <NativeTabs.Trigger.Label>{localizedGetter('adminHomeNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="activity" hidden={!showActivity}><NativeTabs.Trigger.Icon sf={{ default: 'clock.arrow.circlepath', selected: 'clock.arrow.circlepath' }} />
@@ -37,7 +39,7 @@ function AdminSessionGate() {
   if (!adminShellMayEnter(session)) return <Redirect href="/" />;
   if (session.token === 'test-mode-token') return <AdminTestTokenNotice />;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
-    <AdminShellProvider session={session} witness={witness} onLogout={onLogout}><AdminDrawer><AdminTabs /></AdminDrawer></AdminShellProvider>
+    <AdminShellProvider session={session} witness={witness} onLogout={onLogout}><AdminOwnedNavigationProvider><AdminDrawer><AdminTabs /></AdminDrawer></AdminOwnedNavigationProvider></AdminShellProvider>
   </WorkerSecurityProvider>;
 }
 

@@ -1,16 +1,20 @@
-import { BasicTextField, Box, CircularProgressIndicator, Column, FilterChip, FlowRow, IconButton, RNHostView, Row, Shape, SnackbarHost,
-  Spacer, Surface, Text, TextButton, useNativeState, type BasicTextFieldRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { Box, Column, FilterChip, FlowRow, IconButton, RNHostView, Row, Shape, SnackbarHost,
+  Spacer, Surface, TextButton, useNativeState, type BasicTextFieldRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View, type NativeScrollEvent } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, useWindowDimensions, View, type NativeScrollEvent } from 'react-native';
 import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { themeController } from '../shared/themeRuntime';
 import type { AdminUsersRow, AdminUsersScreenProps } from './AdminUsersScreenTypes';
 import { useAdminUsersScreen, type AdminUsersScreenModel } from './useAdminUsersScreen';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
+import { AdminText as Text } from './AdminTypography.android';
+import { AdminBasicTextField as BasicTextField } from './AdminTextFields.android';
+import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
 const searchFill = (outline: string, surface: string) => `#${[1, 3, 5].map(offset => Math.round(parseInt(outline.slice(offset, offset + 2), 16) * .08 +
@@ -103,7 +107,7 @@ function UserRow({ item, model }: { item: AdminUsersRow; model: AdminUsersScreen
 }
 // @v2 AdminSuppliersScreen, AdminCatalogSearchField and AdminSupplierListRow (current 052 role choices).
 export function AdminUsersScreen(props: AdminUsersScreenProps) {
-  const model = useAdminUsersScreen(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets();
+  const model = useAdminUsersScreen(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), window = useWindowDimensions();
   const list = useRef<FlatList<AdminUsersRow>>(null), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
   const metrics = useRef({ viewport: 0, content: 0, offset: 0 });
   useEffect(() => { list.current?.scrollToOffset({ offset: 0, animated: false }); }, [state.scrollResetSerial, model.identity]);
@@ -117,8 +121,9 @@ export function AdminUsersScreen(props: AdminUsersScreenProps) {
   const scrolled = ({ layoutMeasurement, contentOffset, contentSize }: NativeScrollEvent) => {
     metrics.current = { viewport: layoutMeasurement.height, content: contentSize.height, offset: contentOffset.y }; sendMetrics();
   };
-  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }]}>
-    <SearchHeader model={model} props={props} />
+  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-users-header-safe-area"><SearchHeader model={model} props={props} /></SafeAreaView>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-users-body-frame"><View style={styles.content}>
     {!model.salesManager ? <RoleFilter model={model} /> : null}
     <View style={styles.content}>
       <FlatList ref={list} data={model.rows} keyExtractor={row => row.key} renderItem={({ item }) => <UserRow item={item} model={model} />}
@@ -129,14 +134,21 @@ export function AdminUsersScreen(props: AdminUsersScreenProps) {
         onContentSizeChange={(_width, height) => { metrics.current.content = height; sendMetrics(); }}
         refreshControl={<RefreshControl refreshing={model.refreshing} onRefresh={() => { void model.reload(); }} />}
         ListEmptyComponent={<BaseHost matchContents={{ vertical: true }} style={styles.empty}><Text style={{ typography: 'bodyLarge' }}>{model.a('users.not_found')}</Text></BaseHost>}
-        ListFooterComponent={model.showFooter ? <View style={styles.pageFooter}>{state.loadingMore ? <BaseHost matchContents><CircularProgressIndicator /></BaseHost> : null}</View> : undefined} />
-      {state.screen !== 'content' ? <View style={styles.overlay}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
+        ListFooterComponent={model.showFooter ? <View style={styles.pageFooter}>{state.loadingMore ? <BaseHost matchContents><AdminLoadingIndicator /></BaseHost> : null}</View> : undefined} />
+      {state.screen === 'error' ? <View style={[styles.overlay, styles.errorOverlay]}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.max(0, Math.min(window.width - 48, Math.min(360, Math.max(280, window.width * .88)))) }}>
+        <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth()]}>
+          <Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', lineHeight: 21.6, textAlign: 'center' }}>{model.a('users.load_failed')}</Text>
+          <TextButton contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }} onClick={() => { void model.reload(); }}>
+            <Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text>
+          </TextButton>
+        </Column>
+      </BaseHost></View> : state.screen !== 'content' ? <View style={styles.overlay}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(24, 16, 24, 16)]}>
-          {state.screen === 'loading' ? <CircularProgressIndicator /> : <Text style={{ typography: 'bodyLarge', textAlign: 'center' }}>{model.a(state.screen === 'unselected' ? 'users.not_selected' : 'users.load_failed')}</Text>}
-          {state.screen === 'error' ? <TextButton onClick={() => { void model.reload(); }}><Text>{model.t('retry')}</Text></TextButton> : null}
+          {state.screen === 'loading' ? <AdminLoadingIndicator /> : <Text style={{ typography: 'bodyLarge', textAlign: 'center' }}>{model.a('users.not_selected')}</Text>}
         </Column>
       </BaseHost></View> : null}
     </View>
+    </View></AdminShellBodyFrame>
     {props.footer}
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
@@ -146,5 +158,6 @@ const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, fu
   headerSlot: { height: 60, overflow: 'hidden' }, searchField: { flex: 1, minWidth: 0, height: 58, transform: [{ translateY: -1 }] },
   list: { flexGrow: 1, paddingTop: 4, paddingHorizontal: 4, paddingBottom: 116 }, rowClip: { overflow: 'hidden' }, row: { width: '100%', height: 61 },
   invisible: { opacity: 0 }, overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  errorOverlay: { justifyContent: 'flex-start', paddingHorizontal: 24, paddingVertical: 40 },
   empty: { width: '100%', paddingHorizontal: 8, paddingVertical: 12 }, pageFooter: { paddingTop: 14, alignItems: 'center', minHeight: 14 },
   notice: { position: 'absolute', left: 16, right: 16 } });

@@ -128,23 +128,34 @@ test('a witness transition invalidates the old shell and never recaptures the st
   assert.equal(captures, 1); assert.equal(updates[0].witness, witness); valid = false; listener();
   assert.equal(updates.at(-1), undefined); valid = true; listener(); assert.equal(captures, 1); cleanup();
 });
-function layout(platform, value, active = true, os = platform) {
+function layout(platform, value, active = true, os = platform, pathname = '/ios-admin') {
   const Trigger = Object.assign(function Trigger() {}, { Icon: 'NativeTabs.Icon', Label: 'NativeTabs.Label' });
   const tabs = Object.assign(function NativeTabs() {}, { Trigger });
   const admission = value == null ? value : { session: value, witness: { session: value } };
   const mocks = { react: { useCallback: fn => fn, useSyncExternalStore: (_subscribe, get) => get() },
-    'expo-router': { Redirect: 'Redirect', Stack: 'Stack' }, 'expo-router/native-tabs': { NativeTabs: tabs },
+    'expo-router': { Redirect: 'Redirect', Stack: 'Stack', usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs: tabs },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: os }, View: 'View' },
     '../auth': { isSessionWitnessCurrent: () => active, logout: async () => {}, sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../shared/appRoutes': routes,
     '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './AdminDrawer': { AdminDrawer: 'AdminDrawer' }, './AdminTypography.android': { AdminTypographyProvider: 'AdminTypographyProvider' }, './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' },
-    './AdminShellContext': { AdminShellProvider: 'AdminShellProvider', useAdminShell: () => ({ activityBinding: null, destination: () => null }) },
+    './AdminShellContext': { AdminShellProvider: 'AdminShellProvider', useAdminShell: () => ({ activityBinding: null, destination: () => null }) }, './AdminOwnedNavigationContext': { AdminOwnedNavigationProvider: 'AdminOwnedNavigationProvider' },
     './adminShellAccess': access, './useAdminShellSession': { useAdminShellSession: () => admission } };
   const outer = load(`admin/AdminLayout.${platform}.tsx`, mocks).AdminLayout();
   const gate = platform === 'android' ? outer.props.children : outer;
   return gate.type(gate.props);
 }
+test('iOS native Home/Activity roots stay stable while genuine pushed Users/owned pages hide the system bar for their own dock', () => {
+  const find = (node, predicate) => { if (!node || typeof node !== 'object') return null; if (predicate(node)) return node;
+    const children = [node.props?.children].flat(Infinity); for (const child of children) { const found = find(child, predicate); if (found) return found; } return null; };
+  for (const pathname of ['/ios-admin', '/ios-admin/users', '/ios-admin/owned/17', '/ios-admin/settings', '/ios-admin/activity']) {
+    const tree = layout('ios', admin, true, 'ios', pathname), owner = find(tree, node => node.type === 'AdminOwnedNavigationProvider');
+    assert.ok(owner); assert.equal(owner.props.providers, undefined, 'no dummy source-primary provider is injected');
+    const tabsOwner = find(tree, node => typeof node.type === 'function' && node.type.name === 'AdminTabs'), tabs = tabsOwner.type();
+    assert.equal(tabs.props.hidden, pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/'));
+    assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', 'activity']); assert.equal(tabs.props.activityEnabled, undefined);
+  }
+});
 for (const platform of ['ios', 'android']) {
   test(`${platform} layout denies unauthorized direct route, inactive account and wrong platform`, () => {
     assert.equal(layout(platform, null).type, 'Redirect'); assert.equal(layout(platform, worker).type, 'Redirect');

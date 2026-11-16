@@ -7,6 +7,7 @@ import { adminUserKindLabel, adminUserKinds, adminUserRoleLabel, adminUsersShowF
 import { dartTrim } from './dartJsonString';
 import { useAdminUsers } from './useAdminUsers';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
+import { useAdminOwnedBack } from './AdminOwnedBackContext';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const getLocale = () => localeController.locale;
@@ -51,6 +52,8 @@ export function useAdminUsersScreen(props: AdminUsersScreenProps) {
     } catch { controller.completeDetail(ticket, false); }
     finally { if (pendingOpen.current?.marker === marker) pendingOpen.current = null; }
   };
+  const back = () => { if (interactive()) props.onBack(); };
+  useAdminOwnedBack(back);
   return { state, rows, generation, identity: controller, focused, locale, a, t,
     searchText, hasSearchText: dartTrim(searchText).length > 0,
     searchFocused: searchFocus.controller === controller && searchFocus.generation === generation && searchFocus.value,
@@ -66,7 +69,7 @@ export function useAdminUsersScreen(props: AdminUsersScreenProps) {
     selectRole: (kind: (typeof adminUserKinds)[number]) => { if (interactive()) controller.selectKind(kind); },
     scrollMetrics: (viewport: number, extentAfter: number) => { if (interactive()) controller.handleScrollMetrics(viewport, extentAfter); },
     loadMore: async () => { if (interactive()) await controller.loadMore(); },
-    back: () => { if (interactive()) props.onBack(); },
+    back,
   };
 }
 export type AdminUsersScreenModel = ReturnType<typeof useAdminUsersScreen>;

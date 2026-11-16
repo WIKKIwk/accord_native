@@ -214,3 +214,6 @@ Original session/page authority now reaches genuine source-model Back through an
 
 
 The upcoming Item Create/list/customer picker now has a genuine isolated completed-cache singleton, original namespace and auth-reset cleanup. Catalog accumulation/selection exclusion and customer latest-nonempty-page semantics remain distinct; customer clear expires only its old writers. Real controller/UserCreate coupling is pending, broader M3 cache behavior stays Open, and no cache-owner route is enabled.
+
+
+Genuine Users/private file pages now compose the four detail branches, Supplier Items, Worker Profile and existing Profile with original arguments and awaited native-detach results. Empty Customer/Supplier refs embed the real Users fallback. Android uses native60px tab controls plus actual inset/High chrome; iOS preserves Home/Activity system tabs and hides them for pushed custom-dock pages. Actual primary providers remain absent, global roots/manifest stay held, and Profile/chat/Supplier/physical Open items prevent release.

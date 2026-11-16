@@ -11,6 +11,7 @@ import { PreparationNotice } from '../preparation/PreparationNotice';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import type { AdminUsersRow, AdminUsersScreenProps } from './AdminUsersScreenTypes';
 import { useAdminUsersScreen, type AdminUsersScreenModel } from './useAdminUsersScreen';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 
 function RoleFilter({ model }: { model: AdminUsersScreenModel }) {
   const pairs = Array.from({ length: Math.ceil(model.roleOptions.length / 2) }, (_, index) => model.roleOptions.slice(index * 2, index * 2 + 2));
@@ -86,6 +87,7 @@ export function AdminUsersScreen(props: AdminUsersScreenProps) {
         onFocus: () => model.setSearchFocused(true), onBlur: () => model.setSearchFocused(false), onCancelButtonPress: cancelSearch,
         onSearchButtonPress: () => { if (model.interactive()) { search.current?.blur(); model.setSearchFocused(false); } } } }} />
     <View style={styles.screen}>
+      <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-users-body-frame"><View style={styles.content}>
       {!model.salesManager ? <RoleFilter model={model} /> : null}
       <View style={styles.content}>
         <BaseHost style={styles.content}>
@@ -105,6 +107,7 @@ export function AdminUsersScreen(props: AdminUsersScreenProps) {
           </VStack>
         </BaseHost></View> : null}
       </View>
+      </View></AdminShellBodyFrame>
       {props.footer}
       {state.notice ? <PreparationNotice message={model.a(state.notice.key)} /> : null}
     </View>

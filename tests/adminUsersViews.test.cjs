@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -28,7 +29,7 @@ const compound = (name, slots) => Object.assign(() => {}, Object.fromEntries(slo
 const basic = compound('BasicTextField', ['DecorationBox', 'InnerTextField', 'Placeholder']);
 const chip = compound('FilterChip', ['Label', 'LeadingIcon', 'TrailingIcon']);
 const disclosure = Object.assign('DisclosureGroup', { Label: 'DisclosureGroup.Label' });
-const colors = { surfaceContainerLow: '#FEFEFEFF', outlineVariant: '#777777FF', onSurfaceVariant: '#777777FF', surfaceContainerLowest: '#FFFFFFFF',
+const colors = { surfaceContainerLow: '#FEFEFEFF', surfaceContainerHigh: '#E6E6E6FF', outlineVariant: '#777777FF', onSurfaceVariant: '#777777FF', surfaceContainerLowest: '#FFFFFFFF',
   secondaryContainer: '#DDDDDDFF', onSecondaryContainer: '#222222FF', onSurface: '#111111FF' };
 function model(overrides = {}) {
   const calls = [], state = { screen: 'content', selectedKind: 'supplier', roleMenuOpen: false, loadingMore: false, scrollResetSerial: 0, notice: null };
@@ -56,12 +57,14 @@ function render(platform, value) {
   const reanimated = { View: 'Animated.View', default: { View: 'Animated.View' }, Easing: { cubic: 'cubic', out: value => value }, FadeIn: { duration: value => value }, FadeOut: { duration: value => value },
     useSharedValue: value => ({ value }), useAnimatedStyle: callback => callback(), withTiming: value => value };
   const mocks = { react, 'react-native': native, 'react-native-reanimated': reanimated, 'expo-symbols': { SymbolView: 'SymbolView' },
-    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '@expo/ui/jetpack-compose': compose,
+    'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '@expo/ui/jetpack-compose': compose,
     '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../shared/themeRuntime': { themeController: { variant: 'white' } },
     '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), './AdminTypography.android': { AdminText: 'Text' }, './AdminTextFields.android': { AdminBasicTextField: compose.BasicTextField },
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, './useAdminUsersScreen': { useAdminUsersScreen: () => value } };
+  mocks['./AdminLoadingIndicator.android'] = load('AdminLoadingIndicator.android.tsx', mocks);
   const Screen = load(`AdminUsersScreen.${platform}.tsx`, mocks).AdminUsersScreen;
   const tree = expanded(Screen({ backLabel: 'Orqaga', profileAction: { type: 'RealGuardedProfileAction', props: {} }, footer: { type: 'ExistingDock', props: {} } }));
   return { tree, rows() {
@@ -147,4 +150,20 @@ test('ios Cancel preserves the latest native edit even when React props have not
   search.ref.current = { setText: text => restored.push(text) };
   search.onChangeText({ nativeEvent: { text: 'Two' } }); search.onCancelButtonPress(); search.onChangeText({ nativeEvent: { text: '' } });
   assert.deepEqual(restored, ['Two', 'Two']); assert.deepEqual(m.calls, [['search', 'Two'], ['focus', false]]);
+});
+for (const platform of ['android', 'ios']) test(`${platform} Users uses actual source clipped frame with reserve outside and keeps genuine dock outside the body`, () => {
+  const { tree } = render(platform, model()), reserve = nodes(tree, node => node.props.testID === 'admin-users-body-frame-reserve')[0], frame = nodes(tree, node => node.props.testID === 'admin-users-body-frame')[0];
+  assert.equal(reserve.props.style[1].marginHorizontal, 6); assert.equal(reserve.props.style[1].marginBottom, 92);
+  assert.equal(frame.props.style[1].borderTopLeftRadius, 18); assert.equal(frame.props.style[1].borderBottomLeftRadius, 18); assert.equal(frame.props.style[2], false);
+  assert.equal(nodes(frame, node => node.type === 'ExistingDock').length, 0); assert.equal(nodes(tree, node => node.props.testID === 'admin-users-body-frame-safe-area')[0].props.edges.join(), 'left,right');
+  if (platform === 'android') {
+    assert.equal(nodes(tree, node => node.props.testID === 'admin-users-header-safe-area')[0].props.edges.join(), 'left,right');
+    assert.equal(tree.props.style[1].backgroundColor, colors.surfaceContainerHigh);
+  }
+});
+test('Android Users full/pagination loading uses the actual expressive source64 host and48 glyph', () => {
+  const loading = model(); loading.state.screen = 'loading'; const tree = render('android', loading).tree, indicator = nodes(tree, node => node.type === 'LoadingIndicator')[0];
+  assert.ok(indicator.props.modifiers.some(mod => mod.name === 'size' && mod.args.join() === '48,48')); assert.equal(nodes(tree, node => node.type === 'CircularProgressIndicator').length, 0);
+  const more = model({ showFooter: true }); more.state.loadingMore = true; const list = nodes(render('android', more).tree, node => node.type === 'FlatList')[0], footer = expanded(list.props.ListFooterComponent);
+  assert.equal(nodes(footer, node => node.type === 'LoadingIndicator').length, 1); assert.ok(nodes(footer, node => node.type === 'Box' && node.props.modifiers?.some(mod => mod.name === 'size' && mod.args.join() === '64,64')).length);
 });

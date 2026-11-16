@@ -14,13 +14,14 @@ async function fixture() {
       return [slots[index], next => { slots[index] = typeof next === 'function' ? next(slots[index]) : next; }]; },
     useSyncExternalStore: (_subscribe, get) => get(), useLayoutEffect: fn => layouts.push(fn),
   };
-  const hook = s.load('admin/useAdminUsersScreen', { react, '../shared/camera/synchronousGuard': s.load('shared/camera/synchronousGuard'), 'expo-router': { useIsFocused: () => focused },
+  const ownedBacks = [];
+  const hook = s.load('admin/useAdminUsersScreen', { react, './AdminOwnedBackContext': { useAdminOwnedBack: handler => { ownedBacks.push(handler); } }, '../shared/camera/synchronousGuard': s.load('shared/camera/synchronousGuard'), 'expo-router': { useIsFocused: () => focused },
     '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './adminUsersModel': s.model, './dartJsonString': s.strings,
     './useAdminUsers': { useAdminUsers: () => ({ state: controller.getSnapshot(), controller, isCurrent: () => valid }) } });
   const props = { session: { profile: { role: 'admin' } }, onBack: () => { backs++; }, onOpenUser: (ticket, lifetime) => open(ticket, lifetime) };
   const render = () => { cursor = 0; layouts = []; const model = hook.useAdminUsersScreen(props); const cleanup = layouts.map(fn => fn()); return { model, cleanup: () => cleanup.forEach(fn => fn?.()) }; };
-  return { controller, props, render, get reads() { return reads; }, get backs() { return backs; }, retire() { valid = false; }, focus: value => { focused = value; },
+  return { controller, props, ownedBacks, render, get reads() { return reads; }, get backs() { return backs; }, retire() { valid = false; }, focus: value => { focused = value; },
     onOpen: value => { open = value; } };
 }
 test('screen model preserves exact visible subtitles, current role choices and raw search text', async () => {
@@ -65,4 +66,8 @@ test('Users supplies original controller lifetime to navigation and host interac
   model.setSearch('hidden'); model.back(); await model.reload(); assert.equal(captured.lifetime.canInteract(), false); assert.equal(captured.lifetime.isCurrent(), true); assert.equal(f.backs, 0); assert.equal(f.controller.getSnapshot().query, '');
   const before = f.reads; pending.resolve(true); await opening; await s.flush(); assert.equal(f.reads, before + 1);
   f.controller.dispose(); assert.equal(captured.lifetime.isCurrent(), false); assert.equal(captured.lifetime.canInteract(), false);
+});
+test('real embedded Users model registers its genuine Back so an owned missing-ref fallback can leave without a changed result', async () => {
+  const f = await fixture(), first = f.render(); f.ownedBacks.at(-1)(); assert.equal(f.backs, 1); f.focus(false); f.render(); f.ownedBacks.at(-1)(); assert.equal(f.backs, 1);
+  first.cleanup(); f.controller.dispose(); first.model.back(); assert.equal(f.backs, 1);
 });

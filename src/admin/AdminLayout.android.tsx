@@ -9,6 +9,7 @@ import { AdminTypographyProvider } from './AdminTypography.android';
 import { AdminShellProvider } from './AdminShellContext';
 import { adminShellMayEnter } from './adminShellAccess';
 import { useAdminShellSession } from './useAdminShellSession';
+import { AdminOwnedNavigationProvider } from './AdminOwnedNavigationContext';
 
 function AdminSessionGate() {
   const admission = useAdminShellSession(), session = admission?.session, witness = admission?.witness;
@@ -22,7 +23,7 @@ function AdminSessionGate() {
   if (!adminShellMayEnter(session)) return <Redirect href="/" />;
   if (session.token === 'test-mode-token') return <AdminTestTokenNotice />;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
-    <AdminShellProvider session={session} witness={witness} onLogout={onLogout}><AdminDrawer><Stack screenOptions={{ headerShown: false }} /></AdminDrawer></AdminShellProvider>
+    <AdminShellProvider session={session} witness={witness} onLogout={onLogout}><AdminOwnedNavigationProvider><AdminDrawer><Stack screenOptions={{ headerShown: false }} /></AdminDrawer></AdminOwnedNavigationProvider></AdminShellProvider>
   </WorkerSecurityProvider>;
 }
 
