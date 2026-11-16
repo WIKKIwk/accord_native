@@ -127,3 +127,6 @@ Prepared Warehouse live support uses dedicated native openWarehouse admission,25
 
 
 Warehouse Settings is an isolated native child requiring real controlled summaries/warehouse/filter and stable parent onChanged/onDeleted. Assign/unassign reread assignments before parent reload and success. Delete preserves reserved-stock blocking and source product/assignment warnings, using captured summary and known-code notices. Parent deletion clears remembered selection and reloads. The full main screen/filter persistence/live composition remains unported; no route is exposed.
+
+
+Users native components require the real owning profile action, guarded back and awaited onOpenUser(ticket) result. Rows use the source person icon. Search focus-close retains the query; iOS adapts its native Cancel+empty-change sequence to preserve that behavior, while explicit clear stays destructive to the query. No Users app route is exposed until the four genuine detail owners/profile action are composed. Android source row/search geometry/motion is represented; iOS<18 prefetch remains a noted difference.

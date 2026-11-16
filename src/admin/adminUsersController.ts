@@ -52,6 +52,8 @@ export class AdminUsersController {
     this.state = initial(deps.salesManager ? 'customer' : deps.roles.cachedRole);
   }
   getSnapshot = (): AdminUsersSnapshot => this.state;
+  interactionGeneration = (): number => this.lifetime;
+  isInteractionCurrent = (generation: number): boolean => this.current(generation);
   subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private patch(value: Partial<AdminUsersSnapshot>): void {
     if (!this.alive) return;
