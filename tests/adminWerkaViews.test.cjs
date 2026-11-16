@@ -98,6 +98,8 @@ for (const platform of ['android', 'ios']) {
     assert.equal(avatars.length, 1); assert.equal(avatars[0].size, 92); assert.equal(avatars[0].avatarUrl, f.model.state.avatarUrl);
     assert.equal(avatars[0].fallbackText, 'ON'); assert.equal(avatars[0].displayName, 'ON', 'source preview title defaults to initials'); assert.equal(avatars[0].isCurrent, f.model.current);
     assert.equal(nodes(tree, node => node.type === 'ActualChatAction').length, 1); assert.equal(nodes(tree, node => node.type === 'ActualDock').length, 1);
+    const dockHost = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'ActualDock')[0];
+    assert.equal(dockHost.props.style.position, 'absolute'); assert.equal(dockHost.props.style.bottom, 0, 'Scaffold.extendBody retains the full scroll viewport behind the genuine dock');
     if (platform === 'android') assert.equal(nodes(tree, node => node.type === 'ActualProfileAccountAction').length, 1);
     else assert.equal(nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerRight().type, 'ActualProfileAccountAction');
     assert.equal(byId(tree, 'admin-werka-detail-name-input'), undefined); assert.equal(byId(tree, 'admin-werka-detail-phone-input'), undefined);
@@ -121,6 +123,9 @@ for (const platform of ['android', 'ios']) {
   });
   test(`${platform} Werka loading/error do not request an avatar and preserve retry/back changed result`, () => {
     const loading = screen(platform, createModel({ phase: 'loading' })); assert.equal(loading.avatars.length, 0);
+    if (platform === 'android') { const indicator = nodes(loading.tree, node => node.type === 'LoadingIndicator')[0];
+      assert.ok(indicator.props.modifiers.some(mod => mod.name === 'size' && mod.args[0] === 48 && mod.args[1] === 48));
+      assert.equal(nodes(loading.tree, node => node.type === 'CircularProgressIndicator').length, 0); }
     const f = createModel({ phase: 'error', changed: true }), retry = screen(platform, f); assert.equal(retry.avatars.length, 0);
     assert.ok(text(retry.tree).includes(f.model.t('serverDisconnectedRetry'))); click(byId(retry.tree, 'admin-werka-retry'), platform);
     if (platform === 'android') click(byId(retry.tree, 'admin-werka-back'), platform);

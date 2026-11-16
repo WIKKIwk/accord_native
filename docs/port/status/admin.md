@@ -864,3 +864,8 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | AdminWerkaScreen, _AdminWerkaDetailCard/_WerkaAdminPanel/_WerkaPhoneInlineField; Werka source parts01/02 | `AdminWerkaScreen.*`, component route aliases/types, `useAdminWerka.ts`, `adminWerkaController.ts`, API/session/presentation | native Stack/SwiftUI | source dimensions/native Compose | Avatar/profile/dock/chat/app composition and physical rendering still open; iOS chip arrangement adapts natively. |
+
+## 2026-11-16 Werka source footer/loading follow-up
+
+- Rechecked `Scaffold.extendBody:true` and the real RoleBottomBar consuming80+inset height. Both Werka views now overlay the supplied footer at the bottom, retaining source list padding116 and body scrolling behind the dock. Android full-page loading uses the installed native Expressive LoadingIndicator (48 glyph inside64 host), while18-point command spinners stay circular; source retry button min/padding/label weight is represented. The native iOS copy control has an explicit Image child because SDK58 only applies Button.systemImage with a label.
+- 29/29 Werka tests remain green with dock placement/loading/icon regressions; both full platform TypeScript pass. Targeted lint and diff checks pass. Real owning footer/avatar/profile composition and phone rendering remain open; no device/simulator was used.

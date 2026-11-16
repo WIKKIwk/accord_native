@@ -1,6 +1,6 @@
-import { BasicTextField, Box, CircularProgressIndicator, Column, FilledTonalButton, FlowRow, IconButton, RNHostView, Row, Shape,
+import { BasicTextField, Box, CircularProgressIndicator, Column, FilledTonalButton, FlowRow, IconButton, LoadingIndicator, RNHostView, Row, Shape,
   SnackbarHost, Spacer, Surface, Text, TextButton, TopAppBar, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
-import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -147,12 +147,15 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
       </TopAppBar>
       <Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View>
-    {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><CircularProgressIndicator /></Box></BaseHost> :
+    {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
+      <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
+    </Box></Box></BaseHost> :
       state.phase === 'error' ? <ScrollView style={styles.body} contentContainerStyle={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(width * .88, 280), 360), maxWidth: '100%' }}>
         <Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{model.t('serverDisconnectedRetry')}</Text>
-          <Spacer modifiers={[height(16)]} /><TextButton onClick={model.reload} modifiers={[testID('admin-werka-retry')]}><Text>{model.t('retry')}</Text></TextButton></Column>
+          <Spacer modifiers={[height(16)]} /><TextButton onClick={model.reload} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
+            modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('admin-werka-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton></Column>
       </BaseHost></ScrollView> : <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><Detail model={model} props={props} /></ScrollView>}
-    {props.footer}
+    <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }
@@ -162,4 +165,4 @@ const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullW
   profileHeader: { height: 204 }, banner: { position: 'absolute', left: 0, right: 0, top: 0, height: 112, backgroundColor: '#000000' },
   status: { position: 'absolute', right: 14, top: 14 }, avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 },
   identity: { position: 'absolute', left: 124, right: 16, top: 140 }, retry: { paddingLeft: 20, paddingTop: 4, paddingRight: 20, paddingBottom: 24, alignItems: 'center' },
-  profileAction: { width: 58, height: 60, justifyContent: 'center' }, notice: { position: 'absolute', left: 16, right: 16 } });
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, profileAction: { width: 58, height: 60, justifyContent: 'center' }, notice: { position: 'absolute', left: 16, right: 16 } });

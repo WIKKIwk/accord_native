@@ -125,9 +125,9 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
         state.phase === 'error' ? <ScrollView><VStack spacing={16} modifiers={[padding({ leading: 20, trailing: 20, top: 4, bottom: 24 }), frame({ maxWidth: Infinity })]}>
           <Text modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[accessibilityIdentifier('admin-werka-retry')]} />
         </VStack></ScrollView> : <ScrollView><VStack modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}><Detail model={model} props={props} /></VStack></ScrollView>}
-    </BaseHost>{props.footer}{state.copiedNotice !== null ? <PreparationNotice message={model.a('profile.code_copied')} /> : null}</View>
+    </BaseHost><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{state.copiedNotice !== null ? <PreparationNotice message={model.a('profile.code_copied')} /> : null}</View>
   </>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' },
+const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   profileHeader: { height: 204, width: '100%' }, banner: { position: 'absolute', left: 0, right: 0, top: 0, height: 112, backgroundColor: '#000000' },
   status: { position: 'absolute', right: 14, top: 14 }, avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 }, identity: { position: 'absolute', left: 124, right: 16, top: 140 } });
