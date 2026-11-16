@@ -713,3 +713,15 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | Unified Users list domain, source `admin_suppliers_screen.dart` and its methods/widgets parts; `mobile_api_admin_users_list.dart`; `AdminUsersRoleStore` | `adminUsersModel.ts`, `adminUsersApi.ts`, role store/cache/controller/session/runtime, `useAdminUsers.ts` | shared domain tested; UI held | shared domain tested; UI held | Current052 Metalayzer delta is explicit. Full UI, four detail destinations, native performance and visuals remain open. |
+
+
+## 2026-11-16 Admin dock navigation helper source comparison
+
+- Android dock now consumes the source destination/selection model, including Home selected from a child whose active tab is still Home, and no selected destination for Settings. Only reviewed permitted destinations with their real bindings are shown; Users/default Create remain held.
+- Read the actual f119 `core/navigation/app_root_navigation.dart` implementation: despite its name, `replaceRootRoute` does not clear the stack. It unfocuses immediately, coalesces the last target in a frame while retaining the first context, then pops to an existing target or pushes an absent target. `adminRootNavigation.ts` now reproduces that order, rechecking original mounted/focused/session authority and destination before dispatch. It never uses replace to erase the current child.
+- Validation: 11 focused dock/coalescer tests pass, including the installed Expo58 StackRouter reducer (not only navigation spies): Home→Settings→Additional→absent Activity retains those screens below Activity; existing Activity pops back to it; absent Home on a direct child pushes Home. Same-frame last-target, expired first-context, reentrant keyboard/destination callbacks and stale pending events are checked. Scoped ESLint and Android typecheck pass; final combined platform checks follow with the next integration checkpoint.
+- Defensive source difference: V2's observer can search all observed routes, while this Admin bridge inspects only active routes of the actual owning stack, excluding Expo preloads and other navigators. Focus loss also cancels a retained callback. Cross-navigator/default-create composition, physical back/touch, keyboard and native animations remain unverified. iOS continues using native tabs.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Admin dock selection; `widgets/admin_dock.dart:83`; `core/navigation/app_root_navigation.dart:23` | `AdminBottomBar.android.tsx`, `adminRootNavigation.ts` | existing native tabs | source push/pop/coalescing rules compared; real reducer checked | Observed routes are restricted to the owning stack; global cross-navigator behavior and native gestures still need audit. Full default create actions remain held. |

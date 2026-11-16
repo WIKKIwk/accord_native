@@ -106,3 +106,6 @@ Additional Settings now requires its owning session, original SessionWitness, cu
 
 
 Users domain targets current V2 052655a4 with the explicit Metalayzer delta from pinned f119. The live list uses `/v1/mobile/admin/users/list`, page size50 in the screen, 220ms authoritative debounce and verified-prefix local substring filtering. Worker also uses this endpoint; the source worker-side-channel helper always returns false. Role selection persists source camelCase enum names under per-profile/default keys. List UI and worker/werka/customer/supplier detail routes remain held until implemented.
+
+
+Android dock root selection follows the implementation of V2 AppRootNavigation: dismiss keyboard, coalesce last target per frame with first context, pop to an existing route, otherwise push. Its method name does not mean clearing history. The bridge observes active routes in its owning stack and rejects stale focused/session callbacks. Selecting Home from a Home-tab child still returns to Home; Settings has no selected dock destination.
