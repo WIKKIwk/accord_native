@@ -109,3 +109,6 @@ Users domain targets current V2 052655a4 with the explicit Metalayzer delta from
 
 
 Android dock root selection follows the implementation of V2 AppRootNavigation: dismiss keyboard, coalesce last target per frame with first context, pop to an existing route, otherwise push. Its method name does not mean clearing history. The bridge observes active routes in its owning stack and rejects stale focused/session callbacks. Selecting Home from a Home-tab child still returns to Home; Settings has no selected dock destination.
+
+
+Product Groups follows the source tree/items flow: show a group's items, create a group or move its parent, with no rename/delete. Items page40; searchable pickers page50. Create closes after acknowledgment; Move Parent remains open after success. Android preserves source card/field/action dimensions and native pager; iOS uses native SwiftUI TabView. Exact180ms tree/filter animation, iOS420px pagination threshold and physical native presentation remain open.

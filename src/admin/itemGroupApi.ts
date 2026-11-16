@@ -42,32 +42,46 @@ async function mutationError(response: Response, fallbackCode: string, fallbackM
 }
 
 /** @v2 adminItemGroups */
-export async function adminItemGroups(session: Session): Promise<string[]> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups');
-  if (response.status !== 200) throw new Error('Admin item groups failed');
-  return (await responseList(response)).map(dartJsonString);
+export async function adminItemGroups(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<string[]> {
+  try {
+    const response = await itemGroupsRead(session, '/v1/mobile/admin/item-groups', beforeSend, readWitness);
+    if (response.status !== 200) throw new Error('Admin item groups failed');
+    const result = (await responseList(response)).map(dartJsonString);
+    beforeSend?.(); return result;
+  } catch (error) { beforeSend?.(); throw error; }
 }
 /** @v2 adminItemGroupTree */
-export async function adminItemGroupTree(session: Session): Promise<AdminItemGroupTreeEntry[]> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups/tree');
-  if (response.status !== 200) throw new Error('Admin item group tree failed');
-  return (await responseList(response)).map(adminItemGroupFromJson);
+export async function adminItemGroupTree(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<AdminItemGroupTreeEntry[]> {
+  try {
+    const response = await itemGroupsRead(session, '/v1/mobile/admin/item-groups/tree', beforeSend, readWitness);
+    if (response.status !== 200) throw new Error('Admin item group tree failed');
+    const result = (await responseList(response)).map(adminItemGroupFromJson);
+    beforeSend?.(); return result;
+  } catch (error) { beforeSend?.(); throw error; }
 }
 /** @v2 adminCreateItemGroup */
-export async function adminCreateItemGroup(session: Session, name: string, parent: string, isGroup: boolean): Promise<AdminItemGroup> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parent, is_group: isGroup }),
-  });
-  if (response.status !== 200) throw new Error('Admin item group create failed');
-  return adminItemGroupFromJson(await response.json());
+export async function adminCreateItemGroup(session: Session, name: string, parent: string, isGroup: boolean, beforeSend?: () => void): Promise<AdminItemGroup> {
+  try {
+    const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parent, is_group: isGroup }),
+    }, beforeSend);
+    beforeSend?.();
+    if (response.status !== 200) throw new Error('Admin item group create failed');
+    const data: unknown = await response.json(); beforeSend?.();
+    const result = adminItemGroupFromJson(data); beforeSend?.(); return result;
+  } catch (error) { beforeSend?.(); throw error; }
 }
 /** @v2 adminMoveItemGroupParent */
-export async function adminMoveItemGroupParent(session: Session, name: string, parent: string): Promise<AdminItemGroup> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parent }),
-  });
-  if (response.status !== 200) throw await mutationError(response, 'item_group_parent_move_failed', 'Item group parenti o‘zgartirilmadi');
-  return adminItemGroupFromJson(await response.json());
+export async function adminMoveItemGroupParent(session: Session, name: string, parent: string, beforeSend?: () => void): Promise<AdminItemGroup> {
+  try {
+    const response = await authorizedFetch(session, '/v1/mobile/admin/item-groups', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parent }),
+    }, beforeSend);
+    beforeSend?.();
+    if (response.status !== 200) throw await mutationError(response, 'item_group_parent_move_failed', 'Item group parenti o‘zgartirilmadi');
+    const data: unknown = await response.json(); beforeSend?.();
+    const result = adminItemGroupFromJson(data); beforeSend?.(); return result;
+  } catch (error) { beforeSend?.(); throw error; }
 }
 /** @v2 adminMoveItemsToGroup */
 export async function adminMoveItemsToGroup(session: Session, itemCodes: string[], itemGroup: string): Promise<AdminItemGroupBulkMoveResult> {
@@ -92,4 +106,11 @@ export async function adminItems(session: Session, query = '', group = ''): Prom
     items.push(...page);
     if (page.length < pageSize) return items;
   }
+}
+
+/** Opt-in original-witness transport for the Item Groups screen. */
+async function itemGroupsRead(session: Session, path: string, guard?: () => void, readWitness?: () => boolean): Promise<Response> {
+  if (readWitness === undefined) return guard ? authorizedFetch(session, path, {}, guard) : authorizedFetch(session, path);
+  if (typeof guard !== 'function' || typeof readWitness !== 'function') throw new TypeError('Item groups read requires a guard and witness');
+  guard(); const response = await authorizedFetch(session, path, {}, guard, 10_000, { readWitness }); guard(); return response;
 }
