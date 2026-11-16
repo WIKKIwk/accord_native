@@ -11,6 +11,7 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const routes = load('shared/appRoutes'), scope = load('sessionReadScope');
+const profileGuard = load('shared/profileSessionGuard');
 const parser = load('shared/notificationApi', { '../authorizedFetch': {} });
 const guards = load('admin/adminProductionRequest', { '../authorizedFetch': {}, '../shared/mobileApiException': {}, '../workerControlsApi': {} });
 function fixture(change = () => {}) {
@@ -20,7 +21,8 @@ function fixture(change = () => {}) {
     refreshSession: async value => { value.token = 'second'; change(value, () => { active = { ...value }; }); return true; } };
   const transport = load('authorizedFetch', { './auth': auth });
   const api = load('admin/adminActivityApi', { '../authorizedFetch': transport, '../shared/notificationApi': parser, './adminProductionRequest': guards });
-  const reader = load('admin/adminActivityReader', { '../auth': auth, '../sessionReadScope': scope, '../shared/appRoutes': routes, './adminActivityApi': api });
+  const reader = load('admin/adminActivityReader', { '../auth': auth, '../sessionReadScope': scope, '../shared/appRoutes': routes,
+    '../shared/profileSessionGuard': profileGuard, './adminActivityApi': api });
   return { session, read: reader.adminActivityReader(session), switchAccount: () => { active = { ...session }; } };
 }
 const response = () => new Response(JSON.stringify([{ id: 'one', supplier_name: 'Vendor', status: 'accepted' }]), { status: 200 });
@@ -55,7 +57,7 @@ test('an invalidated captured witness blocks the activity reader before send', a
   const transport = load('authorizedFetch', { './auth': auth });
   const api = load('admin/adminActivityApi', { '../authorizedFetch': transport, '../shared/notificationApi': parser, './adminProductionRequest': guards });
   const read = load('admin/adminActivityReader', { '../auth': auth, '../sessionReadScope': scope, '../shared/appRoutes': routes,
-    './adminActivityApi': api }).adminActivityReader(session, () => false);
+    '../shared/profileSessionGuard': profileGuard, './adminActivityApi': api }).adminActivityReader(session, () => false);
   const original = global.fetch; let sends = 0; global.fetch = async () => { sends++; return response(); };
   try { await assert.rejects(read(), /session changed/); assert.equal(sends, 0); } finally { global.fetch = original; }
 });

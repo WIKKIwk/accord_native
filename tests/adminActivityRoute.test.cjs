@@ -28,7 +28,7 @@ function setup({ hiddenState = 'ready', invalidated = false, bound = true, enabl
     reload() { calls.push('reload'); return Promise.resolve(); } requestClear() { calls.push('request-clear'); return 19; }
     resolveClear(serial, value) { calls.push(['resolve', serial, value]); return Promise.resolve(); }
   }
-  const react = { useMemo: fn => fn(), useCallback: fn => fn, useEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
+  const react = { useRef: value => ({ current: value }), useMemo: fn => fn(), useCallback: fn => fn, useEffect: fn => effects.push(fn), useSyncExternalStore: (_subscribe, get) => get() };
   const mocks = { react, 'expo-router': { Redirect: 'Redirect', router: { canGoBack: () => false, back: () => calls.push('back'),
     replace: path => calls.push(['replace', path]) } }, 'react-native': { Platform: { OS: 'android' },
     View: 'View', Alert: { alert: (...args) => { confirm = args; } }, BackHandler: { addEventListener: (_event, fn) => ({ remove() { calls.push('remove-back'); }, fn }) } },
@@ -91,4 +91,24 @@ for (const platform of ['ios', 'android']) test(`${platform} hidden-state pendin
   retry.props.onPress(); assert.deepEqual(calls, ['retry']);
   assert.equal(nodes(tree, n => n.type === 'Pressable' || n.type === 'FlatList' || n.type === 'List').length, 0);
   if (platform === 'ios') assert.equal(nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight, undefined);
+});
+
+test('retained Activity back and clear callbacks cannot navigate or show a dialog after account retirement', () => {
+  const f = setup(), tree = f.outer.type(f.outer.props);
+  f.setActive(false); tree.props.navigation.onPress(); tree.props.onRequestClear();
+  assert.equal(f.calls.some(call => call === 'back' || Array.isArray(call) && call[0] === 'replace'), false);
+  assert.equal(f.confirm, undefined);
+});
+test('a synchronous clear subscriber that invalidates the controller cannot open a stale dialog', () => {
+  const f = setup(), tree = f.outer.type(f.outer.props);
+  f.instance.requestClear = () => { f.instance.state.invalidated = true; return 20; };
+  tree.props.onRequestClear(); assert.equal(f.confirm, undefined);
+});
+
+test('same-account Activity unmount retires retained navigation and confirmation callbacks', () => {
+  const f = setup(), tree = f.outer.type(f.outer.props);
+  const cleanup = f.effects.map(effect => effect()).filter(value => typeof value === 'function');
+  cleanup.forEach(fn => fn()); const count = f.calls.length;
+  tree.props.navigation.onPress(); tree.props.onRequestClear();
+  assert.equal(f.calls.length, count); assert.equal(f.confirm, undefined);
 });

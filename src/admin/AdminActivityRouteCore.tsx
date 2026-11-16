@@ -1,5 +1,5 @@
 import { Redirect, router, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { Alert, BackHandler, Platform, View } from 'react-native';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
@@ -19,6 +19,8 @@ const currentLocale = () => localeController.locale;
 const afterFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 function BoundActivity({ shell, binding, footer }: { shell: Shell; binding: AdminActivityBinding; footer?: ReactNode }) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), { session, store, isCurrent } = shell;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const controller = useMemo(() => new AdminActivityController({ store, hidden: binding.hidden, hub: refreshHub,
     isCurrent, scope: () => sessionReadScope(session), generation: binding.generation,
     canOpen: () => canOpenRoute(session, appRoutes.adminActivity), afterFrame }), [store, isCurrent, session, binding]);
@@ -32,15 +34,18 @@ function BoundActivity({ shell, binding, footer }: { shell: Shell; binding: Admi
     return () => { unsubscribe(); controller.dispose(); };
   }, [binding, controller, session, isCurrent]);
   const goBack = useCallback(() => {
+    if (!mounted.current || !isCurrent() || controller.getSnapshot().invalidated) return;
     if (router.canGoBack()) router.back(); else router.replace(`/${Platform.OS}-admin` as Href);
-  }, []);
+  }, [controller, isCurrent]);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });
     return () => subscription.remove();
   }, [goBack]);
   const requestClear = () => {
+    if (!mounted.current || !isCurrent() || controller.getSnapshot().invalidated) return;
     const serial = controller.requestClear(); if (serial === null) return;
+    if (!mounted.current || !isCurrent() || controller.getSnapshot().invalidated) return;
     Alert.alert(localizedGetter('clearTitle', locale), localizedGetter('clearAllNotificationsPrompt', locale), [
       { text: localizedGetter('no', locale), style: 'cancel', onPress: () => { void controller.resolveClear(serial, false); } },
       { text: localizedGetter('yes', locale), onPress: () => { void controller.resolveClear(serial, true); } },

@@ -31,9 +31,9 @@ function render(platform, changes = {}, hidden = new Set(['hidden']), nav = true
   const calls = [], modifiers = new Proxy({}, { get: (_t, key) => (...args) => ({ name: String(key), args }) });
   const swift = new Proxy({}, { get: (_t, key) => String(key) });
   const native = { View: 'View', Text: 'NativeText', Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList',
-    RefreshControl: 'RefreshControl', PlatformColor: value => value, StyleSheet: { create: value => value } };
+    RefreshControl: 'RefreshControl', useWindowDimensions: () => ({ width: 390 }), PlatformColor: value => value, StyleSheet: { create: value => value } };
   const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() }, '@expo/ui/swift-ui': swift,
-    '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose': { useMaterialColors: () => colors },
+    '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/jetpack-compose': { Host: 'Host', IconButton: 'IconButton', RNHostView: 'RNHostView', Text: 'ComposeText', TextButton: 'TextButton', Column: 'Column', useMaterialColors: () => colors },
     'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
@@ -58,8 +58,8 @@ for (const platform of ['ios', 'android']) {
     const screen = nodes(tree, n => n.type === 'Stack.Screen')[0];
     const navigation = platform === 'ios' ? screen.props.options.headerLeft().props : nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation;
     assert.equal(navigation.icon, 'back'); navigation.onPress();
-    const clear = platform === 'ios' ? screen.props.options.headerRight() : nodes(tree, n => n.type === 'Pressable')[0];
-    assert.equal(clear.props.accessibilityLabel, l10n.localizedGetter('clearTitle', 'en')); clear.props.onPress();
+    const clear = platform === 'ios' ? screen.props.options.headerRight() : nodes(tree, n => n.type === 'IconButton')[0];
+    assert.equal(platform === 'ios' ? clear.props.accessibilityLabel : clear.props.modifiers.find(m => m.name === 'semantics').args[0].contentDescription, l10n.localizedGetter('clearTitle', 'en')); (clear.props.onPress ?? clear.props.onClick)();
     assert.deepEqual(calls, ['back', 'request-confirmation']);
     const noNav = render(platform, {}, new Set(), false).tree;
     assert.equal(platform === 'ios' ? nodes(noNav, n => n.type === 'Stack.Screen')[0].props.options.headerLeft :
@@ -71,8 +71,8 @@ for (const platform of ['ios', 'android']) {
     assert.equal(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length, 1);
     const failed = render(platform, { loadedActivity: false, activityError: new Error('offline') }, hiddenAll);
     const retry = nodes(failed.tree, n => platform === 'ios' ? n.type === 'Button' && n.props.label === l10n.localizedGetter('retry', 'en') :
-      n.type === 'NativeText' && n.props.accessibilityRole === 'button')[0];
-    retry.props.onPress(); assert.deepEqual(failed.calls, ['refresh']);
+      n.type === 'TextButton')[0];
+    (retry.props.onPress ?? retry.props.onClick)(); assert.deepEqual(failed.calls, ['refresh']);
     const loadedEmpty = render(platform, { activityItems: [] }, new Set()).tree;
     assert.equal(nodes(loadedEmpty, n => n.props?.children === l10n.localizedGetter('adminNoActivity', 'en')).length, 1);
     const laterError = render(platform, { activityError: new Error('later failure') }).tree;
@@ -114,3 +114,22 @@ for (const platform of ['ios', 'android']) {
     }
   });
 }
+
+test('Android Activity keeps V2 segment spacing, card padding and status dimensions', () => {
+  const { tree } = render('android');
+  const list = nodes(tree, n => n.type === 'FlatList')[0];
+  const entry = list.props.renderItem({ item: list.props.data[0], index: 0 });
+  const card = entry.type(entry.props);
+  assert.deepEqual(card.props.containerStyle, { paddingHorizontal: 4, paddingTop: 0, paddingBottom: 0 });
+  assert.equal(card.props.style.borderTopLeftRadius, 18);
+  assert.equal(card.props.style.borderBottomLeftRadius, 6);
+  const row = nodes(card, n => Array.isArray(n.props?.style) && n.props.style[0]?.paddingStart === 16)[0];
+  assert.equal(row.props.style[0].paddingVertical, 16); assert.equal(row.props.style[0].paddingEnd, 12);
+  const badge = nodes(row, n => Array.isArray(n.props?.style) && n.props.style[0]?.width === 36)[0];
+  assert.equal(badge.props.style[0].height, 36);
+  assert.equal(nodes(badge, n => n.type === 'SymbolView')[0].props.size, 18);
+  const value = nodes(row, n => n.props?.children === '10:30')[0];
+  assert.equal(value.props.style[0].maxWidth, 140);
+  const clear = nodes(tree, n => n.type === 'IconButton')[0];
+  assert.deepEqual(clear.props.modifiers.find(m => m.name === 'size').args, [48, 48]);
+});

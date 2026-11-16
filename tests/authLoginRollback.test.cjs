@@ -807,3 +807,35 @@ test('failed newer login storage rollback restores prior session without waiting
     await rejected; assert.equal(api.currentSession(), previous); assert.equal(api.isSessionWitnessCurrent(witness), true);
   } finally { global.fetch = original; }
 });
+
+// V2 endpoint activation (mobile_api_server.dart:_activateLoggedInEndpointUnlocked)
+// forces AppSession's runtime reset even for the same role/ref on the new server.
+// Native login(baseUrl, ...) also owns endpoint activation, so exercise that public path.
+for (const role of ['admin', 'aparatchi', 'tayyorlov_masteri']) test(`${role}: endpoint login clears old hidden state for the same role/ref and same-server login retains it`, async t => {
+  const original = global.fetch; t.after(() => { global.fetch = original; });
+  const capabilities = role === 'admin' ? ['admin.access', 'admin.activity.read']
+    : role === 'aparatchi' ? ['apparatus.queue.read'] : ['preparation.access'];
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'token', profile: { role, ref: 'same-ref' }, capabilities }) });
+  const api = auth({}), data = new Map();
+  const storage = { getItem: async key => data.get(key) ?? null, setItem: async (key, value) => { data.set(key, value); }, removeItem: async key => { data.delete(key); } };
+  function loadState(file, mocks = {}) {
+    const filename = path.resolve(__dirname, '../src', file + '.ts'), mod = new Module(filename, module);
+    mod.filename = filename; mod.paths = module.paths;
+    mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+    mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+    return mod.exports;
+  }
+  const search = loadState('shared/searchActivityStore');
+  const { NotificationHiddenStore } = loadState('shared/notificationStores', { './searchActivityStore': search });
+  const hidden = new NotificationHiddenStore(storage, api.currentSession); let resets = 0;
+  const unregister = api.registerSessionResetHook(async () => { resets++; await hidden.clearAll(); });
+  t.after(unregister);
+  const first = await api.login('https://example.test', 'same', 'code');
+  await hidden.hideAll(first, ['server-one']);
+  const sameServer = await api.login('https://example.test', 'same', 'code');
+  assert.equal(resets, 0); assert.deepEqual([...hidden.hiddenIdsForProfile(sameServer)], ['server-one']);
+  const otherServer = await api.login('https://other.example', 'same', 'code');
+  assert.equal(resets, 1); assert.equal(otherServer.baseUrl, 'https://other.example');
+  assert.deepEqual([...hidden.hiddenIdsForProfile(otherServer)], []);
+  assert.equal(data.has('notification_hidden_v1'), false);
+});

@@ -283,7 +283,9 @@ async function resetForChangedProfile(previous: Session | null, next: Session): 
   if (!previous) return;
   const { sessionAccessRole } = await import('./shared/searchActivityStore');
   const key = (value: Session) => `${sessionAccessRole(value) ?? 'custom'}:${String(value.profile.ref ?? '')}`;
-  if (key(previous) === key(next)) return;
+  // Native login also selects its endpoint. V2's endpoint activation forces a
+  // runtime reset even when the new server returns the same access-role/ref.
+  if (previous.baseUrl === next.baseUrl && key(previous) === key(next)) return;
   const results = await Promise.allSettled([...sessionResetHooks].map(hook => Promise.resolve().then(hook)));
   const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
   if (failure) throw failure.reason;

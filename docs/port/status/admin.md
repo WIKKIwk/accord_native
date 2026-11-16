@@ -627,3 +627,18 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 |---|---|---|---|---|
 | Home action/shortcut cards, `admin_home_screen.dart:170,417`; `admin_summary_card.dart:73`; `m3_segmented_list.dart:22` | `AdminHomeScreen.android.tsx` | existing native content | source geometry compared, native Compose | Android glyphs, dynamic text, shadow/ink and visual rendering still require a phone. Other Home destinations remain unimplemented. |
 | Home initial-error retry, `app_retry_state.dart:24` | `AdminHomeScreen.android.tsx` | existing native button | native TextButton/source dimensions | Physical touch, large text and RTL remain device checks. |
+
+
+## 2026-11-16 Activity storage, transport and native controls
+
+- Added an original-shell-witness Activity binding using the existing hidden store. Its storage reads stage parsing before publication; reset generations reject late reads and queued stale writes. Writes/removes are ordered, so reset drains an already dispatched write before deleting old state. Shared hidden/unread preference names and role/ref keys are preserved. Legacy consumers retain their API; guarded methods are additive.
+- Native login now resets runtime state when the server changes even if role/ref is identical. This matches V2 `core/api/server/mobile_api_server.dart:_activateLoggedInEndpointUnlocked` (259–301, forced reset) and `confirmServerEndpointWithoutLogin` (204–211, logout before selection). Three real native-login/store regression cases (Admin, Aparatchi, Preparation) failed before the narrow `resetForChangedProfile` base-URL comparison and pass afterward. Same-server login keeps its existing behavior. This is the only required shared auth edit in this checkpoint; Worker/Preparation views and commands are untouched.
+- Activity reads use the original strict synchronous, permanently retired witness through redirect hops, joined refresh and body/model settlement. Existing direct API callers retain the legacy transport. Unassisted 401 recovery remains the same documented source difference as Home.
+- Android Activity reuses the existing list/card with source 4-point edges, 2-point gaps, 18/6 corners, 16/16/12/16 padding, 36/18 status badge/icon and title/subtitle line heights. Clear is a real native Compose 48-point IconButton; retry is a native TextButton. Native iOS content remains in place. Retained back/clear callbacks reject session retirement and same-account route unmount; synchronous clear invalidation cannot show an old confirmation.
+- Validation: 112 focused Activity/auth/notification checks passed; both platform typechecks, scoped ESLint and diff-check passed. No real storage failure, server mutation, phone or emulator was used. Tests use the real auth/store paths with controlled storage and native event mocks.
+- The reviewed binding is prepared for the held Admin shell. Actual root entry remains closed pending the remaining Admin parity work. Native keyboard, typography, confirmation/dismissal, large text and RTL still need phones.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Activity clear confirmation and back, `admin_activity_screen.dart:45,90` | `AdminActivityRouteCore.tsx` | source flow compared | source flow compared | Real platform confirmation timing and back gestures remain device checks. |
+| Activity card and status, `admin_activity_screen.dart:204,244`; `admin_summary_card.dart:73` | `AdminActivityScreen.android.tsx` | existing native content | source card dimensions compared/native actions | Rendered typography, native touch and dock/insets require device checks. |
