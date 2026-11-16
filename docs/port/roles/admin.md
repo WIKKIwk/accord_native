@@ -202,3 +202,6 @@ The committed common body frame and seven Android custom headers now apply nativ
 
 
 Original-owner catalog adapters now cover source item pages/UOMs/create/bulk move with exact request fields/status/error mapping and guarded body/model decoding. Existing shared catalog/Item Groups/GScale defaults remain unchanged. Full Item Create/list/cache/picker/native/customer-return composition and existing shared parser/refresh differences remain Open; no catalog route is enabled.
+
+
+The genuine five-action root CreateHub overlay/primary native FAB now preserves source callback/close timing, menu/Profile visibility, three-channel motion lifetime, measured native pills, effects-driven semantics and dynamic dock/FAB host height. Source capability-visible unavailable destinations hold readiness instead of disappearing. Actual root/native-stack/destination composition, foreground tint interpolation, physical rendering and the separate six-row pushed hub remain Open; global Admin admission stays held.
