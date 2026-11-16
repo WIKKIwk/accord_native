@@ -163,3 +163,6 @@ Genuine AdminProfileAvatar/preview is implemented on both platforms with account
 
 
 Native AdminProfileAction now provides source38 header content, actual profile tap and real account-switch hold, with original account/read authority distinct from focus. It uses the shared8s ProfileAvatarCache and additive upload/reset revision subscription. Its genuine composition, physical native hold/release and shared sheet retirement/pop review remain held. Shared edits are limited to observer-only cache subscription/runtime export; other role defaults are retained.
+
+
+WorkerProfileDetail now has real guarded concurrent profile/catalog reads and both native six-card activity views. Raw entry ID is preserved; non-eager Future.wait settlement, full loading/error/retry/pull-refresh, canonical display and exact output/action text are retained. Its genuine navigation/profile/dock composition and platform body reserve/physical QA remain open.
