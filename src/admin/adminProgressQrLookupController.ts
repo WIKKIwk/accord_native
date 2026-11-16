@@ -3,6 +3,7 @@ import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import type { AdminProgressQrMaterialReport, AdminProgressQrOpeningWipReport, AdminProgressQrPaddonReport } from './adminProgressQrFallbackModel';
 import { adminProgressQrNeedsWorkerQueue } from './adminProgressQrFallbackModel';
 import { adminProgressQrFallbackFailed, adminProgressQrFallbackState } from './adminProgressQrFallbackPolicy';
+import { adminProgressQrFirstBarcodeValue, adminProgressQrPayload, type AdminProgressQrBarcode } from './adminProgressQrInput';
 import { adminProgressQrLookupFailureKind, adminProgressQrLookupInitial, adminProgressQrLookupVisibleReport, type AdminProgressQrLookupState } from './adminProgressQrLookupModel';
 import type { AdminProgressQrReport } from './adminProgressQrReportModel';
 import type { AdminUserPrincipalRole } from './adminUsersModel';
@@ -22,7 +23,7 @@ export type AdminProgressQrLookupDependencies = Readonly<{
   replaceWorkerQueue: (normalizedPayload: string, guard: Guard) => void;
 }>;
 export type AdminProgressQrManualTicket = Readonly<{ generation: number }>;
-/** Source-normalized input owner. Native camera/coordinator, Dart URI extraction and actual modal/navigation completion remain genuine required adapters. */
+/** Original input/lookup owner. Native camera/coordinator and actual modal/navigation completion remain genuine required adapters. */
 export class AdminProgressQrLookupController {
   private state = adminProgressQrLookupInitial(); private active = false; private retired = false; private checking = false; private generation = 0;
   private interactionFrame: { reentered: boolean } | null = null;
@@ -64,8 +65,17 @@ export class AdminProgressQrLookupController {
   }
   /** Only a genuinely mounted scanner's parsed detection enters here; this does not parse URL/raw barcodes. */
   async detectNormalized(value: string, generation = this.generation): Promise<void> {
-    if (!this.canInteract(generation) || this.state.processing || adminProgressQrLookupVisibleReport(this.state) !== null) return;
+    if (!this.canDetect(generation)) return;
     return this.handleNormalized(value, generation);
+  }
+  private canDetect(generation: number): boolean { return this.canInteract(generation) && !this.state.processing && adminProgressQrLookupVisibleReport(this.state) === null; }
+  /** @v2 _handleDetect
+   * Original native capture admission precedes both ordered barcode access and actual Source URI parsing. Parse errors stay outside lookup recovery. */
+  async detectBarcodes(barcodes: readonly AdminProgressQrBarcode[], generation = this.generation): Promise<void> {
+    if (!this.canDetect(generation)) return;
+    const raw = adminProgressQrFirstBarcodeValue(barcodes);
+    if (!this.canDetect(generation)) return;
+    return this.handleNormalized(adminProgressQrPayload(raw), generation);
   }
   /** Source live-scanner manual button is disabled while processing; unsupported-scanner button has no such condition. */
   issueManual(generation = this.generation): AdminProgressQrManualTicket | null {
@@ -74,9 +84,18 @@ export class AdminProgressQrLookupController {
   }
   /** Call only after the genuine dialog's native removal acknowledges its selected, Source-normalized result. Expected modal blur is not read retirement. */
   async completeManual(ticket: AdminProgressQrManualTicket, normalizedValue: string | null): Promise<void> {
+    return this.completeManualInput(ticket, normalizedValue, false);
+  }
+  /** Genuine native removal must acknowledge this original ticket BEFORE raw manual extraction is requested. No synthetic close completion is inferred. */
+  async completeManualRaw(ticket: AdminProgressQrManualTicket, rawValue: string | null): Promise<void> {
+    return this.completeManualInput(ticket, rawValue, true);
+  }
+  private async completeManualInput(ticket: AdminProgressQrManualTicket, value: string | null, raw: boolean): Promise<void> {
     const generation = this.manual.get(ticket); this.manual.delete(ticket);
-    if (generation === undefined || !this.isCurrent(generation) || normalizedValue === null) return;
-    return this.handleNormalized(normalizedValue, generation);
+    if (generation === undefined || !this.isCurrent(generation) || value === null) return;
+    // Consume before parsing too: a thrown Format/Range error cannot turn the
+    // original already-closed dialog into a second accepted decision.
+    return this.handleNormalized(raw ? adminProgressQrPayload(value) : value, generation);
   }
   private async stopScanner(guard: Guard): Promise<void> {
     if (this.deps.scanner === null) return; guard(); await this.deps.scanner.stop(guard); guard();

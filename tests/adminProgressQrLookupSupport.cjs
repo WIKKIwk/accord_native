@@ -2,8 +2,11 @@ const s = require('./adminProgressQrMaterialSupport.cjs');
 const transport = s.load('authorizedFetch', { './auth': { activeSessionToken: session => session.token, joinRefreshForGuardedRead: async () => false, refreshSession: async () => false } });
 const model = s.load('admin/adminProgressQrLookupModel', { '../authorizedFetch': transport, '../shared/mobileApiException': s.exception,
   './adminProgressQrFallbackPolicy': s.policy, './dartJsonString': s.strings });
+const inputScanner = s.load('admin/adminProgressQrInputScanner');
+const inputUri = s.load('admin/adminProgressQrInputUri', { './dartJsonString': s.strings, './adminProgressQrInputScanner': inputScanner });
+const input = s.load('admin/adminProgressQrInput', { './dartJsonString': s.strings, './adminProgressQrInputUri': inputUri });
 const controllerModule = s.load('admin/adminProgressQrLookupController', { '../shared/camera/synchronousGuard': s.strict, './adminProgressQrFallbackModel': s.model,
-  './adminProgressQrFallbackPolicy': s.policy, './adminProgressQrLookupModel': model, './dartJsonString': s.strings });
+  './adminProgressQrFallbackPolicy': s.policy, './adminProgressQrInput': input, './adminProgressQrLookupModel': model, './dartJsonString': s.strings });
 const report = id => s.report.adminProgressQrReportFromJson({ scanned_batch: s.batch(id) });
 const paddon = id => s.paddon.paddonSnapshotFromJson({ paddon: { code: id }, items: [], available_items: [] });
 const opening = id => s.opening.openingWipRecordFromJson({ ...s.record(), intake: { intake_id: id }, batches: [{ batch_id: id }] });
