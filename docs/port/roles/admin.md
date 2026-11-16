@@ -160,3 +160,6 @@ Supplier Items Add/View now have guarded original-ref reads and native tables/co
 
 
 Genuine AdminProfileAvatar/preview is implemented on both platforms with account-scoped public image reads and original-preview authority independent from parent focus. Integration must pass session/witness, mounted/account isCurrent and separate focus canInteract. Preview retains its original URL/title across parent prop changes. Hero arc/release inertia and physical QA remain open; encoded-cache/URL/codec differences are recorded rather than suppressed. App composition remains held.
+
+
+Native AdminProfileAction now provides source38 header content, actual profile tap and real account-switch hold, with original account/read authority distinct from focus. It uses the shared8s ProfileAvatarCache and additive upload/reset revision subscription. Its genuine composition, physical native hold/release and shared sheet retirement/pop review remain held. Shared edits are limited to observer-only cache subscription/runtime export; other role defaults are retained.

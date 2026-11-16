@@ -18,7 +18,11 @@ function encode(bytes: Uint8Array): string {
 export class ProfileAvatarCache {
   private readonly values = new Map<string, Cached>();
   private readonly inflight = new Map<string, Promise<string | null>>();
+  private readonly listeners = new Set<() => void>();
   private generation = 0;
+  /** Observation only: existing callers keep their cache/read behaviour. */
+  subscribe = (listener: () => void): (() => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  private changed(): void { for (const listener of [...this.listeners]) { try { listener(); } catch { /* Observers never change a cache operation. */ } } }
   private key(account: Account): string {
     return JSON.stringify([account.baseUrl, account.profile.role, account.profile.ref]);
   }
@@ -32,6 +36,7 @@ export class ProfileAvatarCache {
     const safeMime = /^image\/[a-z0-9.+-]+$/i.test(mime) ? mime : 'image/jpeg';
     const uri = `data:${safeMime};base64,${encode(bytes)}`;
     this.values.set(this.key(account), { url: this.url(account), uri });
+    this.changed();
     return uri;
   }
   async refresh(account: Account, download: () => Promise<{ bytes: Uint8Array; mime?: string } | null>, isCurrent?: ProfileSessionGuard): Promise<string | null> {
@@ -55,5 +60,5 @@ export class ProfileAvatarCache {
     try { return await request; }
     finally { if (this.inflight.get(key) === request) this.inflight.delete(key); }
   }
-  clear(): void { this.generation++; this.values.clear(); this.inflight.clear(); }
+  clear(): void { const hadValues = this.values.size > 0; this.generation++; this.values.clear(); this.inflight.clear(); if (hadValues) this.changed(); }
 }

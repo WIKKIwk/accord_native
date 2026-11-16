@@ -974,3 +974,12 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | AdminProfileAvatar/Preview and ImageFade | `AdminProfileAvatar.*`, image/preview, guarded API/cache/controller/session/hook | native controls and image | native Compose thumbnail/close and image | Hero/inertial motion, cache/URL/codec deltas and physical QA remain; actual route composition held. |
+
+
+## 2026-11-16 Header profile/account-switch action (held integration)
+
+- Added real Admin-only native AppShellProfileAction: source38 avatar/person fallback (22 icon), tap uses the supplied actual profile destination; hold invokes the existing real account chooser/haptic/navigation provider. The chooser suppresses the release tap. iOS uses a native44 target with38 content. No placeholder route or account list was added.
+- Original session epoch/read scope/witness/account authority survives parent blur; a separate strict interaction predicate gates tap/hold. Raw role/ref/avatar key changes retain previous bytes while the new request settles; stale key/generation/image callbacks cannot overwrite the current image. Every source didUpdate comparison and cache revision re-runs ensureCached. The correct shared ProfileAvatarCache8s path is used here, distinct from Admin detail's raw NetworkImage path.
+- Added only a cache subscription method and runtime export to the shared profile avatar cache, so real profile uploads/reset can update the Admin header. Existing cache reads/download/defaults and other-role views are unchanged; observers are isolated from cache results. Root regression covers existing cache/runtime, chooser and upload behavior.
+- Validation:44/44 focused tests including15 new controller/session/actual-hook/native checks pass. Both full platform TypeScript and scoped lint pass. No real image/account switch/backend, device/simulator or native app build was used.
+- OPEN: composition into held screens/routes, physical500ms native gesture/release arbitration, Android long-press semantic hint (SDK modifier exposes no hint), decode/cacheWidth96/filterQuality/gapless equivalence, shared legacy automatic redirect and cache-key differences, and shared sheet retirement/pop ownership review before app exposure. Existing account switcher is reused with no protected-role edit; this is not a claim that global Admin admission is ready.

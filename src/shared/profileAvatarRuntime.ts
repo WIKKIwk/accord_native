@@ -4,6 +4,7 @@ import { ProfileAvatarCache } from './profileAvatarCache';
 import { isProfileSessionCurrent, type ProfileSessionGuard } from './profileSessionGuard';
 
 const cache = new ProfileAvatarCache();
+export const subscribeProfileAvatarCache = cache.subscribe;
 registerSessionResetHook(async () => { cache.clear(); });
 
 const account = (session: Session, profile: Record<string, unknown>) => ({ baseUrl: session.baseUrl, profile });
