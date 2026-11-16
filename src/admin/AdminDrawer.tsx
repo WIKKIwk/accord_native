@@ -1,5 +1,5 @@
-import { router, usePathname, type Href } from 'expo-router';
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { router, useNavigationContainerRef, usePathname, type Href } from 'expo-router';
+import { useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { appRoutes, homeRoute } from '../shared/appRoutes';
 import { localizedGetter } from '../shared/localization';
@@ -8,6 +8,7 @@ import { RoleDrawer } from '../shared/navigation/RoleDrawer';
 import { useRoleDrawerState } from '../shared/navigation/roleDrawerContext';
 import { confirmRoleDrawerLogout } from '../shared/navigation/roleDrawerLogout';
 import { adminDrawerDestinations } from './adminDrawerModel';
+import { AdminDrawerNavigation } from './adminDrawerNavigation';
 import { adminHomeSymbol } from './adminHomeSymbols';
 import { useAdminShell } from './AdminShellContext';
 
@@ -17,14 +18,15 @@ const currentLocale = () => localeController.locale;
 export function AdminDrawer({ children }: { children: ReactNode }) {
   const { session, onLogout, isCurrent, destination } = useAdminShell(), state = useRoleDrawerState(), pathname = usePathname();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), home = homeRoute(session);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    const scheduled = timers.current;
-    return () => { mounted.current = false; for (const timer of scheduled) clearTimeout(timer); };
-  }, []);
-  const items = adminDrawerDestinations(session, locale).filter(item => item.routeName === home || !!destination(item.routeName, Platform.OS))
+  const navigation = useNavigationContainerRef();
+  const owner = useMemo(() => new AdminDrawerNavigation({ platform: Platform.OS, home, isCurrent,
+    destination: route => destination(route, Platform.OS), rootState: () => navigation.getRootState(),
+    push: path => router.push(path as Href), replace: path => router.replace(path as Href), popTo: path => router.dismissTo(path as Href),
+    confirmLogout: confirmRoleDrawerLogout, logout: onLogout,
+  }), [home, isCurrent, destination, navigation, onLogout]);
+  useEffect(() => { owner.attach(); return () => owner.detach(); }, [owner]);
+  const destinations = adminDrawerDestinations(session, locale).filter(item => item.routeName === home || !!destination(item.routeName, Platform.OS));
+  const items = destinations
     .map(item => ({ id: item.routeName, label: item.label, symbol: item.routeName === home ? { ios: 'house' as const, android: 'home' as const }
       : item.routeName === appRoutes.profile ? { ios: 'person' as const, android: 'person' as const }
         : item.routeName === appRoutes.adminProductionMapOrders || item.routeName === appRoutes.adminFactoryLocations ||
@@ -32,18 +34,8 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
         : item.routeName === appRoutes.adminAdditionalSettings ? adminHomeSymbol('tune_rounded')
         : { ios: 'scalemass' as const, android: 'scale' as const } }));
   const select = (id: string) => {
-    if (!mounted.current || !isCurrent()) return;
-    if (id === 'logout') {
-      timers.current.push(setTimeout(() => { if (mounted.current && isCurrent()) confirmRoleDrawerLogout(() => { if (mounted.current && isCurrent()) onLogout(); }); }, 120));
-      return;
-    }
-    const path = destination(id, Platform.OS);
-    if (!path) return;
-    if (id === home && pathname.replace(/\/+$/, '') === path) return;
-    timers.current.push(setTimeout(() => {
-      if (!mounted.current || !isCurrent() || destination(id, Platform.OS) !== path) return;
-      if (id === home) router.dismissTo(path as Href); else router.push(path as Href);
-    }, 220));
+    if (id === 'logout') { owner.logout(); return; }
+    const entry = destinations.find(item => item.routeName === id); if (entry) owner.select(entry);
   };
   const active = pathname.endsWith('/profile') ? appRoutes.profile : pathname.endsWith('/work-map') ? appRoutes.adminProductionMapOrders
     : pathname.endsWith('/factory-locations') ? appRoutes.adminFactoryLocations : pathname.endsWith('/activity') ? appRoutes.adminActivity

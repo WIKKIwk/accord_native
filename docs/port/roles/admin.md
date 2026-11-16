@@ -118,3 +118,6 @@ Prepared Admin child routes now include Settings, Additional Settings and Produc
 
 
 Warehouse create is an isolated real subflow requiring stable parent reload/close callbacks. It creates first, then assigns the latest selected user; partial assignment failure keeps the form with no rollback or added failure message. Four role pages50 plus assignments determine source candidates. Full Warehouse list/stock/delete/QR route is held. Native Android picker short-content height (currently fixed66% rather than maximum66%) and physical presentation remain open.
+
+
+Drawer navigation now follows source ordinary-row history rules after220ms: pop existing, replace non-Home child when Home exists, otherwise push. Explicit push rows retain push semantics. Logout waits120ms and rechecks the captured owner/stack before confirmation and action. Active-stack observation excludes preloads and inactive native tabs; iOS flat cross-tab history remains an open adaptation.

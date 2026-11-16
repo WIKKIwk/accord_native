@@ -766,3 +766,15 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | Warehouse create/card and assignee picker; `admin_warehouses_screen_widgets_part_01.dart:51,73,144,180,209`; `_roleForUser` helpers part05 | `AdminWarehouseCreateDialog.*`, create controller/session/hook/types, assignee model and assignment API | native SwiftUI body/sheet in centered RN modal | native Compose dialog/fields/actions/sheet | Isolated, not routed. Short-list height, native animation/dismissal and full Warehouse main remain open. |
+
+
+## 2026-11-16 Drawer active-stack navigation
+
+- Connected the existing source `adminDrawerNavigationPlan` to actual navigation rather than always pushing non-Home destinations. Ordinary rows skip current, pop to an existing target, replace a non-Home child when Home is in history, otherwise push; source push:true Profile/other rows preserve their push behavior. Source220ms navigation and120ms logout delay remain.
+- The drawer sits above its child navigator, so a public Expo navigation-container root snapshot is traversed through the focused route/tab only. Active index prefixes exclude preloads/forward entries, parent routes and inactive iOS Home history. A captured stack key, original owner epoch, account and destination are rechecked after delay and confirmation. Detach/reattach retires old timers; a final reentrant current callback cannot detach then dispatch.
+- Validation:35 drawer/model/shell tests pass, including installed Expo58 StackRouter histories for Android and nested iOS Home. Both platform TypeScript checks and focused ESLint pass. No destination/global root/other-role wiring or backend was added.
+- OPEN: the original flat V2 back history across Activity/Home differs from native iOS separate tab stacks. Cross-tab back history is a native routing adaptation pending broader review; no global routing change was made. Physical native drawer closure, delay/back gestures/keyboard/accessibility/RTL still need phones.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Shared drawer delay and `widgets/admin_drawer_navigation.dart:AdminDrawerNavigation.openRoute` | `AdminDrawer.tsx`, `adminDrawerNavigation.ts`, `adminDrawerNavigationState.ts` | actual focused native stack observed | actual focused native stack observed | Source ordinary/push route plans are reducer-tested. Native iOS cross-tab history and physical interactions remain open. |

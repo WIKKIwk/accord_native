@@ -14,6 +14,14 @@ function load(file, mocks = {}) {
   return mod.exports;
 }
 const routes = load('shared/appRoutes.ts'), { appRoutes: r } = routes;
+const drawerNavigation = load('admin/adminDrawerNavigation.ts', {
+  '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard.ts'),
+  './adminDrawerModel': load('admin/adminDrawerModel.ts'), './adminDrawerNavigationState': load('admin/adminDrawerNavigationState.ts'),
+});
+const drawerRoot = name => ({ type: 'stack', key: 'root', index: 0, routes: [{ name: 'ios-admin', state: {
+  type: 'tab', key: 'tabs', index: 0, routes: [{ name: '(home)', state: { type: 'stack', key: 'home', index: name === 'index' ? 0 : 1,
+    routes: name === 'index' ? [{ name: 'index' }] : [{ name: 'index' }, { name }] } }, { name: 'activity' }],
+} }] });
 const access = load('admin/adminShellAccess.ts', { '../shared/appRoutes': routes });
 const session = (role, capabilities, extra = {}) => ({ token: 'token', profile: { role, ref: 'user' }, capabilities, ...extra });
 const admin = session('admin', ['admin.access', 'gscale.print']);
@@ -188,21 +196,20 @@ test('drawer shows only reviewed destinations, delays navigation/logout and rech
   global.clearTimeout = timer => { timer.cancelled = true; };
   try {
     const drawerModel = { adminDrawerDestinations: () => [
-      { routeName: r.adminHome, label: 'Home' }, { routeName: r.gscaleMode, label: 'Scale' }, { routeName: r.adminActivity, label: 'Activity' }] };
+      { routeName: r.adminHome, label: 'Home' }, { routeName: r.gscaleMode, label: 'Scale', push: true }, { routeName: r.adminActivity, label: 'Activity' }] };
     const shell = { session: admin, isCurrent: () => current, destination: route => route === r.gscaleMode ? path : null, onLogout: () => calls.push('logout') };
-    const Drawer = load('admin/AdminDrawer.tsx', { react: { useEffect: fn => { cleanup = fn(); }, useRef: value => ({ current: value }),
-      useSyncExternalStore: (_subscribe, get) => get() }, 'expo-router': { router: { push: value => calls.push(['push', value]) }, usePathname: () => '/ios-admin' },
+    const Drawer = load('admin/AdminDrawer.tsx', { react: { useMemo: fn => fn(), useEffect: fn => { cleanup = fn(); },
+      useSyncExternalStore: (_subscribe, get) => get() }, 'expo-router': { router: { push: value => calls.push(['push', value]) }, usePathname: () => '/ios-admin', useNavigationContainerRef: () => ({ getRootState: () => drawerRoot('index') }) },
       'react-native': { Platform: { OS: 'ios' } }, '../shared/appRoutes': routes,
       '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: callback => { calls.push('prompt'); callback(); } },
-      './adminDrawerModel': drawerModel, './adminHomeSymbols': { adminHomeSymbol: () => ({ ios: 'x', android: 'x' }) }, './AdminShellContext': { useAdminShell: () => shell } }).AdminDrawer;
+      './adminDrawerModel': drawerModel, './adminDrawerNavigation': drawerNavigation, './adminHomeSymbols': { adminHomeSymbol: () => ({ ios: 'x', android: 'x' }) }, './AdminShellContext': { useAdminShell: () => shell } }).AdminDrawer;
     const tree = Drawer({ children: 'child' }); assert.deepEqual(tree.props.items.map(item => item.id), [r.adminHome, r.gscaleMode]);
-    tree.props.onSelect(r.gscaleMode); assert.equal(scheduled.at(-1).delay, 220); current = false; scheduled.at(-1).callback(); assert.deepEqual(calls, []);
-    current = true; tree.props.onSelect(r.gscaleMode); path = null; scheduled.at(-1).callback(); assert.deepEqual(calls, []);
-    tree.props.onSelect('logout'); assert.equal(scheduled.at(-1).delay, 120); current = false; scheduled.at(-1).callback(); assert.deepEqual(calls, []);
-    current = true; tree.props.onSelect('logout'); scheduled.at(-1).callback(); assert.deepEqual(calls, ['prompt', 'logout']);
-    cleanup(); assert.ok(scheduled.every(timer => timer.cancelled));
+    tree.props.onSelect(r.gscaleMode); assert.equal(scheduled.at(-1).delay, 220); path = null; scheduled.at(-1).callback(); assert.deepEqual(calls, []);
+    tree.props.onSelect('logout'); assert.equal(scheduled.at(-1).delay, 120); scheduled.at(-1).callback(); assert.deepEqual(calls, ['prompt', 'logout']);
+    tree.props.onSelect('logout'); current = false; scheduled.at(-1).callback(); assert.deepEqual(calls, ['prompt', 'logout']);
+    cleanup();
   } finally { global.setTimeout = originalSetTimeout; global.clearTimeout = originalClearTimeout; }
 });
 
@@ -277,9 +284,9 @@ test('Admin drawer returns to existing Home, marks Factory locations and retires
     const shell = { session: account, isCurrent: () => current, onLogout() {},
       destination: (route, platform) => current ? access.adminDestinationPath(account, route, platform, enabled) : null };
     const Drawer = load('admin/AdminDrawer.tsx', {
-      react: { useEffect: fn => { cleanup = fn(); }, useRef: value => ({ current: value }), useSyncExternalStore: (_subscribe, get) => get() },
+      react: { useMemo: fn => fn(), useEffect: fn => { cleanup = fn(); }, useSyncExternalStore: (_subscribe, get) => get() },
       'expo-router': { router: { push: value => calls.push(['push', value]), dismissTo: value => calls.push(['dismissTo', value]) },
-        usePathname: () => '/ios-admin/factory-locations' }, 'react-native': { Platform: { OS: 'ios' } }, '../shared/appRoutes': routes,
+        usePathname: () => '/ios-admin/factory-locations', useNavigationContainerRef: () => ({ getRootState: () => drawerRoot('factory-locations') }) }, 'react-native': { Platform: { OS: 'ios' } }, '../shared/appRoutes': routes,
       '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout() {} }, './adminHomeSymbols': load('admin/adminHomeSymbols.ts'),
@@ -287,7 +294,7 @@ test('Admin drawer returns to existing Home, marks Factory locations and retires
         { routeName: r.adminHome, label: 'Home', materialIcon: 'home_outlined' },
         { routeName: r.adminFactoryLocations, label: 'Factory', materialIcon: 'add_location_alt_outlined' },
         { routeName: r.adminSettings, label: 'Held', materialIcon: 'settings_outlined' },
-      ] }, './AdminShellContext': { useAdminShell: () => shell },
+      ] }, './adminDrawerNavigation': drawerNavigation, './AdminShellContext': { useAdminShell: () => shell },
     }).AdminDrawer;
     const tree = Drawer({ children: 'child' });
     assert.equal(tree.props.active, r.adminFactoryLocations);
@@ -295,9 +302,9 @@ test('Admin drawer returns to existing Home, marks Factory locations and retires
     assert.deepEqual(tree.props.items[1].symbol, { ios: 'mappin.and.ellipse', android: 'add_location_alt' });
     tree.props.onSelect(r.adminHome); assert.equal(scheduled.at(-1).delay, 220); scheduled.at(-1).callback();
     assert.deepEqual(calls, [['dismissTo', '/ios-admin']]);
-    tree.props.onSelect(r.adminHome); current = false; scheduled.at(-1).callback(); assert.equal(calls.length, 1);
-    current = true; tree.props.onSelect(r.adminFactoryLocations); const old = scheduled.at(-1); cleanup(); old.callback();
-    assert.equal(calls.length, 1); assert.ok(scheduled.every(timer => timer.cancelled));
+    const countSelected = scheduled.length; tree.props.onSelect(r.adminFactoryLocations); assert.equal(scheduled.length, countSelected);
+    tree.props.onSelect(r.adminHome); const old = scheduled.at(-1); cleanup(); old.callback();
+    assert.equal(calls.length, 1); assert.equal(old.cancelled, true);
     const count = scheduled.length; tree.props.onSelect(r.adminHome); assert.equal(scheduled.length, count);
   } finally { global.setTimeout = originalSetTimeout; global.clearTimeout = originalClearTimeout; }
 });
@@ -307,13 +314,13 @@ test('Admin drawer opens the real Profile route after its delay only while the w
   global.setTimeout = (fn, ms) => { timer = { fn, ms }; return timer; }; global.clearTimeout = () => {};
   try {
     const shell = { session: admin, isCurrent: () => current, destination: route => current && route === r.profile ? '/ios-admin/profile' : null, onLogout() {} };
-    const Drawer = load('admin/AdminDrawer.tsx', { react: { useEffect() {}, useRef: value => ({ current: value }),
-      useSyncExternalStore: (_subscribe, get) => get() }, 'expo-router': { router: { push: path => calls.push(path) }, usePathname: () => '/ios-admin' },
+    const Drawer = load('admin/AdminDrawer.tsx', { react: { useMemo: fn => fn(), useEffect: fn => fn(),
+      useSyncExternalStore: (_subscribe, get) => get() }, 'expo-router': { router: { push: path => calls.push(path) }, usePathname: () => '/ios-admin', useNavigationContainerRef: () => ({ getRootState: () => drawerRoot('index') }) },
       'react-native': { Platform: { OS: 'ios' } }, '../shared/appRoutes': routes,
       '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
       '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
       '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout() {} },
-      './adminDrawerModel': { adminDrawerDestinations: () => [{ routeName: r.adminHome, label: 'Home' }, { routeName: r.profile, label: 'Profile' }] },
+      './adminDrawerModel': { adminDrawerDestinations: () => [{ routeName: r.adminHome, label: 'Home' }, { routeName: r.profile, label: 'Profile', push: true }] }, './adminDrawerNavigation': drawerNavigation,
       './adminHomeSymbols': { adminHomeSymbol: () => ({ ios: 'x', android: 'x' }) },
       './AdminShellContext': { useAdminShell: () => shell } }).AdminDrawer;
     const tree = Drawer({ children: 'child' }); assert.deepEqual(tree.props.items.map(item => item.id), [r.adminHome, r.profile]);
