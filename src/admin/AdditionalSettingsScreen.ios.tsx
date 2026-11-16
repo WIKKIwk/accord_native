@@ -1,9 +1,8 @@
 import { Alert, Button, Host, List, ProgressView, Section, Text, Toggle } from '@expo/ui/swift-ui';
-import { accessibilityIdentifier, disabled, listStyle } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityIdentifier, disabled, labelStyle, listStyle } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { PlatformColor, Pressable, StyleSheet, Text as NativeText, useWindowDimensions, View } from 'react-native';
+import { PlatformColor, StyleSheet, Text as NativeText, useWindowDimensions, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { localeController } from '../shared/localization/runtime';
@@ -15,8 +14,9 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const currentLocale = () => localeController.locale;
 
 // The shared shell supplies the existing role drawer and appropriate dock; this screen does not invent navigation.
-export function AdditionalSettingsScreen({ session, navigation, footer }: AdditionalSettingsScreenProps) {
-  const { state, controller } = useAdditionalSettings(session), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+// @v2 AdminAdditionalSettingsScreen
+export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer }: AdditionalSettingsScreenProps) {
+  const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), { width, height } = useWindowDimensions();
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (dismissTimer.current) clearTimeout(dismissTimer.current); }, []);
@@ -25,12 +25,12 @@ export function AdditionalSettingsScreen({ session, navigation, footer }: Additi
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
     // Some native alert implementations notify dismissal before the pressed button callback.
     dismissTimer.current = setTimeout(() => {
-      if (controller.getSnapshot().confirmationSerial === serial) controller.resolveFreeMovement(false);
+      if (current() && controller.getSnapshot().confirmationSerial === serial) controller.resolveFreeMovement(false, serial);
     }, 250);
   };
   const confirm = () => {
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
-    controller.resolveFreeMovement(true);
+    if (current()) controller.resolveFreeMovement(true, state.confirmationSerial);
   };
   const retryCard = (id: string) => {
     if (id === 'appUpdate' || id === 'lamination' || id === 'qolip') controller.retryCard(id);
@@ -40,10 +40,9 @@ export function AdditionalSettingsScreen({ session, navigation, footer }: Additi
   return <>
     <Stack.Screen options={{ headerShown: true, title: t.title,
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined,
-      headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel={t.retry} testID="additional-settings-refresh"
-        disabled={refreshingDisabled} onPress={() => { void controller.refresh(); }} hitSlop={8} style={styles.headerButton}>
-        <SymbolView name="arrow.clockwise" size={21} tintColor={PlatformColor('label')} />
-      </Pressable> }} />
+      headerRight: () => <Host matchContents><Button label={t.retry} systemImage="arrow.clockwise"
+        modifiers={[labelStyle('iconOnly'), disabled(refreshingDisabled), accessibilityIdentifier('additional-settings-refresh')]}
+        onPress={() => { if (current()) void controller.refresh(); }} /></Host> }} />
     <View style={styles.screen}>
       <BaseHost style={styles.content}>
         <List modifiers={[listStyle('insetGrouped')]}>
@@ -69,7 +68,7 @@ export function AdditionalSettingsScreen({ session, navigation, footer }: Additi
           <Alert.Trigger><Text> </Text></Alert.Trigger>
           <Alert.Message><Text>{t.confirmMessage}</Text></Alert.Message>
           <Alert.Actions>
-            <Button label={t.no} role="cancel" onPress={() => controller.resolveFreeMovement(false)} />
+            <Button label={t.no} role="cancel" onPress={() => { if (current()) controller.resolveFreeMovement(false, state.confirmationSerial); }} />
             <Button label={t.yes} onPress={confirm} />
           </Alert.Actions>
         </Alert>

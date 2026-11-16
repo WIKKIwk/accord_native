@@ -1,5 +1,5 @@
 import type { Session } from '../auth';
-import { authorizedFetch } from '../authorizedFetch';
+import { additionalSettingsRequest, additionalSettingsDecode } from './additionalSettingsRequest';
 import { MobileApiException } from '../shared/mobileApiException';
 
 const path = '/v1/mobile/admin/app-update/settings';
@@ -17,14 +17,14 @@ async function mandatoryUpdatesResponse(response: Response): Promise<boolean> {
   throw new MobileApiException({ code: 'app_update_settings_failed', message: 'Yangilash sozlamasi yuklanmadi', statusCode: response.status });
 }
 /** @v2 mandatoryAppUpdatesEnabled */
-export async function mandatoryAppUpdatesEnabled(session: Session, beforeSend?: () => void): Promise<boolean> {
-  return mandatoryUpdatesResponse(await authorizedFetch(session, path, undefined, beforeSend));
+export async function mandatoryAppUpdatesEnabled(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<boolean> {
+  return additionalSettingsDecode(await additionalSettingsRequest(session, path, undefined, beforeSend, readWitness), mandatoryUpdatesResponse, beforeSend);
 }
 /** @v2 setMandatoryAppUpdatesEnabled */
 export async function setMandatoryAppUpdatesEnabled(session: Session, enabled: boolean, beforeSend?: () => void): Promise<boolean> {
-  const response = await authorizedFetch(session, path, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  const response = await additionalSettingsRequest(session, path, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mandatory_updates_enabled: enabled }) }, beforeSend);
-  const saved = await mandatoryUpdatesResponse(response);
+  const saved = await additionalSettingsDecode(response, mandatoryUpdatesResponse, beforeSend);
   if (saved !== enabled) throw new MobileApiException({ code: 'app_update_settings_failed', message: 'Yangilash sozlamasi saqlanmadi' });
   return saved;
 }

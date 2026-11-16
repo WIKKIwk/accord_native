@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
+import { registerSessionResetHook, subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { AdditionalSettingsController } from './additionalSettingsController';
@@ -8,30 +8,50 @@ import { mandatoryAppUpdatesEnabled, setMandatoryAppUpdatesEnabled } from './app
 import { laminationLabelSettings, paddonManagementSettings, setLaminationLabelSettings, updatePaddonManagementSettings } from './productionSettingsApi';
 import { qolipStartSettings, setQolipAutomaticConfirmationEnabled } from './qolipStartSettingsApi';
 
-export function useAdditionalSettings(session: Session) {
-  const controller = useMemo(() => new AdditionalSettingsController({
-    isCurrent: () => !!activeSessionToken(session), scope: () => sessionReadScope(session),
-    canOpen: () => canOpenRoute(session, appRoutes.adminAdditionalSettings),
-    isOperator: () => session.profile.role === 'rezka_master',
-    readPaddon: () => paddonManagementSettings(session, additionalSettingsSendGuard(session)),
-    writePaddon: change => updatePaddonManagementSettings(session, change, additionalSettingsSendGuard(session)),
-    readAppUpdate: () => mandatoryAppUpdatesEnabled(session, additionalSettingsSendGuard(session)),
-    writeAppUpdate: enabled => setMandatoryAppUpdatesEnabled(session, enabled, additionalSettingsSendGuard(session)),
-    readLamination: () => laminationLabelSettings(session, additionalSettingsSendGuard(session)),
-    writeLamination: change => setLaminationLabelSettings(session, change, additionalSettingsSendGuard(session)),
-    readQolip: () => qolipStartSettings(session, additionalSettingsSendGuard(session)),
-    writeQolip: enabled => setQolipAutomaticConfirmationEnabled(session, enabled, additionalSettingsSendGuard(session)),
-  }), [session]);
+function createAdditionalSettingsOwner(session: Session, witness: SessionWitness, isCurrent: () => boolean) {
+  let attached = true;
+  const original = additionalSettingsSendGuard(session, witness, isCurrent);
+  const guard = (operation?: () => void) => () => {
+    if (!attached || !witness) throw new Error('Settings session changed');
+    original(); operation?.(); original();
+  };
+  const current = () => { try { guard()(); return true; } catch { return false; } };
+  const read = <T,>(operation: (() => void) | undefined, request: (check: () => void, readWitness: () => boolean) => Promise<T>) => {
+    const check = guard(operation), readWitness = () => { try { check(); return true; } catch { return false; } };
+    return request(check, readWitness);
+  };
+  const controller = new AdditionalSettingsController({
+    isCurrent: current, scope: () => sessionReadScope(session),
+    canOpen: () => canOpenRoute(session, appRoutes.adminAdditionalSettings), isOperator: () => session.profile.role === 'rezka_master',
+    readPaddon: op => read(op, (check, readWitness) => paddonManagementSettings(session, check, readWitness)),
+    writePaddon: (change, op) => updatePaddonManagementSettings(session, change, guard(op)),
+    readAppUpdate: op => read(op, (check, readWitness) => mandatoryAppUpdatesEnabled(session, check, readWitness)),
+    writeAppUpdate: (enabled, op) => setMandatoryAppUpdatesEnabled(session, enabled, guard(op)),
+    readLamination: op => read(op, (check, readWitness) => laminationLabelSettings(session, check, readWitness)),
+    writeLamination: (change, op) => setLaminationLabelSettings(session, change, guard(op)),
+    readQolip: op => read(op, (check, readWitness) => qolipStartSettings(session, check, readWitness)),
+    writeQolip: (enabled, op) => setQolipAutomaticConfirmationEnabled(session, enabled, guard(op)),
+  });
+  return { controller, current, attach: () => { attached = true; }, detach: () => { attached = false; controller.dispose(); } };
+}
+
+/** One mounted screen owns its witness and every read, retry, confirmation and write. */
+export function useAdditionalSettings(session: Session, witness: SessionWitness, isCurrent: () => boolean) {
+  const owner = useMemo(() => createAdditionalSettingsOwner(session, witness, isCurrent), [session, witness, isCurrent]);
+  const { controller } = owner;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
+    owner.attach();
+    const check = () => { if (!owner.current()) controller.invalidate(); };
+    const unsubscribe = subscribeSessionWitness(check);
     const unregister = registerSessionResetHook(async () => { controller.invalidate(); });
-    controller.start();
-    return () => { unregister(); controller.dispose(); };
-  }, [controller]);
+    controller.start(); check();
+    return () => { unsubscribe(); unregister(); owner.detach(); };
+  }, [owner, controller]);
   useEffect(() => {
     if (!state.notice) return;
     const serial = state.notice.serial, timer = setTimeout(() => controller.dismissNotice(serial), 4000);
     return () => clearTimeout(timer);
   }, [controller, state.notice]);
-  return { state, controller };
+  return { state, controller, isCurrent: owner.current };
 }

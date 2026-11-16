@@ -1,5 +1,5 @@
 import type { Session } from '../auth';
-import { authorizedFetch } from '../authorizedFetch';
+import { additionalSettingsRequest, additionalSettingsDecode } from './additionalSettingsRequest';
 import { MobileApiException } from '../shared/mobileApiException';
 import { productionMapResponseError } from '../workerControlsApi';
 
@@ -27,14 +27,14 @@ async function settingsResponse(response: Response): Promise<AdminQolipStartSett
   return adminQolipStartSettingsFromJson(row.settings);
 }
 /** @v2 qolipStartSettings */
-export async function qolipStartSettings(session: Session, beforeSend?: () => void): Promise<AdminQolipStartSettings> {
-  return settingsResponse(await authorizedFetch(session, path, undefined, beforeSend));
+export async function qolipStartSettings(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<AdminQolipStartSettings> {
+  return additionalSettingsDecode(await additionalSettingsRequest(session, path, undefined, beforeSend, readWitness), settingsResponse, beforeSend);
 }
 /** @v2 setQolipAutomaticConfirmationEnabled */
 export async function setQolipAutomaticConfirmationEnabled(session: Session, enabled: boolean, beforeSend?: () => void): Promise<AdminQolipStartSettings> {
-  const response = await authorizedFetch(session, path, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  const response = await additionalSettingsRequest(session, path, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ automatic_confirmation_enabled: enabled }) }, beforeSend);
-  const settings = await settingsResponse(response);
+  const settings = await additionalSettingsDecode(response, settingsResponse, beforeSend);
   if (settings.automatic_confirmation_enabled !== enabled) throw invalid();
   return settings;
 }

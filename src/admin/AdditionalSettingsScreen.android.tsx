@@ -1,9 +1,9 @@
-import { AlertDialog, Card, CircularProgressIndicator, Column, LinearProgressIndicator, Row, SnackbarHost, Switch,
+import { BasicAlertDialog, Button, Card, CircularProgressIndicator, Column, IconButton, RNHostView, LinearProgressIndicator, Row, Shape, SnackbarHost, Spacer, Surface, Switch,
   Text, TextButton, useMaterialColors, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, padding, testID, toggleable, verticalScroll, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { defaultMinSize, fillMaxWidth, height as nativeHeight, padding, semantics, size, testID, toggleable, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost as Host } from '../components/BaseHost.android';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
@@ -14,10 +14,13 @@ import { useAdditionalSettings } from './useAdditionalSettings';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
+const rounded = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
+const withAlpha = (rgba: string, alpha: number) => `${rgba.slice(0, 7)}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
 
 // The shared shell supplies the existing role drawer and appropriate dock; this screen does not invent navigation.
-export function AdditionalSettingsScreen({ session, navigation, footer }: AdditionalSettingsScreenProps) {
-  const { state, controller } = useAdditionalSettings(session), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+// @v2 AdminAdditionalSettingsScreen
+export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer }: AdditionalSettingsScreenProps) {
+  const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), colors = useMaterialColors();
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), snackbar = useRef<SnackbarHostRef>(null);
   useEffect(() => {
@@ -30,22 +33,22 @@ export function AdditionalSettingsScreen({ session, navigation, footer }: Additi
   return <View style={[styles.screen, { backgroundColor: colors.surface }]}>
     <View style={[styles.header, { paddingTop: insets.top }]}>
       <View style={styles.headerTitle}><RoleHeader title={t.title} navigation={navigation ?? undefined} /></View>
-      <Pressable accessibilityRole="button" accessibilityLabel={t.retry} testID="additional-settings-refresh" disabled={refreshingDisabled}
-        onPress={() => { void controller.refresh(); }} hitSlop={8} style={styles.headerButton}>
-        <SymbolView name={{ android: 'refresh', ios: 'arrow.clockwise' }} size={22} tintColor={colors.onSurface} />
-      </Pressable>
+      <Host matchContents><IconButton enabled={!refreshingDisabled} modifiers={[size(48, 48), semantics({ contentDescription: t.retry }), testID('additional-settings-refresh')]}
+        onClick={() => { if (current()) void controller.refresh(); }}><RNHostView matchContents>
+        <SymbolView name={{ android: 'refresh' }} size={24} tintColor={colors.onSurface} />
+      </RNHostView></IconButton></Host>
     </View>
     <Host style={styles.content}>
-      <Column modifiers={[fillMaxWidth(), verticalScroll(), padding(12, 12, 12, 24)]}>
+      <Column modifiers={[fillMaxWidth(), verticalScroll(), padding(12, 12, 12, 144)]}>
         {state.screen === 'loading' ? <CircularProgressIndicator /> : null}
         {state.screen === 'error' ? <Column modifiers={[fillMaxWidth()]}><Text>{t.loadError}</Text>
           <TextButton onClick={() => { void controller.refresh(); }}><Text>{t.retry}</Text></TextButton></Column> : null}
-        {cards.map(card => <Card key={card.id} modifiers={[fillMaxWidth(), padding(0, 0, 0, 8)]}>
-          <Column modifiers={[fillMaxWidth(), padding(16, 12, 16, 12)]}>
+        {cards.map(card => <Card key={card.id} modifiers={[fillMaxWidth(), padding(4, 4, 4, 4)]}>
+          <Column modifiers={[fillMaxWidth()]}>
             {card.rows.map(row => <Row key={row.action} verticalAlignment="center" modifiers={[fillMaxWidth(),
               toggleable(row.value, () => changeAdditionalSetting(controller, row.action, !row.value), { role: 'switch', enabled: row.enabled }),
-              testID(row.testID), padding(0, 6, 0, 6)]}>
-              <Column modifiers={[weight(1)]}><Text>{row.title}</Text><Text>{row.subtitle}</Text></Column>
+              testID(row.testID), defaultMinSize({ minHeight: 72 }), padding(16, 8, 16, 8)]}>
+              <Column modifiers={[weight(1), padding(0, 0, 16, 0)]}><Text style={{ typography: 'bodyLarge' }}>{row.title}</Text><Text style={{ typography: 'bodyMedium' }} color={colors.onSurfaceVariant}>{row.subtitle}</Text></Column>
               <Switch value={row.value} enabled={row.enabled} />
             </Row>)}
             {card.busy ? <LinearProgressIndicator modifiers={[fillMaxWidth()]} /> : null}
@@ -58,16 +61,33 @@ export function AdditionalSettingsScreen({ session, navigation, footer }: Additi
     {footer ?? <View style={{ height: insets.bottom }} />}
     <View pointerEvents="none" style={[styles.snackbar, { bottom: insets.bottom + 16 }]}><Host matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></Host></View>
     {state.confirmFreeMovement ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, width, height }}>
-      <Host style={{ width, height }}><AlertDialog onDismissRequest={() => controller.resolveFreeMovement(false)}>
-        <AlertDialog.Title><Text>{t.confirmTitle}</Text></AlertDialog.Title>
-        <AlertDialog.Text><Text>{t.confirmMessage}</Text></AlertDialog.Text>
-        <AlertDialog.DismissButton><TextButton onClick={() => controller.resolveFreeMovement(false)}><Text>{t.no}</Text></TextButton></AlertDialog.DismissButton>
-        <AlertDialog.ConfirmButton><TextButton onClick={() => controller.resolveFreeMovement(true)} modifiers={[testID('paddon-free-movement-confirm')]}>
-          <Text>{t.yes}</Text></TextButton></AlertDialog.ConfirmButton>
-      </AlertDialog></Host>
+      <Host style={{ width, height }}><BasicAlertDialog properties={{ usePlatformDefaultWidth: false }}
+        onDismissRequest={() => { if (current()) controller.resolveFreeMovement(false, state.confirmationSerial); }}>
+        <Surface modifiers={[nativeWidth(Math.min(width - 48, 420))]} color={colors.surfaceContainerHigh}
+          contentColor={colors.onSurface} shape={rounded(28)} border={{ width: 1, color: withAlpha(colors.outlineVariant, 0.65) }}>
+          <Column modifiers={[fillMaxWidth(), verticalScroll(), padding(24, 24, 24, 20)]}>
+            <Text style={{ typography: 'headlineSmall' }}>{t.confirmTitle}</Text>
+            <Spacer modifiers={[nativeHeight(10)]} />
+            <Text style={{ typography: 'bodyLarge', lineHeight: 23.2 }} color={colors.onSurfaceVariant}>{t.confirmMessage}</Text>
+            <Spacer modifiers={[nativeHeight(22)]} />
+            <Row modifiers={[fillMaxWidth()]}>
+              <Surface modifiers={[weight(1)]} shape={rounded(20)} color={colors.surfaceContainerLow}
+                border={{ width: 1, color: withAlpha(colors.outlineVariant, 0.95) }}>
+                <Button modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 })]} shape={rounded(20)}
+                  colors={{ containerColor: colors.surfaceContainerLow, contentColor: colors.onSurface }}
+                  onClick={() => { if (current()) controller.resolveFreeMovement(false, state.confirmationSerial); }}><Text style={{ typography: 'labelLarge' }}>{t.no}</Text></Button>
+              </Surface>
+              <Spacer modifiers={[nativeWidth(12)]} />
+              <Button modifiers={[weight(1), defaultMinSize({ minHeight: 56 }), testID('paddon-free-movement-confirm')]}
+                shape={rounded(20)} colors={{ containerColor: colors.primaryContainer, contentColor: colors.onPrimaryContainer }}
+                onClick={() => { if (current()) controller.resolveFreeMovement(true, state.confirmationSerial); }}><Text style={{ typography: 'labelLarge' }}>{t.yes}</Text></Button>
+            </Row>
+          </Column>
+        </Surface>
+      </BasicAlertDialog></Host>
     </View> : null}
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { flex: 1 }, headerButton: { width: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1 },
   snackbar: { position: 'absolute', left: 16, right: 16, bottom: 16 } });

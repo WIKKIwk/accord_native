@@ -23,12 +23,12 @@ function load(file, mocks = {}) {
 const l10n = load('shared/localization/index.ts', { './catalog.json': require('../src/shared/localization/catalog.json') });
 const viewModel = load('admin/additionalSettingsViewModel.ts', { '../shared/localization': l10n });
 const alert = Object.assign(function Alert() {}, { Trigger: 'Alert.Trigger', Actions: 'Alert.Actions', Message: 'Alert.Message' });
-const dialog = Object.assign(function AlertDialog() {}, { Title: 'AlertDialog.Title', Text: 'AlertDialog.Text',
-  ConfirmButton: 'AlertDialog.ConfirmButton', DismissButton: 'AlertDialog.DismissButton' });
+const dialog = 'BasicAlertDialog';
 const react = { useEffect() {}, useRef: value => ({ current: value }), useSyncExternalStore: (_subscribe, get) => get() };
 const mods = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) });
 const swift = new Proxy({ Alert: alert }, { get: (target, name) => target[name] ?? String(name) });
-const compose = new Proxy({ AlertDialog: dialog, useMaterialColors: () => ({ surface: 'surface', onSurface: 'text' }) },
+const compose = new Proxy({ BasicAlertDialog: dialog, Shape: { RoundedCorner: props => props },
+  useMaterialColors: () => ({ surface: '#FEFEFEFF', onSurface: '#111111FF', outlineVariant: '#666666FF' }) },
   { get: (target, name) => target[name] ?? String(name) });
 const initialCard = value => ({ value, busy: false, failed: false });
 function state(overrides = {}) {
@@ -51,7 +51,7 @@ function render(platform, initial, navigation) {
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, '../shared/localization': l10n,
-    './additionalSettingsViewModel': viewModel, './useAdditionalSettings': { useAdditionalSettings: () => ({ state: initial, controller }) } };
+    './additionalSettingsViewModel': viewModel, './useAdditionalSettings': { useAdditionalSettings: () => ({ state: initial, controller, isCurrent: () => true }) } };
   const screen = load(`admin/AdditionalSettingsScreen.${platform}.tsx`, mocks).AdditionalSettingsScreen;
   const leading = navigation === null ? null : { icon: navigation ?? 'menu', label: 'Navigation', onPress: () => calls.push('navigation') };
   return { tree: screen({ session: {}, navigation: leading, footer: { type: 'ExistingDock', props: {} } }), calls, controller };
@@ -74,7 +74,7 @@ for (const platform of ['ios', 'android']) {
     const { tree } = render(platform, state({ operator: true }));
     const controls = nodes(tree, n => n.type === (platform === 'ios' ? 'Toggle' : 'Switch'));
     assert.equal(controls.length, 2); assert.equal(nodes(tree, n => n.type === 'ExistingDock').length, 1);
-    assert.equal(nodes(tree, n => n.type === 'Pressable' && n.props.testID === 'additional-settings-refresh').length, platform === 'android' ? 1 : 0);
+    assert.equal(nodes(tree, n => n.type === 'IconButton' && n.props.modifiers?.some(mod => mod.name === 'testID' && mod.args[0] === 'additional-settings-refresh')).length, platform === 'android' ? 1 : 0);
   });
   test(`${platform} delegates drawer or back choice to the existing shell`, () => {
     for (const icon of ['menu', 'back']) {
@@ -122,9 +122,22 @@ for (const platform of ['ios', 'android']) {
       assert.deepEqual(calls, [['confirm', true]]);
     } else {
       const modal = nodes(tree, n => n.type === dialog)[0]; assert.ok(modal);
-      const yes = nodes(modal, n => n.type === 'TextButton' && nodes(n, x => x.type === 'Text' && x.props.children === 'Ha').length)[0];
+      const yes = nodes(modal, n => n.type === 'Button' && nodes(n, x => x.type === 'Text' && x.props.children === 'Ha').length)[0];
       assert.ok(yes); yes.props.onClick(); assert.deepEqual(calls, [['confirm', true]]);
       modal.props.onDismissRequest(); assert.deepEqual(calls[1], ['confirm', false]);
     }
   });
 }
+
+test('android confirmation retains source 56dp native actions and window inset width', () => {
+  const { tree } = render('android', state({ confirmFreeMovement: true, confirmationSerial: 1 }));
+  const modal = nodes(tree, n => n.type === dialog)[0];
+  assert.deepEqual(modal.props.properties, { usePlatformDefaultWidth: false });
+  const surface = nodes(modal, n => n.type === 'Surface')[0];
+  assert.deepEqual(surface.props.modifiers.find(mod => mod.name === 'width').args, [342]);
+  const actions = nodes(modal, n => n.type === 'Button');
+  assert.equal(actions.length, 2);
+  for (const button of actions) {
+    assert.deepEqual(button.props.modifiers.find(mod => mod.name === 'defaultMinSize').args, [{ minHeight: 56 }]);
+  }
+});

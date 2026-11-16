@@ -1,5 +1,5 @@
 import type { Session } from '../auth';
-import { authorizedFetch } from '../authorizedFetch';
+import { additionalSettingsRequest, additionalSettingsDecode } from './additionalSettingsRequest';
 import { MobileApiException } from '../shared/mobileApiException';
 import { productionMapResponseError } from '../workerControlsApi';
 import { laminationLabelSettingsFromJson } from '../workerLaminationRemainders';
@@ -29,8 +29,8 @@ async function paddonResponse(response: Response): Promise<PaddonManagementSetti
   return { free_movement_enabled: settings.free_movement_enabled, worker_visibility_enabled: settings.worker_visibility_enabled === true };
 }
 /** @v2 paddonManagementSettings */
-export async function paddonManagementSettings(session: Session, beforeSend?: () => void): Promise<PaddonManagementSettings> {
-  return paddonResponse(await authorizedFetch(session, paddonPath, undefined, beforeSend));
+export async function paddonManagementSettings(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<PaddonManagementSettings> {
+  return additionalSettingsDecode(await additionalSettingsRequest(session, paddonPath, undefined, beforeSend, readWitness), paddonResponse, beforeSend);
 }
 /** @v2 updatePaddonManagementSettings */
 export async function updatePaddonManagementSettings(session: Session,
@@ -38,9 +38,9 @@ export async function updatePaddonManagementSettings(session: Session,
   const { freeMovementEnabled, workerVisibilityEnabled } = options;
   const body = { ...(freeMovementEnabled != null ? { free_movement_enabled: freeMovementEnabled } : {}),
     ...(workerVisibilityEnabled != null ? { worker_visibility_enabled: workerVisibilityEnabled } : {}) };
-  const response = await authorizedFetch(session, paddonPath, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  const response = await additionalSettingsRequest(session, paddonPath, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body) }, beforeSend);
-  const settings = await paddonResponse(response);
+  const settings = await additionalSettingsDecode(response, paddonResponse, beforeSend);
   if ((freeMovementEnabled != null && settings.free_movement_enabled !== freeMovementEnabled) ||
     (workerVisibilityEnabled != null && settings.worker_visibility_enabled !== workerVisibilityEnabled)) {
     throw new MobileApiException({ code: 'paddon_management_settings', message: 'Paddon sozlamalari tasdiqlanmadi' });
@@ -66,8 +66,8 @@ async function laminationResponse(response: Response): Promise<AdminLaminationLa
   return laminationLabelSettingsFromJson(settings);
 }
 /** @v2 laminationLabelSettings */
-export async function laminationLabelSettings(session: Session, beforeSend?: () => void): Promise<AdminLaminationLabelSettings> {
-  return laminationResponse(await authorizedFetch(session, laminationPath, undefined, beforeSend));
+export async function laminationLabelSettings(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<AdminLaminationLabelSettings> {
+  return additionalSettingsDecode(await additionalSettingsRequest(session, laminationPath, undefined, beforeSend, readWitness), laminationResponse, beforeSend);
 }
 /** @v2 setLaminationLabelSettings */
 export async function setLaminationLabelSettings(session: Session,
@@ -76,9 +76,9 @@ export async function setLaminationLabelSettings(session: Session,
   if (printWipRemainderLabels == null && printFilmRemainderLabels == null) throw new TypeError('A label switch is required');
   const body = { ...(printWipRemainderLabels != null ? { print_wip_remainder_labels: printWipRemainderLabels } : {}),
     ...(printFilmRemainderLabels != null ? { print_film_remainder_labels: printFilmRemainderLabels } : {}) };
-  const response = await authorizedFetch(session, laminationPath, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  const response = await additionalSettingsRequest(session, laminationPath, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body) }, beforeSend);
-  const settings = await laminationResponse(response);
+  const settings = await additionalSettingsDecode(response, laminationResponse, beforeSend);
   if ((printWipRemainderLabels != null && settings.print_wip_remainder_labels !== printWipRemainderLabels) ||
       (printFilmRemainderLabels != null && settings.print_film_remainder_labels !== printFilmRemainderLabels)) {
     throw new MobileApiException({ code: 'lamination_settings', message: 'Laminatsiya sozlamasi tasdiqlanmadi' });

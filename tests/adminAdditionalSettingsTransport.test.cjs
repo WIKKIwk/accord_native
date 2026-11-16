@@ -7,7 +7,7 @@ const ts = require('typescript');
 function load(file, overrides = {}) {
   const filename = path.resolve(__dirname, '../src', file + '.ts');
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = name => Object.hasOwn(overrides, name) ? overrides[name] : name === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(name);
+  mod.require = name => Object.hasOwn(overrides, name) ? overrides[name] : name === './additionalSettingsRequest' ? load('admin/additionalSettingsRequest', { '../authorizedFetch': overrides['../authorizedFetch'] }) : name === 'expo/fetch' ? require('./support/expoFetch.cjs') : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return mod.exports;
 }
@@ -21,7 +21,7 @@ function fixture(refreshAction = () => {}) {
   let active = session;
   const auth = { activeSessionToken: value => value === active ? value.token : null,
     refreshSession: async value => { refreshAction(value, () => { active = { ...value }; }); return true; } };
-  const guard = load('admin/additionalSettingsSendGuard', { '../auth': auth, '../sessionReadScope': scope, '../shared/appRoutes': routes });
+  const guard = load('admin/additionalSettingsSendGuard', { '../auth': auth, '../sessionReadScope': scope, '../shared/appRoutes': routes, '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard') });
   const transport = load('authorizedFetch', { './auth': auth });
   const production = load('admin/productionSettingsApi', { '../authorizedFetch': transport, '../shared/mobileApiException': exception,
     '../workerControlsApi': controls, '../workerLaminationRemainders': lamination });
@@ -82,21 +82,22 @@ test('settings hook applies a session-bound guard to each read and write', async
   let dependencies; const calls = [], guards = [];
   class Controller { constructor(value) { dependencies = value; } subscribe() {} getSnapshot() { return {}; } }
   const record = name => (...args) => { calls.push([name, args]); return Promise.resolve(); };
-  const session = { profile: { role: 'admin' } };
+  const session = { profile: { role: 'admin' } }, witness = { session }, current = () => true;
   const hook = load('admin/useAdditionalSettings', { react: { useMemo: fn => fn(), useEffect() {}, useSyncExternalStore: () => ({}) },
     '../auth': { activeSessionToken: () => 'token', registerSessionResetHook: () => () => {} }, '../sessionReadScope': { sessionReadScope: () => 'scope' },
     '../shared/appRoutes': { appRoutes: { adminAdditionalSettings: '/admin-additional-settings' }, canOpenRoute: () => true },
     './additionalSettingsController': { AdditionalSettingsController: Controller },
-    './additionalSettingsSendGuard': { additionalSettingsSendGuard: value => { assert.equal(value, session); const guard = () => {}; guards.push(guard); return guard; } },
+    './additionalSettingsSendGuard': { additionalSettingsSendGuard: (value, captured, check) => { assert.equal(value, session); assert.equal(captured, witness); assert.equal(check, current); const guard = () => {}; guards.push(guard); return guard; } },
     './appUpdateSettingsApi': { mandatoryAppUpdatesEnabled: record('readApp'), setMandatoryAppUpdatesEnabled: record('writeApp') },
     './productionSettingsApi': { paddonManagementSettings: record('readPaddon'), updatePaddonManagementSettings: record('writePaddon'),
       laminationLabelSettings: record('readLamination'), setLaminationLabelSettings: record('writeLamination') },
     './qolipStartSettingsApi': { qolipStartSettings: record('readQolip'), setQolipAutomaticConfirmationEnabled: record('writeQolip') } });
-  hook.useAdditionalSettings(session);
+  hook.useAdditionalSettings(session, witness, current);
   await dependencies.readPaddon(); await dependencies.writePaddon({ freeMovementEnabled: true });
   await dependencies.readAppUpdate(); await dependencies.writeAppUpdate(true);
   await dependencies.readLamination(); await dependencies.writeLamination({ printWipRemainderLabels: true });
   await dependencies.readQolip(); await dependencies.writeQolip(true);
-  assert.equal(calls.length, 8); assert.equal(guards.length, 8);
-  calls.forEach(([, args], index) => { assert.equal(args[0], session); assert.equal(args.at(-1), guards[index]); });
+  assert.equal(calls.length, 8); assert.equal(guards.length, 1);
+  calls.forEach(([name, args]) => { assert.equal(args[0], session); assert.equal(typeof args.at(-1), 'function');
+    if (name.startsWith('read')) { assert.equal(args.at(-1)(), true); assert.equal(typeof args.at(-2), 'function'); } else args.at(-1)(); });
 });

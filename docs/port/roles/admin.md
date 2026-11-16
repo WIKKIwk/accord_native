@@ -100,3 +100,6 @@ The shared custom create menu preserves action order and disabled actions, remov
 
 
 Main ERP settings use seven plain source fields in order: erp_url, erp_api_key, erp_api_secret, default_target_warehouse, default_uom, werka_phone, werka_name. Save rereads settings, preserves hidden values, trims current input without new validation, sends werka_code empty, fills the acknowledgment and returns the changed flag on explicit back. The source FutureBuilder refill-on-rebuild timing remains an open parity item. Composed navigation only offers reviewed Additional Settings; Push stays held until its implementation exists.
+
+
+Additional Settings now requires its owning session, original SessionWitness, current guard and navigation callback. Each independent card operation retains those values through read/retry/body settlement and command sending. Confirmation callbacks carry a serial so a dismissed prompt cannot authorize a newer one. Reviewed Admin child routing is composed separately from global role admission.

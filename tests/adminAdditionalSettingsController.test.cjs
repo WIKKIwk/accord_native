@@ -30,6 +30,29 @@ function fixture() {
   return { deps, calls, setCurrent: value => { current = value; }, setScope: value => { scope = value; },
     setAllowed: value => { allowed = value; }, setOperator: value => { operator = value; } };
 }
+test('late buttons from an older free-movement confirmation cannot accept or dismiss a newer prompt', async () => {
+  const f = fixture(), controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
+  controller.requestFreeMovement(true); const old = controller.getSnapshot().confirmationSerial;
+  controller.resolveFreeMovement(false, old); controller.requestFreeMovement(true); const current = controller.getSnapshot().confirmationSerial;
+  controller.resolveFreeMovement(true, old); controller.resolveFreeMovement(false, old); await tick();
+  assert.equal(controller.getSnapshot().confirmFreeMovement, true); assert.equal(f.calls.filter(Array.isArray).length, 0);
+  controller.resolveFreeMovement(true, current); await tick(); assert.equal(f.calls.filter(Array.isArray).length, 1);
+});
+test('closing a confirmation cannot synchronously open another prompt or replace its confirmed write', async () => {
+  const f = fixture(), controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
+  controller.requestFreeMovement(true); const serial = controller.getSnapshot().confirmationSerial;
+  let attempted = false;
+  controller.subscribe(() => {
+    if (!attempted && !controller.getSnapshot().confirmFreeMovement) {
+      attempted = true;
+      controller.requestFreeMovement(true); controller.setWorkerVisibility(true);
+    }
+  });
+  controller.resolveFreeMovement(true, serial);
+  assert.equal(controller.getSnapshot().confirmFreeMovement, false);
+  await tick();
+  assert.deepEqual(f.calls.filter(Array.isArray), [['writePaddon', { freeMovementEnabled: true }]]);
+});
 test('admin loads paddon before independent cards and keeps server values', async () => {
   const f = fixture(), controller = new AdditionalSettingsController(f.deps); controller.start(); await tick();
   assert.deepEqual(f.calls, ['readPaddon', 'readApp', 'readLamination', 'readQolip']);

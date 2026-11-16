@@ -688,3 +688,15 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | ERP/Admin fields, retry and save, `admin_settings_screen.dart:56,66,139,157,292` | `AdminSettingsScreen.*`, `adminSettingsController.ts`, `adminSettingsSession.ts`, `useAdminSettings.ts`, `adminSettings.ts` | native Form/fields/actions | native Compose fields/source save dimensions | FutureBuilder refill timing and SmoothAppear remain open; native keyboard/back/layout require phones. Push destination is held until implemented. |
+
+
+## 2026-11-16 Additional Settings original-owner composition
+
+- Existing Paddon-first loading and independently mounted mandatory-update, lamination-label and Qolip cards now share the original shell witness/epoch/scope and a separate operation lifetime. Every read/retry/redirect/joined refresh, mutation attempt and decoded body is checked; stale operations cannot publish or send after StrictMode cleanup/reattach. Direct legacy API signatures remain supported.
+- Enabling free movement retains its independent source confirmation; disabling writes directly. Monotonic confirmation serials and a settling barrier reject old buttons, delayed native dismissal and synchronous close subscribers attempting to replace a confirmed command. Source failure notices and authoritative rereads remain intact.
+- Both native route components accept the original shell authority, navigation and dock. Android confirmation uses source width cap 420, window insets 24, radius 28 and equal 56-high native actions; iOS uses native List/Toggle/Alert. Source operator-only Paddon visibility remains reusable without rewiring another role.
+- Validation: 55 focused Additional Settings/controller/transport/native/API checks passed in the combined 92-test settings run (37 main Settings checks). Both platform typechecks, scoped ESLint and diff check passed. No live backend write or device was used. Scoped reads retain the documented join-only refresh policy; unaided 401 displays the source load error. iOS native alert dismissal timing, Android physical geometry/keyboard/a11y and all light/dark/RTL comparisons remain phone work.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Additional Settings and free-movement confirmation, `admin_additional_settings_screen.dart`; card widgets `admin_app_update_settings_card.dart`, `admin_lamination_settings_card.dart`, `admin_qolip_start_settings_card.dart` | `AdditionalSettingsScreen.*`, `AdditionalSettingsRoute.*`, `useAdditionalSettings.ts`, controller, request/API adapters | native List/Toggle/Alert | native controls/source confirmation dimensions | Exact native alert presentation/dismissal and source message timing need phones. Other roles' shared entry wiring is unchanged. |
