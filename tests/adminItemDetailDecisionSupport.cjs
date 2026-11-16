@@ -3,7 +3,9 @@ const { load, strings, sync } = base;
 const edit = load('admin/adminItemDetailEditModel', { './dartJsonString': strings });
 const group = load('admin/adminItemDetailGroupModel', { './dartJsonString': strings });
 const customers = load('admin/adminItemDetailCustomersController', { '../shared/camera/synchronousGuard': sync, './dartJsonString': strings });
+const menuModel = load('admin/adminItemDetailActionMenuModel');
 const decisions = load('admin/adminItemDetailDecisionController', { '../shared/camera/synchronousGuard': sync,
+  './adminItemDetailActionMenuModel': menuModel,
   './adminItemDetailController': base.controller, './adminItemDetailCustomersController': customers, './adminItemDetailEditModel': edit,
   './adminItemDetailGroupModel': group, './adminItemDetailModel': base.model, './dartJsonString': strings });
 function fixture(overrides = {}, initial = base.detail({ order_image_order_id: 'original image' })) {
@@ -20,4 +22,5 @@ function fixture(overrides = {}, initial = base.detail({ order_image_order_id: '
   return { owner, deps, calls, reads, initial, start: async () => { owner.start(); await base.flush(); }, retire: () => { current = false; }, restore: () => { current = true; },
     dialog: id => owner.getSnapshot().dialogs.find(value => value.id === id), close: async (id, confirm) => { const ticket = owner.prepareClose(id, confirm); if (!ticket) throw Error('no close ticket'); return owner.completeClose(ticket); } };
 }
-module.exports = { ...base, edit, group, customers, decisions, fixture };
+const menus = load('admin/adminItemDetailActionMenuController', { '../shared/camera/synchronousGuard': sync, './adminItemDetailActionMenuModel': menuModel });
+module.exports = { ...base, edit, group, customers, decisions, fixture, menuModel, menus };

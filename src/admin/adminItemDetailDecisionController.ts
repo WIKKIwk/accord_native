@@ -1,6 +1,7 @@
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { AdminItemDetailController } from './adminItemDetailController';
 import { AdminItemDetailCustomersController } from './adminItemDetailCustomersController';
+import { adminItemDetailActions, type AdminItemDetailAction, type AdminItemDetailActionMenuTicket } from './adminItemDetailActionMenuModel';
 import { adminItemDetailEditDraft, adminItemDetailEditUnchanged, type AdminItemDetailEditDraft, type AdminItemDetailEditValidation } from './adminItemDetailEditModel';
 import { adminItemDetailGroupChoices, adminItemDetailSameGroup } from './adminItemDetailGroupModel';
 import { adminItemDetailKind, retainAdminItemDetailImage, type AdminItemDetail, type AdminItemDetailCustomer } from './adminItemDetailModel';
@@ -48,6 +49,7 @@ export class AdminItemDetailDecisionController {
   private closeTickets = new WeakMap<AdminItemDetailCloseTicket, CloseDecision>();
   private closing = new Map<number, AdminItemDetailCloseTicket>();
   private editBuffers = new Map<number, { code: string; name: string }>();
+  private menuTickets = new WeakMap<AdminItemDetailActionMenuTicket, { generation: number; detail: AdminItemDetail }>();
   private readonly listeners = new Set<() => void>();
   constructor(itemCode: string, private readonly deps: AdminItemDetailDecisionDependencies) {
     this.initialCode = dartTrim(itemCode); this.state = initial(this.initialCode);
@@ -100,8 +102,26 @@ export class AdminItemDetailDecisionController {
   private install(detail: AdminItemDetail, rename = false, changed = true): void {
     this.detachRead(); this.publish({ phase: this.state.phase === 'removed' ? 'removed' : 'content', detail, ...(rename ? { itemCode: detail.code } : {}), ...(changed ? { changed: true } : {}) });
   }
+  /** Source header opens against its rendered DTO; its accepted continuation has a separate code/scope contract. */
+  captureActionMenu(detail: AdminItemDetail): AdminItemDetailActionMenuTicket | null {
+    if (!this.isCurrent() || this.state.phase !== 'content' || this.state.detail !== detail || this.settling || this.closing.size) return null;
+    const kind = adminItemDetailKind(detail); if (kind === 'ordinary' || kind === 'finished' && this.busy()) return null;
+    const ticket = Object.freeze({ id: ++this.serial, kind }); this.menuTickets.set(ticket, { generation: this.generation, detail }); return ticket;
+  }
+  discardActionMenu(ticket: AdminItemDetailActionMenuTicket): void { this.menuTickets.delete(ticket); }
+  /** @v2 _showFinishedItemActions after its actual sheet Future completes; no new DTO-reference/branch/phase admission here. */
+  async continueActionMenu(ticket: AdminItemDetailActionMenuTicket, action: AdminItemDetailAction | null): Promise<number | null> {
+    const captured = this.menuTickets.get(ticket); if (!captured) return null; this.menuTickets.delete(ticket);
+    if (ticket.kind === 'combo' || !this.isCurrent(captured.generation) || this.state.itemCode !== captured.detail.code || this.busy() || action === null || !adminItemDetailActions.includes(action)) return null;
+    const result = action === 'rename' ? this.openEdit(captured.detail) : action === 'customers' ? this.openCustomers(captured.detail)
+      : action === 'group' ? await this.openGroup(captured.detail) : this.openDelete(captured.detail);
+    return this.isCurrent(captured.generation) ? result : null;
+  }
   requestEdit(detail: AdminItemDetail): number | null {
-    if (!this.admit(detail)) return null; const id = ++this.serial;
+    if (!this.admit(detail)) return null; return this.openEdit(detail);
+  }
+  private openEdit(detail: AdminItemDetail): number {
+    const id = ++this.serial;
     this.editBuffers.set(id, { code: detail.code, name: detail.name });
     this.publish({ dialogs: Object.freeze([...this.state.dialogs, Object.freeze({ id, kind: 'edit', detail, closing: false, validation: null })]) }); return id;
   }
@@ -112,11 +132,17 @@ export class AdminItemDetailDecisionController {
     if (this.interactive(id)?.kind !== 'edit') return; const buffer = this.editBuffers.get(id); if (buffer) buffer[field] = value;
   }
   requestDelete(detail: AdminItemDetail): number | null {
-    if (!this.admit(detail)) return null; const id = ++this.serial;
+    if (!this.admit(detail)) return null; return this.openDelete(detail);
+  }
+  private openDelete(detail: AdminItemDetail): number {
+    const id = ++this.serial;
     this.publish({ dialogs: Object.freeze([...this.state.dialogs, Object.freeze({ id, kind: 'delete', detail, closing: false })]) }); return id;
   }
   async requestGroup(detail: AdminItemDetail): Promise<number | null> {
-    if (!this.admit(detail)) return null; const generation = this.generation, guard = this.guard(generation); let shown = false; this.publish({ changingGroup: true });
+    if (!this.admit(detail)) return null; return this.openGroup(detail);
+  }
+  private async openGroup(detail: AdminItemDetail): Promise<number | null> {
+    const generation = this.generation, guard = this.guard(generation); let shown = false; this.publish({ changingGroup: true });
     try {
       guard(); const groups = await this.deps.groups(guard, () => { guard(); return true; }); guard();
       const id = ++this.serial, dialog = Object.freeze({ id, kind: 'group' as const, detail, closing: false, groups: adminItemDetailGroupChoices(detail.item_group, groups), query: '', selected: dartTrim(detail.item_group) });
@@ -131,7 +157,10 @@ export class AdminItemDetailDecisionController {
     const dialog = this.interactive(id); if (dialog?.kind === 'group' && dialog.groups.includes(group)) this.patchDialog(id, { selected: group });
   }
   requestCustomers(detail: AdminItemDetail): number | null {
-    if (!this.admit(detail) || adminItemDetailKind(detail) !== 'finished') return null; const generation = this.generation, guard = this.guard(generation), id = ++this.serial;
+    if (!this.admit(detail) || adminItemDetailKind(detail) !== 'finished') return null; return this.openCustomers(detail);
+  }
+  private openCustomers(detail: AdminItemDetail): number {
+    const generation = this.generation, guard = this.guard(generation), id = ++this.serial;
     const owner = new AdminItemDetailCustomersController(detail, {
       isCurrent: () => this.isCurrent(generation) && this.dialog(id)?.kind === 'customers', load: this.deps.customers,
       canInteract: () => this.preparingCustomerClose === id
@@ -212,7 +241,7 @@ export class AdminItemDetailDecisionController {
   }
   dismissNotice(serial: number): void { if (this.isCurrent() && this.state.notice?.serial === serial) this.publish({ notice: null }); }
   private stop(): void {
-    this.detachRead(); this.settling = null; this.preparingCustomerClose = null; this.closeTickets = new WeakMap(); this.closing.clear(); this.editBuffers.clear();
+    this.detachRead(); this.settling = null; this.preparingCustomerClose = null; this.closeTickets = new WeakMap(); this.closing.clear(); this.editBuffers.clear(); this.menuTickets = new WeakMap();
     for (const dialog of this.state.dialogs) if (dialog.kind === 'customers') dialog.owner.dispose();
   }
   invalidate(): void {
