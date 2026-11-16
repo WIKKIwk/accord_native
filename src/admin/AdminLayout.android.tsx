@@ -5,6 +5,7 @@ import { isSessionWitnessCurrent, logout, sessionWitnessVersion, subscribeSessio
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { AdminDrawer } from './AdminDrawer';
 import { AdminTestTokenNotice } from './AdminTestTokenNotice';
+import { AdminTypographyProvider } from './AdminTypography.android';
 import { AdminShellProvider } from './AdminShellContext';
 import { adminShellMayEnter } from './adminShellAccess';
 import { useAdminShellSession } from './useAdminShellSession';
@@ -28,5 +29,5 @@ function AdminSessionGate() {
 /** A witness version change creates a new admission gate; stale operations are never recaptured. */
 export function AdminLayout() {
   const version = useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
-  return <AdminSessionGate key={version} />;
+  return <AdminTypographyProvider><AdminSessionGate key={version} /></AdminTypographyProvider>;
 }

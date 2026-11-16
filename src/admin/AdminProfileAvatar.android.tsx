@@ -1,9 +1,10 @@
-import { Box, FilledTonalIconButton, RNHostView, Shape, Surface, Text } from '@expo/ui/jetpack-compose';
+import { Box, FilledTonalIconButton, RNHostView, Shape, Surface } from '@expo/ui/jetpack-compose';
 import { padding, semantics, size, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import { AdminProfileAvatarImage } from './AdminProfileAvatarImage';
 import { AdminProfileAvatarPreview } from './AdminProfileAvatarPreview';
 import type { AdminProfileAvatarProps } from './AdminProfileAvatarTypes';

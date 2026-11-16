@@ -1,10 +1,11 @@
-import { Button, Checkbox, CircularProgressIndicator, Column, IconButton, LazyColumn, ModalBottomSheet, OutlinedTextField, RNHostView, Row, Spacer, Surface, Text, useNativeState, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
+import { Button, Checkbox, CircularProgressIndicator, Column, IconButton, LazyColumn, ModalBottomSheet, OutlinedTextField, RNHostView, Row, Spacer, Surface, useNativeState, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import type { SupplierItem } from '../shared/catalogApi';
 import { CustomerIcon, CustomerPromptContent, roundedCustomer } from './AdminCustomerDetailNative.android';
 import type { AdminCustomerGroupSheet, AdminCustomerItemSheet } from './adminCustomerDetailPresentation';

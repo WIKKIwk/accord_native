@@ -22,7 +22,7 @@ function setup(platform, mode = 'add', patch = {}) {
     'react-native': { View: 'View', ScrollView: 'RN.ScrollView', Modal: 'Modal', Pressable: 'Pressable', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute' } }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
     'react-native-reanimated': { default: { View: 'Animated.View' }, View: 'Animated.View', Easing: { cubic: 'cubic', inOut: value => value }, LinearTransition: transition },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(s.colors), '../components/useBaseTheme': { useBaseTheme: () => ({ colors: s.colors }) }, './useAdminSupplierItems': { ...hook, useAdminSupplierItems: () => model },
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(s.colors), './AdminTypography.android': { AdminText: 'Text' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: s.colors }) }, './useAdminSupplierItems': { ...hook, useAdminSupplierItems: () => model },
   });
   const props = { profileAction: { type: 'GenuineProfile', props: {} }, footer: { type: 'GenuineDock', props: {} }, backLabel: 'Orqaga' };
   return { model, calls, runtime, render: () => runtime.render(() => s.expand(view.AdminSupplierItemsScreen(props))), blur: () => { focused = false; }, retire: () => { valid = false; } };

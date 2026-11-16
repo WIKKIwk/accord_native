@@ -60,7 +60,7 @@ function fixture(platform, { locale = 'uz', readOnly = false, system = false, pr
     'react-native': { View: 'View', Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'RN.ScrollView', Platform: { OS: platform, Version: 18 }, StyleSheet: { absoluteFill: { position: 'absolute' }, create: value => value },
       useWindowDimensions: () => ({ width: 400, height: 800 }), FlatList: props => ({ type: 'FlatList', props: { ...props, children: props.data?.length ? props.data.map((item, index) => props.renderItem({ item, index })) : props.ListEmptyComponent } }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './dartJsonString': strings, './useAdminWorkerDetail': { useAdminWorkerDetail: () => value } };
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), './AdminTypography.android': { AdminText: 'Text' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './dartJsonString': strings, './useAdminWorkerDetail': { useAdminWorkerDetail: () => value } };
   const compiled = new Map();
   function compile(relative) {
     if (compiled.has(relative)) return compiled.get(relative);

@@ -1,5 +1,5 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
-import { BasicTextField, Box, CircularProgressIndicator, Column, FlowRow, IconButton, OutlinedButton, RNHostView, Row, SnackbarHost, Spacer, Surface, Text, TopAppBar,
+import { BasicTextField, Box, CircularProgressIndicator, Column, FlowRow, IconButton, OutlinedButton, RNHostView, Row, SnackbarHost, Spacer, Surface, TopAppBar,
   useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { animated, animateContentSize, defaultMinSize, fillMaxWidth, graphicsLayer, height, padding, semantics, size, testID, tween, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useEffect, useRef } from 'react';
@@ -7,6 +7,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import type { AdminWorkerDetailScreenProps } from './AdminWorkerDetailTypes';
 import { WorkerMaterialResponsibilities, WorkerWarehouseEditor } from './AdminWorkerDetailEditors.android';
 import { WorkerDetailIcon, workerDetailAlpha, workerDetailCardShape, workerDetailShape, type WorkerDetailIconName } from './AdminWorkerDetailNative.android';

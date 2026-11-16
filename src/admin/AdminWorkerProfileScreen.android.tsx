@@ -1,11 +1,12 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
-import { Box, Button, CircularProgressIndicator, Column, HorizontalDivider, IconButton, RNHostView, Shape, Spacer, Surface, Text, TopAppBar } from '@expo/ui/jetpack-compose';
+import { Box, Button, CircularProgressIndicator, Column, HorizontalDivider, IconButton, RNHostView, Shape, Spacer, Surface, TopAppBar } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import type { AdminWorkerProfileScreenProps } from './AdminWorkerProfileScreenTypes';
 import type { AdminWorkerProfileCard } from './adminWorkerProfilePresentation';
 import { useAdminWorkerProfile } from './useAdminWorkerProfile';

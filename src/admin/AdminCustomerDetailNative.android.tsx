@@ -1,9 +1,10 @@
-import { BasicAlertDialog, BasicTextField, Box, Button, CircularProgressIndicator, Column, FlowRow, HorizontalDivider, IconButton, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, Text, useNativeState } from '@expo/ui/jetpack-compose';
+import { BasicAlertDialog, BasicTextField, Box, Button, CircularProgressIndicator, Column, FlowRow, HorizontalDivider, IconButton, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, useNativeState } from '@expo/ui/jetpack-compose';
 import { fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import { uiText } from '../shared/localization';
 import type { AdminCustomerDetailScreenProps, AdminCustomerMaterialWarehouseProps } from './AdminCustomerDetailScreenTypes';
 import { dartTrim } from './dartJsonString';

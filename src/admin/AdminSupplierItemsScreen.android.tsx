@@ -1,5 +1,5 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
-import { BasicAlertDialog, Box, Button, Column, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, Text, TopAppBar } from '@expo/ui/jetpack-compose';
+import { BasicAlertDialog, Box, Button, Column, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TopAppBar } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -7,6 +7,7 @@ import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import type { AdminSupplierItemsPageProps, AdminSupplierItemsScreenProps } from './AdminSupplierItemsScreenTypes';
 import { useAdminSupplierItems, useAdminSupplierItemsConfirmation, type AdminSupplierItemsScreenModel } from './useAdminSupplierItems';
 

@@ -1,6 +1,7 @@
-import { CircularProgressIndicator, Column, FlowRow, IconButton, InputChip, OutlinedButton, Row, Spacer, Text } from '@expo/ui/jetpack-compose';
+import { CircularProgressIndicator, Column, FlowRow, IconButton, InputChip, OutlinedButton, Row, Spacer } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, semantics, size, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import type { AdminWorkerDetailScreenModel } from './useAdminWorkerDetail';
 import { WorkerDetailIcon, workerDetailShape } from './AdminWorkerDetailNative.android';
 

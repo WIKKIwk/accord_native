@@ -84,7 +84,7 @@ function view(platform, value, r = runtime()) {
     'react-native-reanimated': { View: 'Animated.View', default: { View: 'Animated.View' }, LinearTransition: transition, Easing: { cubic: 'cubic', out: value => value, inOut: value => value },
       useSharedValue: value => r.react.useRef({ value }).current, useAnimatedStyle: callback => callback(), withTiming: value => value },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), '../components/useBaseTheme': { useBaseTheme: () => ({ colors, mode: 'light' }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), './AdminTypography.android': { AdminText: 'Text' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors, mode: 'light' }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     '../shared/localization': s.l10n, './dartJsonString': s.strings, './useAdminCustomerDetail': { ...shared, useAdminCustomerDetail: () => value } };
   const native = base.compile(path.resolve(__dirname, `../src/admin/AdminCustomerDetailNative.${platform}.tsx`), mocks); mocks[`./AdminCustomerDetailNative.${platform}`] = native;
   const sheets = base.compile(path.resolve(__dirname, `../src/admin/AdminCustomerDetailSheets.${platform}.tsx`), mocks); mocks[`./AdminCustomerDetailSheets.${platform}`] = sheets;

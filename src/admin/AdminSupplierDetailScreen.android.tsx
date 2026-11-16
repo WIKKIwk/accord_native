@@ -1,6 +1,6 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { BasicAlertDialog, BasicTextField, Box, Button, CircularProgressIndicator, Column, FlowRow, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row,
-  Shape, SnackbarHost, Spacer, Surface, Text, TextButton, TopAppBar, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+  Shape, SnackbarHost, Spacer, Surface, TextButton, TopAppBar, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
@@ -9,6 +9,7 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, w
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import { uiText } from '../shared/localization';
 import type { AdminSupplierDetailScreenProps } from './AdminSupplierDetailScreenTypes';
 import { dartTrim } from './dartJsonString';

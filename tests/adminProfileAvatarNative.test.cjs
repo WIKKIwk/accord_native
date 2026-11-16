@@ -28,7 +28,7 @@ function fixture(platform, { uri = 'data:image/png;base64,AQ==', preview = true,
       useAnimatedStyle: callback => { styles.push(callback); return callback(); }, withTiming: (value, config, complete) => { timings.push([value, config]); if (complete) animations.push(complete); return value; } },
     'react-native-gesture-handler': { GestureDetector: 'GestureDetector', GestureHandlerRootView: 'GestureHandlerRootView', usePinchGesture: config => ({ type: 'pinch', config }), usePanGesture: config => ({ type: 'pan', config }), useSimultaneousGestures: (...gestures) => gestures },
     'react-native-worklets': { scheduleOnRN: fn => fn() }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 10, left: 0, right: 0 }) },
-    '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
+    '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, './AdminTypography.android': { AdminText: 'Text' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
     './useAdminProfileAvatar': { useAdminProfileAvatar: () => model }, './adminProfileAvatarModel': load('admin/adminProfileAvatarModel', { './dartJsonString': strings }) };
   const compiled = new Map();
   function compile(relative) { if (compiled.has(relative)) return compiled.get(relative); const filename = path.resolve(__dirname, '../src/admin', relative), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;

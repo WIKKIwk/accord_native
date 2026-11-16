@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -137,11 +138,12 @@ function layout(platform, value, active = true, os = platform) {
     '../auth': { isSessionWitnessCurrent: () => active, logout: async () => {}, sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../shared/appRoutes': routes,
     '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
-    './AdminDrawer': { AdminDrawer: 'AdminDrawer' }, './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' },
+    './AdminDrawer': { AdminDrawer: 'AdminDrawer' }, './AdminTypography.android': { AdminTypographyProvider: 'AdminTypographyProvider' }, './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' },
     './AdminShellContext': { AdminShellProvider: 'AdminShellProvider', useAdminShell: () => ({ activityBinding: null, destination: () => null }) },
     './adminShellAccess': access, './useAdminShellSession': { useAdminShellSession: () => admission } };
   const outer = load(`admin/AdminLayout.${platform}.tsx`, mocks).AdminLayout();
-  return outer.type(outer.props);
+  const gate = platform === 'android' ? outer.props.children : outer;
+  return gate.type(gate.props);
 }
 for (const platform of ['ios', 'android']) {
   test(`${platform} layout denies unauthorized direct route, inactive account and wrong platform`, () => {
@@ -219,10 +221,10 @@ test('a witness version change creates a fresh admission gate instead of recaptu
     'expo-router': { Redirect: 'Redirect', Stack: 'Stack' }, 'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: 'android' }, View: 'View' },
     '../auth': { sessionWitnessVersion: () => version, subscribeSessionWitness: () => () => {}, isSessionWitnessCurrent: () => true, logout: async () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, './AdminDrawer': { AdminDrawer: 'AdminDrawer' },
-    './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' }, './AdminShellContext': { AdminShellProvider: 'AdminShellProvider' },
+    './AdminTypography.android': { AdminTypographyProvider: 'AdminTypographyProvider' }, './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' }, './AdminShellContext': { AdminShellProvider: 'AdminShellProvider' },
     './adminShellAccess': access, './useAdminShellSession': { useAdminShellSession: () => undefined } };
   const Layout = load('admin/AdminLayout.android.tsx', mocks).AdminLayout;
-  const before = Layout(); version++; const after = Layout(); assert.notEqual(before.key, after.key);
+  const before = Layout(); version++; const after = Layout(); assert.equal(before.type, 'AdminTypographyProvider'); assert.equal(after.type, 'AdminTypographyProvider'); assert.notEqual(before.props.children.key, after.props.children.key);
 });
 test('test token notice is explicit in all supported languages and has no action or backend dependency', () => {
   let locale = 'uz'; const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() },

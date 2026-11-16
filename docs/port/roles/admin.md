@@ -181,3 +181,6 @@ Genuine Warehouse rolls/reserved-order/rawQR children now exist with awaited nat
 
 
 Twelve native detail screens now consume genuine Admin shell measurements:6 margin,18 clip and60+dock reserve outside the Low body; source list/content padding stays independent. Missing metrics hide/inert the body while retaining owned child reads. Supplier inner SafeArea still needs the actual dynamic dock/FAB host, and native binary/device QA remains open.
+
+
+Android Admin now has six exact source font faces and an Admin-only provider/native Text seam preserving source theme/explicit styles and the installed SDK's nested-span serializer. Six profile families and committed helpers use it. Editable input glyphs, remaining surfaces/internal native text and physical font/RTL metrics remain open; other role font names/defaults are unchanged.

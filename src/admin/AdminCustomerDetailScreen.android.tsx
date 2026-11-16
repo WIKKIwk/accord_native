@@ -1,5 +1,5 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
-import { Column, FlowRow, IconButton, RNHostView, Row, SnackbarHost, Spacer, Surface, Text, TextButton, TopAppBar, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { Column, FlowRow, IconButton, RNHostView, Row, SnackbarHost, Spacer, Surface, TextButton, TopAppBar, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
@@ -8,6 +8,7 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, w
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
 import { CustomerControls, CustomerIcon, CustomerInfoChip, CustomerPrompt, roundedCustomer } from './AdminCustomerDetailNative.android';
 import { CustomerSheetStack } from './AdminCustomerDetailSheets.android';
 import type { AdminCustomerDetailScreenProps } from './AdminCustomerDetailScreenTypes';

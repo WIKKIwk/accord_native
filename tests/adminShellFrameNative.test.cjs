@@ -23,7 +23,7 @@ function setup(family, platform) {
       useSharedValue: value => ({ value }), useAnimatedStyle: callback => callback(), withTiming: value => value },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 34 }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
+    './AdminTypography.android': { AdminText: 'Text' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     '../shared/localization': { uiText: value => value }, '../shared/localization/runtime': { localeController: { locale: 'uz' } }, './dartJsonString': { dartTrim: value => value.trim() }, './AdminShellBodyFrame': actualFrame,
     [`./useAdmin${family}`]: { [`useAdmin${family}`]: () => { hookReads++; return model; } },
   };
