@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { adminFontAssets, adminTextStyle } from './adminFontFamily.android';
 
 const FontsReady = createContext(false);
+export function useAdminFontsReady() { return useContext(FontsReady); }
 /** Admin-owned font scope. It never changes BaseHost or another role's typography defaults. */
 export function AdminTypographyProvider({ children }: { children: ReactNode }) {
   const [ready, error] = useFonts(adminFontAssets), visible = ready || error != null;

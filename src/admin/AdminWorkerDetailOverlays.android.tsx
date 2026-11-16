@@ -1,6 +1,6 @@
+import { AdminBasicTextField as BasicTextField, AdminOutlinedTextField as OutlinedTextField } from './AdminTextFields.android';
 import { AdminText as Text } from './AdminTypography.android';
-import { BasicAlertDialog, BasicTextField, Box, Button, Column, FilledTonalButton, IconButton, ModalBottomSheet, OutlinedButton, OutlinedTextField,
-  RNHostView, Row, Spacer, Surface, useNativeState, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
+import { BasicAlertDialog, Box, Button, Column, FilledTonalButton, IconButton, ModalBottomSheet, OutlinedButton, RNHostView, Row, Spacer, Surface, useNativeState, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, imePadding, padding, semantics, size, testID, verticalScroll, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { useRef } from 'react';
 import { FlatList, StyleSheet, View, useWindowDimensions } from 'react-native';

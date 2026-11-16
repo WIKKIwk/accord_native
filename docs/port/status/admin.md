@@ -1057,3 +1057,10 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 - Main now consumes the committed real shell frame with source zero shell content padding; its existing128/24 list tail stays separate. Android Main uses the committed Admin Text/font provider; no local duplicate font provider was added. Main domain/hook and committed child behavior/defaults remain unchanged.
 - Validation:281/281 Warehouse tests (35 Main/provider/native composition checks in the focused set), both full platform TypeScript/scoped lint/whitespace pass. Root reviewed issued/presenter cleanup and independently reran all Warehouse checks. No backend, printer, Flutter, device/simulator or native app build was used.
 - OPEN: global app route/admission, Material edit/state dependencies, earlier source/native sheet/pagination/lazy-tab/QR-mask/notice/dynamic-dock/USB/device limits. No global Admin entry was enabled.
+
+
+## 2026-11-16 Android native editable input fonts
+
+- Eight real profile/editor input sites now apply the loaded Admin font to the editable glyphs as well as placeholder Text. Small Admin-only wrappers forward the exact Expo BasicTextField/OutlinedTextField component, native buffer/selection/ref, callbacks/worklets, keyboard actions, shape/colors and all ten original slot identities. Only loaded selected fontFamily is added; no font size/theme/body weight is substituted. Custom family or pending-font input style keeps its original object identity.
+- Validation:6 new tests exercise the installed SDK Basic/Outlined/commonProps serializer and native state IDs, UI worklet callbacks, refs, selection and3 Basic/7 Outlined slots;129 combined checks, both full platform TypeScript/scoped lint/whitespace pass. Existing input owners/events and other-role defaults stay unchanged. No build, backend, device/simulator or Flutter was used.
+- OPEN: inputs in remaining Admin flows, physical native font synthesis/baselines/IME/large-text behavior, outer side-safe-area/dynamic Supplier inner SafeArea and earlier device gaps. No global admission was enabled.
