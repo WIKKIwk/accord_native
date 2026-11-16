@@ -59,9 +59,13 @@ export async function adminProductionRequest(session: Session, url: string, init
   catch (error) { check?.(); if (response.status === 200) throw error; value = null; }
   check?.();
   if (response.status !== 200) {
-    const error = productionMapResponseError(response.status, value, fallback);
-    throw new MobileApiException({ code: error.code, message: error.message, statusCode: error.statusCode,
-      diagnostics: error.diagnostics, requestId: error.requestId });
+    try {
+      const error = productionMapResponseError(response.status, value, fallback, response.headers); check?.();
+      const mapped = new MobileApiException({ code: error.code, message: error.message, statusCode: error.statusCode,
+        diagnostics: error.diagnostics, requestId: error.requestId, apparatusOptions: error.apparatusOptions,
+        details: error.details, activeKadrCount: error.activeKadrCount, scannedKadrCount: error.scannedKadrCount, orderTitle: error.orderTitle });
+      check?.(); throw mapped;
+    } catch (error) { check?.(); throw error; }
   }
   return value;
 }
