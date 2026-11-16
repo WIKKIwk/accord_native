@@ -57,9 +57,23 @@ export async function authorizedImageFetch(session: Session, path: string, init:
 
 const progressQrReportPath = '/v1/mobile/admin/production-maps/progress-qr/report';
 const progressQrReportSnapshotPolicy = Symbol('progressQrReportSnapshot');
+const openingWipQrReportPath = '/v1/mobile/admin/production-maps/opening-wip/qr/report';
+const openingWipQrReportSnapshotPolicy = Symbol('openingWipQrReportSnapshot');
+type ReportSnapshotPolicy = typeof progressQrReportSnapshotPolicy | typeof openingWipQrReportSnapshotPolicy;
+const reportSnapshotPath = (policy: ReportSnapshotPolicy | undefined): string | null => policy === progressQrReportSnapshotPolicy ? progressQrReportPath
+  : policy === openingWipQrReportSnapshotPolicy ? openingWipQrReportPath : null;
 /** This Source POST only reads a report. It cannot authorize an arbitrary guarded POST or carry caller-supplied request options. */
-export async function authorizedProgressQrReportSnapshot(session: Session, normalizedQrPayload: string,
+export function authorizedProgressQrReportSnapshot(session: Session, normalizedQrPayload: string,
   beforeSend: () => void, readWitness: ReadWitness): Promise<Response> {
+  return authorizedQrReportSnapshot(session, normalizedQrPayload, beforeSend, readWitness, progressQrReportSnapshotPolicy);
+}
+/** Source opening-WIP fallback report has its own fixed path and private operation capability. */
+export function authorizedOpeningWipQrReportSnapshot(session: Session, normalizedQrPayload: string,
+  beforeSend: () => void, readWitness: ReadWitness): Promise<Response> {
+  return authorizedQrReportSnapshot(session, normalizedQrPayload, beforeSend, readWitness, openingWipQrReportSnapshotPolicy);
+}
+async function authorizedQrReportSnapshot(session: Session, normalizedQrPayload: string,
+  beforeSend: () => void, readWitness: ReadWitness, policy: ReportSnapshotPolicy): Promise<Response> {
   const original = witnessGate(readWitness);
   // Recovery and buffered responses must obey the narrower original scope guard,
   // even when the independently supplied account witness remains true.
@@ -67,20 +81,21 @@ export async function authorizedProgressQrReportSnapshot(session: Session, norma
   try {
     if (typeof normalizedQrPayload !== 'string' || typeof beforeSend !== 'function') throw new TypeError('Report snapshot requires its original payload and guard');
     const init = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qr_payload: normalizedQrPayload }) };
-    return await authenticatedRequest(session, progressQrReportPath, init, beforeSend, false, 10_000, gate, progressQrReportSnapshotPolicy);
+    return await authenticatedRequest(session, reportSnapshotPath(policy)!, init, beforeSend, false, 10_000, gate, policy);
   } finally { gate.close(); }
 }
 
 async function authenticatedRequest(session: Session, path: string, init: RequestInit, beforeSend: (() => void) | undefined,
-  image: boolean, timeoutMs: number | null, gate?: WitnessGate, snapshotPolicy?: typeof progressQrReportSnapshotPolicy): Promise<Response> {
+  image: boolean, timeoutMs: number | null, gate?: WitnessGate, snapshotPolicy?: ReportSnapshotPolicy): Promise<Response> {
   const guardedMethod = gate ? (init.method ?? 'GET').toUpperCase() : undefined;
-  const reportSnapshot = !!gate && snapshotPolicy === progressQrReportSnapshotPolicy && guardedMethod === 'POST' && !image && typeof beforeSend === 'function';
+  const snapshotPath = reportSnapshotPath(snapshotPolicy);
+  const reportSnapshot = !!gate && snapshotPath !== null && guardedMethod === 'POST' && !image && typeof beforeSend === 'function';
   const mutation = gate ? false : !['GET', 'HEAD', 'OPTIONS'].includes((init.method ?? 'GET').toUpperCase());
   if (gate && !['GET', 'HEAD'].includes(guardedMethod!) && !reportSnapshot) throw new Error('guarded_reads_only');
   if (mutation) invalidateQueueSnapshotReads();
   try {
     const url = new URL(path, session.baseUrl);
-    if (snapshotPolicy !== undefined && (!reportSnapshot || path !== progressQrReportPath || url.pathname !== progressQrReportPath || url.search || url.hash)) throw new Error('guarded_reads_only');
+    if (snapshotPolicy !== undefined && (!reportSnapshot || path !== snapshotPath || url.pathname !== snapshotPath || url.search || url.hash)) throw new Error('guarded_reads_only');
     if (url.origin !== session.baseUrl || url.protocol !== 'https:' || url.username || url.password ||
         (!image && !url.pathname.startsWith('/v1/mobile/'))) {
       throw new Error('API manzili noto‘g‘ri.');
