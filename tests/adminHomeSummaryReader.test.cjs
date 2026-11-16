@@ -11,17 +11,21 @@ function load(file, overrides = {}) {
   return mod.exports;
 }
 const scope = load('sessionReadScope');
+const profileGuard = load('shared/profileSessionGuard');
 const model = { adminHomeCanLoadSummary: session => session.capabilities.includes('party.supplier.read') };
 function fixture(refreshAction = () => {}) {
   const session = { baseUrl: 'https://server.example', token: 'first', profile: { role: 'admin', ref: 'example' },
     capabilities: ['admin.access', 'party.supplier.read'] };
   let active = session;
   const auth = { activeSessionToken: value => value === active ? value.token : null,
-    refreshSession: async value => { refreshAction(value, () => { active = { ...value }; }); return true; } };
+    refreshSession: async value => { refreshAction(value, () => { active = { ...value }; }); return true; },
+    joinRefreshForGuardedRead: async (value, _token, check) => {
+      check(); refreshAction(value, () => { active = { ...value }; }); check(); return true;
+    } };
   const transport = load('authorizedFetch', { './auth': auth });
   const api = load('admin/adminSupplierSummary', { '../authorizedFetch': transport });
   const reader = load('admin/adminHomeSummaryReader', { '../auth': auth, '../sessionReadScope': scope,
-    './adminHomeModel': model, './adminSupplierSummary': api });
+    '../shared/profileSessionGuard': profileGuard, './adminHomeModel': model, './adminSupplierSummary': api });
   return { session, read: reader.adminHomeSummaryReader(session), switchAccount: () => { active = { ...session }; } };
 }
 function response() { return new Response(JSON.stringify({ total_suppliers: 4, active_suppliers: 3, blocked_suppliers: 1 }), { status: 200 }); }
@@ -53,13 +57,16 @@ test('an invalidated captured witness stops the summary before a send or post-bo
   const auth = { activeSessionToken: value => value === f.session ? value.token : null, refreshSession: async () => true };
   const transport = load('authorizedFetch', { './auth': auth });
   const api = load('admin/adminSupplierSummary', { '../authorizedFetch': transport });
-  const reader = load('admin/adminHomeSummaryReader', { '../auth': auth, '../sessionReadScope': scope,
-    './adminHomeModel': model, './adminSupplierSummary': api }).adminHomeSummaryReader(f.session, () => allowed);
+  const createReader = () => load('admin/adminHomeSummaryReader', { '../auth': auth, '../sessionReadScope': scope,
+    '../shared/profileSessionGuard': profileGuard, './adminHomeModel': model, './adminSupplierSummary': api }).adminHomeSummaryReader(f.session, () => allowed);
+  const reader = createReader();
   global.fetch = async () => { sends++; return response(); };
   try { await assert.rejects(reader(), /session changed/); assert.equal(sends, 0); }
   finally { global.fetch = original; }
   allowed = true;
+  // An observed retired lifetime is never revived. A new owner captures the new lifetime.
+  const currentReader = createReader();
   global.fetch = async () => ({ status: 200, headers: new Headers(), clone: () => ({ arrayBuffer: async () => new ArrayBuffer(0) }),
     json: async () => { allowed = false; return { total_suppliers: 4, active_suppliers: 3, blocked_suppliers: 1 }; } });
-  try { await assert.rejects(reader(), /session changed/); } finally { global.fetch = original; }
+  try { await assert.rejects(currentReader(), /session changed/); } finally { global.fetch = original; }
 });

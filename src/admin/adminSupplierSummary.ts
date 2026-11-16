@@ -16,8 +16,21 @@ export function adminSupplierSummaryFromJson(value: unknown): AdminSupplierSumma
     blocked_suppliers: integer(row.blocked_suppliers) };
 }
 /** @v2 adminSupplierSummary */
-export async function adminSupplierSummary(session: Session, beforeSend?: () => void): Promise<AdminSupplierSummary> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/suppliers/summary', undefined, beforeSend);
+export async function adminSupplierSummary(session: Session, beforeSend?: () => void,
+  readWitness?: () => boolean): Promise<AdminSupplierSummary> {
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || !beforeSend)) throw new TypeError('Scoped summary read requires a guard');
+  beforeSend?.();
+  let response: Response;
+  try {
+    response = readWitness ? await authorizedFetch(session, '/v1/mobile/admin/suppliers/summary', undefined, beforeSend, 10_000, { readWitness })
+      : await authorizedFetch(session, '/v1/mobile/admin/suppliers/summary', undefined, beforeSend);
+  } catch (error) { beforeSend?.(); throw error; }
+  beforeSend?.();
   if (response.status !== 200) throw new Error('Admin supplier summary failed');
-  return adminSupplierSummaryFromJson(await response.json());
+  let value: unknown;
+  try { value = await response.json(); } catch (error) { beforeSend?.(); throw error; }
+  beforeSend?.();
+  const summary = adminSupplierSummaryFromJson(value);
+  beforeSend?.();
+  return summary;
 }

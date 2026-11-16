@@ -612,3 +612,18 @@ V2 `AdminStore.clear()` does not invalidate pending reads. The port intentionall
 | `AdminHomeScreen`, `admin_home_screen.dart:20` | `src/admin/AdminHomeScreen.ios.tsx`, `.android.tsx`, shared controller/model | partial | partial | Action/shortcut rules and a restricted routed home shell exist. Partial Profile is reachable; the remaining shortcuts/destinations, dock/FAB, native visual/accessibility and frame/refresh timing remain open. |
 
 The remaining V2 ledger surfaces have not been audited. Run the f119 ledger again and compare each relevant source location and V4 implementation side by side; no surface is marked `ok`.
+
+
+## 2026-11-16 Home continuation on main
+
+The user explicitly requested continued Admin port work directly on `main`, checkpoint commits authored by the configured `wikkiwk <qurbonovabdulfattox@gmail.com>`, Android appearance close to V2 and maximum native components on both platforms. This overrides the separate-worktree rule for this session. The original V2 is clean at `052655a4`; source comparison and ledger use the clean read-only `.expo/admin-v2-baseline` clone at pinned `f11910bb`. The baseline file is unchanged. Later Metalayzer-related Admin/user changes remain a separate source-drift comparison before those surfaces are exposed.
+
+- Home's captured synchronous session/access witness now accompanies the summary read through the shared opt-in transport, including each redirect hop, joined 401 refresh and response/body/model settlement. Once observed expired, it cannot revive. Existing direct supplier-summary callers retain their legacy transport behavior.
+- Android Home uses native Compose clickable `Surface`, `Row`, `Text` and `TextButton`, retaining the existing shell and short-content refresh. Compared with `admin_home_screen.dart`, `admin_summary_card.dart` and `m3_segmented_list.dart`: 4-point edges/top, 2-point segment gap, 18/6 corners (a singleton keeps the source top slot), action padding 16/15, summary padding 16/16/12/16, 18.5 bold summary titles and elevation 4. The initial-error retry uses source 12/8 padding and shrink-wrap minimum sizing. iOS continues using its existing native SwiftUI controls.
+- Validation: 29 focused Home view/controller-reader/transport checks passed; both platform TypeScript checks and scoped ESLint passed. New tests cover stale redirects/401, valid independently started refresh, token-only retry, body-time retirement, source card/touch geometry and native retry. These are source-derived and host event tests, not device renders.
+- Source difference remains explicit: guarded reads join an independently started reauthentication but fail closed on an unaided 401. V2 starts its own reauthentication. Full Home destinations, drawer/overlay behavior and native rendering remain open. Actual Admin root layouts/home target remain held; this checkpoint does not claim a completed role or UI.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Home action/shortcut cards, `admin_home_screen.dart:170,417`; `admin_summary_card.dart:73`; `m3_segmented_list.dart:22` | `AdminHomeScreen.android.tsx` | existing native content | source geometry compared, native Compose | Android glyphs, dynamic text, shadow/ink and visual rendering still require a phone. Other Home destinations remain unimplemented. |
+| Home initial-error retry, `app_retry_state.dart:24` | `AdminHomeScreen.android.tsx` | existing native button | native TextButton/source dimensions | Physical touch, large text and RTL remain device checks. |
