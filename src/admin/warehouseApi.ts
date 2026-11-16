@@ -51,10 +51,14 @@ export async function adminCreateWarehouse(session: Session, warehouse: string, 
   } catch (error) { check?.(); throw error; }
 }
 /** @v2 adminDeleteWarehouse */
-export async function adminDeleteWarehouse(session: Session, warehouse: string, deleteProducts: boolean): Promise<void> {
+export async function adminDeleteWarehouse(session: Session, warehouse: string, deleteProducts: boolean, guard?: () => void): Promise<void> {
+  const check = checkedAdminGuard(guard); check?.();
   const normalized = dartTrim(warehouse);
   if (!normalized) throw new MobileApiException({ code: 'warehouse_required', message: 'Ombor tanlanmagan' });
-  const response = await authorizedFetch(session, '/v1/mobile/admin/warehouses', { method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ warehouse: normalized, delete_products: deleteProducts }) });
-  if (response.status !== 200) throw await adminApiError(response, 'warehouse_delete_failed', 'Ombor o‘chirilmadi');
+  try {
+    const response = await authorizedFetch(session, '/v1/mobile/admin/warehouses', { method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ warehouse: normalized, delete_products: deleteProducts }) }, check);
+    check?.();
+    if (response.status !== 200) { const error = await adminApiError(response, 'warehouse_delete_failed', 'Ombor o‘chirilmadi'); check?.(); throw error; }
+  } catch (error) { check?.(); throw error; }
 }

@@ -124,3 +124,6 @@ Drawer navigation now follows source ordinary-row history rules after220ms: pop 
 
 
 Prepared Warehouse live support uses dedicated native openWarehouse admission,250ms refresh debounce, serialized pending reloads,5s reconnect and10s whole-setup deadline. Original account witness owns all events/timers; Werka/material scoped roles skip live. Existing Worker open admission/defaults are preserved. The real Warehouse main owner must supply its stable guarded refresh callback before this hook is composed; a rebuilt native binary is required. HTTP/WS/Iroh and background large-JSON behavior remain open.
+
+
+Warehouse Settings is an isolated native child requiring real controlled summaries/warehouse/filter and stable parent onChanged/onDeleted. Assign/unassign reread assignments before parent reload and success. Delete preserves reserved-stock blocking and source product/assignment warnings, using captured summary and known-code notices. Parent deletion clears remembered selection and reloads. The full main screen/filter persistence/live composition remains unported; no route is exposed.
