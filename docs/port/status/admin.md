@@ -675,3 +675,16 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | Custom create overlay/actions, `widgets/admin_create_hub_sheet_models_part_02.dart` and `_models_part_04.dart` | `AdminCreateMenu.*`, `adminCreateMenuController.ts`, `useAdminCreateMenu.ts` | native menu adaptation | native Compose actions/source dimensions compared | Source control flow is event-tested; exact Android spring/reveal rendering and physical touch remain open. Global default create hub is not composed yet. |
+
+
+## 2026-11-16 ERP/Admin settings native form
+
+- Added both platform forms for the seven source fields, including the source plain API secret, source field order and labels, trim-only saving, GET-before-PUT hidden-field preservation, empty werka_code, acknowledged fill, changed result and existing success message. No URL/required validation or extra error copy was introduced. Android uses native outlined fields (16 corners) and the source 56-high/20-corner save button; iOS uses native Form/TextField/Button.
+- The controller retains the original witness, epoch and scope for initial/retry/save reads, redirects, joined refresh, request attempts and body settlement. Duplicate commands and stale/unmounted/focus-lost UI callbacks are rejected. iOS supplies native explicit back and disables automatic swipe/default back so the changed callback is retained. Android handles focused hardware back with the latest changed value.
+- Optional destination availability keeps unfinished Push navigation held and rechecks retained callbacks. Full source row visibility will be restored with that destination; no unimplemented Push action is exposed by the composed shell.
+- Validation: 37 focused settings tests pass (legacy API, source fields/payload, controller, guarded real transport, session, hook and native event composition). Both platform TypeScript and scoped ESLint pass. No network write or device was used.
+- OPEN source behavior: V2 `admin_settings_screen.dart:149` calls `_fill(snapshot.data)` on every completed FutureBuilder rebuild, including parent rebuilds during save. This native controller fills on initial/read/acknowledgment instead. Source frame/build timing can therefore overwrite edits differently and is not claimed 1:1. Source SmoothAppear, physical typography, keyboard, Snackbar timing and native back need phones. Role admission remains held.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| ERP/Admin fields, retry and save, `admin_settings_screen.dart:56,66,139,157,292` | `AdminSettingsScreen.*`, `adminSettingsController.ts`, `adminSettingsSession.ts`, `useAdminSettings.ts`, `adminSettings.ts` | native Form/fields/actions | native Compose fields/source save dimensions | FutureBuilder refill timing and SmoothAppear remain open; native keyboard/back/layout require phones. Push destination is held until implemented. |

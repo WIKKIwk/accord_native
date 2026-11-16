@@ -41,16 +41,30 @@ export function adminSettingsToJson(settings: AdminSettings): AdminSettings {
     admin_phone: settings.admin_phone, admin_name: settings.admin_name };
 }
 /** @v2 adminSettings */
-export async function adminSettings(session: Session): Promise<AdminSettings> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/settings');
+export async function adminSettings(session: Session, guard?: () => void, readWitness?: () => boolean): Promise<AdminSettings> {
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || !guard)) throw new TypeError('Scoped settings read requires a guard');
+  guard?.();
+  let response: Response;
+  try { response = readWitness ? await authorizedFetch(session, '/v1/mobile/admin/settings', undefined, guard, 10_000, { readWitness })
+    : await authorizedFetch(session, '/v1/mobile/admin/settings', undefined, guard); }
+  catch (error) { guard?.(); throw error; }
+  guard?.();
   if (response.status !== 200) throw new Error('Admin settings failed');
-  return adminSettingsFromJson(await response.json());
+  let value: unknown;
+  try { value = await response.json(); } catch (error) { guard?.(); throw error; }
+  guard?.(); const settings = adminSettingsFromJson(value); guard?.(); return settings;
 }
 /** @v2 updateAdminSettings */
-export async function updateAdminSettings(session: Session, settings: AdminSettings): Promise<AdminSettings> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/settings', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adminSettingsToJson(settings)),
-  });
+export async function updateAdminSettings(session: Session, settings: AdminSettings, guard?: () => void): Promise<AdminSettings> {
+  guard?.();
+  const init = { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adminSettingsToJson(settings)) };
+  guard?.();
+  let response: Response;
+  try { response = await authorizedFetch(session, '/v1/mobile/admin/settings', init, guard); }
+  catch (error) { guard?.(); throw error; }
+  guard?.();
   if (response.status !== 200) throw new Error('Admin settings update failed');
-  return adminSettingsFromJson(await response.json());
+  let value: unknown;
+  try { value = await response.json(); } catch (error) { guard?.(); throw error; }
+  guard?.(); const updated = adminSettingsFromJson(value); guard?.(); return updated;
 }

@@ -97,3 +97,6 @@ Activity fixed-zero rounding and rendered Uzbek, English, Russian and Urdu metri
 
 
 The shared custom create menu preserves action order and disabled actions, removes its overlay before next-frame dispatch, and cancels retained native callbacks after unmount/account retirement/hiding. Android action pills use 56 height, 14 horizontal padding, 10 icon gap and 24 icons; iOS uses native SwiftUI Menu. This does not complete the global default dock create hub.
+
+
+Main ERP settings use seven plain source fields in order: erp_url, erp_api_key, erp_api_secret, default_target_warehouse, default_uom, werka_phone, werka_name. Save rereads settings, preserves hidden values, trims current input without new validation, sends werka_code empty, fills the acknowledgment and returns the changed flag on explicit back. The source FutureBuilder refill-on-rebuild timing remains an open parity item. Composed navigation only offers reviewed Additional Settings; Push stays held until its implementation exists.
