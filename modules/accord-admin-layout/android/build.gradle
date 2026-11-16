@@ -10,3 +10,6 @@ android {
   namespace 'expo.modules.accordadminlayout'
   defaultConfig { versionCode 1; versionName '0.1.0' }
 }
+
+// Public ReactFindViewUtil from the already installed app React SDK; no new runtime dependency.
+dependencies { compileOnly 'com.facebook.react:react-android' }

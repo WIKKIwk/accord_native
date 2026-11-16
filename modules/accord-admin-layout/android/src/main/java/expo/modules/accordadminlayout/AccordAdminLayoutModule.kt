@@ -1,6 +1,7 @@
 package expo.modules.accordadminlayout
 
 import android.os.Handler
+import android.os.Build
 import android.os.Looper
 import android.provider.Settings
 import android.view.View
@@ -19,10 +20,30 @@ class AccordAdminLayoutModule : Module() {
   private var observer: ViewTreeObserver? = null
   private var last: Map<String, Any>? = null
   private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener { emitChanged() }
+  private val scaffoldLayouts = lazy { ScaffoldLayoutRegistry(ScaffoldLayoutAndroidHost(appContext)) { value -> sendEvent("onScaffoldLayoutChange", ScaffoldLayoutWire.event(value)) } }
 
   override fun definition() = ModuleDefinition {
     Name("AccordAdminLayout")
-    Events("onInsetsChange")
+    Events("onInsetsChange", "onScaffoldLayoutChange")
+
+    AsyncFunction("scaffoldLayoutCapability") {
+      if (destroyed || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) null else mapOf("protocol" to ScaffoldLayoutRegistry.PROTOCOL,
+        "guarantee" to ScaffoldLayoutRegistry.GUARANTEE, "platform" to "android", "rawIme" to true)
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("bindScaffoldViewport") { tag: Double, id: String, ticket: String ->
+      check(!destroyed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { "scaffold_layout_unavailable" }
+      ScaffoldLayoutWire.receipt(scaffoldLayouts.value.bindViewport(scaffoldTag(tag), id, ticket))
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("bindScaffoldParts") { handle: String, owner: String, dockTag: Double, dockID: String, fixedTag: Double, fixedID: String, ticket: String ->
+      check(!destroyed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { "scaffold_layout_unavailable" }
+      ScaffoldLayoutWire.receipt(scaffoldLayouts.value.bindParts(handle, owner, scaffoldTag(dockTag), dockID, scaffoldTag(fixedTag), fixedID, ticket))
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("bindScaffoldDock") { handle: String, owner: String, tag: Double, id: String, ticket: String ->
+      check(!destroyed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { "scaffold_layout_unavailable" }
+      ScaffoldLayoutWire.receipt(scaffoldLayouts.value.bindDock(handle, owner, scaffoldTag(tag), id, ticket))
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("releaseScaffoldLayout") { handle: String, ticket: String -> if (destroyed || !scaffoldLayouts.isInitialized()) false else scaffoldLayouts.value.release(handle, ticket) }.runOnQueue(Queues.MAIN)
+    AsyncFunction("cancelScaffoldLayoutTicket") { ticket: String -> if (destroyed) false else scaffoldLayouts.value.cancelTicket(ticket) }.runOnQueue(Queues.MAIN)
 
     // @v2 accord_system_navigation
     AsyncFunction("isGestureNavigation") {
@@ -37,9 +58,11 @@ class AccordAdminLayoutModule : Module() {
     }
     OnStopObserving("onInsetsChange") { main.post { observing = false; detach() } }
     OnActivityEntersForeground { main.post { if (observing && !destroyed) { attach(); emitChanged() } } }
-    OnActivityDestroys { main.post { detach() } }
-    OnDestroy { destroyed = true; main.post { observing = false; detach() } }
+    OnActivityDestroys { main.post { detach(); if (scaffoldLayouts.isInitialized()) scaffoldLayouts.value.invalidate() } }
+    OnDestroy { destroyed = true; main.post { observing = false; detach(); if (scaffoldLayouts.isInitialized()) scaffoldLayouts.value.destroy() } }
   }
+
+  private fun scaffoldTag(value: Double): Int { check(value.isFinite() && value > 0 && value <= Int.MAX_VALUE && value % 1.0 == 0.0) { "invalid_marker" }; return value.toInt() }
 
   private fun attach() {
     val current = appContext.currentActivity?.window?.decorView

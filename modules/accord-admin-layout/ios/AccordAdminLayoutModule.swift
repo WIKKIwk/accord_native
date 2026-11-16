@@ -5,10 +5,31 @@ public class AccordAdminLayoutModule: Module {
   private var tokens: [NSObjectProtocol] = []
   private var last: NSDictionary?
   private var destroyed = false
+  @MainActor private var scaffoldLayouts: ScaffoldLayoutRegistryCore?
+  @MainActor private func scaffoldRegistry() -> ScaffoldLayoutRegistryCore {
+    if let scaffoldLayouts { return scaffoldLayouts }
+    let registry = ScaffoldLayoutRegistryCore(host: ScaffoldLayoutUIKitHost(appContext)) { [weak self] value in self?.sendEvent("onScaffoldLayoutChange", ScaffoldLayoutWire.event(value)) }
+    scaffoldLayouts = registry; return registry
+  }
 
   public func definition() -> ModuleDefinition {
     Name("AccordAdminLayout")
-    Events("onInsetsChange")
+    Events("onInsetsChange", "onScaffoldLayoutChange")
+
+    AsyncFunction("scaffoldLayoutCapability") { () -> [String: Any]? in
+      MainActor.assumeIsolated { self.destroyed ? nil : ["protocol": 1, "guarantee": "original-window-layout-snapshot", "platform": "ios", "rawIme": true] }
+    }.runOnQueue(.main)
+    AsyncFunction("bindScaffoldViewport") { (tag: Int, id: String, ticket: String) throws -> [String: Any] in
+      try MainActor.assumeIsolated { guard !self.destroyed else { throw ScaffoldLayoutFailure.code("module_destroyed") }; return ScaffoldLayoutWire.receipt(try self.scaffoldRegistry().bindViewport(tag, id, ticket)) }
+    }.runOnQueue(.main)
+    AsyncFunction("bindScaffoldParts") { (handle: String, owner: String, dockTag: Int, dockID: String, fixedTag: Int, fixedID: String, ticket: String) throws -> [String: Any] in
+      try MainActor.assumeIsolated { guard !self.destroyed else { throw ScaffoldLayoutFailure.code("module_destroyed") }; return ScaffoldLayoutWire.receipt(try self.scaffoldRegistry().bindParts(handle, owner, dockTag, dockID, fixedTag, fixedID, ticket)) }
+    }.runOnQueue(.main)
+    AsyncFunction("bindScaffoldDock") { (handle: String, owner: String, tag: Int, id: String, ticket: String) throws -> [String: Any] in
+      try MainActor.assumeIsolated { guard !self.destroyed else { throw ScaffoldLayoutFailure.code("module_destroyed") }; return ScaffoldLayoutWire.receipt(try self.scaffoldRegistry().bindDock(handle, owner, tag, id, ticket)) }
+    }.runOnQueue(.main)
+    AsyncFunction("releaseScaffoldLayout") { (handle: String, ticket: String) -> Bool in MainActor.assumeIsolated { self.scaffoldLayouts?.release(handle, ticket) ?? false } }.runOnQueue(.main)
+    AsyncFunction("cancelScaffoldLayoutTicket") { (ticket: String) -> Bool in MainActor.assumeIsolated { self.destroyed ? false : self.scaffoldRegistry().cancelTicket(ticket) } }.runOnQueue(.main)
 
     // V2 never queries Android navigation mode on Apple platforms.
     AsyncFunction("isGestureNavigation") { false }.runOnQueue(.main)
@@ -20,7 +41,7 @@ public class AccordAdminLayoutModule: Module {
       DispatchQueue.main.async { if !self.destroyed { self.startObserving() } }
     }
     OnStopObserving("onInsetsChange") { DispatchQueue.main.async { self.stopObserving() } }
-    OnDestroy { DispatchQueue.main.async { self.destroyed = true; self.stopObserving() } }
+    OnDestroy { DispatchQueue.main.async { self.destroyed = true; self.stopObserving(); self.scaffoldLayouts?.destroy(); self.scaffoldLayouts = nil } }
   }
 
   @MainActor private func snapshot() -> [String: Any]? {
