@@ -199,3 +199,6 @@ Admin profile chat now has a source-compared target/error helper and guarded dir
 
 
 The committed common body frame and seven Android custom headers now apply native left/right safe area outside the independent source6 body margin. iOS native headers retain UIKit ownership, and dock/footer stays outside body safe area. Physical lateral/RTL geometry and Supplier's separate inner dynamic dock/FAB SafeArea remain Open.
+
+
+Original-owner catalog adapters now cover source item pages/UOMs/create/bulk move with exact request fields/status/error mapping and guarded body/model decoding. Existing shared catalog/Item Groups/GScale defaults remain unchanged. Full Item Create/list/cache/picker/native/customer-return composition and existing shared parser/refresh differences remain Open; no catalog route is enabled.
