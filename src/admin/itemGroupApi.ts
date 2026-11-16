@@ -40,6 +40,7 @@ async function mutationError(response: Response, fallbackCode: string, fallbackM
   return new MobileApiException({ code, statusCode: response.status,
     message: Object.hasOwn(messages, code) ? messages[code] : (response.status === 403 ? 'Bu amal uchun admin huquqi kerak' : fallbackMessage) });
 }
+export { mutationError as adminItemMutationError };
 
 /** @v2 adminItemGroups */
 export async function adminItemGroups(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<string[]> {
