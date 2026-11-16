@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["AccordAdminLayoutModule"] },
+  "android": { "modules": ["expo.modules.accordadminlayout.AccordAdminLayoutModule"] }
+}

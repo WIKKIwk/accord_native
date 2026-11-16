@@ -169,3 +169,6 @@ WorkerProfileDetail now has real guarded concurrent profile/catalog reads and bo
 
 
 Customer/Material now has native profile controls and genuine item/group/prompt presentation owners on both platforms. Source fallback/wording/busy/countdown/phone-close and concurrent-row behavior are preserved. Per-sheet native host identity and child-first presence protect real descendant reads through StrictMode and retire them on collapse. Required apparatus/material warehouse children, common shell frame and real app route composition remain open.
+
+
+Admin-owned native layout measurements and pure AppShell policy now exist: source6/18 frame and60+dock reserve, keyboard/no-footer0, once-per-app AndroidSecure mode2 and15/real-system-inset branches. Raw missing metrics remain null. Autolinking/host tests pass; native compilation/binary/device and actual frame integration remain open. No shared role/default layout was modified.
