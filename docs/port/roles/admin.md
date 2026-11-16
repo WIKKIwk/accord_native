@@ -94,3 +94,6 @@ The default create overlay lists permitted actions in this order: create user (`
 The f119 oracle passed the selected mock widget tests `admin home shortcut labels follow selected language` and `admin home action labels follow selected language`. The separate test `admin home defers summary load until after first frame` failed at f119 because the request was already observed after `pumpWidget`; use source behavior, not that failed assertion, until the test/spec discrepancy is resolved. `tests/adminHomeModel.test.cjs` checks filtering, ordering, loading/error branches and representative localized text. Both platforms now have partial, unconnected home content views; the role shell, store binding, routes and real-phone checks remain open.
 
 Activity fixed-zero rounding and rendered Uzbek, English, Russian and Urdu metric strings were independently checked with locally authored f119 oracle probes; those probes are not upstream V2 tests.
+
+
+The shared custom create menu preserves action order and disabled actions, removes its overlay before next-frame dispatch, and cancels retained native callbacks after unmount/account retirement/hiding. Android action pills use 56 height, 14 horizontal padding, 10 icon gap and 24 icons; iOS uses native SwiftUI Menu. This does not complete the global default dock create hub.

@@ -664,3 +664,14 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | Factory locations main screen and callbacks, `admin_factory_locations_screen_widgets_part_01.dart:4` | `AdminFactoryLocationsRouteCore.tsx`, `FactoryLocationsRoute.*`, existing `FactoryLocationScreen.*` | composed with native controls | composed with native controls | Actual global role admission remains held; native layout/keyboard/a11y/RTL need phones. |
 | Create/editor and rename dialogs, `admin_factory_locations_screen_widgets_part_02.dart:198` and `_widgets_part_01.dart:121` | `FactoryLocationsRoute.*`, existing editor/rename contents, `factoryLocationPresentation.ts` | centered dialog with native fields/actions | native AlertDialog with native fields/actions | Real transition completion and V2 exact chip/button geometry remain visual checks; no fake save or success is emitted. |
 | Apparatus picker, `admin_factory_locations_screen_widgets_part_02.dart:232,371` and `_models_part_03.dart:4` | `FactoryLocationPickerSheet.*`, existing `FactoryApparatusPicker.*` | native bottom sheet at 78% | native bottom sheet at 78% | Native detent/safe-area/touch/back and real dismissal require phones; cancellation and result ordering are host-tested. |
+
+
+## 2026-11-16 Native custom create menu
+
+- Added reusable Admin custom actions: source order, disabled entries, close before next-frame dispatch, one dispatch per native selection, original synchronous session witness, and cancellation after account retirement, unmount, hiding or action replacement. StrictMode may reattach a still-current owner; expired authority never revives.
+- Android actions are native Compose pills at source height 56, horizontal padding 14, icon gap 10 and icon size 24. The source 80/56 floating toggle, backdrop, reverse stagger and separate spatial/effects spring constants are represented. iOS uses a real SwiftUI Menu with native actions. This is the custom screen menu; the full default Admin dock create hub remains open.
+- Validation: 10 focused menu/event tests pass. Both platform TypeScript and scoped ESLint pass. No package, backend, simulator or device was used. Exact rendered glyphs, animation trajectory/clipping, keyboard, accessibility, large text and RTL require phones; the animation is not accepted as exact visual parity.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Custom create overlay/actions, `widgets/admin_create_hub_sheet_models_part_02.dart` and `_models_part_04.dart` | `AdminCreateMenu.*`, `adminCreateMenuController.ts`, `useAdminCreateMenu.ts` | native menu adaptation | native Compose actions/source dimensions compared | Source control flow is event-tested; exact Android spring/reveal rendering and physical touch remain open. Global default create hub is not composed yet. |
