@@ -53,7 +53,11 @@ export async function adminProductionRequest(session: Session, url: string, init
   try { response = readWitness ? await authorizedFetch(session, url, init, check, 10_000, { readWitness })
     : await authorizedFetch(session, url, init, check); }
   catch (error) { check?.(); throw error; }
-  check?.();
+  return adminProductionResponsePayload(response, fallback, check);
+}
+/** Canonical Source production response decoding, also used by the fixed POST-only report snapshot transport. */
+export async function adminProductionResponsePayload(response: Response, fallback: string, guard?: AdminRequestGuard): Promise<unknown> {
+  const check = checkedAdminGuard(guard); check?.();
   let value: unknown;
   try { value = await response.json(); }
   catch (error) { check?.(); if (response.status === 200) throw error; value = null; }

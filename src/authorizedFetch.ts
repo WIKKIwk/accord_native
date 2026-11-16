@@ -55,14 +55,32 @@ export async function authorizedImageFetch(session: Session, path: string, init:
   } finally { gate.close(); }
 }
 
+const progressQrReportPath = '/v1/mobile/admin/production-maps/progress-qr/report';
+const progressQrReportSnapshotPolicy = Symbol('progressQrReportSnapshot');
+/** This Source POST only reads a report. It cannot authorize an arbitrary guarded POST or carry caller-supplied request options. */
+export async function authorizedProgressQrReportSnapshot(session: Session, normalizedQrPayload: string,
+  beforeSend: () => void, readWitness: ReadWitness): Promise<Response> {
+  const original = witnessGate(readWitness);
+  // Recovery and buffered responses must obey the narrower original scope guard,
+  // even when the independently supplied account witness remains true.
+  const gate: WitnessGate = { check: () => { beforeSend(); original.check(); beforeSend(); }, close: original.close };
+  try {
+    if (typeof normalizedQrPayload !== 'string' || typeof beforeSend !== 'function') throw new TypeError('Report snapshot requires its original payload and guard');
+    const init = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ qr_payload: normalizedQrPayload }) };
+    return await authenticatedRequest(session, progressQrReportPath, init, beforeSend, false, 10_000, gate, progressQrReportSnapshotPolicy);
+  } finally { gate.close(); }
+}
+
 async function authenticatedRequest(session: Session, path: string, init: RequestInit, beforeSend: (() => void) | undefined,
-  image: boolean, timeoutMs: number | null, gate?: WitnessGate): Promise<Response> {
+  image: boolean, timeoutMs: number | null, gate?: WitnessGate, snapshotPolicy?: typeof progressQrReportSnapshotPolicy): Promise<Response> {
   const guardedMethod = gate ? (init.method ?? 'GET').toUpperCase() : undefined;
+  const reportSnapshot = !!gate && snapshotPolicy === progressQrReportSnapshotPolicy && guardedMethod === 'POST' && !image && typeof beforeSend === 'function';
   const mutation = gate ? false : !['GET', 'HEAD', 'OPTIONS'].includes((init.method ?? 'GET').toUpperCase());
-  if (gate && !['GET', 'HEAD'].includes(guardedMethod!)) throw new Error('guarded_reads_only');
+  if (gate && !['GET', 'HEAD'].includes(guardedMethod!) && !reportSnapshot) throw new Error('guarded_reads_only');
   if (mutation) invalidateQueueSnapshotReads();
   try {
     const url = new URL(path, session.baseUrl);
+    if (snapshotPolicy !== undefined && (!reportSnapshot || path !== progressQrReportPath || url.pathname !== progressQrReportPath || url.search || url.hash)) throw new Error('guarded_reads_only');
     if (url.origin !== session.baseUrl || url.protocol !== 'https:' || url.username || url.password ||
         (!image && !url.pathname.startsWith('/v1/mobile/'))) {
       throw new Error('API manzili noto‘g‘ri.');
@@ -71,49 +89,54 @@ async function authenticatedRequest(session: Session, path: string, init: Reques
       gate?.check(); beforeSend?.();
       const headers = new Headers(init.headers);
       headers.set('Authorization', `Bearer ${token}`);
-      const request = (async () => {
-        const method = guardedMethod ?? (init.method ?? 'GET').toUpperCase();
-        let currentUrl = url, remaining = 5;
-        while (true) {
-          let response: Response;
-          if (gate) {
-            const requestUrl = currentUrl.toString();
-            const requestInit: RequestInit = { ...init, method: guardedMethod, headers, redirect: 'manual', credentials: 'omit' };
-            gate.check();
-            response = await fetch(requestUrl, requestInit);
-          } else {
-            // Preserve the legacy fetch/argument evaluation order exactly.
-            response = await fetch(currentUrl.toString(), { ...init, headers, redirect: 'manual', credentials: 'omit' });
-          }
-          const complete = async () => {
-            // V2's non-streamed client buffers the response before its request timeout ends.
-            if (timeoutMs != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
-            return response;
-          };
-          if (!['GET', 'HEAD'].includes(method) || ![301, 302, 303, 307, 308].includes(response.status)) {
-            return complete();
-          }
-          const location = response.headers.get('location');
-          if (!location) return complete();
-          if (response.body) await response.arrayBuffer();
-          const destination = new URL(location, currentUrl);
-          if (destination.protocol !== 'https:' || !destination.hostname || destination.username || destination.password) {
-            throw new TypeError('API redirect requires HTTPS');
-          }
-          if (remaining-- <= 0) throw new TypeError('Too many API redirects');
-          if (destination.origin !== currentUrl.origin) {
-            headers.delete('authorization'); headers.delete('cookie'); headers.delete('proxy-authorization');
-          }
-          currentUrl = destination;
-        }
-      })();
-      if (timeoutMs == null) return request;
-      let timer: ReturnType<typeof setTimeout> | undefined;
+      // Source _post wraps even this read-only report in _mutationRequest.
+      // Its cache epoch changes for EACH authorized attempt, including retries.
+      if (reportSnapshot) invalidateQueueSnapshotReads();
       try {
-        return await Promise.race([request, new Promise<never>((_, reject) => {
-          timer = setTimeout(() => { const error = new Error('API request timed out'); error.name = 'TimeoutError'; reject(error); }, timeoutMs);
-        })]);
-      } finally { if (timer !== undefined) clearTimeout(timer); }
+        const request = (async () => {
+          const method = guardedMethod ?? (init.method ?? 'GET').toUpperCase();
+          let currentUrl = url, remaining = 5;
+          while (true) {
+            let response: Response;
+            if (gate) {
+              const requestUrl = currentUrl.toString();
+              const requestInit: RequestInit = { ...init, method: guardedMethod, headers, redirect: 'manual', credentials: 'omit' };
+              gate.check();
+              response = await fetch(requestUrl, requestInit);
+            } else {
+              // Preserve the legacy fetch/argument evaluation order exactly.
+              response = await fetch(currentUrl.toString(), { ...init, headers, redirect: 'manual', credentials: 'omit' });
+            }
+            const complete = async () => {
+              // V2's non-streamed client buffers the response before its request timeout ends.
+              if (timeoutMs != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
+              return response;
+            };
+            if (!['GET', 'HEAD'].includes(method) || ![301, 302, 303, 307, 308].includes(response.status)) {
+              return complete();
+            }
+            const location = response.headers.get('location');
+            if (!location) return complete();
+            if (response.body) await response.arrayBuffer();
+            const destination = new URL(location, currentUrl);
+            if (destination.protocol !== 'https:' || !destination.hostname || destination.username || destination.password) {
+              throw new TypeError('API redirect requires HTTPS');
+            }
+            if (remaining-- <= 0) throw new TypeError('Too many API redirects');
+            if (destination.origin !== currentUrl.origin) {
+              headers.delete('authorization'); headers.delete('cookie'); headers.delete('proxy-authorization');
+            }
+            currentUrl = destination;
+          }
+        })();
+        if (timeoutMs == null) return request;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          return await Promise.race([request, new Promise<never>((_, reject) => {
+            timer = setTimeout(() => { const error = new Error('API request timed out'); error.name = 'TimeoutError'; reject(error); }, timeoutMs);
+          })]);
+        } finally { if (timer !== undefined) clearTimeout(timer); }
+      } finally { if (reportSnapshot) invalidateQueueSnapshotReads(); }
     };
     gate?.check(); const token = activeSessionToken(session);
     if (!token) throw new Error('Sessiya tugagan. Qayta kiring.');
