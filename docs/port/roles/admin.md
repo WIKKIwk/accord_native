@@ -166,3 +166,6 @@ Native AdminProfileAction now provides source38 header content, actual profile t
 
 
 WorkerProfileDetail now has real guarded concurrent profile/catalog reads and both native six-card activity views. Raw entry ID is preserved; non-eager Future.wait settlement, full loading/error/retry/pull-refresh, canonical display and exact output/action text are retained. Its genuine navigation/profile/dock composition and platform body reserve/physical QA remain open.
+
+
+Customer/Material now has native profile controls and genuine item/group/prompt presentation owners on both platforms. Source fallback/wording/busy/countdown/phone-close and concurrent-row behavior are preserved. Per-sheet native host identity and child-first presence protect real descendant reads through StrictMode and retire them on collapse. Required apparatus/material warehouse children, common shell frame and real app route composition remain open.
