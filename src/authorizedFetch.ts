@@ -121,7 +121,8 @@ async function rawLookupAttempt(url: URL, token: string, signal: AbortSignal, ch
     currentUrl = destination;
   }
 }
-/** @v2 resilientApiRead. Each authorized send(token) owns a fresh budget; 401 recovery is outside this loop. */
+/** @v2 resilientApiRead
+ * Each authorized send(token) owns a fresh budget; 401 recovery is outside this loop. */
 async function rawLookupRead(url: URL, token: string, check: () => void): Promise<Response> {
   const started = performance.now();
   for (let attempt = 1; attempt <= 2; attempt++) {
