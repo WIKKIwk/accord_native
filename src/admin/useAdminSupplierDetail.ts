@@ -29,6 +29,7 @@ export function useAdminSupplierDetail(props: AdminSupplierDetailScreenProps) {
   const generation = controller.interactionGeneration, current = useCallback(() => owner.current() && controller.isCurrent(generation), [owner, controller, generation]);
   const hostInteractive = props.canInteract;
   const interactive = () => focus.current && current() && (hostInteractive === undefined || isSynchronouslyTrue(hostInteractive)) && current();
+  const bodyInteractive = () => interactive() && (props.canInteractBody === undefined || isSynchronouslyTrue(props.canInteractBody)) && current();
   const back = () => {
     if (!interactive() || controller.getSnapshot().phase === 'removed') return;
     const prompt = controller.getSnapshot().removePrompt;
@@ -49,22 +50,22 @@ export function useAdminSupplierDetail(props: AdminSupplierDetailScreenProps) {
   const displayName = dartTrim(state.detail?.name ?? '') || a('detail.supplier_missing');
   const notice = state.notice ? a(state.notice.key, state.notice.key === 'detail.phone_save_failed' ? { error: String(state.notice.error) } : undefined) : null;
   const promptIsCurrent = (prompt: AdminSupplierDetailRemovePrompt) => current() && controller.getSnapshot().removePrompt === prompt;
-  return { state, generation, current, interactive, displayName, initials: dartTrim(displayName) ? adminWerkaInitials(displayName) : 'Y', readOnly,
+  return { state, generation, current, interactive, bodyInteractive, displayName, initials: dartTrim(displayName) ? adminWerkaInitials(displayName) : 'Y', readOnly,
     a, t: (key: string) => localizedGetter(key, locale), locale, notice, back, promptIsCurrent,
-    toggle: () => { if (interactive()) controller.toggle(); },
-    reload: () => { if (interactive() && controller.getSnapshot().phase === 'error') void controller.reload(); },
-    savePhone: (detail: AdminSupplierDetail, phone: string) => interactive() ? controller.savePhone(detail, phone) : Promise.resolve(false),
-    toggleBlocked: (detail: AdminSupplierDetail) => { if (interactive()) void controller.toggleBlocked(detail).catch(() => {}); },
-    regenerate: () => { if (interactive()) void controller.regenerate().catch(() => {}); },
-    copy: (code: string) => { if (interactive()) void controller.copy(code).catch(() => {}); },
-    requestRemove: () => { if (interactive() && !controller.getSnapshot().removePrompt) controller.requestRemove(); },
+    toggle: () => { if (bodyInteractive()) controller.toggle(); },
+    reload: () => { if (bodyInteractive() && controller.getSnapshot().phase === 'error') void controller.reload(); },
+    savePhone: (detail: AdminSupplierDetail, phone: string) => bodyInteractive() ? controller.savePhone(detail, phone) : Promise.resolve(false),
+    toggleBlocked: (detail: AdminSupplierDetail) => { if (bodyInteractive()) void controller.toggleBlocked(detail).catch(() => {}); },
+    regenerate: () => { if (bodyInteractive()) void controller.regenerate().catch(() => {}); },
+    copy: (code: string) => { if (bodyInteractive()) void controller.copy(code).catch(() => {}); },
+    requestRemove: () => { if (bodyInteractive() && !controller.getSnapshot().removePrompt) controller.requestRemove(); },
     dismissRemove: (prompt: AdminSupplierDetailRemovePrompt) => { if (promptIsCurrent(prompt)) controller.dismissRemove(prompt); },
     confirmRemove: async (prompt: AdminSupplierDetailRemovePrompt) => {
       if (!promptIsCurrent(prompt)) return;
       try { if (await controller.confirmRemove(prompt) && current()) onBack(true); } catch {}
     },
-    viewItems: () => { if (interactive() && !props.readOnly && controller.getSnapshot().phase === 'content') void props.onViewItems(supplierRef); },
-    addItem: () => { if (interactive() && !props.readOnly && controller.getSnapshot().phase === 'content') void props.onAddItem(supplierRef); },
+    viewItems: () => { if (bodyInteractive() && !props.readOnly && controller.getSnapshot().phase === 'content') void props.onViewItems(supplierRef); },
+    addItem: () => { if (bodyInteractive() && !props.readOnly && controller.getSnapshot().phase === 'content') void props.onAddItem(supplierRef); },
   };
 }
 export type AdminSupplierDetailScreenModel = ReturnType<typeof useAdminSupplierDetail>;
@@ -80,7 +81,7 @@ export function useAdminSupplierPhoneEditor(model: AdminSupplierDetailScreenMode
     if (previous !== detail.phone && lifetime.current.editor === null && model.current()) buffer.set(dartTrim(detail.phone));
   }, [buffer, detail.phone, model]);
   const submit = async () => {
-    if (!lifetime.current.active || lifetime.current.saving || editor === null || lifetime.current.editor !== editor || !model.interactive()) return;
+    if (!lifetime.current.active || lifetime.current.saving || editor === null || lifetime.current.editor !== editor || !(model.bodyInteractive ?? model.interactive)()) return;
     const original = lifetime.current.serial;
     const handled = await model.savePhone(detail, buffer.get());
     if (handled && lifetime.current.active && lifetime.current.serial === original && lifetime.current.editor === editor && model.current()) {
@@ -89,7 +90,7 @@ export function useAdminSupplierPhoneEditor(model: AdminSupplierDetailScreenMode
   };
   return { editing: editor !== null, submit,
     action: () => {
-      if (!lifetime.current.active || lifetime.current.saving || !model.interactive()) return;
+      if (!lifetime.current.active || lifetime.current.saving || !(model.bodyInteractive ?? model.interactive)()) return;
       if (editor !== null) void submit();
       else if (lifetime.current.editor === null) { const value = ++lifetime.current.nextEditor; lifetime.current.editor = value; setEditor(value); }
     },

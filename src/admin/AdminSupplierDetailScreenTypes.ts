@@ -9,6 +9,10 @@ export type AdminSupplierDetailAvatarProps = {
 type Common = {
   session: Session; witness: SessionWitness; isCurrent: () => boolean; supplierRef: string;
   canInteract?: () => boolean;
+  /** Body-only readiness; source Back and existing modal decisions keep their original authority. */
+  canInteractBody?: () => boolean;
+  /** Source inner SafeArea uses the real Scaffold dock/FAB host. Null keeps existing children mounted but hidden/inert; omitted preserves legacy composition. */
+  bodySafeAreaBottom?: number | null;
   onBack: (changed: boolean) => void; backLabel: string; footer?: ReactNode;
   profileAction: ReactElement; renderAvatar: (props: AdminSupplierDetailAvatarProps) => ReactElement; chatAction?: ReactElement;
 };

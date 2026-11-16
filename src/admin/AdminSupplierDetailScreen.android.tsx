@@ -80,7 +80,7 @@ function Detail({ model, props }: { model: AdminSupplierDetailScreenModel; props
     <View style={styles.profileHeader}><View style={styles.banner} /><View style={styles.status}><BaseHost matchContents><Surface color={colors.secondaryContainer} shape={rounded(999)}>
       <Text color={colors.onSecondaryContainer} style={{ typography: 'bodySmall', fontWeight: '700' }} modifiers={[padding(12, 8, 12, 8)]}>{model.a(detail.blocked ? 'detail.blocked' : 'detail.ready')}</Text>
     </Surface></BaseHost></View>
-      <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: detail.avatar_url, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.interactive })}</View>
+      <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: detail.avatar_url, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.bodyInteractive ?? model.interactive })}</View>
       <View style={styles.identity}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column>
         <Text maxLines={1} overflow="ellipsis" style={{ typography: 'headlineSmall', fontWeight: '800', lineHeight: 25.92 }}>{model.displayName}</Text><Spacer modifiers={[height(6)]} />
         <Text maxLines={1} overflow="ellipsis" color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{model.a('detail.supplier_profile')}</Text>
@@ -120,6 +120,14 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<unknown>(null);
   useEffect(() => { if (state.notice && state.notice !== shown.current && model.current()) { shown.current = state.notice; void snackbar.current?.showSnackbar({ message: model.notice!, duration: 'short' }); } }, [state.notice, model]);
   if (!model.current() || state.phase === 'invalidated' || state.phase === 'removed') return null;
+  const body = state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
+      <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
+    </Box></Box></BaseHost> :
+      state.phase === 'error' ? <ScrollView style={styles.body} contentContainerStyle={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(360, Math.max(280, width * .88)), maxWidth: '100%' }}>
+        <Column horizontalAlignment="center"><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{model.t('serverDisconnectedRetry')}</Text><Spacer modifiers={[height(16)]} />
+          <TextButton onClick={model.reload} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
+            modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('admin-supplier-detail-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton></Column>
+      </BaseHost></ScrollView> : <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><Detail model={model} props={props} /></ScrollView>;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
@@ -129,14 +137,9 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
       </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame">
-    {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
-      <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
-    </Box></Box></BaseHost> :
-      state.phase === 'error' ? <ScrollView style={styles.body} contentContainerStyle={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(360, Math.max(280, width * .88)), maxWidth: '100%' }}>
-        <Column horizontalAlignment="center"><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{model.t('serverDisconnectedRetry')}</Text><Spacer modifiers={[height(16)]} />
-          <TextButton onClick={model.reload} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
-            modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('admin-supplier-detail-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton></Column>
-      </BaseHost></ScrollView> : <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><Detail model={model} props={props} /></ScrollView>}
+    {props.bodySafeAreaBottom === undefined ? body : <View testID="admin-supplier-detail-inner-safe-area" pointerEvents={props.bodySafeAreaBottom === null ? 'none' : 'auto'}
+      accessibilityElementsHidden={props.bodySafeAreaBottom === null} importantForAccessibility={props.bodySafeAreaBottom === null ? 'no-hide-descendants' : 'auto'}
+      accessibilityState={{ busy: props.bodySafeAreaBottom === null }} style={[styles.body, { paddingBottom: props.bodySafeAreaBottom ?? undefined, opacity: props.bodySafeAreaBottom === null ? 0 : 1 }]}>{body}</View>}
     </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
     {state.removePrompt ? <SupplierRemoveConfirmation key={`${model.generation}:${state.removePrompt.serial}`} model={model} /> : null}

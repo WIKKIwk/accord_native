@@ -18,5 +18,5 @@ export function useAdminShellLayout(hasFooter: boolean, bottomDockHeight?: numbe
     return () => { native(); foreground.remove(); keyboard.forEach(subscription => subscription.remove()); };
   }, [controller]);
   const frame = adminShellFrameLayout(state.metrics, hasFooter, state.thinGestureBottom, bottomDockHeight);
-  return { ...frame, metricsReady: state.metrics !== null, navigationResolved: state.navigationResolved, thinGestureBottom: state.thinGestureBottom };
+  return { ...frame, metrics: state.metrics, metricsReady: state.metrics !== null, navigationResolved: state.navigationResolved, thinGestureBottom: state.thinGestureBottom };
 }

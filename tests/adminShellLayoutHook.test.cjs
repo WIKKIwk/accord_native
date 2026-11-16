@@ -29,6 +29,11 @@ test('actual Admin frame hook waits for genuine measurements, then uses cached n
   await tick(); const measured = f.render(); assert.equal(measured.metricsReady, true); assert.equal(measured.bottomReserve, 75); assert.equal(measured.thinGestureBottom, true); assert.equal(f.navCalls(), 1);
   f.footer(false); assert.equal(f.render().bottomReserve, 0); f.footer(true); f.dockHeight(70); assert.equal(f.render().bottomReserve, 85); assert.equal(f.reads.length, 1); assert.equal(f.navCalls(), 1);
 });
+test('frame exposes its exact original raw snapshot for root Scaffold layout without another native measurement', async t => {
+  const f = fixture(t), raw = Object.freeze({ platform: 'android', width: 400, height: 800, viewPaddingBottom: 24, systemGestureInsetsBottom: 16, viewInsetsBottom: 1 });
+  f.metrics(raw); assert.equal(f.render().metrics, null); await tick(); const measured = f.render(), before = f.reads.length;
+  assert.equal(measured.metrics, raw); assert.equal(measured.bottomReserve, 0); assert.equal(f.render().metrics, raw); assert.equal(f.reads.length, before);
+});
 test('native/safe-area/dimension changes refresh actual metrics and cannot infer gesture mode from changing inset values', async t => {
   const f = fixture(t); f.render(); await tick(); const before = f.reads.length;
   f.native.forEach(callback => callback()); await tick(); assert.equal(f.reads.length, before + 1);

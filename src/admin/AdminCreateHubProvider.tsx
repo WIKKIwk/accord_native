@@ -9,9 +9,12 @@ import type { AdminCreateHubProviderProps, AdminPrimaryActionProps } from './Adm
 import { adminCreateHubLayout } from './adminCreateHubModel';
 import { createAdminCreateHubSession } from './adminCreateHubSession';
 import { useAdminShellLayout } from './useAdminShellLayout';
+import type { AdminSystemInsets } from '../../modules/accord-admin-layout/src/AccordAdminLayoutModule';
 
 type Owner = ReturnType<typeof createAdminCreateHubSession>;
 const HubContext = createContext<Owner | null>(null);
+export type AdminCreateHubScaffoldLayout = Readonly<{ metrics: AdminSystemInsets | null; hostHeight: number | null }>;
+const ScaffoldLayoutContext = createContext<AdminCreateHubScaffoldLayout | null>(null);
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 const nextFrame = (callback: () => void) => { const id = requestAnimationFrame(callback); return () => cancelAnimationFrame(id); };
@@ -26,7 +29,10 @@ export function AdminCreateHubProvider(props: AdminCreateHubProviderProps) {
   useLayoutEffect(() => { owner.controller.setProfileOnStack(props.profileOnStack); }, [owner, props.profileOnStack]);
   useLayoutEffect(() => { owner.controller.refreshLocale(); }, [owner, locale]);
   const primary = owner.controller.primary(), layout = adminCreateHubLayout(metrics.dockBottomInset, primary?.hasPrimary ?? false, primary?.visible ?? false);
-  return <HubContext.Provider value={owner}><View style={styles.root}>{props.children}
+  // A missing original trigger or a held visible FAB has no faithful source footer measurement yet.
+  const sourceHostHeight = primary === null || primary.visible && !primary.ready ? null : layout.hostHeight;
+  const scaffoldLayout = useMemo(() => Object.freeze({ metrics: metrics.metrics, hostHeight: sourceHostHeight }), [metrics.metrics, sourceHostHeight]);
+  return <HubContext.Provider value={owner}><View style={styles.root}><ScaffoldLayoutContext.Provider value={scaffoldLayout}>{props.children}</ScaffoldLayoutContext.Provider>
     <AdminCreateHubHost controller={owner.controller} state={state} primary={primary} layout={layout}
       labels={{ trigger: localizedGetter('adminCreateTitle', locale), closed: localizedGetter('createHubTitle', locale), close: localizedGetter('closeAction', locale) }} />
   </View></HubContext.Provider>;
@@ -49,8 +55,10 @@ export function useAdminCreateHubReadiness() {
 }
 /** Source Scaffold receives the whole dock/FAB host, separately from AppShell's60px reserve. */
 export function useAdminCreateHubHostHeight() {
-  const owner = useOwner(); useSyncExternalStore(owner.controller.subscribe, owner.controller.getSnapshot, owner.controller.getSnapshot);
-  const metrics = useAdminShellLayout(true), primary = owner.controller.primary();
-  return adminCreateHubLayout(metrics.dockBottomInset, primary?.hasPrimary ?? false, primary?.visible ?? false).hostHeight;
+  return useAdminCreateHubScaffoldLayout().hostHeight;
+}
+/** The raw IME measurement and the real dock/FAB host are from one root layout snapshot. */
+export function useAdminCreateHubScaffoldLayout(): AdminCreateHubScaffoldLayout {
+  const layout = useContext(ScaffoldLayoutContext); if (!layout) throw new Error('AdminCreateHubProvider is required'); return layout;
 }
 const styles = StyleSheet.create({ root: { flex: 1 } });

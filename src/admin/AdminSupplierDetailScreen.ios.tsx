@@ -64,7 +64,7 @@ function Header({ model, props }: { model: AdminSupplierDetailScreenModel; props
   return <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>
     <View style={styles.banner} /><View style={styles.status}><BaseHost matchContents><Text modifiers={[font({ textStyle: 'caption', weight: 'bold' }), foregroundStyle(colors.onSecondaryContainer),
       padding({ horizontal: 12, vertical: 8 }), background(colors.secondaryContainer), cornerRadius(999)]}>{model.a(detail.blocked ? 'detail.blocked' : 'detail.ready')}</Text></BaseHost></View>
-    <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: detail.avatar_url, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.interactive })}</View>
+    <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: detail.avatar_url, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.bodyInteractive ?? model.interactive })}</View>
     <View style={styles.identity}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><VStack alignment="leading" spacing={6}>
       <Text modifiers={[font({ textStyle: 'title2', weight: 'heavy' }), lineLimit(1)]}>{model.displayName}</Text><Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('secondary'), lineLimit(1)]}>{model.a('detail.supplier_profile')}</Text>
     </VStack></BaseHost></View>
@@ -110,15 +110,19 @@ export function SupplierRemoveConfirmation({ model }: { model: AdminSupplierDeta
 export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps) {
   const model = useAdminSupplierDetail(props), { state } = model, { colors } = useBaseTheme();
   if (!model.current() || state.phase === 'invalidated' || state.phase === 'removed') return null;
+  const body = state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
+        state.phase === 'error' ? <ScrollView><VStack spacing={16} modifiers={[padding({ leading: 20, trailing: 20, top: 4, bottom: 24 }), frame({ maxWidth: Infinity })]}>
+          <Text modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[accessibilityIdentifier('admin-supplier-detail-retry')]} />
+        </VStack></ScrollView> : <ScrollView><VStack modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}><Detail model={model} props={props} /></VStack></ScrollView>;
   return <><Stack.Screen options={{ headerShown: true, title: model.a('profile.title'), headerBackVisible: false, gestureEnabled: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }),
       accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-supplier-detail-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame"><BaseHost style={styles.body}>
-      {state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
-        state.phase === 'error' ? <ScrollView><VStack spacing={16} modifiers={[padding({ leading: 20, trailing: 20, top: 4, bottom: 24 }), frame({ maxWidth: Infinity })]}>
-          <Text modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[accessibilityIdentifier('admin-supplier-detail-retry')]} />
-        </VStack></ScrollView> : <ScrollView><VStack modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}><Detail model={model} props={props} /></VStack></ScrollView>}
-    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{model.notice ? <PreparationNotice message={model.notice} /> : null}
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame">{props.bodySafeAreaBottom === undefined ? <BaseHost style={styles.body}>{body}</BaseHost> :
+      <View testID="admin-supplier-detail-inner-safe-area" pointerEvents={props.bodySafeAreaBottom === null ? 'none' : 'auto'} accessibilityElementsHidden={props.bodySafeAreaBottom === null}
+        importantForAccessibility={props.bodySafeAreaBottom === null ? 'no-hide-descendants' : 'auto'} accessibilityState={{ busy: props.bodySafeAreaBottom === null }}
+        style={[styles.body, { paddingBottom: props.bodySafeAreaBottom ?? undefined, opacity: props.bodySafeAreaBottom === null ? 0 : 1 }]}><BaseHost style={styles.body}>
+      {body}
+    </BaseHost></View>}</AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{model.notice ? <PreparationNotice message={model.notice} /> : null}
     {state.removePrompt ? <SupplierRemoveConfirmation key={`${model.generation}:${state.removePrompt.serial}`} model={model} /> : null}</View>
   </>;
 }
