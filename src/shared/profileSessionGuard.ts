@@ -25,6 +25,26 @@ export function isProfileSessionCurrent(guard?: ProfileSessionGuard): boolean {
   } catch { return false; }
   finally { checking = null; }
 }
+
+/** A role owner gets its own recursion frame, so a separate cache/child guard may safely wrap it.
+ * Legacy isProfileSessionCurrent and its callers keep their existing global-frame behaviour. */
+export function createProfileSessionGuard(guard: ProfileSessionGuard): ProfileSessionGuard {
+  let active: { reentered: boolean } | null = null;
+  return () => {
+    if (typeof guard !== 'function') return false;
+    if (active) { active.reentered = true; return false; }
+    const frame = { reentered: false }; active = frame;
+    try {
+      const result: unknown = guard();
+      if (result !== true) {
+        if (result !== null && (typeof result === 'object' || typeof result === 'function')) suppressRejection(result);
+        return false;
+      }
+      return !frame.reentered;
+    } catch { return false; }
+    finally { active = null; }
+  };
+}
 export function assertProfileSessionCurrent(guard?: ProfileSessionGuard): void {
   if (!isProfileSessionCurrent(guard)) throw new Error('Profile session changed');
 }

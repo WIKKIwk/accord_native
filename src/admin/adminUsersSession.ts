@@ -1,7 +1,7 @@
 import { activeSessionEpoch, activeSessionToken, isSessionWitnessCurrent, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
-import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
+import { createProfileSessionGuard } from '../shared/profileSessionGuard';
 import { adminRoleAssignments, adminUserList } from './adminUsersApi';
 import { AdminUsersController } from './adminUsersController';
 import type { AdminUsersCache } from './adminUsersCache';
@@ -11,6 +11,7 @@ import { adminUsersCache, adminUsersRoleStore } from './adminUsersRuntime';
 /** One original witness/epoch/scope owns list reads, preferences, cache publication and detail-return callbacks. */
 export function createAdminUsersSession(session: Session, witness: SessionWitness, isCurrent: () => boolean,
   stores: { cache: AdminUsersCache; roles: AdminUsersRoleStore } = { cache: adminUsersCache, roles: adminUsersRoleStore }) {
+  const parentCurrent = createProfileSessionGuard(isCurrent);
   const epoch = activeSessionEpoch(session), scope = sessionReadScope(session);
   let attached = true, retired = false;
   const original = () => {
@@ -19,7 +20,7 @@ export function createAdminUsersSession(session: Session, witness: SessionWitnes
       session.token !== 'test-mode-token' && witness.session === session && isSessionWitnessCurrent(witness) &&
       sessionReadScope(session) === scope && canOpenRoute(session, appRoutes.adminSuppliers);
     try {
-      if (!check() || !isProfileSessionCurrent(isCurrent) || !check()) retired = true;
+      if (!check() || !parentCurrent() || !check()) retired = true;
     } catch { retired = true; }
     return !retired;
   };

@@ -172,3 +172,6 @@ Customer/Material now has native profile controls and genuine item/group/prompt 
 
 
 Admin-owned native layout measurements and pure AppShell policy now exist: source6/18 frame and60+dock reserve, keyboard/no-footer0, once-per-app AndroidSecure mode2 and15/real-system-inset branches. Raw missing metrics remain null. Autolinking/host tests pass; native compilation/binary/device and actual frame integration remain open. No shared role/default layout was modified.
+
+
+Six older Admin account owners now use an independent per-owner recursion guard so the genuine shared avatar cache/child guard can wrap them without false retirement. Same-owner cycles, async authority and original account/scope changes remain denied. Shared legacy guard defaults and other-role consumers are unchanged.

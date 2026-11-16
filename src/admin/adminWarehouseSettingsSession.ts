@@ -1,7 +1,7 @@
 import { activeSessionEpoch, activeSessionToken, isSessionWitnessCurrent, type Session, type SessionWitness } from '../auth';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
-import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
+import { createProfileSessionGuard } from '../shared/profileSessionGuard';
 import { adminUserList, adminRoleAssignments } from './adminUsersApi';
 import { loadAdminWarehouseAssignees } from './adminWarehouseAssignees';
 import { adminAssignWarehouse } from './adminWarehouseAssignmentApi';
@@ -13,13 +13,14 @@ import { adminUserPrincipalRoleFromJson } from './adminUsersModel';
 /** Original authority is captured once; view focus is a separate interaction fence in the hook. */
 export function adminWarehouseSettingsSession(session: Session, witness: SessionWitness, isCurrent: () => boolean,
   callbacks: { onChanged: () => Promise<void>; onDeleted: () => Promise<void> }) {
+  const parentCurrent = createProfileSessionGuard(isCurrent);
   const epoch = activeSessionEpoch(session), scope = sessionReadScope(session); let retired = false;
   const current = () => {
     if (retired) return false;
     const check = () => epoch !== null && activeSessionEpoch(session) === epoch && activeSessionToken(session) !== null &&
       session.token !== 'test-mode-token' && witness.session === session && isSessionWitnessCurrent(witness) &&
       sessionReadScope(session) === scope && canOpenRoute(session, appRoutes.adminWarehouses);
-    if (!check() || !isProfileSessionCurrent(isCurrent) || !check()) { retired = true; return false; } return true;
+    if (!check() || !parentCurrent() || !check()) { retired = true; return false; } return true;
   };
   return { current, controller: new AdminWarehouseSettingsController({ isCurrent: current,
     users: (guard, readWitness) => loadAdminWarehouseAssignees({ users: (role, offset, g, w) => adminUserList(session, { role, offset, limit: 50 }, g, w),

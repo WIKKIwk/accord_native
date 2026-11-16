@@ -3,7 +3,7 @@ import { activeSessionEpoch, activeSessionToken, isSessionWitnessCurrent, type S
 import { adminApparatus } from '../apparatusApi';
 import { sessionReadScope } from '../sessionReadScope';
 import { appRoutes, canOpenRoute } from '../shared/appRoutes';
-import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
+import { createProfileSessionGuard } from '../shared/profileSessionGuard';
 import { adminText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import type { AdminUserListEntry } from './adminUsersModel';
@@ -21,6 +21,7 @@ import { dartTrim } from './dartJsonString';
 
 /** Account, target entry and epoch are retained by both editor lifetimes and every command/read continuation. */
 export function adminWorkerDetailSession(session: Session, witness: SessionWitness, isCurrent: () => boolean, entry: AdminUserListEntry, readOnly = false) {
+  const parentCurrent = createProfileSessionGuard(isCurrent);
   const epoch = activeSessionEpoch(session), scope = sessionReadScope(session), target = JSON.stringify([entry.id, entry.kind, entry.principal_role]);
   let retired = false, serial = 0;
   const current = () => {
@@ -28,7 +29,7 @@ export function adminWorkerDetailSession(session: Session, witness: SessionWitne
     const check = () => epoch !== null && activeSessionEpoch(session) === epoch && activeSessionToken(session) !== null && session.token !== 'test-mode-token' &&
       witness.session === session && isSessionWitnessCurrent(witness) && sessionReadScope(session) === scope &&
       JSON.stringify([entry.id, entry.kind, entry.principal_role]) === target && canOpenRoute(session, appRoutes.adminWorkerDetail);
-    if (!check() || !isProfileSessionCurrent(isCurrent) || !check()) { retired = true; return false; } return true;
+    if (!check() || !parentCurrent() || !check()) { retired = true; return false; } return true;
   };
   const workerId = dartTrim(entry.id), system = adminWorkerDetailIsSystem(entry), warehouseRole = adminWorkerDetailWarehouseRole(entry);
   const fromSystem = (user: AdminWorkerDetailSystemUser) => Object.freeze({ id: user.id, name: user.name, phone: user.phone, avatar_url: user.avatar_url,

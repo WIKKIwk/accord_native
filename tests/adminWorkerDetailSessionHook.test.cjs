@@ -111,3 +111,9 @@ test('Worker Android hardware back uses latest changed result; iOS avoids Androi
   const ios = hookFixture(t, { platform: 'ios' }); ios.render(); await flush(); const old = ios.render(); assert.equal(ios.handlers.size, 0); ios.retire(); old.back(); old.toggle(); old.material.add();
   assert.deepEqual(ios.backs, []); assert.equal(ios.controller.getSnapshot().phase, 'invalidated'); assert.equal(ios.materialEditor.getSnapshot().phase, 'invalidated');
 });
+test('genuine shared avatar cache guard can wrap a valid Worker parent without unrelated recursion retirement', () => {
+  const f = sessionFixture(); assert.equal(f.owner.current(), true);
+  assert.equal(profileGuard.isProfileSessionCurrent(f.owner.current), true);
+  assert.equal(f.owner.current(), true);
+  f.retire(); assert.equal(profileGuard.isProfileSessionCurrent(f.owner.current), false);
+});
