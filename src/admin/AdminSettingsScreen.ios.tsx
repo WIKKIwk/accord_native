@@ -4,11 +4,13 @@ import { Stack } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { PreparationNotice } from '../preparation/PreparationNotice';
 import { appRoutes } from '../shared/appRoutes';
 import { adminSettingsFieldLabels, adminSettingsFieldNames, type AdminSettingsField } from './adminSettingsController';
 import type { AdminSettingsScreenProps } from './AdminSettingsTypes';
 import { useAdminSettings } from './useAdminSettings';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 
 function SettingsField({ label, value, fillVersion, change, name }: { label: string; value: string; fillVersion: number;
   change: (value: string) => void; name: AdminSettingsField }) {
@@ -22,14 +24,14 @@ function SettingsField({ label, value, fillVersion, change, name }: { label: str
 
 /** @v2 AdminSettingsScreen */
 export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
-  const model = useAdminSettings(props), { state, t, a, p } = model;
+  const model = useAdminSettings(props), { state, t, a, p } = model, { colors } = useBaseTheme();
   if (!model.current || state.phase === 'invalidated') return <View style={styles.root} />;
   const field = (name: AdminSettingsField) => <SettingsField key={name} name={name} value={state.fields[name]} fillVersion={state.fillVersion}
     label={a(`settings.${adminSettingsFieldLabels[name]}`)} change={value => model.change(name, value)} />;
   return <><Stack.Screen options={{ headerShown: true, title: t('adminSettingsTitle'), gestureEnabled: false, headerBackVisible: false,
-    headerLeft: () => <BaseHost matchContents><Button label={model.navigation!.label} systemImage={model.navigation!.icon === 'back' ? 'chevron.left' : 'line.3.horizontal'}
-      onPress={model.navigation!.onPress} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), accessibilityLabel(model.navigation!.label), frame({ minWidth: 44, minHeight: 44 })]} /></BaseHost> }} />
-    <View style={styles.root}><BaseHost style={styles.body}>
+    headerRight: props.profileAction ? () => props.profileAction : undefined,
+    headerLeft: () => <BaseHost matchContents><Button onPress={model.navigation!.onPress} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), accessibilityLabel(model.navigation!.label), frame({ minWidth: 44, minHeight: 44 })]}><Image systemName={model.navigation!.icon === 'back' ? 'chevron.left' : 'line.3.horizontal'} size={20} /></Button></BaseHost> }} />
+    <View style={[styles.root, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}><BaseHost style={styles.body}>
       {state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         state.phase === 'error' ? <VStack spacing={16} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
           <Text>{t('serverDisconnectedRetry')}</Text><Button label={t('retry')} onPress={() => { model.reload(); }} /></VStack> :
@@ -56,7 +58,7 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
               </Button>
             </Section>
           </Form>}
-    </BaseHost>{props.footer}{state.notice !== null ? <PreparationNotice message={t('settingsSaved')} /> : null}</View>
+    </BaseHost></View></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{state.notice !== null ? <PreparationNotice message={t('settingsSaved')} /> : null}</View>
   </>;
 }
-const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 } });
+const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, content: { flex: 1, paddingStart: 12, paddingEnd: 14 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

@@ -205,3 +205,6 @@ Original-owner catalog adapters now cover source item pages/UOMs/create/bulk mov
 
 
 The genuine five-action root CreateHub overlay/primary native FAB now preserves source callback/close timing, menu/Profile visibility, three-channel motion lifetime, measured native pills, effects-driven semantics and dynamic dock/FAB host height. Source capability-visible unavailable destinations hold readiness instead of disappearing. Actual root/native-stack/destination composition, foreground tint interpolation, physical rendering and the separate six-row pushed hub remain Open; global Admin admission stays held.
+
+
+Settings now consumes the genuine common source frame/lateral safe area and separate12/14 padding on every state. Android native60+3 toolbar/24w800 title, loaded input/Text fonts, exact theme fill branches and top-aligned compact Retry/expressive Loading replace earlier layout/font gaps. iOS back uses a real native image; both headers accept only a supplied genuine profile action. Profile/dock/result composition, source section motion, SDK input padding/border and physical QA remain Open.
