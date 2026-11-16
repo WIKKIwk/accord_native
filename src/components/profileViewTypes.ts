@@ -26,4 +26,5 @@ export type ProfileViewProps = {
   showDirectLogout?: boolean;
   registerSettingsOpener?: (open: () => void) => () => void;
   settingsUnavailableMessage?: string;
+  settingsDisabled?: boolean;
 };

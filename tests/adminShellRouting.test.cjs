@@ -180,14 +180,14 @@ for (const platform of ['ios', 'android']) test(`${platform} profile requires wi
       '../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' }, '../shared/appRoutes': routes,
       '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
       '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, './adminActivityBackLabel': { adminActivityBackLabel: () => 'Back' },
-      './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' }, './adminProfileText': { adminProfileSettingsUnavailable: () => 'Settings unavailable' },
+      './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' },
       './AdminShellContext': { useAdminShell: () => ({ session: admin, isCurrent: () => current, destination: () => destination, onLogout() {} }) } };
     const tree = load(`admin/AdminProfileRoute.${platform}.tsx`, mocks).AdminProfileRoute();
     if (!allowed) { assert.equal(tree.type, current ? 'Redirect' : 'View'); continue; }
     function find(node) { if (!node || typeof node !== 'object') return null; if (Array.isArray(node)) return node.map(find).find(Boolean);
       if (node.type === 'ProfileScreen') return node; return find(node.props?.children); }
     const profile = find(tree); assert.ok(profile); assert.equal(profile.props.showDirectLogout, false); assert.equal(profile.props.onDailyWork, undefined);
-    assert.equal(profile.props.isCurrent(), true); assert.equal(profile.props.settingsUnavailableMessage, 'Settings unavailable');
+    assert.equal(profile.props.isCurrent(), true); assert.equal(profile.props.settingsDisabled, true); assert.equal(profile.props.settingsUnavailableMessage, undefined);
   }
 });
 test('home route resolves on child return or unmount and never pushes a held destination', async () => {

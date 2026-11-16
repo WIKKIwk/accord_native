@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -12,7 +13,7 @@ function nodes(node, predicate) {
 }
 function fixture(role, registerSettingsOpener) {
   const hooks = []; let cursor = 0, focusEffect, focusCleanup, focused = false, hookCalls = 0, writes = [];
-  const react = { useCallback: fn => fn, useState: initial => { const i = cursor++;
+  const react = { useCallback: fn => fn, useLayoutEffect() {}, useRef: initial => { const i = cursor++; if (!hooks[i]) hooks[i] = { current: initial }; return hooks[i]; }, useState: initial => { const i = cursor++;
     if (!hooks[i]) hooks[i] = { value: initial };
     return [hooks[i].value, value => { hooks[i].value = value; writes.push([i, value]); }]; } };
   const ui = new Proxy({}, { get: (_target, name) => String(name) });

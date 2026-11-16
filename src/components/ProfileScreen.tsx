@@ -17,7 +17,7 @@ import { ProfileView } from './ProfileView';
 import type { AvatarSource } from './profileViewTypes';
 
 type Props = { session: Session; onLogout: () => void; onDailyWork?: () => void; showDirectLogout?: boolean;
-  registerSettingsOpener?: (open: () => void) => () => void; isCurrent?: ProfileSessionGuard; settingsUnavailableMessage?: string };
+  registerSettingsOpener?: (open: () => void) => () => void; isCurrent?: ProfileSessionGuard; settingsUnavailableMessage?: string; settingsDisabled?: boolean };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 
@@ -30,7 +30,7 @@ export function ProfileScreen(props: Props) {
   return <ProfileContent key={props.session.imageCacheScope} {...props} />;
 }
 
-function ProfileContent({ session, onLogout, onDailyWork, showDirectLogout, registerSettingsOpener, isCurrent, settingsUnavailableMessage }: Props) {
+function ProfileContent({ session, onLogout, onDailyWork, showDirectLogout, registerSettingsOpener, isCurrent, settingsUnavailableMessage, settingsDisabled }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), hasGuard = isCurrent != null;
   const [snapshot, setSnapshot] = useState(() => initialProfileSnapshot(session));
   const [avatarToken, setAvatarToken] = useState(() => activeSessionToken(session));
@@ -182,5 +182,5 @@ function ProfileContent({ session, onLogout, onDailyWork, showDirectLogout, regi
     editing={editing} busy={isBusy} saving={saving} refreshing={refreshing} onRefresh={refresh} draftName={draftName} draftPhoto={draftPhoto?.uri ?? null}
     onOpenEditor={openEditor} onCloseEditor={closeEditor} onChangeName={changeDraftName}
     onChoosePhoto={choosePhoto} onSave={save} onDailyWork={onDailyWork} onLogout={onLogout} showDirectLogout={showDirectLogout}
-    registerSettingsOpener={registerSettingsOpener} settingsUnavailableMessage={settingsUnavailableMessage} />;
+    registerSettingsOpener={registerSettingsOpener} settingsUnavailableMessage={settingsUnavailableMessage} settingsDisabled={settingsDisabled} />;
 }

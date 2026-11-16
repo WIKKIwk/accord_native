@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -65,7 +66,7 @@ test('failed-login rollback and same-object scope changes invalidate old openers
 test('header button opens the actual shared Settings once and a blurred header cannot open it again', () => {
   const f = setup(), session = f.session(); f.setActive(session);
   const hooks = []; let cursor = 0, focusEffect, writes = 0;
-  const react = { createContext: () => ({ Provider: 'Provider' }), useContext: () => f.slot,
+  const react = { createContext: () => ({ Provider: 'Provider' }), useContext: () => f.slot, useLayoutEffect() {},
     useRef: value => ({ current: value }), useSyncExternalStore: (_subscribe, get) => get(), useCallback: fn => fn,
     useState: initial => { const i = cursor++; if (!hooks[i]) hooks[i] = { value: initial };
       return [hooks[i].value, value => { hooks[i].value = value; if (i === 0 && value === true) writes++; }]; } };

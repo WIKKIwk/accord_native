@@ -17,19 +17,23 @@ const currentLocale = () => localeController.locale;
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, settingsUnavailableMessage } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, settingsUnavailableMessage, settingsDisabled } = props;
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const colors = useMaterialColors({});
   const muted = colors.onSurfaceVariant;
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const editorSheet = useNativeSheet();
   const settingsSheet = useNativeSheet();
+  const settingsBlocked = settingsDisabled === true || !!settingsUnavailableMessage, settingsAllowed = useRef(!settingsBlocked);
+  useLayoutEffect(() => { settingsAllowed.current = !settingsBlocked; return () => { settingsAllowed.current = false; }; }, [settingsBlocked]);
   const disconnectPending = useRef(false);
   const requestDisconnect = useCallback(() => {
+    if (!settingsAllowed.current) return;
     disconnectPending.current = true;
     settingsSheet.close();
   }, [settingsSheet]);
   const settingsDismissed = useCallback(() => {
+    if (!settingsAllowed.current) { disconnectPending.current = false; return; }
     if (!disconnectPending.current) return;
     disconnectPending.current = false;
     const t = (key: string) => localizedGetter(key, locale);
@@ -48,14 +52,14 @@ export function ProfileView(props: ProfileViewProps) {
       editorSheet.update(content, { dismissible: true, onDismiss: onCloseEditor });
       editorSheet.close();
     }
-    if (settingsUnavailableMessage && settingsSheet.isOpen()) { disconnectPending.current = false; settingsSheet.close(); }
-    if (!settingsUnavailableMessage && settingsSheet.isOpen()) {
+    if (settingsBlocked && settingsSheet.isOpen()) { disconnectPending.current = false; if (settingsDisabled === true) settingsSheet.update(null); settingsSheet.close(); }
+    if (!settingsBlocked && settingsSheet.isOpen()) {
       settingsSheet.update(<Host dynamicColors style={{ flex: 1 }}>
         <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
-  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, settingsUnavailableMessage]);
-  const openSettings = () => { if (settingsUnavailableMessage) return; settingsSheet.open(<Host dynamicColors style={{ flex: 1 }}>
+  }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, settingsBlocked, settingsDisabled]);
+  const openSettings = () => { if (!settingsAllowed.current) return; settingsSheet.open(<Host dynamicColors style={{ flex: 1 }}>
     <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed }); };
   const details = profileDisplay(snapshot);
@@ -92,11 +96,11 @@ export function ProfileView(props: ProfileViewProps) {
           </Column> : null}
         </Column> : null}
       </FieldGroup.Section>
-      <FieldGroup.Section>
+      {(onDailyWork && session.profile.role !== 'tayyorlov_masteri') || settingsDisabled !== true ? <FieldGroup.Section>
         {onDailyWork && session.profile.role !== 'tayyorlov_masteri' ? <Button label="Kunlik ish" variant="text" onPress={onDailyWork} /> : null}
-        {settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
+        {settingsDisabled === true ? null : settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
           <Button label={localizedGetter('profileSettingsTitle', locale)} variant="text" onPress={openSettings} testID="profile-settings" />}
-      </FieldGroup.Section>
+      </FieldGroup.Section> : null}
       {showDirectLogout !== false ? <FieldGroup.Section>
         <Button label={localizedGetter('logoutTitle', locale)} variant="outlined" onPress={onLogout} />
       </FieldGroup.Section> : null}

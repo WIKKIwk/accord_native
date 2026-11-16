@@ -217,3 +217,6 @@ The upcoming Item Create/list/customer picker now has a genuine isolated complet
 
 
 Genuine Users/private file pages now compose the four detail branches, Supplier Items, Worker Profile and existing Profile with original arguments and awaited native-detach results. Empty Customer/Supplier refs embed the real Users fallback. Android uses native60px tab controls plus actual inset/High chrome; iOS preserves Home/Activity system tabs and hides them for pushed custom-dock pages. Actual primary providers remain absent, global roots/manifest stay held, and Profile/chat/Supplier/physical Open items prevent release.
+
+
+Native shared Profile now offers an explicit Settings omission option for Admin, with no Settings subtree, warning row, opener or switch-PIN read when enabled. Old Admin Profile callers use it; shared visible defaults/Base/web and other-role app code remain unchanged. Owned callers/helper cleanup and the genuine source Settings/header/frame/outer-interaction providers remain Open; omission is not a Settings port.

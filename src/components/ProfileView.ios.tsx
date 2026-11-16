@@ -1,6 +1,6 @@
 import { BottomSheet, Button, DisclosureGroup, Group, HStack, Image, List, Menu, RNHostView, ScrollView, Section, Spacer, Text, TextField, useNativeState, VStack, ZStack } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, interactiveDismissDisabled, layoutPriority, listRowBackground, listRowInsets, listRowSeparator, listSectionSpacing, listStyle, menuIndicator, menuOrder, multilineTextAlignment, offset, padding, presentationCornerRadius, presentationDetents, presentationDragIndicator, refreshable, shapes, strokeBorder, textInputAutocapitalization } from '@expo/ui/swift-ui/modifiers';
-import { useCallback, useState, type ComponentProps } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { PlatformColor } from 'react-native';
 import { profileDisplay } from '../profileModel';
@@ -116,14 +116,18 @@ function SettingsOpenerRegistration({ register, setOpen }: { register: NonNullab
 
 // @v2 ProfileScreen
 export function ProfileView(props: ProfileViewProps) {
-  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, registerSettingsOpener, settingsUnavailableMessage } = props;
+  const { session, snapshot, avatarToken, avatarRevision, editing, busy, onOpenEditor, onCloseEditor, onDailyWork, onLogout, showDirectLogout, registerSettingsOpener, settingsUnavailableMessage, settingsDisabled } = props;
   const details = profileDisplay(snapshot);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  if (settingsDisabled === true && settingsOpen) setSettingsOpen(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const { text } = useBaseLocale();
-  const switchPin = useSwitchPinSetup(session, !settingsUnavailableMessage);
-  const closeSettings = () => { if (!switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
-  return <>{registerSettingsOpener && !settingsUnavailableMessage ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={setSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
+  const settingsBlocked = settingsDisabled === true || !!settingsUnavailableMessage, settingsAllowed = useRef(!settingsBlocked);
+  useLayoutEffect(() => { settingsAllowed.current = !settingsBlocked; return () => { settingsAllowed.current = false; }; }, [settingsBlocked]);
+  const changeSettingsOpen = useCallback((open: boolean) => { if (settingsAllowed.current) setSettingsOpen(open); }, []);
+  const switchPin = useSwitchPinSetup(session, !settingsBlocked);
+  const closeSettings = () => { if (settingsAllowed.current && !switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
+  return <>{registerSettingsOpener && !settingsBlocked ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={changeSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped'), listSectionSpacing('compact'), refreshable(props.onRefresh)]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), listRowInsets({ top: 0, bottom: 0, leading: 0, trailing: 0 }), padding({ top: 14 })]}>
         <Spacer />
@@ -155,16 +159,16 @@ export function ProfileView(props: ProfileViewProps) {
         {details.phone ? <ProfileRow icon="phone" title={text('phoneLabel')} value={details.phone} /> : null}
         <ApparatusRow labels={details.apparatusLabels} />
       </Section>
-      <Section>
+      {onDailyWork || settingsDisabled !== true ? <Section>
         {onDailyWork ? <NavigationRow icon="calendar" title="Kunlik ish" onPress={onDailyWork} /> : null}
-        {settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
-          <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) setSettingsOpen(true); else closeSettings(); }}
-            anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => setSettingsOpen(true)} />}>
+        {settingsDisabled === true ? null : settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
+          <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) changeSettingsOpen(true); else closeSettings(); }}
+            anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => changeSettingsOpen(true)} />}>
             <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
               preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
               onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
           </BottomSheet>}
-      </Section>
+      </Section> : null}
       {showDirectLogout !== false ? <Section>
         <Button role="destructive" label={text('logoutTitle')} systemImage="rectangle.portrait.and.arrow.right"
           onPress={onLogout} modifiers={[buttonStyle('plain')]} />

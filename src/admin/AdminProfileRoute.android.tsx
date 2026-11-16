@@ -9,7 +9,6 @@ import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { adminActivityBackLabel } from './adminActivityBackLabel';
-import { adminProfileSettingsUnavailable } from './adminProfileText';
 import { AdminBottomBar } from './AdminBottomBar.android';
 import { useAdminShell } from './AdminShellContext';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -24,7 +23,7 @@ export function AdminProfileRoute() {
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
     <RoleHeader title={localizedGetter('profileTitle', locale)} navigation={{ icon: 'back', label: adminActivityBackLabel(locale), onPress: goBack }} />
     <View style={{ flex: 1 }}><ProfileScreen session={shell.session} isCurrent={shell.isCurrent} onLogout={() => { if (shell.isCurrent()) shell.onLogout(); }}
-      showDirectLogout={false} settingsUnavailableMessage={adminProfileSettingsUnavailable(locale)} /></View>
+      showDirectLogout={false} settingsDisabled /></View>
     <AdminBottomBar active="user" />
   </View>;
 }
