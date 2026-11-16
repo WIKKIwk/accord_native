@@ -130,3 +130,6 @@ Warehouse Settings is an isolated native child requiring real controlled summari
 
 
 Users native components require the real owning profile action, guarded back and awaited onOpenUser(ticket) result. Rows use the source person icon. Search focus-close retains the query; iOS adapts its native Cancel+empty-change sequence to preserve that behavior, while explicit clear stays destructive to the query. No Users app route is exposed until the four genuine detail owners/profile action are composed. Android source row/search geometry/motion is represented; iOS<18 prefetch remains a noted difference.
+
+
+Warehouse main domain now owns source summaries, physical raw stock/reservations, product paging80,220ms search, Qolip grouping/catalog20000/ETag, per-profile/default persisted selection and same-scope warm re-entry. It never auto-selects the first warehouse. Create/change reload summary plus selected raw detail; live refresh replaces only summary. Deletion clears remembered selection before reload. Shared preference writes remain serialized across owner replacement and auth reset. Native main/child composition, genuine QR/edit/roll/reserved-order/material-state destinations and app exposure remain held.
