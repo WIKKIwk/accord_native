@@ -148,3 +148,6 @@ Customer/Material Detail keeps the identity card through loading/error and allow
 
 
 Worker/System Detail preserves interactive fallback identity, independent phone/code operations, warehouse scopes for qualifying system kinds, Tayyorlov material responsibilities and read-only work activity summary. It adds no block/delete/role actions. Phone failure keeps editing, and its successful acknowledgment copies the captured detail/code; old panel completions cannot affect a newly mounted phone editor. Warehouse and responsibility writes reread/confirm scopes before changed notices. The visible retry text uses the DTO's immutable retry seconds. Native presentation verification and genuine WorkerProfileDetail/avatar/profile/dock/chat composition are still in progress.
+
+
+Worker/System native screens, warehouse/material editors and modal hosts now exist on both platforms. They keep read ownership separate from visible focus/overlay authority, including avatar/chat provider predicates; covered pages stay mounted and only the top original overlay handles actions/back. The genuine WorkerProfileDetail/profile/avatar/dock/chat providers and global Admin route remain held. Android source button/header metrics are represented; exact native chip/short-sheet/frame/font behavior and phone checks remain open.
