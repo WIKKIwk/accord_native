@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { BasicTextField, Box, CircularProgressIndicator, Column, FilledTonalButton, FlowRow, IconButton, LoadingIndicator, RNHostView, Row, Shape,
   SnackbarHost, Spacer, Surface, Text, TextButton, TopAppBar, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
@@ -138,7 +139,7 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
     shown.current = state.copiedNotice; void snackbar.current?.showSnackbar({ message: model.a('profile.code_copied'), duration: 'short' });
   } }, [state.copiedNotice, model]);
   if (!model.current() || state.phase === 'invalidated') return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow }]}>
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
     <View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
         <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-werka-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
@@ -147,6 +148,7 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
       </TopAppBar>
       <Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-werka-body-frame">
     {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
       <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
     </Box></Box></BaseHost> :
@@ -155,7 +157,7 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
           <Spacer modifiers={[height(16)]} /><TextButton onClick={model.reload} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
             modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('admin-werka-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton></Column>
       </BaseHost></ScrollView> : <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><Detail model={model} props={props} /></ScrollView>}
-    <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+    </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }

@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Button, Divider, Image, List, ProgressView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, accessibilityLabel, background, buttonStyle, controlSize, cornerRadius, font, foregroundStyle, frame, labelStyle, listRowBackground, listRowInsets, listRowSeparator, listStyle, padding, refreshable, scrollContentBackground } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
@@ -22,13 +23,13 @@ export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
   const model = useAdminWorkerProfile(props), { colors } = useBaseTheme(); if (!model.current() || !model.state.valid) return null;
   return <><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel)]}><Image systemName="chevron.left" size={20} /></Button></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><View style={[styles.body, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-profile-body-frame"><BaseHost style={styles.screen}>
       {model.state.phase === 'content' ? <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), padding({ top: 8 }), refreshable(model.reload)]}>
         {model.cards.map((card, index) => <WorkerProfileInfoCard key={index} card={card} />)}<Spacer modifiers={[frame({ height: 116 }), listRowBackground('clear'), listRowSeparator('hidden'), listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 })]} />
       </List> : <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         {model.state.phase === 'loading' ? <ProgressView /> : <Button label={model.retryLabel} onPress={() => { void model.reload(); }} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ minHeight: 56 }), accessibilityIdentifier('admin-worker-profile-retry')]} />}
       </VStack>}
-    </BaseHost></View><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View></View>
+    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View></View>
   </>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1, marginHorizontal: 6, borderRadius: 18, overflow: 'hidden' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

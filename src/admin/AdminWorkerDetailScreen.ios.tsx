@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Button, Divider, HStack, Image, ProgressView, RNHostView, ScrollView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, accessibilityLabel, animation, Animation, background, buttonStyle, clipped, controlSize, cornerRadius, disabled, font, foregroundStyle, frame,
   keyboardType, labelStyle, lineLimit, onSubmit, padding, rotationEffect, submitLabel } from '@expo/ui/swift-ui/modifiers';
@@ -87,14 +88,14 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
   const action = (label: string, press: () => void, id: string) => <Button label={label} onPress={press} modifiers={[buttonStyle('bordered'), controlSize('large'), frame({ maxWidth: Infinity, minHeight: 54 }), padding({ top: 12 }), accessibilityIdentifier(id)]} />;
   return <><Stack.Screen options={{ headerShown: true, title: a('profile.title'), headerBackVisible: false, gestureEnabled: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={() => { model.back(); }} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel)]} /></BaseHost> }} />
-    <View style={[styles.root, { backgroundColor: colors.surfaceContainer }]}><View style={[styles.frame, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.body}><ScrollView><VStack spacing={0} modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}>
+    <View style={[styles.root, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><BaseHost style={styles.body}><ScrollView><VStack spacing={0} modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}>
       <Profile model={model} props={props} />
       {model.preparation ? <VStack modifiers={[padding({ all: 16 }), frame({ maxWidth: Infinity }), background(colors.surface), cornerRadius(18), padding({ top: 12 })]}><WorkerMaterialResponsibilities model={model} /></VStack> : null}
       {!model.system ? <VStack modifiers={[padding({ all: 14 }), frame({ maxWidth: Infinity }), background(colors.surface), cornerRadius(18), padding({ top: 12 })]}><Activity model={model} /></VStack> : null}
       {!model.readOnly && !model.system ? action(a('detail.worker_activity'), model.openActivity, 'admin-worker-detail-activity') : null}
       {state.loadError ? action(a('detail.reload'), model.reload, 'admin-worker-detail-reload') : null}
-    </VStack></ScrollView></BaseHost></View><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View><WorkerDetailOverlays model={model} />{model.notice ? <PreparationNotice message={model.notice} /> : null}</View>
+    </VStack></ScrollView></BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View><WorkerDetailOverlays model={model} />{model.notice ? <PreparationNotice message={model.notice} /> : null}</View>
   </>;
 }
-const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, frame: { flex: 1, marginHorizontal: 6, borderRadius: 18, overflow: 'hidden' }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, profileHeader: { height: 204, width: '100%' },
+const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, profileHeader: { height: 204, width: '100%' },
   banner: { position: 'absolute', left: 0, right: 0, top: 0, height: 112, backgroundColor: '#000000' }, status: { position: 'absolute', right: 14, top: 14 }, avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 }, identity: { position: 'absolute', left: 124, right: 16, top: 140 } });

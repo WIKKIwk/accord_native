@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { BasicTextField, Box, CircularProgressIndicator, Column, FlowRow, IconButton, OutlinedButton, RNHostView, Row, SnackbarHost, Spacer, Surface, Text, TopAppBar,
   useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { animated, animateContentSize, defaultMinSize, fillMaxWidth, graphicsLayer, height, padding, semantics, size, testID, tween, weight } from '@expo/ui/jetpack-compose/modifiers';
@@ -77,7 +78,7 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
       <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{a('profile.title')}</Text></TopAppBar.Title>
       <TopAppBar.Actions><RNHostView matchContents><View style={styles.headerAction}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
     </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} /></Column></BaseHost>
-    <View style={[styles.frame, { backgroundColor: colors.surfaceContainerLow }]}><ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={colors.surface} shadowElevation={2} shape={workerDetailCardShape()} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), animateContentSize()]}>
         <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>
           <View style={[styles.lowerBanner, { backgroundColor: colors.surface }]} /><View style={styles.banner} />
@@ -99,10 +100,10 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
       {!model.system ? <><View style={styles.gap} /><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={colors.surface} shadowElevation={2} shape={workerDetailCardShape()} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), padding(14, 14, 14, 14)]}><Activity model={model} /></Column></Surface></BaseHost></> : null}
       {!model.readOnly && !model.system ? <><View style={styles.gap} />{action(a('detail.worker_activity'), model.openActivity, 'admin-worker-detail-activity')}</> : null}
       {state.loadError ? <><View style={styles.gap} />{action(a('detail.reload'), model.reload, 'admin-worker-detail-reload')}</> : null}
-    </ScrollView></View><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View><WorkerDetailOverlays model={model} />
+    </ScrollView></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View><WorkerDetailOverlays model={model} />
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }
-const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, frame: { flex: 1, marginHorizontal: 6, borderRadius: 18, overflow: 'hidden' }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, header: { height: 63, width: '100%' }, headerAction: { width: 58, height: 60, alignItems: 'center', justifyContent: 'center' },
+const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, header: { height: 63, width: '100%' }, headerAction: { width: 58, height: 60, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 4, paddingBottom: 116 }, profileHeader: { height: 204, width: '100%' }, banner: { position: 'absolute', left: 0, right: 0, top: 0, height: 112, backgroundColor: '#000' }, lowerBanner: { position: 'absolute', left: 0, right: 0, top: 112, bottom: 0 },
   status: { position: 'absolute', right: 14, top: 14 }, avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 }, identity: { position: 'absolute', left: 124, right: 16, top: 140 }, gap: { height: 12 }, notice: { position: 'absolute', left: 16, right: 16 } });

@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Column, FlowRow, IconButton, RNHostView, Row, SnackbarHost, Spacer, Surface, Text, TextButton, TopAppBar, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
@@ -47,7 +48,7 @@ export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps)
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<unknown>(null);
   useEffect(() => { if (state.notice && state.notice !== shown.current && model.current()) { shown.current = state.notice; void snackbar.current?.showSnackbar({ message: model.notice!, duration: 'short' }); } }, [state.notice, model]);
   if (!model.current() || !state.valid || state.removed) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow }]}>
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
     <View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
         <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-customer-detail-back')]}><CustomerIcon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
@@ -55,7 +56,7 @@ export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps)
         <TopAppBar.Actions><RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
       </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View>
-    <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} testID="admin-customer-detail-scroll">
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-customer-detail-body-frame"><ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} testID="admin-customer-detail-scroll">
       <Detail model={model} props={props} />
       {model.mode.management ? <View style={styles.subordinate}>{props.renderApparatusCard(model.apparatus)}</View> : null}
       {state.loadError != null ? <View style={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(360, Math.max(280, width * .88)), maxWidth: '100%' }}><Column horizontalAlignment="center">
@@ -64,7 +65,7 @@ export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps)
           <Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text>
         </TextButton>
       </Column></BaseHost></View> : null}
-    </ScrollView>
+    </ScrollView></AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
     {model.overlays.sheets.length ? <BaseHost style={styles.overlay}><CustomerSheetStack key={model.overlays.sheets[0].id} model={model} /></BaseHost> : state.prompt ? <CustomerPrompt key={`${model.generation}:${state.prompt.serial}`} model={model} /> : null}

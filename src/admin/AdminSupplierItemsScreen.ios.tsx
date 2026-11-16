@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Button, Divider, HStack, Image, ProgressView, ScrollView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, accessibilityLabel, background, buttonStyle, controlSize, cornerRadius, disabled, font, foregroundStyle, frame, labelStyle, padding } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
@@ -53,9 +54,9 @@ export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
   return <><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'),
       frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel)]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><View style={[styles.content, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.body}>
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-items-body-frame" contentPadding="default"><View style={styles.content}><BaseHost style={styles.body}>
       {model.state.loading ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> : <SupplierItemsTable model={model} />}
-    </BaseHost></View><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+    </BaseHost></View></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
       {model.state.prompt ? <SupplierItemConfirmation key={`${model.generation}:${model.state.prompt.serial}`} model={model} /> : null}
     </View>
   </>;
@@ -65,6 +66,6 @@ export function AdminSupplierItemsViewScreen(props: AdminSupplierItemsPageProps)
 /** @v2 AdminSupplierItemsAddScreen */
 export function AdminSupplierItemsAddScreen(props: AdminSupplierItemsPageProps) { return <AdminSupplierItemsScreen {...props} mode="add" />; }
 const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' },
-  content: { flex: 1, marginHorizontal: 6, borderRadius: 18, overflow: 'hidden', paddingStart: 4, paddingEnd: 6, paddingTop: 4 },
+  content: { flex: 1, paddingTop: 4 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, modal: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,.54)' },
   dialog: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: 28, overflow: 'hidden' }, dialogScroll: { flexGrow: 0, flexShrink: 1 } });

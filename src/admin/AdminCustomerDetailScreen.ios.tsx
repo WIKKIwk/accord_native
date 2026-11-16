@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Button, HStack, Image, RNHostView, ScrollView, Text, VStack } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, accessibilityLabel, animation, Animation, background, buttonStyle, clipped, cornerRadius, font, foregroundStyle, frame, labelStyle, lineLimit, multilineTextAlignment, padding, rotationEffect } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
@@ -44,7 +45,7 @@ export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps)
   if (!model.current() || !state.valid || state.removed) return null;
   return <><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false, gestureEnabled: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-customer-detail-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.body}>
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-customer-detail-body-frame"><BaseHost style={styles.body}>
       <ScrollView modifiers={[accessibilityIdentifier('admin-customer-detail-scroll')]}><VStack spacing={0} modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}>
         <Detail model={model} props={props} />
         {model.mode.management ? <RNHostView matchContents={{ vertical: true }}><View style={styles.subordinate}>{props.renderApparatusCard(model.apparatus)}</View></RNHostView> : null}
@@ -53,7 +54,7 @@ export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps)
         </VStack> : null}
       </VStack></ScrollView>
       {model.overlays.sheets.length ? <CustomerSheetStack key={model.overlays.sheets[0].id} model={model} /> : null}
-    </BaseHost><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{model.notice ? <PreparationNotice message={model.notice} /> : null}
+    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{model.notice ? <PreparationNotice message={model.notice} /> : null}
     {!model.overlays.sheets.length && state.prompt ? <CustomerPrompt key={`${model.generation}:${state.prompt.serial}`} model={model} /> : null}</View>
   </>;
 }

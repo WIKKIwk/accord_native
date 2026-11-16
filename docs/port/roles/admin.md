@@ -178,3 +178,6 @@ Six older Admin account owners now use an independent per-owner recursion guard 
 
 
 Genuine Warehouse rolls/reserved-order/rawQR children now exist with awaited native dismissal and original account/mounted context. Raw QR follows prepare→identity→offline Zebra USB print→confirm with4s FIFO notices. Main must compose its direct native QR child inside the current iOS Details presenter. Main/raw-edit/material-state/app integration, QR mask/short-notice/retirement differences and device checks remain open; GoDEX remains excluded by D13.
+
+
+Twelve native detail screens now consume genuine Admin shell measurements:6 margin,18 clip and60+dock reserve outside the Low body; source list/content padding stays independent. Missing metrics hide/inert the body while retaining owned child reads. Supplier inner SafeArea still needs the actual dynamic dock/FAB host, and native binary/device QA remains open.

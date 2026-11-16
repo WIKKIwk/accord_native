@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { BasicAlertDialog, Box, Button, Column, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, Text, TopAppBar } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
@@ -69,11 +70,11 @@ export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
         <TopAppBar.Actions><RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
       </TopAppBar><Spacer modifiers={[height(3)]} />
     </Column></BaseHost>
-    <View style={[styles.content, { backgroundColor: colors.surfaceContainerLow }]}>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-items-body-frame" contentPadding="default"><View style={styles.content}>
       {model.state.loading ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
         <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
       </Box></Box></BaseHost> : <SupplierItemsTable model={model} />}
-    </View><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+    </View></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     {model.state.prompt ? <SupplierItemConfirmation key={`${model.generation}:${model.state.prompt.serial}`} model={model} /> : null}
   </View>;
 }
@@ -82,6 +83,6 @@ export function AdminSupplierItemsViewScreen(props: AdminSupplierItemsPageProps)
 /** @v2 AdminSupplierItemsAddScreen */
 export function AdminSupplierItemsAddScreen(props: AdminSupplierItemsPageProps) { return <AdminSupplierItemsScreen {...props} mode="add" />; }
 const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' },
-  content: { flex: 1, marginHorizontal: 6, borderRadius: 18, overflow: 'hidden', paddingStart: 4, paddingEnd: 6, paddingTop: 4 },
+  content: { flex: 1, paddingTop: 4 },
   table: { borderRadius: 24, borderWidth: 1, overflow: 'hidden' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   dialogHost: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } });

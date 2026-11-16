@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -49,7 +50,7 @@ function load(platform, model, runtime = hookRuntime()) {
       useSharedValue: value => runtime.react.useRef({ value }).current, useAnimatedStyle: callback => callback(), withTiming: value => value },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     '../shared/localization': l10n, '../shared/localization/runtime': { localeController: { locale: 'uz' } }, './dartJsonString': strings,
     './useAdminWerka': { useAdminWerka: () => model } };
   const filename = path.resolve(__dirname, `../src/admin/AdminWerkaScreen.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;

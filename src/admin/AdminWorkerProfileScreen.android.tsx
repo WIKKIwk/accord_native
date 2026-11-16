@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Box, Button, CircularProgressIndicator, Column, HorizontalDivider, IconButton, RNHostView, Shape, Spacer, Surface, Text, TopAppBar } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
@@ -35,15 +36,15 @@ export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
         <TopAppBar.Actions><RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
       </TopAppBar><Spacer modifiers={[height(3)]} />
     </Column></BaseHost>
-    <View style={[styles.body, { backgroundColor: colors.surfaceContainerLow }]}>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-profile-body-frame">
       {model.state.phase === 'content' ? <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void model.reload(); }} tintColor={colors.primary} colors={[colors.primary]} />}>
         {model.cards.map((card, index) => <WorkerProfileInfoCard key={index} card={card} />)}
       </ScrollView> : <BaseHost style={styles.screen}><Box contentAlignment="center" modifiers={[fillMaxSize()]}>
         {model.state.phase === 'loading' ? <CircularProgressIndicator /> : <Button onClick={() => { void model.reload(); }} shape={rounded(20)} modifiers={[height(56), testID('admin-worker-profile-retry')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.retryLabel}</Text></Button>}
       </Box></BaseHost>}
-    </View><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+    </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' },
-  body: { flex: 1, marginHorizontal: 6, borderRadius: 18, overflow: 'hidden' }, content: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 116 }, card: { width: '100%', marginBottom: 8 },
+  content: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 116 }, card: { width: '100%', marginBottom: 8 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

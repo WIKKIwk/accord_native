@@ -1,3 +1,4 @@
+/* global __dirname */
 const fs = require('node:fs');
 const path = require('node:path');
 const Module = require('node:module');
@@ -83,7 +84,7 @@ function view(platform, value, r = runtime()) {
     'react-native-reanimated': { View: 'Animated.View', default: { View: 'Animated.View' }, LinearTransition: transition, Easing: { cubic: 'cubic', out: value => value },
       useSharedValue: value => r.react.useRef({ value }).current, useAnimatedStyle: callback => callback(), withTiming: value => value },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     '../shared/localization': s.l10n, './dartJsonString': s.strings, './useAdminSupplierDetail': { ...shared, useAdminSupplierDetail: () => value } };
   const exports = compile(path.resolve(__dirname, `../src/admin/AdminSupplierDetailScreen.${platform}.tsx`), mocks);
   const avatars = [], props = { profileAction: { type: 'ActualProfileAction', props: {} }, footer: { type: 'ActualDock', props: {} }, chatAction: { type: 'ActualChatAction', props: {} }, backLabel: 'Orqaga',

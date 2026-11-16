@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { BasicAlertDialog, BasicTextField, Box, Button, CircularProgressIndicator, Column, FlowRow, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row,
   Shape, SnackbarHost, Spacer, Surface, Text, TextButton, TopAppBar, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
@@ -117,7 +118,7 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<unknown>(null);
   useEffect(() => { if (state.notice && state.notice !== shown.current && model.current()) { shown.current = state.notice; void snackbar.current?.showSnackbar({ message: model.notice!, duration: 'short' }); } }, [state.notice, model]);
   if (!model.current() || state.phase === 'invalidated' || state.phase === 'removed') return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow }]}>
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
     <View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
         <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-supplier-detail-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
@@ -125,6 +126,7 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
         <TopAppBar.Actions><RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
       </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame">
     {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
       <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
     </Box></Box></BaseHost> :
@@ -133,7 +135,7 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
           <TextButton onClick={model.reload} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
             modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('admin-supplier-detail-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton></Column>
       </BaseHost></ScrollView> : <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><Detail model={model} props={props} /></ScrollView>}
-    <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+    </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
     {state.removePrompt ? <SupplierRemoveConfirmation key={`${model.generation}:${state.removePrompt.serial}`} model={model} /> : null}
   </View>;

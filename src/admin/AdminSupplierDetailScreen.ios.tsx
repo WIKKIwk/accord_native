@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Button, Divider, HStack, Image, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, accessibilityLabel, animation, Animation, background, buttonStyle, clipped, controlSize, cornerRadius, disabled,
   font, foregroundStyle, frame, keyboardType, labelStyle, lineLimit, multilineTextAlignment, onSubmit, padding, rotationEffect, submitLabel } from '@expo/ui/swift-ui/modifiers';
@@ -112,12 +113,12 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
   return <><Stack.Screen options={{ headerShown: true, title: model.a('profile.title'), headerBackVisible: false, gestureEnabled: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }),
       accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-supplier-detail-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.body}>
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame"><BaseHost style={styles.body}>
       {state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         state.phase === 'error' ? <ScrollView><VStack spacing={16} modifiers={[padding({ leading: 20, trailing: 20, top: 4, bottom: 24 }), frame({ maxWidth: Infinity })]}>
           <Text modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[accessibilityIdentifier('admin-supplier-detail-retry')]} />
         </VStack></ScrollView> : <ScrollView><VStack modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}><Detail model={model} props={props} /></VStack></ScrollView>}
-    </BaseHost><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{model.notice ? <PreparationNotice message={model.notice} /> : null}
+    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{model.notice ? <PreparationNotice message={model.notice} /> : null}
     {state.removePrompt ? <SupplierRemoveConfirmation key={`${model.generation}:${state.removePrompt.serial}`} model={model} /> : null}</View>
   </>;
 }

@@ -60,7 +60,7 @@ function fixture(platform, { locale = 'uz', readOnly = false, system = false, pr
     'react-native': { View: 'View', Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'RN.ScrollView', Platform: { OS: platform, Version: 18 }, StyleSheet: { absoluteFill: { position: 'absolute' }, create: value => value },
       useWindowDimensions: () => ({ width: 400, height: 800 }), FlatList: props => ({ type: 'FlatList', props: { ...props, children: props.data?.length ? props.data.map((item, index) => props.renderItem({ item, index })) : props.ListEmptyComponent } }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './dartJsonString': strings, './useAdminWorkerDetail': { useAdminWorkerDetail: () => value } };
+    './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './dartJsonString': strings, './useAdminWorkerDetail': { useAdminWorkerDetail: () => value } };
   const compiled = new Map();
   function compile(relative) {
     if (compiled.has(relative)) return compiled.get(relative);
@@ -85,7 +85,8 @@ for (const platform of ['android', 'ios']) {
     const f = fixture(platform, { overlays: [{ mode: 'material' }] }); f.render(); f.focus(false); const tree = f.render(), avatar = f.avatars.at(-1);
     assert.equal(nodes(tree, n => n.type === 'RealAvatar').length, 1); assert.equal(avatar.isCurrent(), true); assert.equal(avatar.canInteract(), false);
     assert.equal(nodes(tree, n => ['BottomSheet', 'ModalBottomSheet'].includes(n.type)).length, 0);
-    assert.ok(nodes(tree, n => n.type === 'View' && n.props.style?.[0]?.marginHorizontal === 6 && n.props.style?.[0]?.borderRadius === 18).length);
+    const outer = nodes(tree, n => n.props.testID === 'admin-worker-detail-body-frame-reserve')[0], frame = nodes(tree, n => n.props.testID === 'admin-worker-detail-body-frame')[0];
+    const flat = require('./adminShellFrameViewSupport.cjs').flattenStyle; assert.equal(flat(outer.props.style).marginHorizontal, 6); assert.equal(flat(frame.props.style).borderTopLeftRadius, 18); assert.equal(flat(frame.props.style).borderBottomLeftRadius, 18);
     f.valid(false); assert.equal(avatar.isCurrent(), false); assert.equal(f.render(), null);
   });
   test(`${platform} source phone remains editable during save; independent code/copy have no code_locked or retry cooldown gate`, () => {

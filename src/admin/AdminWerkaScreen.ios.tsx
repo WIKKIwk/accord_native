@@ -1,3 +1,4 @@
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { Button, HStack, Image, ProgressView, RNHostView, ScrollView, Spacer, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, accessibilityLabel, animation, Animation, background, buttonStyle, clipped, controlSize, cornerRadius, disabled,
   font, foregroundStyle, frame, keyboardType, labelStyle, lineLimit, multilineTextAlignment, onSubmit, padding, rotationEffect, submitLabel, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
@@ -120,12 +121,12 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
     headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back}
       modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-werka-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.body}>
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-werka-body-frame"><BaseHost style={styles.body}>
       {state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         state.phase === 'error' ? <ScrollView><VStack spacing={16} modifiers={[padding({ leading: 20, trailing: 20, top: 4, bottom: 24 }), frame({ maxWidth: Infinity })]}>
           <Text modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[accessibilityIdentifier('admin-werka-retry')]} />
         </VStack></ScrollView> : <ScrollView><VStack modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}><Detail model={model} props={props} /></VStack></ScrollView>}
-    </BaseHost><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{state.copiedNotice !== null ? <PreparationNotice message={model.a('profile.code_copied')} /> : null}</View>
+    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>{state.copiedNotice !== null ? <PreparationNotice message={model.a('profile.code_copied')} /> : null}</View>
   </>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
