@@ -53,7 +53,7 @@ export function useAdminItemCreate(props: AdminItemCreateScreenProps) {
   const noticeText = (notice: AdminItemCreateNotice | null) => notice?.literal ?? (notice?.getter ? t(notice.getter) : notice?.key ? a(notice.key, notice.values) : null);
   return { state, owner, locale, a, t, current, nativeCurrent, interactive, focused, searchFocused, profileVisible: !searchFocused,
     formNotice: noticeText(state.form.notice), listNotice: noticeText(state.list.notice), pickerNotice: noticeText(state.pickerState?.notice ?? null),
-    back, search: (value: string) => { if (interactive()) controller.list.changeSearch(value); }, searchFocus: (value: boolean) => { if (nativeCurrent()) setSearchFocused(value); },
+    back, search: (value: string) => { if (interactive()) controller.list.changeSearch(value); }, searchFocus: (value: boolean) => { if (value ? nativeCurrent() : current()) setSearchFocused(value); },
     reload: () => { if (interactive()) void controller.list.reload(); }, loadMore: () => { if (interactive()) void controller.list.loadMore(); }, scroll: (extentAfter: number) => { if (interactive()) controller.list.scroll(extentAfter); },
     toggleGroup: () => { if (interactive()) controller.list.toggleGroup(); }, group: (value: string) => { if (interactive()) controller.list.changeGroup(value); },
     clearSelection: () => { if (interactive()) controller.list.clearSelection(); },

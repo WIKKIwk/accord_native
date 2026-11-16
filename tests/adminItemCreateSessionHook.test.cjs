@@ -79,3 +79,12 @@ test('actual customer empty-action guard treats U+0085 as blank while header add
     model.createCustomer(false); await s.flush(); assert.deepEqual(created, []); model.createCustomer(true); await s.flush(); assert.deepEqual(created, ['']);
   } finally { f.cleanup(); }
 });
+test('real header blur after detail navigation preserves original mounted authority and restores profile on return; retired-generation blur is inert', async () => {
+  const navigation = s.deferred(), row = s.item('A'); let f; f = hook({ catalog: { adminCatalogItemsPage: async () => [row] }, props: { onOpenItem: async () => { f.focus(false); await navigation.promise; } } });
+  try {
+    f.render(); await s.flush(); let model = f.render(); model.searchFocus(true); model = f.render(); assert.equal(model.profileVisible, false);
+    const original = model; model.openItem(row); f.render(); original.searchFocus(false); model = f.render(); assert.equal(model.profileVisible, true);
+    navigation.resolve(); await s.flush(); f.focus(true); model = f.render(); assert.equal(model.profileVisible, true);
+    f.r.replay(); await s.flush(); model = f.render(); model.searchFocus(true); model = f.render(); original.searchFocus(false); assert.equal(f.render().profileVisible, false);
+  } finally { f.cleanup(); }
+});
