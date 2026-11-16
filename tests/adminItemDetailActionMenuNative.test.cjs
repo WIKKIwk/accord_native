@@ -76,6 +76,11 @@ for (const platform of ['android', 'ios']) {
       s.press(s.rows(f.render())[0], platform); await s.flush(); assert.equal(f.controller.getSnapshot().menus[0].closing, true); assert.deepEqual(f.owner.getSnapshot().dialogs, []); assert.deepEqual(f.calls, []);
     }
   });
+  test(`${platform} final original-current reentrancy cannot admit a new selection after content unmount`, async () => {
+    const f = await s.fixture(platform); let armed = false, checks = 0;
+    f.props.isCurrent = () => { if (armed && ++checks === 2) f.r.unmount(); return true; };
+    const row = s.rows(f.render())[0]; armed = true; s.press(row, platform); assert.deepEqual(f.closes, []); assert.equal(f.controller.getSnapshot().menus[0].closing, false);
+  });
 }
 test('missing actual host authority or close target is rejected before native menu content is rendered', async () => {
   const f = await s.fixture('android'); f.props.canInteract = undefined; assert.throws(f.render, /original action-menu host/);

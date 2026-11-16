@@ -19,7 +19,7 @@ class ActionMenuContentLifetime {
   };
   choose = (action: AdminItemDetailAction) => {
     const { controller, generation, ticket, canInteract, onCloseRequested } = this.original;
-    if (!this.members.size || !this.current() || !isSynchronouslyTrue(canInteract) || !this.members.size || !this.current()) return;
+    if (!this.members.size || !this.current() || !isSynchronouslyTrue(canInteract) || !this.current() || !this.members.size) return;
     const close = controller.prepareClose(ticket, action);
     // Closing publication may synchronously remove the body while the ORIGINAL
     // native shell survives. Its accepted ticket still needs the genuine host.
