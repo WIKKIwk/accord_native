@@ -103,3 +103,6 @@ Main ERP settings use seven plain source fields in order: erp_url, erp_api_key, 
 
 
 Additional Settings now requires its owning session, original SessionWitness, current guard and navigation callback. Each independent card operation retains those values through read/retry/body settlement and command sending. Confirmation callbacks carry a serial so a dismissed prompt cannot authorize a newer one. Reviewed Admin child routing is composed separately from global role admission.
+
+
+Users domain targets current V2 052655a4 with the explicit Metalayzer delta from pinned f119. The live list uses `/v1/mobile/admin/users/list`, page size50 in the screen, 220ms authoritative debounce and verified-prefix local substring filtering. Worker also uses this endpoint; the source worker-side-channel helper always returns false. Role selection persists source camelCase enum names under per-profile/default keys. List UI and worker/werka/customer/supplier detail routes remain held until implemented.
