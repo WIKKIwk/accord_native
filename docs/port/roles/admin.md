@@ -175,3 +175,6 @@ Admin-owned native layout measurements and pure AppShell policy now exist: sourc
 
 
 Six older Admin account owners now use an independent per-owner recursion guard so the genuine shared avatar cache/child guard can wrap them without false retirement. Same-owner cycles, async authority and original account/scope changes remain denied. Shared legacy guard defaults and other-role consumers are unchanged.
+
+
+Genuine Warehouse rolls/reserved-order/rawQR children now exist with awaited native dismissal and original account/mounted context. Raw QR follows prepare→identity→offline Zebra USB print→confirm with4s FIFO notices. Main must compose its direct native QR child inside the current iOS Details presenter. Main/raw-edit/material-state/app integration, QR mask/short-notice/retirement differences and device checks remain open; GoDEX remains excluded by D13.
