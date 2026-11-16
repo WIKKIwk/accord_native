@@ -5,7 +5,7 @@ import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { FlatList, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { localizedGetter } from '../shared/localization';
@@ -163,7 +163,7 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
   const bottomPadding = insets.bottom + model.bottomPaddingOffset, tabs = model.scope === 'werka' ? [] : [
     { value: 'products', label: model.scope === 'material' ? model.a('warehouse.tabs_warehouses') : 'Mahsulotlar' }, { value: 'settings', label: model.scope === 'material' ? model.a('warehouse.tabs_states') : 'Sozlamalar' }];
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
-    <View style={{ backgroundColor: colors.surfaceContainerHigh }}><SearchHeader model={model} props={props} /></View>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ backgroundColor: colors.surfaceContainerHigh }}><SearchHeader model={model} props={props} /></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-warehouse-main-body-frame">
     {model.summaryScreen === 'loading' ? <View style={styles.center}><BaseHost matchContents><WarehouseLoadingIndicator /></BaseHost></View> : model.summaryScreen === 'error' ? <ScrollView style={styles.body} contentContainerStyle={styles.retry}>
       <BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(viewportWidth * .88, 280), 360), maxWidth: '100%' }}><Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}>

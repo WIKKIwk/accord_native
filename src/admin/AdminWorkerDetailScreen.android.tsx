@@ -4,7 +4,7 @@ import { Box, CircularProgressIndicator, Column, FlowRow, IconButton, OutlinedBu
 import { animated, animateContentSize, defaultMinSize, fillMaxWidth, graphicsLayer, height, padding, semantics, size, testID, tween, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { AdminText as Text } from './AdminTypography.android';
@@ -75,11 +75,11 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
   if (!model.scopeCurrent()) return null;
   const action = (label: string, click: () => void, id: string) => <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><OutlinedButton onClick={click} colors={{ contentColor: colors.onSurface }} shape={workerDetailShape(14)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 54 }), testID(id)]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{label}</Text></OutlinedButton></BaseHost>;
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
-    <BaseHost style={styles.header}><Column><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost style={styles.header}><Column><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
       <TopAppBar.NavigationIcon><IconButton onClick={() => { model.back(); }} modifiers={[size(48, 48), semantics({ contentDescription: props.backLabel })]}><WorkerDetailIcon name="arrow_back" color={colors.onSurfaceVariant} /></IconButton></TopAppBar.NavigationIcon>
       <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{a('profile.title')}</Text></TopAppBar.Title>
       <TopAppBar.Actions><RNHostView matchContents><View style={styles.headerAction}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
-    </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} /></Column></BaseHost>
+    </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} /></Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={colors.surface} shadowElevation={2} shape={workerDetailCardShape()} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), animateContentSize()]}>
         <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>

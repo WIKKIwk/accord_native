@@ -21,7 +21,7 @@ function setup(family, platform) {
     'react-native': { View: 'View', ScrollView: 'RN.ScrollView', RefreshControl: 'RefreshControl', Modal: 'Modal', Pressable: 'Pressable', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
     'react-native-reanimated': { default: { View: 'Animated.View' }, View: 'Animated.View', LinearTransition: transition, Easing: { cubic: 'cubic', out: value => value, inOut: value => value },
       useSharedValue: value => ({ value }), useAnimatedStyle: callback => callback(), withTiming: value => value },
-    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 34 }) },
+    'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 34 }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     './AdminTypography.android': { AdminText: 'Text' }, './AdminTextFields.android': { AdminBasicTextField: ui.BasicTextField, AdminOutlinedTextField: ui.OutlinedTextField }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     '../shared/localization': { uiText: value => value }, '../shared/localization/runtime': { localeController: { locale: 'uz' } }, './dartJsonString': { dartTrim: value => value.trim() }, './AdminShellBodyFrame': actualFrame,
@@ -44,6 +44,16 @@ for (const [family, id] of Object.entries(families)) for (const platform of ['an
     const parts = () => { const tree = f.render(), outer = nodes(tree, node => node.props.testID === `${frameID}-reserve`)[0], body = nodes(tree, node => node.props.testID === frameID)[0]; return { tree, outer, body, outside: flattenStyle(outer.props.style), inside: flattenStyle(body.props.style) }; };
     f.set({ metrics: metrics({ platform, viewPaddingBottom: 40, systemGestureInsetsBottom: 48 }), thinGestureBottom: platform === 'android' });
     let p = parts(); assert.equal(p.outside.marginHorizontal, 6); assert.equal(p.outside.marginBottom, 75); assert.equal(p.outside.backgroundColor, undefined);
+    const safe = nodes(p.tree, node => node.props.testID === `${frameID}-safe-area`)[0];
+    assert.equal(safe.type, 'SafeAreaView'); assert.deepEqual(safe.props.edges, ['left', 'right']);
+    assert.equal(flattenStyle(safe.props.style).flex, 1); assert.equal(nodes(safe, node => node === p.outer).length, 1);
+    assert.equal(nodes(safe, node => node.type === 'GenuineDock').length, 0);
+    if (platform === 'android') {
+      const header = nodes(p.tree, node => node.props.testID === 'admin-header-safe-area')[0];
+      assert.equal(header.type, 'SafeAreaView'); assert.deepEqual(header.props.edges, ['left', 'right']);
+      assert.equal(nodes(header, node => node.props.windowInsets != null && Object.keys(node.props.windowInsets).length === 0).length, 1);
+      assert.equal(nodes(header, node => node.props.testID === frameID).length, 0);
+    } else assert.equal(nodes(p.tree, node => node.props.testID === 'admin-header-safe-area').length, 0);
     assert.equal(p.inside.backgroundColor, colors.surfaceContainerLow); assert.equal(p.inside.borderTopLeftRadius, 18); assert.equal(p.inside.borderTopRightRadius, 18); assert.equal(p.inside.borderBottomLeftRadius, 18); assert.equal(p.inside.borderBottomRightRadius, 18); assert.equal(p.inside.overflow, 'hidden');
     assert.equal(p.inside.paddingBottom ?? 0, 0); assert.equal(p.inside.opacity, 1); assert.equal(p.body.props.pointerEvents, 'auto');
     assert.ok(nodes(p.tree, node => flattenStyle(node.props.style).backgroundColor === colors.surfaceContainerHigh).length);

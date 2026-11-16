@@ -6,7 +6,7 @@ import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { AdminText as Text } from './AdminTypography.android';
@@ -121,13 +121,13 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
   useEffect(() => { if (state.notice && state.notice !== shown.current && model.current()) { shown.current = state.notice; void snackbar.current?.showSnackbar({ message: model.notice!, duration: 'short' }); } }, [state.notice, model]);
   if (!model.current() || state.phase === 'invalidated' || state.phase === 'removed') return null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
-    <View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
         <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-supplier-detail-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
         <TopAppBar.Title><Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('profile.title')}</Text></TopAppBar.Title>
         <TopAppBar.Actions><RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
       </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
-    </Column></BaseHost></View>
+    </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame">
     {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
       <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />

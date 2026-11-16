@@ -20,6 +20,7 @@ const metrics = (patch = {}) => ({ platform: 'android', width: 390, height: 844,
 function frameModule(colors = { surfaceContainerLow: '#dddddd' }, facts = () => ({ metrics: metrics(), thinGestureBottom: false })) {
   return compile('AdminShellBodyFrame.tsx', {
     'react-native': { View: 'View', StyleSheet: { create: value => value } },
+    'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, './adminShellLayoutPolicy': policy,
     './useAdminShellLayout': { useAdminShellLayout: hasFooter => {
       const state = facts(); return { ...policy.adminShellFrameLayout(state.metrics, hasFooter, state.thinGestureBottom), metricsReady: state.metrics !== null };

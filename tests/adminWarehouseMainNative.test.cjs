@@ -45,7 +45,7 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
       FlatList: props => ({ type: 'FlatList', props: { ...props, children: [props.ListHeaderComponent, props.data.map(item => props.renderItem({ item }))] } }) },
     '@expo/ui/community/pager-view': { __esModule: true, default: 'PagerView' },
     'react-native-reanimated': { __esModule: true, default: { View: 'Animated.View' }, LinearTransition: transition, Easing: { out: value => value, cubic: 'cubic' }, useSharedValue: value => ({ value }), useAnimatedStyle: fn => fn(), withTiming: value => value },
-    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
+    'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
     '../shared/localization': l10n, '../shared/themeRuntime': { themeController: { variant: 'white' } }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     './AdminCreateMenu.android': { AdminCreateMenu: 'AdminCreateMenu' }, './AdminCreateMenu.ios': { AdminCreateMenu: 'AdminCreateMenu' }, './AdminWarehouseCreateDialog.android': { AdminWarehouseCreateDialog: 'AdminWarehouseCreateDialog' }, './AdminWarehouseCreateDialog.ios': { AdminWarehouseCreateDialog: 'AdminWarehouseCreateDialog' },
     './AdminWarehouseSettingsTab.android': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseSettingsTab.ios': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseMainRows': rows, './AdminWarehouseMainEntries': entries, './useAdminWarehouseMain': { useAdminWarehouseMain: () => model },
@@ -113,6 +113,14 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} Main applies real shell geometry without remounting body for missing metrics or keyboard`, () => {
     const keyboard = fixture(platform, { nativeMetrics: metrics({ viewInsetsBottom: 300 }) }).render();
     assert.equal(flattenStyle(nodes(keyboard, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0].props.style).marginBottom, 0);
+    const safe = nodes(keyboard, node => node.props.testID === 'admin-warehouse-main-body-frame-safe-area')[0];
+    assert.equal(safe.type, 'SafeAreaView'); assert.deepEqual(safe.props.edges, ['left', 'right']);
+    assert.equal(nodes(safe, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve').length, 1);
+    if (platform === 'android') {
+      const header = nodes(keyboard, node => node.props.testID === 'admin-header-safe-area')[0];
+      assert.equal(header.type, 'SafeAreaView'); assert.deepEqual(header.props.edges, ['left', 'right']);
+      assert.equal(nodes(header, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve').length, 0);
+    }
     const missing = fixture(platform, { nativeMetrics: null }).render(), frame = nodes(missing, node => node.props.testID === 'admin-warehouse-main-body-frame')[0];
     assert.equal(flattenStyle(frame.props.style).opacity, 0); assert.equal(frame.props.pointerEvents, 'none'); assert.ok(nodes(frame, node => node.type === (platform === 'android' ? 'PagerView' : 'TabView')).length);
     const f = fixture(platform); f.props.footer = null; const tree = f.render();

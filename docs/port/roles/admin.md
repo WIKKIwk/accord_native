@@ -196,3 +196,6 @@ Real Admin child navigation now has original-argument/awaited-result ownership a
 
 
 Admin profile chat now has a source-compared target/error helper and guarded direct DM request boundary. Full ChatStore start/upsert/persistence and a genuine shared Android thread destination remain external Open dependencies; no profile chat action or fake route has been connected. Existing shared decoder/legacy mutation refresh differences remain recorded.
+
+
+The committed common body frame and seven Android custom headers now apply native left/right safe area outside the independent source6 body margin. iOS native headers retain UIKit ownership, and dock/footer stays outside body safe area. Physical lateral/RTL geometry and Supplier's separate inner dynamic dock/FAB SafeArea remain Open.

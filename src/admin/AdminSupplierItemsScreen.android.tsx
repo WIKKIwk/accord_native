@@ -4,7 +4,7 @@ import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, ve
 import { SymbolView } from 'expo-symbols';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { AdminText as Text } from './AdminTypography.android';
@@ -64,13 +64,13 @@ export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
   const model = useAdminSupplierItems(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets();
   if (!model.current() || !model.state.valid) return null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
-    <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
         <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
         <TopAppBar.Title><Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.title}</Text></TopAppBar.Title>
         <TopAppBar.Actions><RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
       </TopAppBar><Spacer modifiers={[height(3)]} />
-    </Column></BaseHost>
+    </Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-items-body-frame" contentPadding="default"><View style={styles.content}>
       {model.state.loading ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
         <LoadingIndicator color={colors.primary} modifiers={[size(48, 48), semantics({ contentDescription: 'Loading' })]} />
