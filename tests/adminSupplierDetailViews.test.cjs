@@ -5,7 +5,7 @@ const s = require('./adminSupplierDetailViewSupport.cjs');
 for (const platform of ['android', 'ios']) {
   test(`${platform} supplier identity, genuine slots and overlay dock retain source profile geometry`, () => {
     const f = s.model({ expanded: false }), v = s.view(platform, f.model), tree = v.render();
-    assert.equal(v.avatars.length, 1); assert.equal(v.avatars[0].size, 92); assert.equal(v.avatars[0].displayName, 'SN'); assert.equal(v.avatars[0].isCurrent, f.model.current);
+    assert.equal(v.avatars.length, 1); assert.equal(v.avatars[0].size, 92); assert.equal(v.avatars[0].displayName, 'SN'); assert.equal(v.avatars[0].isCurrent, f.model.current); assert.equal(v.avatars[0].canInteract, f.model.interactive);
     assert.equal(s.nodes(tree, node => node.type === 'ActualChatAction').length, 1);
     const dock = s.nodes(tree, node => node.type === 'View' && node.props.children?.type === 'ActualDock')[0]; assert.equal(dock.props.style.position, 'absolute'); assert.equal(dock.props.style.bottom, 0);
     if (platform === 'android') assert.equal(s.nodes(tree, node => node.type === 'ActualProfileAction').length, 1);

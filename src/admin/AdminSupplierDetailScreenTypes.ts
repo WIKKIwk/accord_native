@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from 'react';
 import type { Session, SessionWitness } from '../auth';
 
 export type AdminSupplierDetailAvatarProps = {
-  avatarUrl: string; fallbackText: string; size: number; isCurrent: () => boolean;
+  avatarUrl: string; fallbackText: string; size: number; isCurrent: () => boolean; canInteract: () => boolean;
   /** Source avatar preview title; AdminProfileAvatar defaults this to the initials. */
   displayName: string;
 };

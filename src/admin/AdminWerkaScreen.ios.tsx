@@ -88,7 +88,7 @@ function Header({ model, props }: { model: AdminWerkaScreenModel; props: AdminWe
   return <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>
     <View style={styles.banner} /><View style={styles.status}><BaseHost matchContents><Text modifiers={[font({ textStyle: 'caption', weight: 'bold' }), foregroundStyle(colors.onSecondaryContainer),
       padding({ horizontal: 12, vertical: 8 }), background(colors.secondaryContainer), cornerRadius(999)]}>{model.a('profile.ready')}</Text></BaseHost></View>
-    <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: model.state.avatarUrl, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current })}</View>
+    <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: model.state.avatarUrl, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.interactive })}</View>
     <View style={styles.identity}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><VStack alignment="leading" spacing={6}>
       <Text modifiers={[font({ textStyle: 'title2', weight: 'heavy' }), lineLimit(1)]}>{model.displayName}</Text>
       <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle('secondary'), lineLimit(1)]}>{model.a('profile.description')}</Text>

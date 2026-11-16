@@ -111,7 +111,7 @@ function Detail({ model, props }: { model: AdminWerkaScreenModel; props: AdminWe
       <View style={styles.status}><BaseHost matchContents><Surface color={colors.secondaryContainer} shape={rounded(999)}>
         <Text color={colors.onSecondaryContainer} style={{ typography: 'bodySmall', fontWeight: '700' }} modifiers={[padding(12, 8, 12, 8)]}>{model.a('profile.ready')}</Text>
       </Surface></BaseHost></View>
-      <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: state.avatarUrl, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current })}</View>
+      <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: state.avatarUrl, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.interactive })}</View>
       <View style={styles.identity}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column>
         <Text maxLines={1} overflow="ellipsis" style={{ typography: 'headlineSmall', fontWeight: '800', lineHeight: 25.92 }}>{model.displayName}</Text><Spacer modifiers={[height(6)]} />
         <Text maxLines={1} overflow="ellipsis" color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{model.a('profile.description')}</Text>

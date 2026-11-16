@@ -77,7 +77,7 @@ function Detail({ model, props }: { model: AdminSupplierDetailScreenModel; props
     <View style={styles.profileHeader}><View style={styles.banner} /><View style={styles.status}><BaseHost matchContents><Surface color={colors.secondaryContainer} shape={rounded(999)}>
       <Text color={colors.onSecondaryContainer} style={{ typography: 'bodySmall', fontWeight: '700' }} modifiers={[padding(12, 8, 12, 8)]}>{model.a(detail.blocked ? 'detail.blocked' : 'detail.ready')}</Text>
     </Surface></BaseHost></View>
-      <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: detail.avatar_url, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current })}</View>
+      <View style={styles.avatar}>{props.renderAvatar({ avatarUrl: detail.avatar_url, displayName: model.initials, fallbackText: model.initials, size: 92, isCurrent: model.current, canInteract: model.interactive })}</View>
       <View style={styles.identity}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column>
         <Text maxLines={1} overflow="ellipsis" style={{ typography: 'headlineSmall', fontWeight: '800', lineHeight: 25.92 }}>{model.displayName}</Text><Spacer modifiers={[height(6)]} />
         <Text maxLines={1} overflow="ellipsis" color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{model.a('detail.supplier_profile')}</Text>

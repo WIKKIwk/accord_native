@@ -96,7 +96,7 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} Werka preserves source identity/avatar/chat/dock and collapsed controls are destroyed`, () => {
     const f = createModel({ expanded: false }), { tree, avatars } = screen(platform, f);
     assert.equal(avatars.length, 1); assert.equal(avatars[0].size, 92); assert.equal(avatars[0].avatarUrl, f.model.state.avatarUrl);
-    assert.equal(avatars[0].fallbackText, 'ON'); assert.equal(avatars[0].displayName, 'ON', 'source preview title defaults to initials'); assert.equal(avatars[0].isCurrent, f.model.current);
+    assert.equal(avatars[0].fallbackText, 'ON'); assert.equal(avatars[0].displayName, 'ON', 'source preview title defaults to initials'); assert.equal(avatars[0].isCurrent, f.model.current); assert.equal(avatars[0].canInteract, f.model.interactive);
     assert.equal(nodes(tree, node => node.type === 'ActualChatAction').length, 1); assert.equal(nodes(tree, node => node.type === 'ActualDock').length, 1);
     const dockHost = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'ActualDock')[0];
     assert.equal(dockHost.props.style.position, 'absolute'); assert.equal(dockHost.props.style.bottom, 0, 'Scaffold.extendBody retains the full scroll viewport behind the genuine dock');

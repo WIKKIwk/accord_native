@@ -992,3 +992,9 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 - Android uses native63 chrome/24w800 title, source16-radius bordered cards/padding16,20w800 titles,14w700 values,18 dividers,8 list/card gaps,116 extra bottom space and56/radius20 reload. iOS uses native SwiftUI List/cards/pull refresh and Stack actions. Genuine supplied profile and dock remain required; no placeholder activity route was exposed.
 - Validation:16/16 new presentation/concurrency/session/actual-hook/native tests and combined Worker126/126 pass; both full platform TypeScript and scoped lint pass. No backend, Flutter, device/simulator or native app build was used.
 - OPEN: original return/navigation composition, source body60+dockLayoutBottomInset/keyboard reserve, Google Sans/native metrics, physical short-list refresh/scroll/RTL/large-font/accessibility and iOS List adaptation. Existing shared DTO/parser differences recorded by Worker Detail still apply. No acceptance exception/global Admin admission was added.
+
+
+## 2026-11-16 Werka/Supplier genuine avatar interaction boundary
+
+- Added the missing canInteract renderer argument on both Werka and Supplier native views, separate from their mounted/account isCurrent. This lets the actual committed AdminProfileAvatar keep its image/preview read through parent blur while rejecting new opens from covered native controls; no focus predicate was substituted for read authority.
+- Combined avatar/Werka/Supplier119/119, both full platform TypeScript and full source lint (zero errors, one existing AdminClosedHistoryOwner dependency warning) pass. Parent routing remains held.
