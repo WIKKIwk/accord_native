@@ -211,3 +211,6 @@ Settings now consumes the genuine common source frame/lateral safe area and sepa
 
 
 Original session/page authority now reaches genuine source-model Back through an optional context and exact native removal repeat. A separate original-prefix permit handles root dock removal. Seven hooks fence unaccepted interactions while preserving owned reads/accepted writes; Users passes its actual inner controller lifetime with the original ticket. Native detach still owns result completion. File-page/provider/dock composition and global/primary/chat admission remain held.
+
+
+The upcoming Item Create/list/customer picker now has a genuine isolated completed-cache singleton, original namespace and auth-reset cleanup. Catalog accumulation/selection exclusion and customer latest-nonempty-page semantics remain distinct; customer clear expires only its old writers. Real controller/UserCreate coupling is pending, broader M3 cache behavior stays Open, and no cache-owner route is enabled.
