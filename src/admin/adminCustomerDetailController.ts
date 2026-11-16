@@ -5,7 +5,7 @@ import { adminCustomerSameScope, adminCustomerScopeValues, type AdminCustomerDet
 import { dartTrim } from './dartJsonString';
 
 export type AdminCustomerDetailMode = Readonly<{ management: boolean; items: boolean; remove: boolean; material: boolean }>;
-export type AdminCustomerDetailNotice = Readonly<{ serial: number; key: string; error?: unknown; operationError?: boolean }>;
+export type AdminCustomerDetailNotice = Readonly<{ serial: number; key: string; error?: unknown; operationError?: boolean }> | Readonly<{ serial: number; message: string }>;
 export type AdminCustomerDetailPrompt = Readonly<{ serial: number; kind: 'customer' }> | Readonly<{ serial: number; kind: 'item'; item: SupplierItem }>;
 export type AdminCustomerDetailState = {
   valid: boolean; removed: boolean; loading: boolean; loadError: unknown; detail: AdminCustomerDetail | null; seconds: number; expanded: boolean; changed: boolean;
@@ -85,6 +85,8 @@ export class AdminCustomerDetailController {
   }
   toggle(): void { if (this.editable()) this.publish({ expanded: !this.state.expanded }); }
   private notice(key: string, error?: unknown, operationError = false) { if (this.isCurrent() && !this.state.removed) this.publish({ notice: { serial: ++this.serial, key, error, operationError } }); }
+  /** A genuine source child shares this screen's ScaffoldMessenger and captured localized message. */
+  childNotice(message: string): void { if (this.editable()) this.publish({ notice: Object.freeze({ serial: ++this.serial, message }) }); }
   dismissNotice(serial: number): void { if (this.isCurrent() && this.state.notice?.serial === serial) this.publish({ notice: null }); }
   /** Phone failure/empty input resolves normally in V2, so a still-mounted editor closes. */
   async savePhone(detail: AdminCustomerDetail, input: string): Promise<boolean> {

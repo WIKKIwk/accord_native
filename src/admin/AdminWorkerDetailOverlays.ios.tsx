@@ -6,6 +6,10 @@ import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
 import type { AdminWorkerDetailOverlay, AdminWorkerDetailScreenModel } from './useAdminWorkerDetail';
+export type AdminWorkerDetailOverlaysModel = Pick<AdminWorkerDetailScreenModel, 'a' | 't' | 'current' | 'overlays'> & {
+  /** Optional original selection/lifetime ticket committed only after the native warehouse picker closes. */
+  prepareWarehousePickerClose?: (id: number, confirmed: boolean) => (() => void) | null;
+};
 
 function Confirmation({ overlay }: { overlay: AdminWorkerDetailOverlay }) {
   const { editor, id } = overlay, labels = editor.dialogText!, { colors } = useBaseTheme();
@@ -22,10 +26,12 @@ function Confirmation({ overlay }: { overlay: AdminWorkerDetailOverlay }) {
     </BaseHost></View>
   </View></Modal>;
 }
-function Picker({ overlay, model, children }: { overlay: AdminWorkerDetailOverlay; model: AdminWorkerDetailScreenModel; children: ReactNode }) {
+function Picker({ overlay, model, children }: { overlay: AdminWorkerDetailOverlay; model: AdminWorkerDetailOverlaysModel; children: ReactNode }) {
   const { editor, id } = overlay, picker = editor.state.picker!, warehouse = picker.kind === 'warehouse', query = useNativeState(picker.query), { colors } = useBaseTheme();
   const [presented, setPresented] = useState(true), pending = useRef<null | (() => void)>(null), closing = useRef(false);
-  const hide = (action: () => void) => { if (!editor.canInteractOverlay(id) || closing.current) return; closing.current = true; pending.current = action; setPresented(false); };
+  const hide = (action: () => void, confirmed = false) => { if (!editor.canInteractOverlay(id) || closing.current) return;
+    const commit = warehouse && model.prepareWarehousePickerClose ? model.prepareWarehousePickerClose(id, confirmed) : action; if (!commit) return;
+    closing.current = true; pending.current = commit; setPresented(false); };
   const geometry = useScrollGeometryChange(value => { if (!warehouse) editor.materialScroll(id, value.contentHeight - value.contentOffsetY - value.containerHeight); });
   return <BottomSheet isPresented={presented} onIsPresentedChange={value => { if (!value) hide(() => editor.dismissPicker(id)); }} onDismiss={() => { const action = pending.current ?? (() => editor.dismissPicker(id)); pending.current = null; action(); }}>
     <Group modifiers={[presentationDetents([{ fraction: warehouse ? .72 : .66 }]), presentationDragIndicator('visible')]}>
@@ -52,22 +58,22 @@ function Picker({ overlay, model, children }: { overlay: AdminWorkerDetailOverla
               </VStack>
             </Button>}</List.ForEach>{!editor.materials.length ? <Text>{model.t('noRecordsYet')}</Text> : null}{picker.loadingMore ? <ProgressView /> : null}</>}
         </List>
-        {warehouse ? <Button label={model.a('action.confirm')} systemImage="checkmark" onPress={() => hide(() => editor.confirmWarehouse(id))} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), disabled(picker.kind !== 'warehouse' || picker.selected === null), frame({ maxWidth: Infinity, minHeight: 56 }), padding({ leading: 16, top: 8, trailing: 16, bottom: 16 }), accessibilityIdentifier('admin-material-warehouse-confirm')]} /> : null}
+        {warehouse ? <Button label={model.a('action.confirm')} systemImage="checkmark" onPress={() => hide(() => editor.confirmWarehouse(id), true)} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), disabled(picker.kind !== 'warehouse' || picker.selected === null), frame({ maxWidth: Infinity, minHeight: 56 }), padding({ leading: 16, top: 8, trailing: 16, bottom: 16 }), accessibilityIdentifier('admin-material-warehouse-confirm')]} /> : null}
       </VStack>
       {children}
     </Group>
   </BottomSheet>;
 }
-function OverlayStack({ model, index }: { model: AdminWorkerDetailScreenModel; index: number }): ReactNode {
+function OverlayStack({ model, index }: { model: AdminWorkerDetailOverlaysModel; index: number }): ReactNode {
   const overlay = model.overlays[index]; if (!overlay) return null;
   const next = <OverlayStack model={model} index={index + 1} />;
   // A second SwiftUI sheet must be attached to the first sheet's presented content.
   return overlay.type === 'picker' ? <Picker key={overlay.id} overlay={overlay} model={model}>{next}</Picker> : <Group><RNHostView matchContents><View><Confirmation overlay={overlay} /></View></RNHostView>{next}</Group>;
 }
 /** Independent source editors retain native presentation order instead of merging their busy states. */
-export function WorkerDetailOverlays({ model }: { model: AdminWorkerDetailScreenModel }) {
+export function WorkerDetailOverlays({ model }: { model: AdminWorkerDetailOverlaysModel }) {
   if (!model.overlays.length || !model.current()) return null;
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}><BaseHost style={styles.host}><OverlayStack model={model} index={0} /></BaseHost></View>;
 }
-const styles = StyleSheet.create({ host: { position: 'absolute', width: '100%' }, fullWidth: { width: '100%' }, modal: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,.32)' },
+const styles = StyleSheet.create({ host: { position: 'absolute', width: '100%' }, fullWidth: { width: '100%' }, modal: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,.54)' },
   card: { width: '100%', maxWidth: 420, borderRadius: 28, borderWidth: 1, overflow: 'hidden' } });

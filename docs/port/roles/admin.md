@@ -187,3 +187,6 @@ Android Admin now has six exact source font faces and an Admin-only provider/nat
 
 
 Warehouse Main now has a genuine both-platform composition with actual rolls, nested rawQR, reserved-order and profile/account owners. Native presenter membership survives StrictMode and fences first-commit/removal/replacement races. Real frame/font integration is included. Host navigation/footer and Material edit/state dependencies stay explicit; app admission and prior native/device Open items remain.
+
+
+Customer/Material now composes actual avatar/apparatus/material warehouse owners. Real source role assignment/read/write/notice/reload ordering and original accepted picker choice across native dismissal/blur are retained. Parent notices use its existing short-message host. Worker native picker reuse has a narrow optional lifetime seam; existing defaults remain. Physical chip/dialog/sheet/keyboard and global route/external chat work remain open.

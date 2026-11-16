@@ -5,11 +5,11 @@ import type { AdminUserListEntry } from './adminUsersModel';
 
 export type AdminCustomerAvatarProps = { avatarUrl: string; fallbackText: string; displayName: string; size: number; isCurrent: () => boolean; canInteract: () => boolean };
 export type AdminCustomerApparatusProps = { customerRef: string; materialTaminotchi: boolean; session: Session; witness: SessionWitness;
-  isCurrent: () => boolean; isInteractive: () => boolean; onChanged: () => void };
+  isCurrent: () => boolean; isInteractive: () => boolean; onChanged: () => void; onNotice: (message: string) => void };
 export type AdminCustomerMaterialWarehouseProps = {
   session: Session; witness: SessionWitness; isCurrent: () => boolean; isInteractive: () => boolean;
   principalRole: 'material_taminotchi'; principalRef: string; displayName: string; assignedWarehouses: readonly string[];
-  reloadAssignedWarehouses: () => Promise<readonly string[]>; onChanged: (warehouses: readonly string[]) => void;
+  reloadAssignedWarehouses: () => Promise<readonly string[]>; onChanged: (warehouses: readonly string[]) => void; onNotice: (message: string) => void;
   assignedMessage: string; chipKeyPrefix: 'admin-material-detail-warehouse-'; addButtonKey: 'admin-material-detail-add-warehouse'; buttonRadius: 14;
 };
 /** Genuine subordinate owners are required before this held screen can be composed into app routes. */

@@ -70,9 +70,10 @@ export function useAdminCustomerDetail(props: AdminCustomerDetailScreenProps) {
   const promptText = state.prompt ? state.prompt.kind === 'customer' ? { title: a('detail.customer_remove_title'), body: a('detail.customer_remove_message'),
     cancel: a('action.cancel'), confirm: a('detail.customer_remove'), destructive: true } : { title: a('detail.item_unlink_title'),
     body: a('detail.customer_item_remove_message', { item: state.prompt.item.name }), cancel: a('bulk_move.no'), confirm: a('bulk_move.yes'), destructive: false } : null;
-  const notice = state.notice ? state.notice.operationError ? adminCustomerOperationError(a(state.notice.key), state.notice.error) :
+  const notice = state.notice ? 'message' in state.notice ? state.notice.message : state.notice.operationError ? adminCustomerOperationError(a(state.notice.key), state.notice.error) :
     a(state.notice.key, state.notice.error === undefined ? undefined : { error: String(state.notice.error) }) : null;
   const apparatusChanged = useCallback(() => { if (current()) controller.apparatusChanged(); }, [current, controller]);
+  const childNotice = useCallback((message: string) => { if (current()) controller.childNotice(message); }, [current, controller]);
   const warehousesChanged = useCallback((warehouses: readonly string[]) => { if (current()) controller.warehousesChanged(warehouses); }, [current, controller]);
   const reloadWarehouses = useCallback(async () => {
     if (!current()) throw new Error('Admin customer detail session changed');
@@ -80,12 +81,12 @@ export function useAdminCustomerDetail(props: AdminCustomerDetailScreenProps) {
   }, [current, controller]);
   const materialWarehouse: AdminCustomerMaterialWarehouseProps | null = mode.management && mode.material && state.detail ? {
     session, witness, isCurrent: current, isInteractive: controlsCurrent, principalRole: 'material_taminotchi', principalRef: state.detail.ref,
-    displayName: state.detail.name, assignedWarehouses: state.detail.assigned_warehouses, reloadAssignedWarehouses: reloadWarehouses, onChanged: warehousesChanged,
+    displayName: state.detail.name, assignedWarehouses: state.detail.assigned_warehouses, reloadAssignedWarehouses: reloadWarehouses, onChanged: warehousesChanged, onNotice: childNotice,
     assignedMessage: a('detail.material_scope_message'), chipKeyPrefix: 'admin-material-detail-warehouse-', addButtonKey: 'admin-material-detail-add-warehouse', buttonRadius: 14,
   } : null;
   return { state, detail, overlays, mode, current, interactive, controlsCurrent, generation, overlayGeneration, presentation, locale, a,
     t: (key: string) => localizedGetter(key, locale), title, subtitle, displayName, initials, status, notice, back, materialWarehouse, promptText,
-    apparatus: { session, witness, customerRef, materialTaminotchi: mode.material, isCurrent: current, isInteractive: interactive, onChanged: apparatusChanged },
+    apparatus: { session, witness, customerRef, materialTaminotchi: mode.material, isCurrent: current, isInteractive: interactive, onChanged: apparatusChanged, onNotice: childNotice },
     toggle: () => { if (interactive()) controller.toggle(); },
     reload: () => { if (interactive() && controller.getSnapshot().loadError != null) void controller.reload(); },
     savePhone: (captured: AdminCustomerDetail, input: string) => controlsCurrent() ? controller.savePhone(captured, input) : Promise.resolve(false),
@@ -129,12 +130,13 @@ export function useAdminCustomerWarehouseProps(warehouse: AdminCustomerMaterialW
   const attached = useRef(true);
   useInsertionEffect(() => { attached.current = true; return () => { attached.current = false; }; }, []);
   const current = useCallback(() => attached.current && parentCurrent(), [parentCurrent]);
-  const { onChanged, reloadAssignedWarehouses } = warehouse;
+  const { onChanged, onNotice, reloadAssignedWarehouses } = warehouse;
   const changed = useCallback((values: readonly string[]) => { if (current()) onChanged(values); }, [current, onChanged]);
+  const notice = useCallback((message: string) => { if (current()) onNotice(message); }, [current, onNotice]);
   const reload = useCallback(async () => { if (!current()) throw new Error('Admin customer detail warehouse editor changed');
     const values = await reloadAssignedWarehouses(); if (!current()) throw new Error('Admin customer detail warehouse editor changed'); return values;
   }, [current, reloadAssignedWarehouses]);
-  return { ...warehouse, isCurrent: current, isInteractive: () => attached.current && parentInteractive(), onChanged: changed, reloadAssignedWarehouses: reload };
+  return { ...warehouse, isCurrent: current, isInteractive: () => attached.current && parentInteractive(), onChanged: changed, onNotice: notice, reloadAssignedWarehouses: reload };
 }
 /** @v2 _CustomerPhoneInlineFieldState, including its retained local buffer after empty/failed submits. */
 export function useAdminCustomerPhoneEditor(model: AdminCustomerPhoneModel, buffer: { get: () => string; set: (text: string) => void }) {

@@ -1,14 +1,18 @@
-import { AdminBasicTextField as BasicTextField, AdminOutlinedTextField as OutlinedTextField } from './AdminTextFields.android';
-import { AdminText as Text } from './AdminTypography.android';
 import { BasicAlertDialog, Box, Button, Column, FilledTonalButton, IconButton, ModalBottomSheet, OutlinedButton, RNHostView, Row, Spacer, Surface, useNativeState, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, imePadding, padding, semantics, size, testID, verticalScroll, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { useRef } from 'react';
 import { FlatList, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from './AdminTypography.android';
+import { AdminBasicTextField as BasicTextField, AdminOutlinedTextField as OutlinedTextField } from './AdminTextFields.android';
 import { WorkerDetailIcon, WorkerDetailLoading, workerDetailAlpha, workerDetailSegmentShape, workerDetailShape } from './AdminWorkerDetailNative.android';
 import type { AdminWorkerDetailMaterial } from './adminWorkerDetailAssignmentsApi';
 import type { AdminWorkerDetailOverlay, AdminWorkerDetailScreenModel } from './useAdminWorkerDetail';
+export type AdminWorkerDetailOverlaysModel = Pick<AdminWorkerDetailScreenModel, 'a' | 't' | 'current' | 'overlays'> & {
+  /** Optional original selection/lifetime ticket committed only after the native warehouse picker closes. */
+  prepareWarehousePickerClose?: (id: number, confirmed: boolean) => (() => void) | null;
+};
 
 function Confirmation({ overlay }: { overlay: AdminWorkerDetailOverlay }) {
   const { editor, id } = overlay, labels = editor.dialogText!, { colors } = useBaseTheme(), { width: screenWidth } = useWindowDimensions();
@@ -24,10 +28,12 @@ function Confirmation({ overlay }: { overlay: AdminWorkerDetailOverlay }) {
     </Surface>
   </BasicAlertDialog>;
 }
-function Picker({ overlay, model }: { overlay: AdminWorkerDetailOverlay; model: AdminWorkerDetailScreenModel }) {
+function Picker({ overlay, model }: { overlay: AdminWorkerDetailOverlay; model: AdminWorkerDetailOverlaysModel }) {
   const { editor, id } = overlay, picker = editor.state.picker!, native = useNativeState(picker.query), { colors, mode } = useBaseTheme(), { height: screenHeight } = useWindowDimensions();
   const sheet = useRef<ModalBottomSheetRef>(null), hiding = useRef(false), warehouse = picker.kind === 'warehouse';
-  const hide = async (action: () => void) => { if (!editor.canInteractOverlay(id) || hiding.current) return; hiding.current = true; try { await sheet.current?.hide(); action(); } finally { hiding.current = false; } };
+  const hide = async (action: () => void, confirmed = false) => { if (!editor.canInteractOverlay(id) || hiding.current) return;
+    const commit = warehouse && model.prepareWarehousePickerClose ? model.prepareWarehousePickerClose(id, confirmed) : action; if (!commit) return;
+    hiding.current = true; try { await sheet.current?.hide(); commit(); } finally { hiding.current = false; } };
   const close = () => { void hide(() => editor.dismissPicker(id)); };
   const materialRow = ({ item, index }: { item: AdminWorkerDetailMaterial; index: number }) => <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
     <Surface color={colors.surfaceContainerHighest} shape={workerDetailSegmentShape(index, editor.materials.length)} modifiers={[fillMaxWidth()]} onClick={() => { void hide(() => editor.selectMaterial(id, item)); }}>
@@ -64,14 +70,14 @@ function Picker({ overlay, model }: { overlay: AdminWorkerDetailOverlay; model: 
             onScroll={({ nativeEvent: e }) => editor.materialScroll(id, e.contentSize.height - e.contentOffset.y - e.layoutMeasurement.height)} ItemSeparatorComponent={() => <View style={styles.materialGap} />}
             ListEmptyComponent={<BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column horizontalAlignment="center" modifiers={[fillMaxWidth(), padding(0, 24, 0, 24)]}><Text>{model.t('noRecordsYet')}</Text></Column></BaseHost>}
             ListFooterComponent={picker.loadingMore ? <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column horizontalAlignment="center" modifiers={[fillMaxWidth(), padding(0, 18, 0, 18)]}><WorkerDetailLoading /></Column></BaseHost> : undefined} /></RNHostView>}
-      {warehouse ? <Column modifiers={[fillMaxWidth(), padding(16, 8, 16, 16)]}><Button onClick={() => { void hide(() => editor.confirmWarehouse(id)); }} enabled={picker.selected !== null} shape={workerDetailShape(20)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID('admin-material-warehouse-confirm')]}>
+      {warehouse ? <Column modifiers={[fillMaxWidth(), padding(16, 8, 16, 16)]}><Button onClick={() => { void hide(() => editor.confirmWarehouse(id), true); }} enabled={picker.selected !== null} shape={workerDetailShape(20)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID('admin-material-warehouse-confirm')]}>
         <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }}><WorkerDetailIcon name="check" color={colors.onPrimary} /><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('action.confirm')}</Text></Row>
       </Button></Column> : null}
     </Column>
   </ModalBottomSheet>;
 }
 /** Source editors may overlap while their independent catalog loads complete; IDs retain native window ordering. */
-export function WorkerDetailOverlays({ model }: { model: AdminWorkerDetailScreenModel }) {
+export function WorkerDetailOverlays({ model }: { model: AdminWorkerDetailOverlaysModel }) {
   if (!model.overlays.length || !model.current()) return null;
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}><BaseHost style={styles.host}>{model.overlays.map(overlay => overlay.type === 'dialog'
     ? <Confirmation key={overlay.id} overlay={overlay} /> : <Picker key={overlay.id} overlay={overlay} model={model} />)}</BaseHost></View>;
