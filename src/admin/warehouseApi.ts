@@ -4,6 +4,7 @@ import { adminWarehouseFromJson, type GScaleAdminWarehouse } from '../gscale/gsc
 import { MobileApiException } from '../shared/mobileApiException';
 import { adminApiError } from './adminApiError';
 import { dartJsonString, dartTrim } from './dartJsonString';
+import { checkedAdminGuard } from './adminProductionRequest';
 
 /** @v2 AdminWarehouseSummary */
 export type AdminWarehouseSummary = { warehouse: string; product_count: number; reserved_count: number;
@@ -36,13 +37,18 @@ export async function adminWarehouseSummaries(session: Session, options: { query
   return value.map(adminWarehouseSummaryFromJson);
 }
 /** @v2 adminCreateWarehouse */
-export async function adminCreateWarehouse(session: Session, warehouse: string): Promise<GScaleAdminWarehouse> {
+export async function adminCreateWarehouse(session: Session, warehouse: string, guard?: () => void): Promise<GScaleAdminWarehouse> {
+  const check = checkedAdminGuard(guard); check?.();
   const name = dartTrim(warehouse);
   if (!name) throw new Error('Admin warehouse name required');
-  const response = await authorizedFetch(session, '/v1/mobile/admin/warehouses', { method: 'POST',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ warehouse: name }) });
-  if (response.status !== 200) throw new Error('Admin warehouse create failed');
-  return adminWarehouseFromJson(await response.json());
+  try {
+    const response = await authorizedFetch(session, '/v1/mobile/admin/warehouses', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ warehouse: name }) }, check);
+    check?.();
+    if (response.status !== 200) throw new Error('Admin warehouse create failed');
+    const value: unknown = await response.json(); check?.();
+    try { return adminWarehouseFromJson(value); } finally { check?.(); }
+  } catch (error) { check?.(); throw error; }
 }
 /** @v2 adminDeleteWarehouse */
 export async function adminDeleteWarehouse(session: Session, warehouse: string, deleteProducts: boolean): Promise<void> {

@@ -14,12 +14,13 @@ function load(file, overrides = {}) {
 const exception = load('shared/mobileApiException');
 const errorApi = load('admin/adminApiError', { '../shared/mobileApiException': exception });
 const dart = load('admin/dartJsonString');
+const checked = load('admin/adminProductionRequest', { '../authorizedFetch': {}, '../shared/mobileApiException': exception, '../workerControlsApi': {} });
 const warehouseParser = load('gscale/gscaleAdminApi', { '../authorizedFetch': {}, '../workerControlsApi': {}, '../workerProductionMapSaved': {} });
 function fixture() {
   const requests = []; let status = 200, payload = {};
   const api = load('admin/warehouseApi', { '../authorizedFetch': { authorizedFetch: async (session, url, init = {}) => {
     requests.push({ session, url, init }); return new Response(JSON.stringify(payload), { status });
-  } }, '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
+  } }, '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart, './adminProductionRequest': checked });
   return { ...api, requests, setResponse(value, code = 200) { payload = value; status = code; } };
 }
 const session = { token: 'test' };
@@ -66,7 +67,7 @@ test('warehouse summary replays the available-stock widget test request', async 
   const session = recordedSession(stem, name);
   const api = load('admin/warehouseApi', { '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
     replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) },
-    '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
+    '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart, './adminProductionRequest': checked });
   assert.deepEqual(await api.adminWarehouseSummaries(session, { limit: 500 }), [{ warehouse: 'Ulug‘bek ombori', product_count: 1,
     reserved_count: 0, assignment_count: 0, assigned_display_names: [] }]);
   replay.assertDone();
@@ -91,7 +92,7 @@ for (const name of ['warehouse create trims name and reads response', 'warehouse
     const session = recordedSession(stem, name);
     const api = load('admin/warehouseApi', { '../authorizedFetch': { authorizedFetch: (s, p, init = {}) =>
       replay(new URL(p, s.baseUrl), { ...init, headers: { ...init.headers, Authorization: `Bearer ${s.token}` } }) },
-      '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart });
+      '../gscale/gscaleAdminApi': warehouseParser, '../shared/mobileApiException': exception, './adminApiError': errorApi, './dartJsonString': dart, './adminProductionRequest': checked });
     if (name.startsWith('warehouse create')) {
       assert.deepEqual(await api.adminCreateWarehouse(session, '\u0085 Production \u0085'), { warehouse: 'Production', company: 'Test',
         is_group: false, parent_warehouse: 'Root' });

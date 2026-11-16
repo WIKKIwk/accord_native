@@ -115,3 +115,6 @@ Product Groups follows the source tree/items flow: show a group's items, create 
 
 
 Prepared Admin child routes now include Settings, Additional Settings and Product Groups, guarded by original shell admission/capabilities/witness. Global Admin root/login remains held. The bridge gates native navigation by focus and mount while original account authority continues to own background reads. Main Settings links only reviewed nested destinations until Push is implemented.
+
+
+Warehouse create is an isolated real subflow requiring stable parent reload/close callbacks. It creates first, then assigns the latest selected user; partial assignment failure keeps the form with no rollback or added failure message. Four role pages50 plus assignments determine source candidates. Full Warehouse list/stock/delete/QR route is held. Native Android picker short-content height (currently fixed66% rather than maximum66%) and physical presentation remain open.
