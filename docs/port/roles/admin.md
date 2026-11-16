@@ -190,3 +190,6 @@ Warehouse Main now has a genuine both-platform composition with actual rolls, ne
 
 
 Customer/Material now composes actual avatar/apparatus/material warehouse owners. Real source role assignment/read/write/notice/reload ordering and original accepted picker choice across native dismissal/blur are retained. Parent notices use its existing short-message host. Worker native picker reuse has a narrow optional lifetime seam; existing defaults remain. Physical chip/dialog/sheet/keyboard and global route/external chat work remain open.
+
+
+Real Admin child navigation now has original-argument/awaited-result ownership and exact native source/target POP, validated with the installed Expo reducer. Native detach owns completion; four User Detail branches alone return changed=true. File-page/back/dock/provider composition and global admission remain held.
