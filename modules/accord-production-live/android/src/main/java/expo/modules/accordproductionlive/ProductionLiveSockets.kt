@@ -37,8 +37,23 @@ internal fun newProductionSocketClient(): OkHttpClient = OkHttpClient.Builder()
     .pingInterval(25, TimeUnit.SECONDS)
     .build()
 
+/** Bound the whole Warehouse HTTP Upgrade. OkHttp exits call timeout after a successful 101. */
+internal fun newWarehouseSocketClient(base: OkHttpClient): OkHttpClient = base.newBuilder()
+    .callTimeout(10, TimeUnit.SECONDS)
+    .build()
+
 /** The only destination is the signed-in server's canonical HTTPS origin. */
 internal fun productionSocketRequest(origin: String, target: String): Request {
+    return liveSocketRequest(origin, target, "/v1/mobile/admin/production-maps/live",
+        setOf("token", "protocol", "worker_scope", "projection", "queue_limit", "queue_positions", "queue_search", "epoch", "scope", "rev"))
+}
+
+/** Warehouse admission never broadens the existing Worker entry point. */
+internal fun warehouseSocketRequest(origin: String, target: String): Request {
+    return liveSocketRequest(origin, target, "/v1/mobile/admin/warehouses/live", setOf("token"))
+}
+
+private fun liveSocketRequest(origin: String, target: String, path: String, allowed: Set<String>): Request {
     val base = origin.toHttpUrlOrNull() ?: throw IllegalArgumentException("Invalid production origin")
     require(base.isHttps && base.username.isEmpty() && base.password.isEmpty() &&
         base.encodedPath == "/" && base.query == null && base.fragment == null && base.toString() == "$origin/") {
@@ -47,10 +62,9 @@ internal fun productionSocketRequest(origin: String, target: String): Request {
     require(target.startsWith("wss://")) { "Invalid production destination" }
     val url = target.replaceFirst("wss://", "https://").toHttpUrlOrNull()
         ?: throw IllegalArgumentException("Invalid production destination")
-    val allowed = setOf("token", "protocol", "worker_scope", "projection", "queue_limit", "queue_positions", "queue_search", "epoch", "scope", "rev")
     val token = url.queryParameter("token")
     require(url.host == base.host && url.port == base.port && url.username.isEmpty() && url.password.isEmpty() &&
-        url.encodedPath == "/v1/mobile/admin/production-maps/live" && url.fragment == null &&
+        url.encodedPath == path && url.fragment == null &&
         url.queryParameterNames.all { it in allowed && url.queryParameterValues(it).size == 1 } &&
         !token.isNullOrEmpty() && token == token.trim()) { "Invalid production destination" }
     return Request.Builder().url(url).build()
@@ -65,9 +79,17 @@ internal class ProductionLiveSockets(
     private val lock = Any()
     private val entries = mutableMapOf<String, Entry>()
     private var closed = false
+    private val warehouseClient by lazy { newWarehouseSocketClient(client) }
 
     fun open(id: String, origin: String, target: String) {
-        val request = productionSocketRequest(origin, target)
+        openRequest(id, productionSocketRequest(origin, target))
+    }
+
+    fun openWarehouse(id: String, origin: String, target: String) {
+        openRequest(id, warehouseSocketRequest(origin, target), warehouseClient)
+    }
+
+    private fun openRequest(id: String, request: Request, transport: OkHttpClient = client) {
         val entry = Entry(id)
         synchronized(lock) {
             check(!closed) { "Production socket transport closed" }
@@ -75,7 +97,7 @@ internal class ProductionLiveSockets(
             entries[id] = entry
         }
         try {
-            val socket = client.newWebSocket(request, Listener(entry))
+            val socket = transport.newWebSocket(request, Listener(entry))
             val stillCurrent = synchronized(lock) {
                 if (entries[id] === entry) { entry.socket = socket; true } else false
             }

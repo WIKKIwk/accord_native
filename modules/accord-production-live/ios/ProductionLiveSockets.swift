@@ -23,14 +23,24 @@ enum ProductionSocketIds {
 
 /// Construct only the production live endpoint on the authenticated server origin.
 func productionSocketRequest(origin: String, target: String) throws -> URLRequest {
+  try liveSocketRequest(origin: origin, target: target, path: "/v1/mobile/admin/production-maps/live",
+    allowed: ["token", "protocol", "worker_scope", "projection", "queue_limit", "queue_positions", "queue_search", "epoch", "scope", "rev"])
+}
+
+/// Warehouse admission never broadens the existing Worker entry point.
+func warehouseSocketRequest(origin: String, target: String) throws -> URLRequest {
+  try liveSocketRequest(origin: origin, target: target, path: "/v1/mobile/admin/warehouses/live", allowed: ["token"])
+}
+
+private func liveSocketRequest(origin: String, target: String, path: String, allowed: Set<String>) throws -> URLRequest {
   guard let base = URLComponents(string: origin), base.scheme == "https",
         let host = base.host, !host.isEmpty, base.user == nil, base.password == nil,
         (base.path.isEmpty || base.path == "/"), base.query == nil, base.fragment == nil,
         let parts = URLComponents(string: target), parts.scheme == "wss",
         parts.host == host, parts.port == base.port, parts.user == nil, parts.password == nil,
-        parts.path == "/v1/mobile/admin/production-maps/live", parts.fragment == nil,
+        parts.path == path, parts.fragment == nil,
         let items = parts.queryItems, Set(items.map { $0.name }).count == items.count,
-        items.allSatisfy({ ["token", "protocol", "worker_scope", "projection", "queue_limit", "queue_positions", "queue_search", "epoch", "scope", "rev"].contains($0.name) }),
+        items.allSatisfy({ allowed.contains($0.name) }),
         let token = items.first(where: { $0.name == "token" })?.value, !token.isEmpty,
         token == token.trimmingCharacters(in: .whitespacesAndNewlines),
         let url = parts.url else { throw ProductionSocketError.invalidOrigin }
@@ -67,7 +77,14 @@ final class ProductionLiveSockets: NSObject, URLSessionWebSocketDelegate, @unche
   init(emit: @escaping ([String: Any]) -> Void) { self.emit = emit }
 
   func open(id: String, origin: String, target: String) throws {
-    let request = try productionSocketRequest(origin: origin, target: target)
+    try openRequest(id: id, request: productionSocketRequest(origin: origin, target: target))
+  }
+
+  func openWarehouse(id: String, origin: String, target: String) throws {
+    try openRequest(id: id, request: warehouseSocketRequest(origin: origin, target: target))
+  }
+
+  private func openRequest(id: String, request: URLRequest) throws {
     lock.lock()
     defer { lock.unlock() }
     guard !closed else { throw ProductionSocketError.closed }

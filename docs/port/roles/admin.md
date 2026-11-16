@@ -121,3 +121,6 @@ Warehouse create is an isolated real subflow requiring stable parent reload/clos
 
 
 Drawer navigation now follows source ordinary-row history rules after220ms: pop existing, replace non-Home child when Home exists, otherwise push. Explicit push rows retain push semantics. Logout waits120ms and rechecks the captured owner/stack before confirmation and action. Active-stack observation excludes preloads and inactive native tabs; iOS flat cross-tab history remains an open adaptation.
+
+
+Prepared Warehouse live support uses dedicated native openWarehouse admission,250ms refresh debounce, serialized pending reloads,5s reconnect and10s whole-setup deadline. Original account witness owns all events/timers; Werka/material scoped roles skip live. Existing Worker open admission/defaults are preserved. The real Warehouse main owner must supply its stable guarded refresh callback before this hook is composed; a rebuilt native binary is required. HTTP/WS/Iroh and background large-JSON behavior remain open.

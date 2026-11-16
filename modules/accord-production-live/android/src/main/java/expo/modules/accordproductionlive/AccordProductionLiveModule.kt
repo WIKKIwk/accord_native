@@ -17,6 +17,11 @@ class AccordProductionLiveModule : Module() {
             id
         }
         Function("stop") { id: String -> sockets.stop(id) }
+        Function("openWarehouse") { origin: String, target: String ->
+            val id = ProductionSocketIds.next()
+            sockets.openWarehouse(id, origin, target)
+            id
+        }
         OnDestroy { sockets.shutdown() }
     }
 }

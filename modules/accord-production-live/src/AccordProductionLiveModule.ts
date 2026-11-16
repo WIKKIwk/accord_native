@@ -4,6 +4,8 @@ export type NativeProductionSocketEvent = { session: string; type: 'open' | 'mes
 
 declare class NativeAccordProductionLive extends NativeModule<{ onProductionSocket: (event: NativeProductionSocketEvent) => void }> {
   open(origin: string, target: string): string;
+  /** Dedicated endpoint admission; absent in older development binaries. */
+  openWarehouse?(origin: string, target: string): string;
   stop(id: string): void;
 }
 

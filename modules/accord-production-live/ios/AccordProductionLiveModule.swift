@@ -14,6 +14,11 @@ public class AccordProductionLiveModule: Module {
       return id
     }
     Function("stop") { (id: String) in self.sockets.stop(id: id) }
+    Function("openWarehouse") { (origin: String, target: String) -> String in
+      let id = try ProductionSocketIds.next()
+      try self.sockets.openWarehouse(id: id, origin: origin, target: target)
+      return id
+    }
     OnDestroy { self.sockets.shutdown() }
   }
 }
