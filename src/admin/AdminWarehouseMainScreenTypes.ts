@@ -12,6 +12,8 @@ type BaseProps = {
   /** Own the real source sheet/read flow; resolve only after that child returns. */
   onItemRolls: (item: AdminWarehouseStockItem, context: AdminWarehouseMainActionContext) => Promise<void>;
   renderReservedOrderDetails: (orderId: string, context: AdminWarehouseMainActionContext) => ReactNode;
+  /** Direct native children of the current details sheet, rather than a second first-sheet host. */
+  renderDetailActionSurface?: () => ReactNode;
 };
 /** Providers own the complete source child flow, including its errors/notices, until dismissal. */
 type QrProps = { onRawStockQr: (stock: RawMaterialStock, orderId: string, context: AdminWarehouseMainActionContext) => Promise<void> };

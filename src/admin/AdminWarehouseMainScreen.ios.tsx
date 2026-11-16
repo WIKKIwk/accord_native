@@ -10,6 +10,7 @@ import { useBaseTheme } from '../components/useBaseTheme';
 import { localizedGetter } from '../shared/localization';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { AdminCreateMenu } from './AdminCreateMenu.ios';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminWarehouseCreateDialog } from './AdminWarehouseCreateDialog.ios';
 import { adminWarehouseMainEntries, type AdminWarehouseMainEntry } from './AdminWarehouseMainEntries';
 import { adminWarehouseMainDetailValue, type AdminWarehouseMainRow } from './AdminWarehouseMainRows';
@@ -68,7 +69,7 @@ function Products({ model, bottomPadding }: { model: AdminWarehouseMainModel; bo
     <ProductList model={model} bottomPadding={bottomPadding} tab="reserved" />
   </ZStack>;
 }
-function Details({ model }: { model: AdminWarehouseMainModel }) {
+function Details({ model, renderActionSurface }: { model: AdminWarehouseMainModel; renderActionSurface?: AdminWarehouseMainScreenProps['renderDetailActionSurface'] }) {
   const dialog = model.dialog, [presented, setPresented] = useState(true);
   if (dialog?.kind !== 'details') return null; const { row } = dialog;
   return <BaseHost style={{ position: 'absolute', width: '100%' }}><BottomSheet isPresented={presented} onIsPresentedChange={value => { if (!value) { model.beginDismissDialog(); setPresented(false); } }} onDismiss={model.closeDialog}>
@@ -85,7 +86,7 @@ function Details({ model }: { model: AdminWarehouseMainModel }) {
           {row.kind === 'raw' && row.canEdit ? <Button onPress={() => model.runDetailAction(dialog.id, 'edit')} modifiers={[buttonStyle('bordered'), controlSize('large'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(model.a('action.edit')), accessibilityIdentifier('warehouse-details-edit')]}><Image systemName="pencil" /></Button> : null}
         </HStack> : null}
       </VStack>
-    </SwiftScrollView></Group>
+    </SwiftScrollView>{renderActionSurface?.()}</Group>
   </BottomSheet></BaseHost>;
 }
 /** @v2 AdminWarehousesScreen */
@@ -114,7 +115,7 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
       headerRight: presentation.searchFocused ? undefined : model.profile,
       headerSearchBarOptions: { ref: search, placeholder: model.searchHint, hideWhenScrolling: false, hideNavigationBar: false, obscureBackground: false, autoCapitalize: 'none', cancelButtonText: model.a('action.close'),
         onChangeText: event => changeSearch(event.nativeEvent.text), onFocus: () => model.setSearchFocused(true), onBlur: () => model.setSearchFocused(false), onCancelButtonPress: cancelSearch, onSearchButtonPress: model.closeSearch } }} />
-    <View style={[styles.contentFrame, { backgroundColor: colors.surfaceContainerLow, borderBottomLeftRadius: props.footer == null ? 0 : 18, borderBottomRightRadius: props.footer == null ? 0 : 18 }]}>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-warehouse-main-body-frame">
     {model.summaryScreen !== 'content' ? <View style={model.summaryScreen === 'loading' ? styles.center : styles.retry}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
       <VStack spacing={16} modifiers={[frame({ maxWidth: Infinity })]}>{model.summaryScreen === 'loading' ? <ProgressView /> : <><Text modifiers={[font({ textStyle: 'body' }), foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={() => { void model.reload(); }} modifiers={[accessibilityIdentifier('warehouse-retry')]} /></>}</VStack>
     </BaseHost></View> : <>
@@ -127,11 +128,11 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
         <TabView.Tab value="settings"><RNHostView><View style={styles.body}>{model.scope === 'material' ? model.materialStates : <AdminWarehouseSettingsTab {...model.settings} bottomPadding={bottomPadding} />}</View></RNHostView></TabView.Tab>
       </TabView>}</BaseHost>
     </>}
-    </View>
+    </AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     {model.scope === 'admin' ? <AdminCreateMenu actions={model.actions} isCurrent={model.interactive} openLabel={localizedGetter('adminCreateTitle', model.locale)} closeLabel={model.a('action.close')} visible={model.focused && !model.dialog} bottomOffset={insets.bottom + 94} /> : null}
     {model.dialog?.kind === 'create' ? <AdminWarehouseCreateDialog key={model.dialog.id} session={props.session} witness={props.witness} isCurrent={model.dialogCurrent} onSaved={model.created} onClose={model.closeDialog} /> : null}
-    {model.dialog?.kind === 'details' ? <Details key={model.dialog.id} model={model} /> : null}
+    {model.dialog?.kind === 'details' ? <Details key={model.dialog.id} model={model} renderActionSurface={props.renderDetailActionSurface} /> : null}
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, contentFrame: { flex: 1, marginHorizontal: 6, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden' }, fullWidth: { width: '100%' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { flex: 1, paddingHorizontal: 24, paddingVertical: 40 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { flex: 1, paddingHorizontal: 24, paddingVertical: 40 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

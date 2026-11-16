@@ -1,7 +1,9 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module'), ts = require('typescript');
 const { load, strings, l10n } = require('./adminUsersSupport.cjs');
+const { frameModule, metrics, flattenStyle } = require('./adminShellFrameViewSupport.cjs');
 const rows = load('admin/AdminWarehouseMainRows', { '../workerPeremotka': load('workerPeremotka'), '../qolip/qolipApiCommon': load('qolip/qolipApiCommon', { '../shared/mobileApiException': {} }), './dartJsonString': strings });
 const entries = load('admin/AdminWarehouseMainEntries');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
@@ -17,7 +19,7 @@ function nodes(node, predicate) { if (Array.isArray(node)) return node.flatMap(v
 const byID = (tree, id) => nodes(tree, node => node.props?.modifiers?.some(value => ['testID', 'accessibilityIdentifier'].includes(value.name) && value.args[0] === id))[0];
 const text = tree => nodes(tree, node => node.type === 'Text').map(node => node.props.children).flat().join(' ');
 const click = (node, platform) => node.props[platform === 'android' ? 'onClick' : 'onPress']();
-function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', screen = 'content', dialog = false, reserved = false, valid = true } = {}) {
+function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', screen = 'content', dialog = false, reserved = false, valid = true, nativeMetrics = metrics() } = {}) {
   const calls = [], a = (key, values) => l10n.adminText(key, locale, values), t = key => l10n.localizedGetter(key, locale);
   const stock = { id: 'raw', barcode: 'BAR', item_code: 'R', item_name: 'Raw', warehouse: 'A', qty: 2.5, uom: 'kg', status: 'available', reserved_order_id: ' Order ', source_receipt_id: '', width_mm: null, micron: null, length_m: null };
   const row = rows.adminWarehouseMainRawRow(stock, 0, a, scope !== 'werka', scope === 'material');
@@ -46,7 +48,8 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
     '../shared/localization': l10n, '../shared/themeRuntime': { themeController: { variant: 'white' } }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     './AdminCreateMenu.android': { AdminCreateMenu: 'AdminCreateMenu' }, './AdminCreateMenu.ios': { AdminCreateMenu: 'AdminCreateMenu' }, './AdminWarehouseCreateDialog.android': { AdminWarehouseCreateDialog: 'AdminWarehouseCreateDialog' }, './AdminWarehouseCreateDialog.ios': { AdminWarehouseCreateDialog: 'AdminWarehouseCreateDialog' },
-    './AdminWarehouseSettingsTab.android': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseSettingsTab.ios': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseMainRows': rows, './AdminWarehouseMainEntries': entries, './useAdminWarehouseMain': { useAdminWarehouseMain: () => model } };
+    './AdminWarehouseSettingsTab.android': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseSettingsTab.ios': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseMainRows': rows, './AdminWarehouseMainEntries': entries, './useAdminWarehouseMain': { useAdminWarehouseMain: () => model },
+    './AdminShellBodyFrame': frameModule(colors, () => ({ metrics: nativeMetrics, thinGestureBottom: false })), './AdminTypography.android': { AdminText: 'Text' } };
   mocks['@expo/ui/swift-ui/modifiers'] = new Proxy({ useScrollGeometryChange: callback => ({ name: 'geometry', args: [callback] }) }, { get: (target, name) => target[name] ?? modifiers[name] });
   const loadingFile = path.resolve(__dirname, '../src/admin/AdminLoadingIndicator.android.tsx'), loadingModule = new Module(loadingFile, module); loadingModule.filename = loadingFile; loadingModule.paths = module.paths; loadingModule.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
   loadingModule._compile(ts.transpileModule(fs.readFileSync(loadingFile, 'utf8'), { fileName: loadingFile, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, loadingFile);
@@ -54,7 +57,7 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
   const filename = path.resolve(__dirname, `../src/admin/AdminWarehouseMainScreen.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths; mod.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   const props = { scope, backLabel: 'Back', footer: { type: 'RealDock', props: {} }, session: {}, witness: {} };
-  return { calls, row, model, render: () => render(mod.exports.AdminWarehouseMainScreen(props)) };
+  return { calls, row, model, props, render: () => render(mod.exports.AdminWarehouseMainScreen(props)) };
 }
 for (const platform of ['android', 'ios']) {
   test(`${platform} main native filter, retained pager, source rows and stock tab dispatch exact values`, () => {
@@ -69,7 +72,9 @@ for (const platform of ['android', 'ios']) {
     assert.deepEqual(f.calls.at(-1), ['page', 'products']); assert.equal(nodes(tree, node => node.type === 'AdminWarehouseSettingsTab')[0].props.onChanged, f.model.settings.onChanged);
     assert.equal(nodes(tree, node => node.type === 'AdminCreateMenu')[0].props.actions, f.model.actions);
     const dock = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'RealDock')[0]; assert.equal(dock.props.style.position, 'absolute'); assert.equal(dock.props.style.bottom, 0);
-    const frame = nodes(tree, node => node.type === 'View' && Array.isArray(node.props.style) && node.props.style[0]?.marginHorizontal === 6)[0]; assert.ok(frame); assert.equal(frame.props.style[0].borderTopLeftRadius, 18); assert.equal(frame.props.style[1].borderBottomRightRadius, 18);
+    const reserve = nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0], frame = nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0];
+    assert.equal(flattenStyle(reserve.props.style).marginHorizontal, 6); assert.equal(flattenStyle(reserve.props.style).marginBottom, 92);
+    assert.equal(flattenStyle(frame.props.style).borderTopLeftRadius, 18); assert.equal(flattenStyle(frame.props.style).borderBottomRightRadius, 18);
   });
   test(`${platform} source main page words stay literal while material/worker branches receive only their real children`, () => {
     for (const locale of ['uz', 'en', 'ru', 'ur']) { const f = fixture(platform, { locale }), tree = f.render(); assert.ok(text(tree).includes('Mahsulotlar')); assert.ok(text(tree).includes('Sozlamalar')); }
@@ -95,6 +100,24 @@ for (const platform of ['android', 'ios']) {
     const f = fixture(platform); f.model.dialog = { id: 91, kind: 'create' }; const tree = f.render(), create = nodes(tree, node => node.type === 'AdminWarehouseCreateDialog')[0];
     assert.equal(create.props.isCurrent, f.model.dialogCurrent); await create.props.onSaved(); create.props.onClose(); assert.deepEqual(f.calls, ['created', 'close-dialog']);
     assert.equal(nodes(tree, node => node.type === 'AdminCreateMenu')[0].props.visible, false);
+  });
+  test(`${platform} detail action presenter is inside the original native sheet without a second first-sheet host`, () => {
+    const f = fixture(platform, { dialog: true }); f.props.renderDetailActionSurface = () => ({ type: 'DirectNativeQrSheet', props: {} });
+    const tree = f.render(), sheet = nodes(tree, node => node.type === (platform === 'ios' ? 'BottomSheet' : 'ModalBottomSheet'))[0];
+    assert.equal(nodes(sheet, node => node.type === 'DirectNativeQrSheet').length, 1);
+    const content = platform === 'ios' ? nodes(sheet, node => node.type === 'Group')[0] : sheet;
+    assert.ok([content.props.children].flat().some(node => node?.type === 'DirectNativeQrSheet'), 'native presenter is a direct native content child');
+    assert.equal(nodes(sheet, node => node.type === 'RNHostView' && nodes(node, child => child.type === 'DirectNativeQrSheet').length).length, 0);
+    f.model.dialog = null; assert.equal(nodes(f.render(), node => node.type === 'DirectNativeQrSheet').length, 0);
+  });
+  test(`${platform} Main applies real shell geometry without remounting body for missing metrics or keyboard`, () => {
+    const keyboard = fixture(platform, { nativeMetrics: metrics({ viewInsetsBottom: 300 }) }).render();
+    assert.equal(flattenStyle(nodes(keyboard, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0].props.style).marginBottom, 0);
+    const missing = fixture(platform, { nativeMetrics: null }).render(), frame = nodes(missing, node => node.props.testID === 'admin-warehouse-main-body-frame')[0];
+    assert.equal(flattenStyle(frame.props.style).opacity, 0); assert.equal(frame.props.pointerEvents, 'none'); assert.ok(nodes(frame, node => node.type === (platform === 'android' ? 'PagerView' : 'TabView')).length);
+    const f = fixture(platform); f.props.footer = null; const tree = f.render();
+    assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0].props.style).marginBottom, 0);
+    assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0].props.style).borderBottomRightRadius, 0);
   });
 }
 test('Android main keeps source63 toolbar,58 search,61 row, segmented corners,4 body and420 pagination threshold', async () => {

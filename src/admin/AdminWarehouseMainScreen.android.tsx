@@ -1,4 +1,4 @@
-import { BasicTextField, Box, Column, FilledTonalIconButton, FilterChip, FlowRow, IconButton, ModalBottomSheet, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, Text, TextButton, useNativeState, type BasicTextFieldRef } from '@expo/ui/jetpack-compose';
+import { BasicTextField, Box, Column, FilledTonalIconButton, FilterChip, FlowRow, IconButton, ModalBottomSheet, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, useNativeState, type BasicTextFieldRef } from '@expo/ui/jetpack-compose';
 import PagerView, { type PagerViewRef } from '@expo/ui/community/pager-view';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
@@ -12,6 +12,8 @@ import { localizedGetter } from '../shared/localization';
 import { themeController } from '../shared/themeRuntime';
 import { AdminCreateMenu } from './AdminCreateMenu.android';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
+import { AdminText as Text } from './AdminTypography.android';
 import { AdminWarehouseCreateDialog } from './AdminWarehouseCreateDialog.android';
 import { adminWarehouseMainEntries, type AdminWarehouseMainEntry } from './AdminWarehouseMainEntries';
 import { adminWarehouseMainDetailValue, type AdminWarehouseMainRow } from './AdminWarehouseMainRows';
@@ -133,7 +135,7 @@ function Products({ model, bottomPadding }: { model: AdminWarehouseMainModel; bo
     <ProductList model={model} bottomPadding={bottomPadding} tab={tab} />
   </View>)}</View>;
 }
-function Details({ model }: { model: AdminWarehouseMainModel }) {
+function Details({ model, renderActionSurface }: { model: AdminWarehouseMainModel; renderActionSurface?: AdminWarehouseMainScreenProps['renderDetailActionSurface'] }) {
   const { colors } = useBaseTheme(), { height: viewportHeight } = useWindowDimensions(), dialog = model.dialog;
   if (dialog?.kind !== 'details') return null; const { row } = dialog;
   return <BaseHost style={{ position: 'absolute', width: '100%' }}><ModalBottomSheet showDragHandle skipPartiallyExpanded initialFullyExpanded onDismissRequest={model.closeDialog} containerColor={colors.surface} scrimColor="rgba(0,0,0,.32)">
@@ -150,6 +152,7 @@ function Details({ model }: { model: AdminWarehouseMainModel }) {
         </Row> : null}
       </Column></BaseHost>
     </ScrollView></RNHostView>
+    {renderActionSurface?.()}
   </ModalBottomSheet></BaseHost>;
 }
 /** @v2 AdminWarehousesScreen */
@@ -161,7 +164,7 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
     { value: 'products', label: model.scope === 'material' ? model.a('warehouse.tabs_warehouses') : 'Mahsulotlar' }, { value: 'settings', label: model.scope === 'material' ? model.a('warehouse.tabs_states') : 'Sozlamalar' }];
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
     <View style={{ backgroundColor: colors.surfaceContainerHigh }}><SearchHeader model={model} props={props} /></View>
-    <View style={[styles.contentFrame, { backgroundColor: colors.surfaceContainerLow, borderBottomLeftRadius: props.footer == null ? 0 : 18, borderBottomRightRadius: props.footer == null ? 0 : 18 }]}>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-warehouse-main-body-frame">
     {model.summaryScreen === 'loading' ? <View style={styles.center}><BaseHost matchContents><WarehouseLoadingIndicator /></BaseHost></View> : model.summaryScreen === 'error' ? <ScrollView style={styles.body} contentContainerStyle={styles.retry}>
       <BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(viewportWidth * .88, 280), 360), maxWidth: '100%' }}><Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}>
         <Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{model.t('serverDisconnectedRetry')}</Text><Spacer modifiers={[height(16)]} />
@@ -176,12 +179,12 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
         <View key="settings" style={styles.body}>{model.scope === 'material' ? model.materialStates : <AdminWarehouseSettingsTab {...model.settings} bottomPadding={bottomPadding} />}</View>
       </PagerView>}
     </>}
-    </View>
+    </AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     {model.scope === 'admin' ? <AdminCreateMenu actions={model.actions} isCurrent={model.interactive} openLabel={localizedGetter('adminCreateTitle', model.locale)} closeLabel={model.a('action.close')} visible={model.focused && !model.dialog} bottomOffset={insets.bottom + 94} /> : null}
     {model.dialog?.kind === 'create' ? <AdminWarehouseCreateDialog key={model.dialog.id} session={props.session} witness={props.witness} isCurrent={model.dialogCurrent} onSaved={model.created} onClose={model.closeDialog} /> : null}
-    {model.dialog?.kind === 'details' ? <Details key={model.dialog.id} model={model} /> : null}
+    {model.dialog?.kind === 'details' ? <Details key={model.dialog.id} model={model} renderActionSurface={props.renderDetailActionSurface} /> : null}
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, contentFrame: { flex: 1, marginHorizontal: 6, borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden' }, fullWidth: { width: '100%' }, header: { height: 63, width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 3 },
+const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, header: { height: 63, width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 3 },
   headerSlot: { height: 60, overflow: 'hidden' }, searchField: { flex: 1, minWidth: 0, height: 58, transform: [{ translateY: -1 }] }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

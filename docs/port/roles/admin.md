@@ -184,3 +184,6 @@ Twelve native detail screens now consume genuine Admin shell measurements:6 marg
 
 
 Android Admin now has six exact source font faces and an Admin-only provider/native Text seam preserving source theme/explicit styles and the installed SDK's nested-span serializer. Six profile families and committed helpers use it. Editable input glyphs, remaining surfaces/internal native text and physical font/RTL metrics remain open; other role font names/defaults are unchanged.
+
+
+Warehouse Main now has a genuine both-platform composition with actual rolls, nested rawQR, reserved-order and profile/account owners. Native presenter membership survives StrictMode and fences first-commit/removal/replacement races. Real frame/font integration is included. Host navigation/footer and Material edit/state dependencies stay explicit; app admission and prior native/device Open items remain.
