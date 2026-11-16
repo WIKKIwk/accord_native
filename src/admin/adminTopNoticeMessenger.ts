@@ -33,6 +33,8 @@ export class AdminTopNoticeMessenger {
     if (!valid || this.state.retired) { this.retire(); return false; } return true;
   };
   private driverCurrent(identity: object) { return this.current() && this.driver?.identity === identity && this.driver.members.size > 0; }
+  /** Exact original mounted coordinator lease, never inferred from its React context or a readiness boolean. */
+  hasDriverLease = (identity: object): boolean => this.driverCurrent(identity);
   /** Must be the actual single mounted coordinator; React registration is not an animation completion. */
   attachDriver(identity: object, accessibleNavigation: boolean): (() => void) | null {
     if (!object(identity) || typeof accessibleNavigation !== 'boolean' || !this.current() || this.driver && this.driver.identity !== identity) return null;
