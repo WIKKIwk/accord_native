@@ -15,10 +15,15 @@ async function decodeMutation(response: Response, code: string, message: string)
   return adminFactoryLocationFromJson(await response.json());
 }
 /** @v2 adminFactoryLocations */
-export async function adminFactoryLocations(session: Session, beforeSend?: () => void): Promise<AdminFactoryLocation[]> {
-  const response = await authorizedFetch(session, path, undefined, beforeSend);
+export async function adminFactoryLocations(session: Session, beforeSend?: () => void, readWitness?: () => boolean): Promise<AdminFactoryLocation[]> {
+  if (readWitness !== undefined && (typeof readWitness !== 'function' || typeof beforeSend !== 'function')) throw new TypeError('Scoped factory read requires a guard and witness');
+  if (readWitness !== undefined) beforeSend?.();
+  const response = readWitness === undefined ? await authorizedFetch(session, path, undefined, beforeSend)
+    : await authorizedFetch(session, path, undefined, beforeSend, 10_000, { readWitness });
+  if (readWitness !== undefined) beforeSend?.();
   if (response.status !== 200) throw await adminApiError(response, 'factory_locations_load_failed', 'State’lar yuklanmadi');
   const value: unknown = await response.json();
+  if (readWitness !== undefined) beforeSend?.();
   if (!Array.isArray(value)) throw new TypeError('Invalid factory locations list');
   return value.filter(item => item !== null && typeof item === 'object' && !Array.isArray(item)).map(adminFactoryLocationFromJson);
 }

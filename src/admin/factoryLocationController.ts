@@ -26,6 +26,7 @@ export class FactoryLocationController {
   private state = empty();
   private readonly listeners = new Set<() => void>();
   private readonly owner = Symbol('factory-locations');
+  private readonly tickets = new WeakSet<FactoryLocationTicket>();
   private readonly scope: string;
   private readonly generation: Generation | null;
   private active = false;
@@ -89,13 +90,14 @@ export class FactoryLocationController {
       (id !== null && this.state.status !== 'ready')) return null;
     const location = id === null ? null : this.state.locations.find(item => item.id === id);
     if (id !== null && !location) return null;
-    return { owner: this.owner, epoch: this.epoch, location: location ?? null };
+    const ticket = Object.freeze({ owner: this.owner, epoch: this.epoch, location: location ?? null });
+    this.tickets.add(ticket); return ticket;
   }
-  private ticketValid(ticket: FactoryLocationTicket): boolean {
-    return ticket.owner === this.owner && this.currentOrInvalidate(ticket.epoch) && !this.state.saving && this.state.status !== 'forbidden';
+  isTicketCurrent(ticket: FactoryLocationTicket): boolean {
+    return this.tickets.has(ticket) && ticket.owner === this.owner && this.currentOrInvalidate(ticket.epoch) && !this.state.saving && this.state.status !== 'forbidden';
   }
   async saveEditor(ticket: FactoryLocationTicket, name: string, selected: ReadonlySet<string>): Promise<FactorySaveResult> {
-    if (!this.ticketValid(ticket)) return 'cancelled';
+    if (!this.isTicketCurrent(ticket)) return 'cancelled';
     const plan = factoryLocationEditorPlan(ticket.location, name, selected);
     if (plan.kind === 'nameRequired') return 'nameRequired';
     return this.save(ticket.epoch, 'factory.state_save_failed', async guard => {
@@ -105,7 +107,7 @@ export class FactoryLocationController {
     }, saved => upsertFactoryLocation(this.state.locations, saved));
   }
   async rename(ticket: FactoryLocationTicket, value: string): Promise<FactorySaveResult> {
-    if (!this.ticketValid(ticket) || !ticket.location) return 'cancelled';
+    if (!this.isTicketCurrent(ticket) || !ticket.location) return 'cancelled';
     const name = dartTrim(value);
     if (!name) return 'nameRequired';
     if (name === ticket.location.name) return 'cancelled';

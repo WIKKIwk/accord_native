@@ -44,8 +44,12 @@ test('shell and login reject missing session, unauthorized capabilities and role
   assert.equal(routes.homeTarget(session('brigader', ['admin.access']), 'android'), null);
 });
 test('destination requires shell access, current route permission, explicit integration enablement and platform', () => {
-  const enabled = new Set([r.profile, r.gscaleMode, r.adminProductionMapOrders]), held = new Set(), activityEnabled = new Set([r.adminActivity]);
+  const enabled = new Set([r.adminHome, r.profile, r.gscaleMode, r.adminProductionMapOrders, r.adminFactoryLocations]), held = new Set(), activityEnabled = new Set([r.adminActivity]);
   for (const platform of ['ios', 'android']) {
+    assert.equal(access.adminDestinationPath(admin, r.adminHome, platform, enabled), `/${platform}-admin`);
+    assert.equal(access.adminDestinationPath(admin, r.adminFactoryLocations, platform, enabled), null);
+    assert.equal(access.adminDestinationPath(session('admin', ['admin.access', 'factory.location.manage']), r.adminFactoryLocations, platform, enabled), `/${platform}-admin/factory-locations`);
+    assert.equal(access.adminDestinationPath(worker, r.adminFactoryLocations, platform, enabled), null);
     assert.equal(access.adminDestinationPath(admin, r.profile, platform, held), null);
     assert.equal(access.adminDestinationPath(admin, r.profile, platform, enabled), `/${platform}-admin/profile`);
     assert.equal(access.adminDestinationPath(admin, r.gscaleMode, platform, enabled), `/${platform}-gscale`);
@@ -64,6 +68,10 @@ test('destination requires shell access, current route permission, explicit inte
   assert.equal(access.adminDestinationPath(token, r.profile, 'ios', enabled), null);
   assert.equal(access.adminDestinationPath(token, r.gscaleMode, 'android', enabled), null);
   assert.equal(access.adminDestinationPath(token, r.adminProductionMapOrders, 'ios', enabled), null);
+  const demo = session('admin', ['admin.access', 'admin.activity.read', 'factory.location.manage'], { token: 'test-mode-token' });
+  for (const route of [r.adminHome, r.adminActivity, r.adminFactoryLocations]) {
+    assert.equal(access.adminDestinationPath(demo, route, 'ios', new Set([route])), null);
+  }
 });
 
 test('session hook captures once and rejects stale loads, inactive and unauthorized sessions', async () => {
@@ -207,24 +215,76 @@ test('test token notice is explicit in all supported languages and has no action
   }
 });
 
-test('real shell enables guarded Profile and Work Map and blocks test-token, stale and held routes', () => {
+test('held shell binds the original witness and enables only reviewed permitted destinations', () => {
   let valid = true; const witness = {}, cleanups = [];
   const react = { createContext: () => ({ Provider: 'Provider' }), useCallback: fn => fn, useMemo: fn => fn(), useEffect: fn => cleanups.push(fn()) };
   class Store { constructor(summary, activity) { this.summary = summary; this.activity = activity; } clear() {} }
   const mocks = { react, '../auth': { isSessionWitnessCurrent: candidate => candidate === witness && valid },
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile.role, value.profile.ref, value.capabilities]) },
     '../shared/appRoutes': routes, './adminActivityReader': { adminActivityReader: () => async () => [] },
-    './adminHomeSummaryReader': { adminHomeSummaryReader: () => async () => ({}) }, './adminShellAccess': access, './adminStore': { AdminStore: Store } };
+    './adminHomeSummaryReader': { adminHomeSummaryReader: () => async () => ({}) }, './adminShellAccess': access, './adminStore': { AdminStore: Store },
+    './adminActivityBinding': { createAdminActivityBinding: (session, witness) => ({ session, witness }) } };
   const Provider = load('admin/AdminShellContext.tsx', mocks).AdminShellProvider;
-  const account = { ...admin, baseUrl: 'https://server.example' }, result = Provider({ session: account, witness, onLogout() {}, children: 'home' });
+  const account = { ...admin, capabilities: [...admin.capabilities, 'admin.activity.read', 'factory.location.manage'], baseUrl: 'https://server.example' },
+    result = Provider({ session: account, witness, onLogout() {}, children: 'home' });
   const shell = result.props.value;
+  assert.equal(shell.witness, witness); assert.equal(shell.activityBinding.session, account); assert.equal(shell.activityBinding.witness, witness);
+  assert.equal(shell.destination(r.adminHome, 'ios'), '/ios-admin');
+  assert.equal(shell.destination(r.adminHome, 'android'), '/android-admin');
   assert.equal(shell.destination(r.profile, 'ios'), '/ios-admin/profile'); assert.equal(shell.destination(r.profile, 'android'), '/android-admin/profile');
   assert.equal(shell.destination(r.adminProductionMapOrders, 'ios'), '/ios-admin/work-map');
   assert.equal(shell.destination(r.adminProductionMapOrders, 'android'), '/android-admin/work-map');
-  assert.equal(shell.destination(r.gscaleMode, 'ios'), null); assert.equal(shell.destination(r.adminActivity, 'ios'), null);
-  assert.equal(shell.activityBinding, null); valid = false; assert.equal(shell.destination(r.profile, 'ios'), null); assert.equal(shell.destination(r.adminProductionMapOrders, 'ios'), null);
+  assert.equal(shell.destination(r.gscaleMode, 'ios'), null);
+  assert.equal(shell.destination(r.adminActivity, 'ios'), '/ios-admin/activity');
+  assert.equal(shell.destination(r.adminFactoryLocations, 'android'), '/android-admin/factory-locations');
+  valid = false; assert.equal(shell.destination(r.profile, 'ios'), null); assert.equal(shell.destination(r.adminProductionMapOrders, 'ios'), null);
+  assert.equal(shell.destination(r.adminActivity, 'ios'), null); assert.equal(shell.destination(r.adminFactoryLocations, 'android'), null);
   valid = true; const demo = Provider({ session: { ...account, token: 'test-mode-token' }, witness, onLogout() {}, children: 'notice' }).props.value;
   assert.equal(demo.destination(r.profile, 'ios'), null); assert.equal(demo.destination(r.adminProductionMapOrders, 'ios'), null); cleanups.filter(fn => typeof fn === 'function').forEach(fn => fn());
+});
+
+test('held shell integration keeps both actual Admin roots closed', () => {
+  for (const platform of ['ios', 'android']) {
+    const content = fs.readFileSync(path.resolve(__dirname, `../src/app/${platform}-admin/_layout.tsx`), 'utf8');
+    assert.match(content, /Redirect href="\/"/);
+    assert.doesNotMatch(content, /AdminLayout/);
+  }
+});
+
+test('Admin drawer returns to existing Home, marks Factory locations and retires delayed native callbacks', () => {
+  const originalSetTimeout = global.setTimeout, originalClearTimeout = global.clearTimeout;
+  const scheduled = [], calls = []; let current = true, cleanup;
+  global.setTimeout = (callback, delay) => { const timer = { callback, delay }; scheduled.push(timer); return timer; };
+  global.clearTimeout = timer => { timer.cancelled = true; };
+  try {
+    const account = { ...admin, capabilities: [...admin.capabilities, 'factory.location.manage'] };
+    const enabled = new Set([r.adminHome, r.adminFactoryLocations]);
+    const shell = { session: account, isCurrent: () => current, onLogout() {},
+      destination: (route, platform) => current ? access.adminDestinationPath(account, route, platform, enabled) : null };
+    const Drawer = load('admin/AdminDrawer.tsx', {
+      react: { useEffect: fn => { cleanup = fn(); }, useRef: value => ({ current: value }), useSyncExternalStore: (_subscribe, get) => get() },
+      'expo-router': { router: { push: value => calls.push(['push', value]), dismissTo: value => calls.push(['dismissTo', value]) },
+        usePathname: () => '/ios-admin/factory-locations' }, 'react-native': { Platform: { OS: 'ios' } }, '../shared/appRoutes': routes,
+      '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
+      '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
+      '../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout() {} }, './adminHomeSymbols': load('admin/adminHomeSymbols.ts'),
+      './adminDrawerModel': { adminDrawerDestinations: () => [
+        { routeName: r.adminHome, label: 'Home', materialIcon: 'home_outlined' },
+        { routeName: r.adminFactoryLocations, label: 'Factory', materialIcon: 'add_location_alt_outlined' },
+        { routeName: r.adminSettings, label: 'Held', materialIcon: 'settings_outlined' },
+      ] }, './AdminShellContext': { useAdminShell: () => shell },
+    }).AdminDrawer;
+    const tree = Drawer({ children: 'child' });
+    assert.equal(tree.props.active, r.adminFactoryLocations);
+    assert.deepEqual(tree.props.items.map(item => item.id), [r.adminHome, r.adminFactoryLocations]);
+    assert.deepEqual(tree.props.items[1].symbol, { ios: 'mappin.and.ellipse', android: 'add_location_alt' });
+    tree.props.onSelect(r.adminHome); assert.equal(scheduled.at(-1).delay, 220); scheduled.at(-1).callback();
+    assert.deepEqual(calls, [['dismissTo', '/ios-admin']]);
+    tree.props.onSelect(r.adminHome); current = false; scheduled.at(-1).callback(); assert.equal(calls.length, 1);
+    current = true; tree.props.onSelect(r.adminFactoryLocations); const old = scheduled.at(-1); cleanup(); old.callback();
+    assert.equal(calls.length, 1); assert.ok(scheduled.every(timer => timer.cancelled));
+    const count = scheduled.length; tree.props.onSelect(r.adminHome); assert.equal(scheduled.length, count);
+  } finally { global.setTimeout = originalSetTimeout; global.clearTimeout = originalClearTimeout; }
 });
 
 test('Admin drawer opens the real Profile route after its delay only while the witness remains current', () => {
