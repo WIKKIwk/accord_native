@@ -95,13 +95,14 @@ for (const platform of ['android', 'ios']) {
     const { AdminOwnedProfileContent } = s.compile(path.resolve(__dirname, `../src/admin/AdminOwnedProfileContent.${platform}.tsx`), {
       react: { useSyncExternalStore: (_subscribe, get) => get() }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
       'react-native': { View: 'View', StyleSheet: { create: value => value }, PlatformColor: value => value }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24 }) },
-      '../components/ProfileScreen': { ProfileScreen: 'ActualProfileScreen' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerLow: '#eee' } }) },
+      '../components/ProfileScreen': { ProfileScreen: 'ActualProfileScreen' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: '#ddd' } }) },
       '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
-      '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, './adminProfileText': { adminProfileSettingsUnavailable: () => 'existing source message' },
+      './AdminProfileHeader.android': { AdminProfileHeader: 'AdminProfileHeader' }, './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(),
+      '@expo/ui/swift-ui': { Button: 'Button' }, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) }), '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     });
     const props = { session: {}, isCurrent: current, canInteract: () => interactive, onBack: value => calls.push(value), onLogout: () => calls.push('logout'), footer: { type: 'ActualDock' }, backLabel: 'Back' }, tree = AdminOwnedProfileContent(props), profile = nodes(tree, node => node.type === 'ActualProfileScreen')[0];
-    assert.equal(profile.props.session, props.session); assert.equal(profile.props.isCurrent, current); assert.equal(profile.props.onLogout, props.onLogout); assert.equal(profile.props.showDirectLogout, false); assert.equal(profile.props.settingsUnavailableMessage, 'existing source message');
-    const back = platform === 'android' ? nodes(tree, node => node.type === 'RoleHeader')[0].props.navigation.onPress : nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerLeft().props.onPress;
+    assert.equal(profile.props.session, props.session); assert.equal(profile.props.isCurrent, current); assert.equal(profile.props.onLogout, props.onLogout); assert.equal(profile.props.showDirectLogout, false); assert.equal(profile.props.settingsDisabled, true); assert.equal(profile.props.settingsUnavailableMessage, undefined);
+    const back = platform === 'android' ? nodes(tree, node => node.type === 'AdminProfileHeader')[0].props.onBack : nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerLeft().props.children.props.onPress;
     interactive = false; back(); assert.deepEqual(calls, []); interactive = true; back(); assert.deepEqual(calls, [false]); assert.ok(nodes(tree, node => node.type === 'View' && node.props.style?.position === 'absolute').length);
   });
 }

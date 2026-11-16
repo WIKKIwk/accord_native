@@ -180,6 +180,8 @@ for (const platform of ['ios', 'android']) test(`${platform} profile requires wi
       '../components/ProfileScreen': { ProfileScreen: 'ProfileScreen' }, '../shared/appRoutes': routes,
       '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
       '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, './adminActivityBackLabel': { adminActivityBackLabel: () => 'Back' },
+      '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: 'bg' } }) }, './AdminProfileHeader.android': { AdminProfileHeader: 'AdminProfileHeader' },
+      './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(),
       './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' },
       './AdminShellContext': { useAdminShell: () => ({ session: admin, isCurrent: () => current, destination: () => destination, onLogout() {} }) } };
     const tree = load(`admin/AdminProfileRoute.${platform}.tsx`, mocks).AdminProfileRoute();

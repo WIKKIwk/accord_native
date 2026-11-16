@@ -1,23 +1,26 @@
 import { Stack } from 'expo-router';
 import { useSyncExternalStore } from 'react';
-import { PlatformColor, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Button } from '@expo/ui/swift-ui';
+import { accessibilityIdentifier, accessibilityLabel, buttonStyle, foregroundStyle, frame, labelStyle } from '@expo/ui/swift-ui/modifiers';
+import { StyleSheet, View } from 'react-native';
+import { BaseHost } from '../components/BaseHost.ios';
 import { ProfileScreen } from '../components/ProfileScreen';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
-import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
-import { adminProfileSettingsUnavailable } from './adminProfileText';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import type { AdminOwnedRouteContentProps } from './AdminOwnedRouteContentTypes';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener), getLocale = () => localeController.locale;
 export function AdminOwnedProfileContent(props: AdminOwnedRouteContentProps) {
-  const locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale);
+  const locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale), { colors } = useBaseTheme();
   return <><Stack.Screen options={{ headerShown: true, title: localizedGetter('profileTitle', locale), headerBackVisible: false,
-    headerLeft: () => <RoleHeaderButton icon="back" label={props.backLabel} onPress={() => { if (props.canInteract()) props.onBack(false); }} tintColor={PlatformColor('label')} /> }} />
-    <SafeAreaView edges={['left', 'right']} style={styles.screen}><ProfileScreen session={props.session} isCurrent={props.isCurrent} onLogout={props.onLogout}
-      showDirectLogout={false} settingsUnavailableMessage={adminProfileSettingsUnavailable(locale)} />
+    headerStyle: { backgroundColor: colors.surfaceContainerHigh }, headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={() => { if (props.canInteract()) props.onBack(false); }}
+      modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), foregroundStyle(colors.onSurface), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-profile-back')]} /></BaseHost> }} />
+    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-profile-body-frame"><ProfileScreen session={props.session} isCurrent={props.isCurrent} onLogout={props.onLogout}
+      showDirectLogout={false} settingsDisabled /></AdminShellBodyFrame>
       <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
-    </SafeAreaView>
+    </View>
   </>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: PlatformColor('systemGroupedBackground') }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
