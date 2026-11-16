@@ -39,6 +39,7 @@ function hookFixture(overrides = {}) {
   } };
   const react = { useMemo: memo, useRef: value => memo(() => ({ current: value }), []), useLayoutEffect: effect, useEffect: effect, useSyncExternalStore: (_subscribe, get) => get() };
   const { useAdminWarehouseSettings } = load('admin/useAdminWarehouseSettings', { react, 'expo-router': { useIsFocused: () => focused },
+    '../shared/camera/synchronousGuard': sync,
     '../auth': { subscribeSessionWitness: fn => { notify = fn; return () => calls.push('unsubscribe'); } }, '../shared/localization': { adminText: key => key, localizedGetter: key => key },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, './adminWarehouseSettingsSession': { adminWarehouseSettingsSession: () => owner },
     './adminWarehouseSettingsPresentation': { adminWarehouseSettingsDialogText: () => ({}) } });
@@ -46,7 +47,7 @@ function hookFixture(overrides = {}) {
     summaries: [{ warehouse: 'A', product_count: 2, reserved_count: 0, assignment_count: 1 }], onFilterToggle: () => calls.push('filter'), onWarehouseChanged: name => calls.push(['warehouse', name]) };
   const Harness = () => { slot = 0; const value = useAdminWarehouseSettings(props); effects.splice(0).forEach(run => run()); return value; };
   const unmount = () => slots.forEach(entry => entry?.cleanup?.());
-  return { calls, controller, assignment, user, render: Harness, unmount, focus: value => { focused = value; }, retire: () => { current = false; notify(); },
+  return { calls, controller, assignment, user, props, render: Harness, unmount, focus: value => { focused = value; }, retire: () => { current = false; notify(); },
     replay: () => { unmount(); slots.forEach(entry => { if (entry?.create) entry.cleanup = entry.create(); }); } };
 }
 test('actual settings hook replays attach-cleanup-attach and fences all callbacks retained from old generation', async () => {
@@ -66,4 +67,14 @@ test('retired pending hook operation cannot publish success, run parent callback
   const wait = deferred(), f = hookFixture({ deleteWarehouse: async () => { f.calls.push('delete'); return wait.promise; } }); f.render(); await tick(); const view = f.render();
   view.deleteWarehouse(); view.confirm(f.controller.getSnapshot().dialog.id); f.retire(); wait.resolve(); await tick(); f.replay(); assert.equal(f.render().current, false);
   assert.equal(f.calls.includes('deleted'), false); assert.equal(f.controller.getSnapshot().notice, null); f.unmount();
+});
+test('a retained hidden pager rejects native callbacks while keeping account reads and visible-page confirmations alive', async () => {
+  let visible = true; const f = hookFixture(); f.props.canInteract = () => visible; f.render(); await tick(); const original = f.render();
+  original.unassign(f.assignment); const id = f.controller.getSnapshot().dialog.id;
+  visible = false; const before = [...f.calls];
+  original.confirm(id); original.dismiss(id); original.assign(); original.deleteWarehouse(); original.toggleFilter(); original.selectWarehouse('A');
+  assert.deepEqual(f.calls, before); assert.equal(f.controller.isCurrent(), true, 'the hidden page does not retire the account owner');
+  visible = true; original.confirm(id); await tick(); assert.deepEqual(f.calls.slice(-3), ['unassign', ['read', 'A'], 'changed']);
+  f.props.canInteract = () => Promise.reject(Error('async visibility is not authority')); f.render(); const count = f.calls.length; original.assign(); await tick(); assert.equal(f.calls.length, count);
+  f.props.canInteract = () => { f.unmount(); return true; }; f.render(); original.assign(); assert.equal(f.calls.length, count + 1); assert.equal(f.calls.at(-1), 'unsubscribe', 'a synchronous visibility callback can detach but cannot authorize a read or write afterward');
 });

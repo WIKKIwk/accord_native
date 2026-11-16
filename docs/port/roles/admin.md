@@ -151,3 +151,6 @@ Worker/System Detail preserves interactive fallback identity, independent phone/
 
 
 Worker/System native screens, warehouse/material editors and modal hosts now exist on both platforms. They keep read ownership separate from visible focus/overlay authority, including avatar/chat provider predicates; covered pages stay mounted and only the top original overlay handles actions/back. The genuine WorkerProfileDetail/profile/avatar/dock/chat providers and global Admin route remain held. Android source button/header metrics are represented; exact native chip/short-sheet/frame/font behavior and phone checks remain open.
+
+
+Warehouse Main now composes its native search/filter/stock lists, retained page tabs, real create/Settings owners, live summary callback and generic captured-row detail sheets. Genuine item-roll/order/rawQR/raw-edit/material-state providers are required; no app route is exposed. Issued child read/return authority survives expected parent blur; visible native controls and hidden Settings pager events have separate strict interaction guards. The source body bottom reserve and native short-sheet/prefetch/lazy-tab timing remain open.

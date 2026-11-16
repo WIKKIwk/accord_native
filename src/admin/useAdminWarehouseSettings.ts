@@ -3,6 +3,7 @@ import { useIsFocused } from 'expo-router';
 import { subscribeSessionWitness } from '../auth';
 import { adminText, localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import type { AdminWarehouseSettingsProps } from './AdminWarehouseSettingsTypes';
 import { adminWarehouseSettingsSession } from './adminWarehouseSettingsSession';
 import { adminWarehouseSettingsDialogText } from './adminWarehouseSettingsPresentation';
@@ -15,7 +16,8 @@ export function useAdminWarehouseSettings(props: AdminWarehouseSettingsProps) {
   const { session, witness, isCurrent, onChanged, onDeleted, summaries, warehouse, onFilterToggle, onWarehouseChanged } = props;
   const owner = useMemo(() => adminWarehouseSettingsSession(session, witness, isCurrent, { onChanged, onDeleted }), [session, witness, isCurrent, onChanged, onDeleted]);
   const { controller } = owner, state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
-  const focused = useIsFocused(), focus = useRef(focused), locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale);
+  const focused = useIsFocused(), focus = useRef(focused), interaction = useRef(props.canInteract), locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale);
+  useLayoutEffect(() => { interaction.current = props.canInteract; }, [props.canInteract]);
   useLayoutEffect(() => { focus.current = focused; return () => { focus.current = false; }; }, [focused]);
   useLayoutEffect(() => { controller.start(); return () => controller.dispose(); }, [controller]);
   useLayoutEffect(() => { controller.setSelection(warehouse, summaries); }, [controller, warehouse, summaries]);
@@ -23,7 +25,8 @@ export function useAdminWarehouseSettings(props: AdminWarehouseSettingsProps) {
     if (!owner.current()) controller.invalidate(); return unsubscribe; }, [controller, owner]);
   useEffect(() => { if (!state.notice) return; const serial = state.notice.serial, timer = setTimeout(() => controller.dismissNotice(serial), 4000);
     return () => clearTimeout(timer); }, [controller, state.notice]);
-  const generation = controller.interactionGeneration, interactive = () => focus.current && generation === controller.interactionGeneration && controller.isCurrent();
+  const generation = controller.interactionGeneration, internal = () => focus.current && generation === controller.interactionGeneration && controller.isCurrent();
+  const interactive = () => internal() && (!interaction.current || isSynchronouslyTrue(interaction.current)) && internal();
   const notice = state.notice ? 'message' in state.notice ? state.notice.message : adminText(state.notice.key, locale, state.notice.values) : null;
   return { state, summary: controller.summary(), current: focused && owner.current() && state.phase === 'content', locale,
     a: (key: string, values?: Record<string, unknown>) => adminText(key, locale, values), t: (key: string) => localizedGetter(key, locale), notice,
