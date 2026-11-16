@@ -136,7 +136,7 @@ export class AdminWarehouseMainController {
       const before = adminWarehouseMainReservedCount(this.state.detail?.rawStock ?? [], this.state.detail?.reservations ?? []) > 0;
       const after = adminWarehouseMainReservedCount(detail?.rawStock ?? [], detail?.reservations ?? []) > 0;
       this.publish({ detail, detailPhase: 'ready', ...(before !== after ? { stockTab: 'available' as const } : {}) });
-    } catch (error) { if (witness()) this.publish({ detailPhase: 'error', detailError: error }); }
+    } catch (error) { if (witness()) this.publish({ detail: null, detailPhase: 'error', detailError: error, stockTab: 'available' }); }
   }
   /** Source _reload refreshes summary + selected raw detail; product paging is a separate retained child. */
   reload = async (): Promise<void> => {

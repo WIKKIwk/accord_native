@@ -897,3 +897,8 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 |---|---|---|---|---|
 | Customer/Material profile state, phone/code/item commands and group-scope flow; Customer Detail six parts | `adminCustomerDetailModel.ts`, `adminCustomerDetailController.ts`, `adminCustomerDetailSession.ts` | shared domain checked | shared domain checked | Native identity/editor/item/group/dialog surfaces and real child owners are in progress. |
 | Customer/material APIs; supplier/customer methods01:113–373, items methods01:96–220, role upsert methods02:362 | `adminCustomerDetailApi.ts`; existing item error export | guarded APIs checked | guarded APIs checked | Source test mode deferred; native large-body parse/transport details remain open. |
+
+## 2026-11-16 Warehouse raw-detail error completion
+
+- Compared the source FutureBuilder at warehouse models resplit part02:119. Raw detail is retained while a replacement future waits, then becomes empty on error completion. The controller now clears old raw stock/reservations/apparatus on that error and resets the removed reserved-stock tab to Available. Ordinary product pages remain separate. Added a source-lifecycle regression for waiting→error and one confirming the explicit parent page controller retains Settings across summary error/retry; that controller is outside the stock-tab DefaultTabController.
+- All17 Main controller checks pass within the164-test focused regression selection; both platform TypeScript and scoped lint pass. Source raw-detail errors do not gain a new error screen or stale-row fallback. Native Main presentation remains in progress and its actual child destinations/device validation remain open.

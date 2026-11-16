@@ -76,6 +76,18 @@ test('source reload refreshes summary+raw detail while live refresh only replace
   f.calls.length = 0; await f.controller.refreshInPlace(); assert.deepEqual(f.calls, ['summary']);
   f.controller.selectWarehouse('A'); await tick(); assert.deepEqual(f.calls, ['summary', ['detail', 'A']]);
 });
+test('explicit source parent page controller survives summary failure and retry on the selected Settings page', async () => {
+  const f = fixture(); await f.start(); f.controller.setPageTab('settings'); assert.equal(f.controller.getSnapshot().pageTab, 'settings');
+  f.deps.summary = async () => { throw Error('summary offline'); }; await assert.rejects(f.controller.refreshInPlace());
+  assert.equal(f.controller.getSnapshot().summaryPhase, 'error'); assert.equal(f.controller.getSnapshot().pageTab, 'settings');
+  f.deps.summary = async () => summary(); await f.controller.reload(); assert.equal(f.controller.getSnapshot().pageTab, 'settings'); f.controller.dispose();
+});
+test('raw-detail FutureBuilder retains data while waiting but drops it on error and resets the removed reserved stock tab', async () => {
+  const f = fixture(); f.deps.detail = async () => ({ ...detail(), reservations: [{ barcode: 'raw' }] }); await f.start(); f.controller.selectWarehouse('A'); await tick();
+  f.controller.setStockTab('reserved'); const original = f.controller.getSnapshot().detail, pending = deferred(); f.deps.detail = () => pending.promise;
+  await f.controller.reload(); assert.equal(f.controller.getSnapshot().detailPhase, 'loading'); assert.equal(f.controller.getSnapshot().detail, original); assert.equal(f.controller.getSnapshot().stockTab, 'reserved');
+  pending.reject(Error('raw detail unavailable')); await tick(); assert.equal(f.controller.getSnapshot().detailPhase, 'error'); assert.equal(f.controller.getSnapshot().detail, null); assert.equal(f.controller.getSnapshot().stockTab, 'available'); f.controller.dispose();
+});
 test('deleting the selected warehouse clears per-ref/default preference and a late saved read cannot resurrect it', async () => {
   const f = fixture(), saved = deferred(); await f.preferences.saveWarehouse('A'); f.db.getItem = async () => saved.promise; await f.start();
   assert.equal(f.controller.getSnapshot().warehouse, 'A'); f.deps.summary = async () => summary(['B']); await f.controller.warehouseDeleted(); saved.resolve('A'); await tick();
