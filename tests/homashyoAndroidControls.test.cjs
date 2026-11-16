@@ -29,13 +29,20 @@ const compose = new Proxy({ Shape: { RoundedCorner: props => props }, useMateria
 // V2 raw_material_split_screen.dart:505–520: native icon actions stay disabled while busy.
 test('Android Homashyo header uses native icon actions with source enable conditions', () => {
   const calls = [], router = { push: value => calls.push(['push', value]), canGoBack: () => false,
-    replace: value => calls.push(['replace', value]), back: () => calls.push(['back']) };
+    replace: value => calls.push(['replace', value]), back: () => calls.push(['back']), navigate: value => calls.push(['navigate', value]) };
+  const { RoleHeaderButton } = load('../shared/navigation/RoleHeaderButton.tsx', {
+    'react/jsx-runtime': jsx, 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
+    '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: onProfile => ({
+      onPress: onProfile, open: () => calls.push(['switch-account']), hint: 'accountSwitchHint' }) },
+  });
   const { RawSplitFrame } = load('RawSplitFrame.android.tsx', {
     'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': compose,
     '@expo/ui/jetpack-compose/modifiers': { semantics: value => ({ semantics: value }), testID: value => ({ testID: value }) },
     'expo-router': { router }, 'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+    '../shared/navigation/RoleHeaderButton': { RoleHeaderButton },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open: () => calls.push(['drawer']) }) },
     '../preparation/PreparationUI.android': { usePreparationText: () => value => value },
     './RawSplitBusy': { RawSplitBusy: 'Busy' }, './RawSplitDock.android': { RawSplitDock: 'Dock' },
@@ -56,6 +63,13 @@ test('Android Homashyo header uses native icon actions with source enable condit
   router.canGoBack = () => true;
   find(render({ page: 'history' }), node => node.type === 'RoleHeader')[0].props.navigation.onPress();
   assert.deepEqual(calls.at(-1), ['back']);
+  for (const page of ['home', 'history', 'profile']) {
+    const entry = find(render({ page, busy: true }), node => node.type === RoleHeaderButton)[0];
+    const button = RoleHeaderButton(entry.props);
+    assert.equal(button.props.testID, 'header-profile'); assert.equal(button.props.accessibilityLabel, 'Profil');
+    button.props.onPress(); button.props.onLongPress();
+    assert.deepEqual(calls.slice(-2), [['navigate', '/android-homashyo/profile'], ['switch-account']]);
+  }
 });
 
 // V2 raw_material_split_screen.dart:399–426 unfocuses before confirming width or appending a roll.

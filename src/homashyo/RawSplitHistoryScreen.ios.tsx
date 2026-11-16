@@ -8,6 +8,7 @@ import { RawSplitHistory } from './RawSplitHistory';
 import { RawSplitPendingCheck } from './RawSplitPendingCheck';
 import { useRawSplitHistoryActions } from './useRawSplitHistoryActions';
 import { useRawSplitHeaderPrinter } from './useRawSplitHeaderPrinter';
+import { RawSplitHeaderProfile } from './RawSplitHeaderProfile.ios';
 export function RawSplitHistoryScreen() {
   const flow = useRawSplitHistoryActions(), state = useSyncExternalStore(flow.controller.subscribe, flow.controller.getSnapshot, flow.controller.getSnapshot), t = usePreparationText();
   useSyncExternalStore(flow.pendingController.subscribe, flow.pendingController.getSnapshot, flow.pendingController.getSnapshot);
@@ -19,7 +20,8 @@ export function RawSplitHistoryScreen() {
   return <View style={{ flex: 1 }}><Stack.Screen options={{ title: t('Rezka tarixi'), headerBackVisible: false,
     headerLeft: () => <Pressable accessibilityRole="button" accessibilityLabel={t('Orqaga')} onPress={back}><SymbolView name="chevron.left" size={20} /></Pressable> }} />
     <Stack.Toolbar placement="right"><Stack.Toolbar.Button icon="printer" accessibilityLabel={t('Printer tanlash')} disabled={state.busy || printerDisabled}
-      onPress={selectPrinter} /></Stack.Toolbar>
+      onPress={selectPrinter} />
+      <Stack.Toolbar.View><RawSplitHeaderProfile /></Stack.Toolbar.View></Stack.Toolbar>
     {state.busy && <RawSplitBusy />}
     <RawSplitPendingCheck controller={flow.pendingController} onOpenHome={home} /><RawSplitHistory {...flow} />
   </View>;

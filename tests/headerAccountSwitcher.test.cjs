@@ -239,7 +239,7 @@ function loadProfilePressTarget(launcher) {
   }).ProfilePressTarget;
 }
 
-test('the iOS toolbar avatar uses one RN press target without a competing SwiftUI Button', () => {
+test('the iOS toolbar avatar and Homashyo header share the profile and account-switch press target', () => {
   const calls = [];
   const ProfilePressTarget = loadProfilePressTarget(switcherMock(calls));
   const { WorkerProfileButton } = load('components/WorkerProfileButton.ios.tsx', {
@@ -257,6 +257,18 @@ test('the iOS toolbar avatar uses one RN press target without a competing SwiftU
   const target = nodes(tree, node => node.type === ProfilePressTarget)[0], press = ProfilePressTarget(target.props);
   assert.equal(press.props.delayLongPress, 500); assert.equal(press.props.accessibilityHint, 'accountSwitchHint');
   press.props.onPress(); press.props.onLongPress(); assert.deepEqual(calls, ['profile', 'switch']);
+  const session = { profile: {}, imageCacheScope: 'homashyo-account' };
+  const { RawSplitHeaderProfile } = load('homashyo/RawSplitHeaderProfile.ios.tsx', {
+    'expo-router': { router: { navigate: route => calls.push(route) } },
+    '../components/BaseHost': { BaseHost: 'Host' }, '../components/WorkerProfileButton.ios': { WorkerProfileButton },
+    './RawSplitContext': { useRawSplitContext: () => ({ session }) },
+  });
+  const header = RawSplitHeaderProfile(); assert.equal(header.type, 'Host'); assert.equal(header.props.matchContents, true);
+  const avatar = header.props.children; assert.equal(avatar.type, WorkerProfileButton); assert.equal(avatar.props.session, session);
+  const targetForRole = nodes(WorkerProfileButton(avatar.props), node => node.type === ProfilePressTarget)[0];
+  const rolePress = ProfilePressTarget(targetForRole.props);
+  rolePress.props.onPress(); rolePress.props.onLongPress();
+  assert.deepEqual(calls.slice(-2), ['/ios-homashyo/profile', 'switch']);
 });
 
 test('the legacy iOS search header reuses the same profile press target while preserving menu', () => {

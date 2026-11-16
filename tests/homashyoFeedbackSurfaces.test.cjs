@@ -34,7 +34,7 @@ test('both native busy surfaces remain indeterminate without fabricated progress
 });
 function iosScreen(page) {
   const state = { busy: false, pendingCheck: 'ready' }, controller = { writesHeld: false, subscribe() {}, getSnapshot: () => state, capturePrinterLease: () => state.busy || state.pendingCheck !== 'ready' || state.pending || state.pendingIssue ? null : () => true };
-  const toolbar = Object.assign(() => {}, { Button: 'ToolbarButton' });
+  const toolbar = Object.assign(() => {}, { Button: 'ToolbarButton', View: 'ToolbarView' });
   const calls = [];
   const flow = { controller, pendingController: controller, isCurrent: () => true, scan() {}, isScannerCurrent: () => true, complete() {}, close() {} };
   const mocks = { 'react/jsx-runtime': jsx, react: { useSyncExternalStore: (_subscribe, get) => get(), useLayoutEffect() {} },
@@ -43,6 +43,7 @@ function iosScreen(page) {
     '../preparation/PreparationUI': { usePreparationText: () => value => value },
     './RawSplitBusy': { RawSplitBusy: 'Busy' }, './RawSplitHome': { RawSplitHome: 'Home' },
     './RawSplitHistory': { RawSplitHistory: 'History' }, './RawSplitPendingCheck': { RawSplitPendingCheck: 'PendingCheck' }, './RawSplitScanner': { RawSplitScanner: 'Scanner' },
+    './RawSplitHeaderProfile.ios': { RawSplitHeaderProfile: 'HeaderProfile' },
     './useRawSplitHomeScreen': { useRawSplitHomeScreen: () => flow },
     './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => flow },
     './useRawSplitHeaderPrinter': { useRawSplitHeaderPrinter: () => () => calls.push('picker') } };
@@ -56,6 +57,7 @@ for (const page of ['Home', 'History']) test(`iOS ${page} retains content while 
   assert.equal(find(busy, n => n.type === 'Busy').length, 1);
   assert.equal(find(busy, n => n.type === contentType).length, 1);
   assert.ok(find(busy, n => n.type === 'ToolbarButton').every(n => n.props.disabled === true));
+  assert.equal(find(busy, n => n.type === 'ToolbarView')[0].props.children.type, 'HeaderProfile');
   const children = busy.props.children;
   assert.ok(children.findIndex(n => n && n.type === 'Busy') < children.findIndex(n => n && n.type === contentType));
   h.state.busy = false; const idle = h.render();
@@ -73,6 +75,7 @@ function androidFrame() {
     'react-native': { View: 'View' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
+    '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
     '../preparation/PreparationUI.android': { usePreparationText: () => value => value },
     './RawSplitBusy': { RawSplitBusy: 'Busy' }, './RawSplitDock.android': { RawSplitDock: 'Dock' } };
@@ -119,12 +122,13 @@ for (const platform of ['ios', 'android']) test(`${platform} deep-linked History
   const pendingController = { subscribe() {}, getSnapshot: () => pending, reload: async () => calls.push('reload') };
   const controller = { writesHeld: false, subscribe() {}, getSnapshot: () => state, capturePrinterLease: () => null };
   const flow = { controller, pendingController, isCurrent: () => true, onResult() {}, onIssue() {} };
-  const toolbar = Object.assign(() => {}, { Button: 'ToolbarButton' });
+  const toolbar = Object.assign(() => {}, { Button: 'ToolbarButton', View: 'ToolbarView' });
   const mocks = { 'react/jsx-runtime': jsx, react: { useSyncExternalStore: (_sub, get) => get(), useLayoutEffect: fn => effects.push(fn) },
     'expo-router': { Stack: { Screen: 'StackScreen', Toolbar: toolbar }, router: {} }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Pressable: 'Pressable' }, '../preparation/PreparationUI': { usePreparationText: () => value => value },
     '../preparation/PreparationUI.android': { usePreparationText: () => value => value }, './RawSplitFrame.android': { RawSplitFrame: 'Frame' },
     './RawSplitBusy': { RawSplitBusy: 'Busy' }, './RawSplitHistory': { RawSplitHistory: 'History' }, './RawSplitPendingCheck': { RawSplitPendingCheck: 'PendingCheck' },
+    './RawSplitHeaderProfile.ios': { RawSplitHeaderProfile: 'HeaderProfile' },
     './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => flow }, './useRawSplitHeaderPrinter': { useRawSplitHeaderPrinter: () => () => {} } };
   const render = load(`RawSplitHistoryScreen.${platform}.tsx`, mocks).RawSplitHistoryScreen; render(); effects.shift()(); assert.deepEqual(calls, ['reload']);
   pending.pendingCheck = 'failed'; render(); effects.shift()(); assert.deepEqual(calls, ['reload']);
@@ -147,12 +151,13 @@ for (const platform of ['ios', 'android']) test(`${platform} History pending not
   const state = { busy: false }, pending = { pendingCheck: 'ready' }, calls = [];
   const pendingController = { subscribe() {}, getSnapshot: () => pending, reload: async () => {} };
   const controller = { writesHeld: false, subscribe() {}, getSnapshot: () => state, capturePrinterLease: () => null };
-  let current = true; const flow = { controller, pendingController, isCurrent: () => current, onResult() {}, onIssue() {} }, toolbar = Object.assign(() => {}, { Button: 'ToolbarButton' });
+  let current = true; const flow = { controller, pendingController, isCurrent: () => current, onResult() {}, onIssue() {} }, toolbar = Object.assign(() => {}, { Button: 'ToolbarButton', View: 'ToolbarView' });
   const mocks = { 'react/jsx-runtime': jsx, react: { useSyncExternalStore: (_sub, get) => get(), useLayoutEffect() {} },
     'expo-router': { Stack: { Screen: 'StackScreen', Toolbar: toolbar }, router: { replace: route => calls.push(route) } },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { View: 'View', Pressable: 'Pressable' },
     '../preparation/PreparationUI': { usePreparationText: () => value => value }, '../preparation/PreparationUI.android': { usePreparationText: () => value => value },
     './RawSplitFrame.android': { RawSplitFrame: 'Frame' }, './RawSplitBusy': { RawSplitBusy: 'Busy' }, './RawSplitHistory': { RawSplitHistory: 'History' },
+    './RawSplitHeaderProfile.ios': { RawSplitHeaderProfile: 'HeaderProfile' },
     './RawSplitPendingCheck': { RawSplitPendingCheck: 'PendingCheck' }, './useRawSplitHistoryActions': { useRawSplitHistoryActions: () => flow },
     './useRawSplitHeaderPrinter': { useRawSplitHeaderPrinter: () => () => {} } };
   const tree = load(`RawSplitHistoryScreen.${platform}.tsx`, mocks).RawSplitHistoryScreen();

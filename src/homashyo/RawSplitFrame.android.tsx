@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { usePreparationText } from '../preparation/PreparationUI.android';
 import { RawSplitBusy } from './RawSplitBusy';
@@ -25,7 +26,9 @@ export function RawSplitFrame({ title, page, busy = false, printerDisabled = fal
     {onPrinter && <Host matchContents><IconButton enabled={!busy && !printerDisabled} onClick={onPrinter}
       modifiers={[semantics({ contentDescription: t('Printer tanlash') }), testID('homashyo-printer')]}>
       <RNHostView matchContents><SymbolView name={{ android: 'print' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView>
-    </IconButton></Host>}</View>
+    </IconButton></Host>}
+    <RoleHeaderButton icon="profile" label={t('Profil')} testID="header-profile" tintColor={colors.onSurfaceVariant}
+      onPress={() => router.navigate('/android-homashyo/profile' as Href)} /></View>
     {busy && <RawSplitBusy />}
     <View style={{ flex: 1 }}>{children}</View><RawSplitDock profile={page === 'profile'} />
   </View>;
