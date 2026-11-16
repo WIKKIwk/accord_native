@@ -38,7 +38,7 @@ export function NativeSupplierPhoneField({ model }: { model: AdminSupplierDetail
 function Controls({ model }: { model: AdminSupplierDetailScreenModel }) {
   const { state } = model, detail = state.detail!, { colors } = useBaseTheme(), hasCode = !!dartTrim(detail.code);
   const action = (label: string, click: () => void, id: string, enabled = true) => <OutlinedButton onClick={click} enabled={enabled} shape={rounded(14)} colors={{ contentColor: colors.onSurface }}
-    modifiers={[fillMaxWidth(), height(54), testID(id)]}><Text>{label}</Text></OutlinedButton>;
+    modifiers={[fillMaxWidth(), height(54), testID(id)]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{label}</Text></OutlinedButton>;
   return <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth(), padding(16, 0, 16, 16)]}>
     <HorizontalDivider thickness={1} color={alpha(colors.outlineVariant, 'B3')} /><Spacer modifiers={[height(14)]} />
     <Text style={{ typography: 'titleMedium', fontWeight: '800' }}>{model.a('profile.admin_controls')}</Text><Spacer modifiers={[height(14)]} />
@@ -53,7 +53,7 @@ function Controls({ model }: { model: AdminSupplierDetailScreenModel }) {
     </Row></Surface>
     {hasCode ? <><Spacer modifiers={[height(8)]} /><Text style={{ typography: 'bodySmall' }}>{model.a('profile.code_copy_hint')}</Text></> : null}
     {state.seconds > 0 ? <><Spacer modifiers={[height(12)]} /><Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{model.a('profile.code_wait', { seconds: state.seconds })}</Text></> : null}
-    <Spacer modifiers={[height(18)]} /><Text style={{ typography: 'titleLarge' }}>{model.a('detail.assigned_items')}</Text><Spacer modifiers={[height(10)]} />
+    <Spacer modifiers={[height(18)]} /><Text style={{ typography: 'titleLarge', fontSize: 20, fontWeight: '700' }}>{model.a('detail.assigned_items')}</Text><Spacer modifiers={[height(10)]} />
     <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{detail.assigned_items.length ? model.a('detail.assigned_items_count', { count: detail.assigned_items.length }) : model.a('detail.assigned_items_empty')}</Text>
     <Spacer modifiers={[height(12)]} /><Row modifiers={[fillMaxWidth()]}>
       <Column modifiers={[weight(1)]}>{action(model.a('detail.items_view'), model.viewItems, 'admin-supplier-detail-items-view')}</Column><Spacer modifiers={[size(12, 1)]} />
@@ -104,9 +104,9 @@ export function SupplierRemoveConfirmation({ model }: { model: AdminSupplierDeta
         <Text style={{ typography: 'headlineSmall' }}>{model.a('detail.supplier_remove_title')}</Text><Spacer modifiers={[height(10)]} />
         <Text style={{ typography: 'bodyLarge', lineHeight: 23.2 }} color={colors.onSurfaceVariant}>{model.a('detail.supplier_remove_message')}</Text><Spacer modifiers={[height(22)]} />
         <Row modifiers={[fillMaxWidth()]}><Surface shape={rounded(20)} border={{ width: 1, color: alpha(colors.outlineVariant, 'F2') }} modifiers={[weight(1)]}>
-          <Button onClick={() => host.choose(false)} shape={rounded(20)} colors={{ containerColor: colors.surfaceContainerLow, contentColor: colors.onSurface }} modifiers={[fillMaxWidth(), height(56), testID('admin-supplier-detail-remove-cancel')]}><Text>{model.a('action.cancel')}</Text></Button>
+          <Button onClick={() => host.choose(false)} shape={rounded(20)} colors={{ containerColor: colors.surfaceContainerLow, contentColor: colors.onSurface }} modifiers={[fillMaxWidth(), height(56), testID('admin-supplier-detail-remove-cancel')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('action.cancel')}</Text></Button>
         </Surface><Spacer modifiers={[size(12, 1)]} /><Button onClick={() => host.choose(true)} shape={rounded(20)} colors={{ containerColor: colors.errorContainer, contentColor: colors.onErrorContainer }}
-          modifiers={[weight(1), height(56), testID('admin-supplier-detail-remove-confirm')]}><Text>{model.a('detail.customer_remove')}</Text></Button></Row>
+          modifiers={[weight(1), height(56), testID('admin-supplier-detail-remove-confirm')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('detail.customer_remove')}</Text></Button></Row>
       </Column>
     </Surface>
   </BasicAlertDialog></BaseHost>;

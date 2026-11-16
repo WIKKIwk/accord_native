@@ -955,3 +955,9 @@ The user explicitly requested continued Admin port work directly on `main`, chec
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
 | AdminSupplierItemsViewScreen/AddScreen; supplier source files | `AdminSupplierItemsScreen.*`, hook/controller/session/API | native table/buttons/modal | source table proportions/native dialog | Actual providers/routes, body bottom reserve and physical visual/gesture QA remain open. |
+
+
+## 2026-11-16 Android profile action typography correction
+
+- Source theme explicitly defines labelLarge16w500 and titleLarge20w700. Set these on existing Werka Save, Supplier profile/item buttons and remove-confirmation labels/title instead of relying on the native Material defaults, which differ. Existing54/56 button heights/radii and native actions are retained.
+- Combined detail88/88, both full platform TypeScript and scoped lint pass. Global Google Sans loading, remaining typography surfaces and physical visual QA remain open. No route, backend or device was used.

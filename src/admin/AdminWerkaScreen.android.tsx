@@ -90,7 +90,7 @@ function Controls({ model }: { model: AdminWerkaScreenModel }) {
     {hasCode ? <><Spacer modifiers={[height(8)]} /><Text style={{ typography: 'bodySmall' }}>{model.a('profile.code_copy_hint')}</Text></> : null}
     {state.seconds > 0 ? <><Spacer modifiers={[height(12)]} /><Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{model.a('profile.code_wait', { seconds: state.seconds })}</Text></> : null}
     <Spacer modifiers={[height(18)]} /><FilledTonalButton enabled={!state.saving} onClick={() => { void model.save(); }} shape={rounded(14)}
-      modifiers={[fillMaxWidth(), height(54), testID('admin-werka-detail-save')]}><Text>{model.a(state.saving ? 'profile.saving' : 'profile.save')}</Text></FilledTonalButton>
+      modifiers={[fillMaxWidth(), height(54), testID('admin-werka-detail-save')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a(state.saving ? 'profile.saving' : 'profile.save')}</Text></FilledTonalButton>
   </Column></BaseHost>;
 }
 
