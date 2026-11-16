@@ -27,7 +27,7 @@ export function itemGroupsPickerPage(groups: readonly string[], query: string, l
   const q = dartPartialLower(dartTrim(query)), filtered = groups.filter(value => !q || dartPartialLower(value).includes(q));
   const loaded = filtered.slice(0, limit).map((value, index) => ({ value, index, score: searchRelevanceScore(rankingQuery, value, ['']) }));
   if (dartTrim(rankingQuery)) loaded.sort((a, b) => b.score - a.score || a.index - b.index);
-  return { items: loaded.map(row => row.value), hasMore: filtered.length >= limit }; 
+  return { items: loaded.map(row => row.value), hasMore: filtered.length >= limit };
 }
 export function itemGroupsVisibleTree(roots: readonly ItemGroupsTreeNode[], expanded: ReadonlySet<string>, depth = 0): { node: ItemGroupsTreeNode; depth: number }[] {
   return roots.flatMap(node => [{ node, depth }, ...(expanded.has(node.entry.name) ? itemGroupsVisibleTree(node.children, expanded, depth + 1) : [])]);

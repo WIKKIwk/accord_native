@@ -74,6 +74,21 @@ test('destination requires shell access, current route permission, explicit inte
   }
 });
 
+test('reviewed management destinations require their own capabilities in addition to Admin admission', () => {
+  const cases = [[r.adminSettings, 'admin.settings.read', 'settings'],
+    [r.adminAdditionalSettings, 'admin.access', 'additional-settings'],
+    [r.adminItemGroupCreate, 'catalog.item_group.manage', 'item-groups']];
+  for (const [route, capability, suffix] of cases) {
+    const enabled = new Set([route]), account = session('admin', ['admin.access', capability]);
+    for (const platform of ['ios', 'android']) {
+      assert.equal(access.adminDestinationPath(account, route, platform, enabled), `/${platform}-admin/${suffix}`);
+      assert.equal(access.adminDestinationPath(account, route, platform, new Set()), null);
+      assert.equal(access.adminDestinationPath(worker, route, platform, enabled), null);
+      assert.equal(access.adminDestinationPath({ ...account, token: 'test-mode-token' }, route, platform, enabled), null);
+    }
+  }
+});
+
 test('session hook captures once and rejects stale loads, inactive and unauthorized sessions', async () => {
   async function run(result, { reset = false, unmount = false, active = true } = {}) {
     const updates = []; let effect, resetHook, resolve, unregistered = false, unobserved = false;

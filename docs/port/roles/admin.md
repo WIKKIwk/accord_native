@@ -112,3 +112,6 @@ Android dock root selection follows the implementation of V2 AppRootNavigation: 
 
 
 Product Groups follows the source tree/items flow: show a group's items, create a group or move its parent, with no rename/delete. Items page40; searchable pickers page50. Create closes after acknowledgment; Move Parent remains open after success. Android preserves source card/field/action dimensions and native pager; iOS uses native SwiftUI TabView. Exact180ms tree/filter animation, iOS420px pagination threshold and physical native presentation remain open.
+
+
+Prepared Admin child routes now include Settings, Additional Settings and Product Groups, guarded by original shell admission/capabilities/witness. Global Admin root/login remains held. The bridge gates native navigation by focus and mount while original account authority continues to own background reads. Main Settings links only reviewed nested destinations until Push is implemented.
