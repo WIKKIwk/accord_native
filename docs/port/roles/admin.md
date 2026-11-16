@@ -193,3 +193,6 @@ Customer/Material now composes actual avatar/apparatus/material warehouse owners
 
 
 Real Admin child navigation now has original-argument/awaited-result ownership and exact native source/target POP, validated with the installed Expo reducer. Native detach owns completion; four User Detail branches alone return changed=true. File-page/back/dock/provider composition and global admission remain held.
+
+
+Admin profile chat now has a source-compared target/error helper and guarded direct DM request boundary. Full ChatStore start/upsert/persistence and a genuine shared Android thread destination remain external Open dependencies; no profile chat action or fake route has been connected. Existing shared decoder/legacy mutation refresh differences remain recorded.
