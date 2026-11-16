@@ -208,3 +208,6 @@ The genuine five-action root CreateHub overlay/primary native FAB now preserves 
 
 
 Settings now consumes the genuine common source frame/lateral safe area and separate12/14 padding on every state. Android native60+3 toolbar/24w800 title, loaded input/Text fonts, exact theme fill branches and top-aligned compact Retry/expressive Loading replace earlier layout/font gaps. iOS back uses a real native image; both headers accept only a supplied genuine profile action. Profile/dock/result composition, source section motion, SDK input padding/border and physical QA remain Open.
+
+
+Original session/page authority now reaches genuine source-model Back through an optional context and exact native removal repeat. A separate original-prefix permit handles root dock removal. Seven hooks fence unaccepted interactions while preserving owned reads/accepted writes; Users passes its actual inner controller lifetime with the original ticket. Native detach still owns result completion. File-page/provider/dock composition and global/primary/chat admission remain held.

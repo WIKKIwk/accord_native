@@ -79,7 +79,7 @@ test('profile session uses raw entry id, profile route capability, genuine catal
 function hookFixture(t) {
   const r = runtime(), f = ownerFixture(); let focus = true, notify; const calls = [];
   const props = { session: {}, witness: {}, entry: {}, isCurrent: () => true, onBack: () => calls.push('back') };
-  const hook = load('admin/useAdminWorkerProfile', { react: r.react,
+  const hook = load('admin/useAdminWorkerProfile', { react: r.react, '../shared/camera/synchronousGuard': strict,
     'expo-router': { useIsFocused: () => focus, useFocusEffect: callback => r.react.useEffect(callback, [callback]) }, 'react-native': { Platform: { OS: 'ios' }, BackHandler: {} },
     '../auth': { subscribeSessionWitness: listener => { notify = listener; return () => {}; } }, '../shared/localization': l10n,
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } }, './adminWorkerProfilePresentation': presentation,
@@ -94,6 +94,13 @@ test('actual profile hook keeps owned read through blur; back and refresh requir
 test('actual profile hook retires stale reload/back through StrictMode and changed witness', async t => {
   const f = hookFixture(t); f.render(); const first = f.render(); await flush(); f.r.replay(); await flush(); const fresh = f.render(); first.back(); await first.reload(); assert.deepEqual(f.calls, []); assert.equal(f.reads.length, 2);
   f.retire(); f.notify(); fresh.back(); await fresh.reload(); assert.equal(fresh.current(), false); assert.deepEqual(f.calls, []); assert.equal(f.controller.getSnapshot().data, null);
+});
+test('Worker Profile host interaction gates back/reload while original background reads remain admissible', async t => {
+  const f = hookFixture(t); f.props.canInteract = async () => true; f.render(); await flush(); let model = f.render(); model.back(); await model.reload();
+  assert.equal(model.current(), true); assert.equal(f.reads.length, 1); assert.deepEqual(f.calls, []);
+  f.props.canInteract = () => false; model = f.render(); model.back(); await model.reload(); assert.equal(f.reads.length, 1);
+  f.reads[0].resolve(data()); f.catalogs[0].resolve([]); await flush(); assert.equal(f.render().cards.length, 6);
+  f.props.canInteract = () => true; f.render().back(); assert.deepEqual(f.calls, ['back']);
 });
 for (const platform of ['android', 'ios']) test(`${platform} native profile represents six passive cards, real pull refresh/retry, source button and genuine header/dock`, () => {
   const calls = [], model = { state: { valid: true, phase: 'content' }, current: () => true, title: 'Source title', retryLabel: 'Source reload', cards: presentation.adminWorkerProfileCards(data(), [], 'uz'), back: () => calls.push('back'), reload: async () => { calls.push('reload'); } };

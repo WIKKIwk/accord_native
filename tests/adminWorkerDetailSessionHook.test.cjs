@@ -48,7 +48,7 @@ test('Worker factory preserves trimmed widget identity, captured phone DTO, same
 const presentation = load('admin/adminWorkerDetailPresentation', { '../shared/localization': l10n, './adminUsersModel': support.model, './dartJsonString': strings,
   './adminWerkaPresentation': load('admin/adminWerkaPresentation', { './dartJsonString': strings }) });
 function hookFixture(t, { kind = 'tayyorlovMasteri', role = 'tayyorlov_masteri', readOnly = false, platform = 'android' } = {}) {
-  let valid = true, focused = true, cursor = 0, notify, serial = 0; const slots = [], effects = [], handlers = new Set(), calls = [], backs = [], clock = scheduler();
+  let valid = true, focused = true, cursor = 0, notify, serial = 0; const slots = [], effects = [], handlers = new Set(), ownedBacks = new Set(), calls = [], backs = [], clock = scheduler();
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const memo = (create, deps) => { const index = cursor++, old = slots[index]; if (!old || !equal(old.deps, deps)) slots[index] = { deps, value: create() }; return slots[index].value; };
   const effect = (create, deps) => { const index = cursor++, old = slots[index]; if (!old || !equal(old.deps, deps)) effects.push(() => { old?.cleanup?.(); slots[index] = { deps, cleanup: create() }; }); };
@@ -63,14 +63,14 @@ function hookFixture(t, { kind = 'tayyorlovMasteri', role = 'tayyorlov_masteri',
     assignMaterial: async (id, guard) => { guard(); calls.push('assignMaterial'); return { material_id: id, material_name: 'Material' }; }, unassignMaterial: async () => {}, reloadMaterials: async () => [{ material_id: 'm', material_name: 'Material' }],
     changedWarehouses: values => controller.updateWarehouses(values), changedMaterials: values => controller.updateResponsibilities(values), text: key => key, notice: (key, values) => controller.notice(key, values), rawNotice: message => controller.rawNotice(message), schedule: clock.set, cancel: clock.clear });
   const warehouseDeps = editorDeps('warehouse'), materialDeps = editorDeps('material'), warehouseEditor = new AdminWorkerDetailEditorController(warehouseDeps), materialEditor = new AdminWorkerDetailEditorController(materialDeps), owner = { controller, warehouseEditor, materialEditor, current: () => valid };
-  const hook = load('admin/useAdminWorkerDetail', { react, 'expo-router': { useIsFocused: () => focused, useFocusEffect: fn => effect(fn, [fn]) },
+  const hook = load('admin/useAdminWorkerDetail', { react, '../shared/camera/synchronousGuard': load('shared/camera/synchronousGuard'), './AdminOwnedBackContext': { useAdminOwnedBack: handler => effect(() => { ownedBacks.add(handler); return () => ownedBacks.delete(handler); }, [handler]) }, 'expo-router': { useIsFocused: () => focused, useFocusEffect: fn => effect(fn, [fn]) },
     'react-native': { Platform: { OS: platform }, BackHandler: { addEventListener: (_event, fn) => { handlers.add(fn); return { remove: () => handlers.delete(fn) }; } } }, '../auth': { subscribeSessionWitness: fn => { notify = fn; return () => {}; } },
     '../shared/localization': l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } }, './adminWorkerDetailSession': { adminWorkerDetailSession: () => owner }, './adminWorkerDetailPresentation': presentation, './adminWorkerDetailModel': workerModel, './dartJsonString': strings });
   const props = { session: {}, witness: {}, isCurrent: () => valid, entry: target, readOnly, onBack: changed => backs.push(changed), onOpenActivity: value => calls.push(['activity', value]) };
   const render = () => { cursor = 0; effects.length = 0; const value = hook.useAdminWorkerDetail(props); for (const commit of [...effects]) commit(); return value; };
   const cleanup = () => { for (const slot of slots) if (slot?.cleanup) { slot.cleanup(); slot.cleanup = null; slot.deps = null; } };
   t.after(cleanup);
-  return { render, controller, warehouseEditor, materialEditor, rootDeps, warehouseDeps, materialDeps, calls, backs, handlers, props, cleanup, clock, focus: value => { focused = value; }, retire: () => { valid = false; notify?.(); } };
+  return { render, controller, warehouseEditor, materialEditor, rootDeps, warehouseDeps, materialDeps, calls, backs, handlers, ownedBacks, props, cleanup, clock, focus: value => { focused = value; }, retire: () => { valid = false; notify?.(); } };
 }
 test('Worker hook replay fences retained root/field/editor/native callbacks while fresh lifetime remains usable', async t => {
   const f = hookFixture(t); f.render(); await flush(); f.render().toggle(); f.render(); const old = f.render(); old.phoneAction(); const field = f.render();
@@ -105,6 +105,13 @@ test('simultaneous independent editor completions preserve overlay order; only t
 test('Worker real activity callback preserves original entry and source no-refresh return; system/read-only screens do not expose it', async t => {
   const f = hookFixture(t, { kind: 'worker', role: 'aparatchi' }); f.render(); await flush(); const visible = f.render(); visible.openActivity(); await tick(); assert.deepEqual(f.calls, [['activity', f.props.entry]]);
   for (const options of [{ readOnly: true, kind: 'worker', role: 'aparatchi' }, {}]) { const hidden = hookFixture(t, options); hidden.render(); await flush(); hidden.render().openActivity(); assert.deepEqual(hidden.calls, []); }
+});
+test('Worker original host interaction blocks owned Back/fields/activity while accepted write keeps blur-safe scope', async t => {
+  const f = hookFixture(t, { kind: 'worker', role: 'aparatchi' }), pending = deferred(); let allowed = true; f.props.canInteract = () => allowed;
+  f.rootDeps.savePhone = () => pending.promise; f.render(); await flush(); f.render().toggle(); f.render().phoneAction(); const model = f.render(); model.changePhone('typed'); model.submitPhone();
+  allowed = false; model.changePhone('hidden'); model.copy(); model.regenerate(); model.openActivity(); [...f.ownedBacks][0](); assert.equal([...f.handlers][0](), false);
+  assert.equal(model.current(), false); assert.equal(model.scopeCurrent(), true); assert.deepEqual(f.backs, []); assert.deepEqual(f.calls, []);
+  pending.resolve('ack'); await tick(); allowed = true; f.render(); [...f.ownedBacks][0](); assert.deepEqual(f.backs, [true]);
 });
 test('Worker Android hardware back uses latest changed result; iOS avoids Android subscription and retirement blocks original callbacks', async t => {
   const f = hookFixture(t); f.render(); await flush(); f.render(); assert.equal(f.handlers.size, 1); f.controller.updateWarehouses(['A']); assert.equal([...f.handlers][0](), true); assert.deepEqual(f.backs, [true]);

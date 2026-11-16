@@ -13,19 +13,21 @@ import { adminUserRoleLabel } from './adminUsersModel';
 import { adminWerkaInitials } from './adminWerkaPresentation';
 import { dartTrim } from './dartJsonString';
 import type { SupplierItem } from '../shared/catalogApi';
+import { useAdminOwnedBack } from './AdminOwnedBackContext';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const getLocale = () => localeController.locale;
 export function useAdminCustomerDetail(props: AdminCustomerDetailScreenProps) {
-  const { session, witness, isCurrent, customerRef, entry = null, readOnly = false, onBack } = props;
+  const { session, witness, isCurrent, customerRef, entry = null, readOnly = false, onBack, canInteract: hostInteractive } = props;
   const focused = useIsFocused(), focus = useRef(focused), mounted = useRef(false), leaving = useRef(false);
   const owner = useMemo(() => createAdminCustomerDetailSession(session, witness, isCurrent, customerRef, entry, readOnly), [session, witness, isCurrent, customerRef, entry, readOnly]);
   const { controller, mode } = owner;
   // The constructor stores these callbacks. Only accepted events and async completions invoke them.
   // eslint-disable-next-line react-hooks/refs
-  const presentation = useMemo(() => new AdminCustomerDetailPresentation({ controller, interactive: () => focus.current && !leaving.current,
+  const presentation = useMemo(() => new AdminCustomerDetailPresentation({ controller, interactive: () => focus.current && !leaving.current && (hostInteractive === undefined || isSynchronouslyTrue(hostInteractive)) && mounted.current && owner.current(),
     onRemoved: () => { if (!leaving.current && owner.current()) { leaving.current = true; try { onBack(true); } catch (error) { leaving.current = false; throw error; } } },
-  }), [controller, owner, onBack]);
+  }), [controller, owner, onBack, hostInteractive]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const overlays = useSyncExternalStore(presentation.subscribe, presentation.getSnapshot, presentation.getSnapshot);
   const locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale);
@@ -40,16 +42,17 @@ export function useAdminCustomerDetail(props: AdminCustomerDetailScreenProps) {
     return () => clearTimeout(timer); }, [controller, state.notice]);
   const generation = controller.interactionGeneration, overlayGeneration = presentation.interactionGeneration;
   const current = useCallback(() => mounted.current && owner.current() && controller.isCurrent(generation), [owner, controller, generation]);
-  const interactive = () => current() && presentation.parentInteractive(overlayGeneration);
+  const interactive = () => current() && presentation.parentInteractive(overlayGeneration) && current();
   const controlsCurrent = () => interactive() && mode.management && controller.getSnapshot().expanded;
   const back = useCallback(() => {
-    if (!focus.current || leaving.current || !current()) return false;
+    if (!focus.current || leaving.current || !current() || hostInteractive !== undefined && !isSynchronouslyTrue(hostInteractive) || !current()) return false;
     if (controller.getSnapshot().removed) return true;
     if (presentation.back(overlayGeneration)) return true;
     leaving.current = true;
     try { onBack(controller.getSnapshot().changed); } catch (error) { leaving.current = false; throw error; }
     return true;
-  }, [current, controller, presentation, overlayGeneration, onBack]);
+  }, [current, controller, presentation, overlayGeneration, onBack, hostInteractive]);
+  useAdminOwnedBack(back);
   useFocusEffect(useCallback(() => { if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', back); return () => subscription.remove(); }, [back]));
   const a = (key: string, values?: Record<string, unknown>) => adminText(key, locale, values);

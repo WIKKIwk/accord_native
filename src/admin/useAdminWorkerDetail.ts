@@ -11,6 +11,8 @@ import { adminWorkerDetailApparatusLabels, adminWorkerDetailIsPreparation, admin
 import type { AdminWorkerDetailEditorController } from './adminWorkerDetailEditorController';
 import type { AdminWorkerDetailMaterial, AdminWorkerDetailResponsibility } from './adminWorkerDetailAssignmentsApi';
 import { dartTrim } from './dartJsonString';
+import { useAdminOwnedBack } from './AdminOwnedBackContext';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const getLocale = () => localeController.locale;
@@ -33,7 +35,8 @@ export function useAdminWorkerDetail(props: AdminWorkerDetailScreenProps) {
   useEffect(() => { if (!state.notice) return; const serial = state.notice.serial, timer = setTimeout(() => controller.dismissNotice(serial), 4000); return () => clearTimeout(timer); }, [controller, state.notice]);
   const generation = controller.interactionGeneration, phoneGeneration = controller.phoneInteractionGeneration;
   const scopeCurrent = useCallback(() => mounted.current && !leaving.current && generation === controller.interactionGeneration && controller.isCurrent(), [controller, generation]);
-  const current = useCallback(() => focus.current && scopeCurrent(), [scopeCurrent]);
+  const hostInteractive = props.canInteract;
+  const current = useCallback(() => focus.current && scopeCurrent() && (hostInteractive === undefined || isSynchronouslyTrue(hostInteractive)) && scopeCurrent(), [scopeCurrent, hostInteractive]);
   const topOverlay = useCallback(() => {
     const overlays = ([warehouseEditor, materialEditor] as const).flatMap(editor => {
       const value = editor.getSnapshot(); return [...(value.picker ? [{ editor, id: value.picker.id, type: 'picker' as const }] : []), ...(value.dialog ? [{ editor, id: value.dialog.id, type: 'dialog' as const }] : [])];
@@ -48,6 +51,7 @@ export function useAdminWorkerDetail(props: AdminWorkerDetailScreenProps) {
     try { onBack(controller.getSnapshot().changed); } catch (error) { leaving.current = false; throw error; }
     return true;
   }, [current, topOverlay, onBack, controller]);
+  useAdminOwnedBack(back);
   useFocusEffect(useCallback(() => { if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', back); return () => subscription.remove(); }, [back]));
   const a = (key: string, values?: Record<string, unknown>) => adminText(key, locale, values), u = (value: string) => uiText(value, locale), detail = adminWorkerDetailDisplay(state, entry, locale);

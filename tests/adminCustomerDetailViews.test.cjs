@@ -106,13 +106,13 @@ async function realHook(t, modes = {}, options = {}) {
     phone: async (dto, phone) => { writes.push(['phone', dto, phone]); return s.detail({ phone, code_retry_after_sec: 19 }); }, regenerate: async () => { writes.push('regen'); return s.detail(); }, remove: async () => { writes.push('remove'); },
     items: async () => [s.item('A'), s.item('B')], assign: async item => s.detail({ assigned_items: [item] }), unassign: async () => s.detail({ assigned_items: [] }),
     groups: async () => ['Rulon', 'Kley'], updateGroups: async () => s.detail(), copy: async value => { writes.push(['copy', value]); }, everySecond: callback => { ticks = callback; return 1; }, cancelTimer() {} });
-  const owner = { current: () => valid, controller, mode }, r = s.runtime(), h = s.hooks(r, { './adminCustomerDetailSession': { createAdminCustomerDetailSession: () => owner },
+  const ownedBacks = new Set(), owner = { current: () => valid, controller, mode }, r = s.runtime(), h = s.hooks(r, { './adminCustomerDetailSession': { createAdminCustomerDetailSession: () => owner }, './AdminOwnedBackContext': { useAdminOwnedBack: handler => r.react.useLayoutEffect(() => { ownedBacks.add(handler); return () => ownedBacks.delete(handler); }, [handler]) },
     'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => r.react.useEffect(callback, [callback]) } });
   const props = { session: {}, witness: {}, isCurrent: () => true, customerRef: ' raw widget ref ', onBack: changed => back.push(changed), ...options.props };
   const render = () => r.render(() => h.useAdminCustomerDetail(props)); let admitted;
   const initial = r.render(() => { const model = h.useAdminCustomerDetail(props); admitted = model.current(); return model; }); await s.flush();
   t.after(() => { r.unmount(); controller.dispose(); });
-  return { render, initial, initiallyAdmitted: admitted, r, h, props, controller, writes, back, get reads() { return reads; }, read(value) { read = value; }, tick() { ticks?.(); }, focus(value) { focused = value; render(); }, retire() { valid = false; } };
+  return { render, initial, initiallyAdmitted: admitted, r, h, props, ownedBacks, controller, writes, back, get reads() { return reads; }, read(value) { read = value; }, tick() { ticks?.(); }, focus(value) { focused = value; render(); }, retire() { valid = false; } };
 }
 test('real customer hook initially gates descendants until the parent starts, then exposes localized fallback without hiding the source card', async t => {
   const pending = s.deferred(), f = await realHook(t, {}, { read: () => pending.promise }); assert.equal(f.initiallyAdmitted, false);
@@ -136,6 +136,12 @@ test('real customer hook fences blur, replay and stale subordinate callbacks; so
   f.focus(true); f.r.replay(); await s.flush(); f.controller.toggle(); const fresh = f.render(); old.regenerate(); old.apparatus.onChanged(); assert.deepEqual(f.writes, []); assert.equal(f.controller.getSnapshot().changed, false);
   fresh.apparatus.onChanged(); fresh.back(); fresh.back(); assert.deepEqual(f.back, [true]);
   const readOnly = await realHook(t, { management: false, items: false, remove: false }); const readonly = readOnly.render(); readonly.apparatus.onChanged(); readonly.regenerate(); readonly.toggle(); assert.equal(readOnly.controller.getSnapshot().changed, false); assert.deepEqual(readOnly.writes, []);
+});
+test('Customer original host interaction holds source controls and owned Back without retiring accepted prompt completion', async t => {
+  let allowed = true; const f = await realHook(t, {}, { props: { canInteract: () => allowed } }); f.controller.toggle(); let model = f.render();
+  allowed = false; model.regenerate(); model.requestRemove(); [...f.ownedBacks][0](); assert.equal(model.current(), true); assert.deepEqual(f.writes, []); assert.deepEqual(f.back, []);
+  allowed = true; model.requestRemove(); model = f.render(); const prompt = model.state.prompt; assert.equal(model.choosePrompt(prompt, true), true);
+  allowed = false; f.focus(false); await model.confirmPrompt(prompt); assert.deepEqual(f.writes, ['remove']); assert.deepEqual(f.back, [true]);
 });
 test('real customer typed remove labels retain source customer/item distinction and accepted removal calls back once after host closure', async t => {
   const f = await realHook(t); f.controller.toggle(); let model = f.render(); model.requestRemove(); model = f.render();

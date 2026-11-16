@@ -6,7 +6,7 @@ const { AdminWerkaController } = load('admin/adminWerkaController', { '../shared
 const presentation = load('admin/adminWerkaPresentation', { './dartJsonString': strings });
 const settings = { werka_name: 'Original', werka_phone: '123', werka_code: ' raw ', werka_code_retry_after_sec: 0, werka_avatar_url: '' };
 function fixture(t, platform = 'android') {
-  let valid = true, focused = true, locale = 'uz', cursor = 0; const slots = [], effects = [], handlers = new Set(), backs = [], calls = [];
+  let valid = true, focused = true, locale = 'uz', cursor = 0; const slots = [], effects = [], handlers = new Set(), ownedBacks = new Set(), backs = [], calls = [];
   const equal = (left, right) => !!left && !!right && left.length === right.length && left.every((value, index) => Object.is(value, right[index]));
   const memo = (create, deps) => { const index = cursor++, old = slots[index]; if (!old || !equal(old.deps, deps)) slots[index] = { deps, value: create() }; return slots[index].value; };
   const effect = (callback, deps) => { const index = cursor++, old = slots[index]; if (!old || !equal(old.deps, deps)) effects.push(() => { old?.cleanup?.(); slots[index] = { deps, cleanup: callback() }; }); };
@@ -16,7 +16,7 @@ function fixture(t, platform = 'android') {
     regenerate: async guard => { guard(); calls.push('regen'); return settings; }, copy: async (code, guard) => { guard(); calls.push(['copy', code]); },
     everySecond: () => 1, cancelTimer() {} };
   const controller = new AdminWerkaController(deps), owner = { controller, current: () => valid };
-  const hook = load('admin/useAdminWerka', { react, 'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => effect(callback, [callback]) },
+  const hook = load('admin/useAdminWerka', { react, '../shared/camera/synchronousGuard': strict, './AdminOwnedBackContext': { useAdminOwnedBack: handler => effect(() => { ownedBacks.add(handler); return () => ownedBacks.delete(handler); }, [handler]) }, 'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => effect(callback, [callback]) },
     'react-native': { Platform: { OS: platform }, BackHandler: { addEventListener: (_event, handler) => { handlers.add(handler); return { remove: () => handlers.delete(handler) }; } } },
     '../auth': { subscribeSessionWitness: () => () => {} }, '../shared/localization': l10n,
     '../shared/localization/runtime': { localeController: { get locale() { return locale; }, addListener() { return () => {}; } } },
@@ -25,7 +25,7 @@ function fixture(t, platform = 'android') {
   const render = () => { cursor = 0; effects.length = 0; const model = hook.useAdminWerka(props); for (const commit of [...effects]) commit(); return model; };
   const cleanup = () => { for (const slot of slots) if (slot?.cleanup) { slot.cleanup(); slot.cleanup = null; slot.deps = null; } };
   t.after(() => { cleanup(); controller.dispose(); });
-  return { render, controller, deps, calls, backs, handlers, cleanup, focus: value => { focused = value; }, locale: value => { locale = value; }, retire: () => { valid = false; } };
+  return { render, controller, deps, props, calls, backs, handlers, ownedBacks, cleanup, focus: value => { focused = value; }, locale: value => { locale = value; }, retire: () => { valid = false; } };
 }
 test('Werka hook locale parent rebuild reads live drafts while copy/dismiss notice leaves source header unchanged', async t => {
   const f = fixture(t); f.render(); await flush(); const first = f.render(); first.changeName('Draft'); first.changePhone('456');
@@ -51,4 +51,17 @@ test('Werka changed-back intercepts Android hardware back only while focused; iO
   const f = fixture(t); f.render(); await flush(); f.render(); assert.equal(f.handlers.size, 1); assert.equal([...f.handlers][0](), true); assert.deepEqual(f.backs, [false]);
   f.focus(false); f.render(); assert.equal([...f.handlers][0](), false); assert.deepEqual(f.backs, [false]);
   const ios = fixture(t, 'ios'); ios.render(); await flush(); ios.render(); assert.equal(ios.handlers.size, 0);
+});
+test('Werka original host interaction fences queued actions and real owned Back while accepted save stays alive', async t => {
+  const f = fixture(t), pending = deferred(); let allowed = true; f.props.canInteract = () => allowed; f.deps.write = () => pending.promise;
+  f.render(); await flush(); const model = f.render(), saving = model.save(); allowed = false;
+  model.changeName('hidden'); model.toggle(); model.regenerate(); model.copy(); [...f.ownedBacks][0](); assert.equal([...f.handlers][0](), false);
+  assert.equal(model.current(), true); assert.deepEqual(f.backs, []); assert.equal(f.controller.currentFields.name, 'Original');
+  pending.resolve({ ...settings, werka_name: 'saved' }); assert.equal(await saving, true); allowed = true; f.render(); [...f.ownedBacks][0](); assert.deepEqual(f.backs, [true]);
+});
+test('Werka async or reentrant retiring host interaction cannot invoke native Back', async t => {
+  for (const mode of ['async', 'retire']) {
+    const f = fixture(t); f.props.canInteract = mode === 'async' ? async () => true : () => { f.retire(); return true; };
+    f.render(); await flush(); f.render(); [...f.ownedBacks][0](); assert.equal([...f.handlers][0](), false); assert.deepEqual(f.backs, []);
+  }
 });

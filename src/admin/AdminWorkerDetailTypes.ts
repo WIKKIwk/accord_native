@@ -6,8 +6,9 @@ export type AdminWorkerDetailAvatarProps = { avatarUrl: string; fallbackText: st
 /** Real shell/preview/chat/activity destinations are supplied before this held screen can be routed. */
 export type AdminWorkerDetailScreenProps = {
   session: Session; witness: SessionWitness; isCurrent: () => boolean; entry: AdminUserListEntry; readOnly?: boolean;
+  canInteract?: () => boolean;
   backLabel: string; onBack: (changed: boolean) => void; footer: ReactNode; profileAction: ReactElement;
   renderAvatar: (props: AdminWorkerDetailAvatarProps) => ReactElement;
-  renderChatAction?: (isCurrent: () => boolean, canInteract: () => boolean) => ReactElement;
+  renderChatAction?: (isCurrent: () => boolean, canInteract: () => boolean) => ReactElement | null;
   onOpenActivity: (entry: AdminUserListEntry) => void | Promise<unknown>;
 };

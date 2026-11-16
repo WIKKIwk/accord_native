@@ -52,6 +52,7 @@ function Controls({ model }: { model: AdminWorkerDetailScreenModel }) {
 }
 function Profile({ model, props }: { model: AdminWorkerDetailScreenModel; props: AdminWorkerDetailScreenProps }) {
   const { state, detail, a } = model, { colors } = useBaseTheme();
+  const chatAction = props.renderChatAction?.(model.scopeCurrent, model.interactive);
   return <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity }), background(colors.surface), cornerRadius(18), clipped(), animation(Animation.easeOut({ duration: .18 }), state.expanded)]}>
     <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>
       <View style={styles.banner} /><View style={styles.status}><BaseHost matchContents><Text modifiers={[font({ textStyle: 'caption', weight: 'bold' }), foregroundStyle(colors.onSecondaryContainer), padding({ horizontal: 12, vertical: 8 }), background(colors.secondaryContainer), cornerRadius(999)]}>{model.status}</Text></BaseHost></View>
@@ -62,7 +63,7 @@ function Profile({ model, props }: { model: AdminWorkerDetailScreenModel; props:
       <VStack alignment="leading" spacing={8} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
         <Chip icon="phone.fill" label={dartTrim(detail.phone) || a('profile.phone_missing')} /><Chip icon="person.text.rectangle" label={dartTrim(detail.level) || a('detail.level_missing')} />
         {model.warehouseEnabled ? <Chip icon="building.2" label={a('detail.warehouses_count', { count: state.warehouses.length })} /> : null}
-        {props.renderChatAction ? <RNHostView matchContents>{props.renderChatAction(model.scopeCurrent, model.interactive)}</RNHostView> : null}
+        {chatAction ? <RNHostView matchContents>{chatAction}</RNHostView> : null}
       </VStack>
       {!model.readOnly ? <Button onPress={model.toggle} modifiers={[buttonStyle('plain'), frame({ minWidth: 44, minHeight: 44 }), accessibilityIdentifier('admin-worker-detail-admin-toggle'), accessibilityLabel(a(state.expanded ? 'profile.controls_close' : 'profile.controls_open'))]}>
         <Image systemName="chevron.down" size={20} modifiers={[foregroundStyle('secondary'), rotationEffect(state.expanded ? 180 : 0), animation(Animation.easeOut({ duration: .18 }), state.expanded)]} />

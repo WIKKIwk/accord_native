@@ -14,13 +14,13 @@ async function fixture() {
       return [slots[index], next => { slots[index] = typeof next === 'function' ? next(slots[index]) : next; }]; },
     useSyncExternalStore: (_subscribe, get) => get(), useLayoutEffect: fn => layouts.push(fn),
   };
-  const hook = s.load('admin/useAdminUsersScreen', { react, 'expo-router': { useIsFocused: () => focused },
+  const hook = s.load('admin/useAdminUsersScreen', { react, '../shared/camera/synchronousGuard': s.load('shared/camera/synchronousGuard'), 'expo-router': { useIsFocused: () => focused },
     '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './adminUsersModel': s.model, './dartJsonString': s.strings,
     './useAdminUsers': { useAdminUsers: () => ({ state: controller.getSnapshot(), controller, isCurrent: () => valid }) } });
-  const props = { session: { profile: { role: 'admin' } }, onBack: () => { backs++; }, onOpenUser: ticket => open(ticket) };
+  const props = { session: { profile: { role: 'admin' } }, onBack: () => { backs++; }, onOpenUser: (ticket, lifetime) => open(ticket, lifetime) };
   const render = () => { cursor = 0; layouts = []; const model = hook.useAdminUsersScreen(props); const cleanup = layouts.map(fn => fn()); return { model, cleanup: () => cleanup.forEach(fn => fn?.()) }; };
-  return { controller, render, get reads() { return reads; }, get backs() { return backs; }, retire() { valid = false; }, focus: value => { focused = value; },
+  return { controller, props, render, get reads() { return reads; }, get backs() { return backs; }, retire() { valid = false; }, focus: value => { focused = value; },
     onOpen: value => { open = value; } };
 }
 test('screen model preserves exact visible subtitles, current role choices and raw search text', async () => {
@@ -57,4 +57,12 @@ test('route blur blocks native actions and pagination without retiring session o
   model.setSearch('hidden'); model.selectRole('metalayzer'); model.back(); await model.reload(); model.scrollMetrics(100, 0);
   assert.equal(f.controller.getSnapshot().query, ''); assert.equal(f.reads, before); assert.equal(f.backs, 0);
   f.focus(true); const focused = f.render().model; focused.back(); assert.equal(f.backs, 1); assert.equal(f.controller.getSnapshot().screen, 'content'); f.controller.dispose();
+});
+test('Users supplies original controller lifetime to navigation and host interaction cannot replace its awaited result authority', async () => {
+  const f = await fixture(), pending = s.deferred(); let allowed = true, captured; f.props.canInteract = () => allowed;
+  f.onOpen((ticket, lifetime) => { captured = { ticket, lifetime }; return pending.promise; }); const model = f.render().model, opening = model.openUser('ROW');
+  assert.equal(captured.lifetime.isCurrent(), true); assert.equal(captured.lifetime.canInteract(), true); allowed = false;
+  model.setSearch('hidden'); model.back(); await model.reload(); assert.equal(captured.lifetime.canInteract(), false); assert.equal(captured.lifetime.isCurrent(), true); assert.equal(f.backs, 0); assert.equal(f.controller.getSnapshot().query, '');
+  const before = f.reads; pending.resolve(true); await opening; await s.flush(); assert.equal(f.reads, before + 1);
+  f.controller.dispose(); assert.equal(captured.lifetime.isCurrent(), false); assert.equal(captured.lifetime.canInteract(), false);
 });

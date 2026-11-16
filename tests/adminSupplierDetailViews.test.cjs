@@ -92,18 +92,25 @@ async function realHook(t, readOnly = false) {
   const controller = new s.AdminSupplierDetailController({ isCurrent: () => valid, readOnly, read: async () => { reads++; return read(); }, status: async (dto, blocked) => s.detail({ blocked }),
     phone: async (dto, phone) => s.detail({ phone }), regenerate: async () => s.detail(), remove: async () => { posted.push('remove'); if (removed) await removed.promise; }, copy: async () => {},
     everySecond: () => 1, cancelTimer() {} });
-  const owner = { current: () => valid, controller }, r = s.runtime(), h = s.hooks(r, { './adminSupplierDetailSession': { createAdminSupplierDetailSession: () => owner },
+  const ownedBacks = new Set(), owner = { current: () => valid, controller }, r = s.runtime(), h = s.hooks(r, { './adminSupplierDetailSession': { createAdminSupplierDetailSession: () => owner }, './AdminOwnedBackContext': { useAdminOwnedBack: handler => r.react.useLayoutEffect(() => { ownedBacks.add(handler); return () => ownedBacks.delete(handler); }, [handler]) },
     'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => r.react.useEffect(callback, [callback]) } });
   const props = { session: {}, witness: {}, isCurrent: () => true, supplierRef: ' raw widget ref ', readOnly,
     onBack: changed => back.push(changed), onViewItems: ref => callbacks.push(['view', ref]), onAddItem: ref => callbacks.push(['add', ref]) };
   const render = () => r.render(() => h.useAdminSupplierDetail(props)); render(); await s.flush();
   t.after(() => { r.unmount(); controller.dispose(); });
-  return { render, r, controller, callbacks, back, posted, get reads() { return reads; }, read(value) { read = value; }, focus(value) { focused = value; render(); }, retire() { valid = false; }, pendingRemove() { removed = s.deferred(); return removed; } };
+  return { render, r, props, ownedBacks, controller, callbacks, back, posted, get reads() { return reads; }, read(value) { read = value; }, focus(value) { focused = value; render(); }, retire() { valid = false; }, pendingRemove() { removed = s.deferred(); return removed; } };
 }
 test('real supplier hook forwards raw item refs, captured DTO writes and changed back result without inventing return refresh', async t => {
   const f = await realHook(t), model = f.render(); model.viewItems(); model.addItem(); assert.deepEqual(f.callbacks, [['view', ' raw widget ref '], ['add', ' raw widget ref ']]);
   await model.savePhone(model.state.detail, '123'); model.back(); assert.deepEqual(f.back, [true]);
   const hidden = await realHook(t, true), readonly = hidden.render(); readonly.viewItems(); readonly.addItem(); readonly.toggle(); assert.deepEqual(hidden.callbacks, []); assert.equal(hidden.controller.getSnapshot().expanded, false);
+});
+test('Supplier original host interaction blocks new item/native Back actions but accepted remove completes through focus loss', async t => {
+  const f = await realHook(t); let allowed = false; f.props.canInteract = () => allowed; let model = f.render();
+  model.viewItems(); model.addItem(); model.requestRemove(); [...f.ownedBacks][0](); assert.equal(model.current(), true); assert.deepEqual(f.callbacks, []); assert.deepEqual(f.back, []);
+  allowed = true; model.requestRemove(); const prompt = f.controller.getSnapshot().removePrompt; allowed = false; f.focus(false);
+  await model.confirmRemove(prompt); assert.deepEqual(f.posted, ['remove']); assert.deepEqual(f.back, [true]);
+  const stale = await realHook(t); stale.props.canInteract = () => { stale.retire(); return true; }; stale.render(); [...stale.ownedBacks][0](); assert.deepEqual(stale.back, []);
 });
 test('real supplier hook rejects callbacks from blur/StrictMode replay and returns remove true only to the original owner', async t => {
   const f = await realHook(t), original = f.render(); f.focus(false); original.viewItems(); original.requestRemove(); assert.deepEqual(f.callbacks, []); assert.equal(f.controller.getSnapshot().removePrompt, null);

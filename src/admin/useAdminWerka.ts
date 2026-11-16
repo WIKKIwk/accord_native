@@ -8,6 +8,8 @@ import type { AdminWerkaScreenProps } from './AdminWerkaScreenTypes';
 import { createAdminWerkaSession } from './adminWerkaSession';
 import { adminWerkaInitials } from './adminWerkaPresentation';
 import { dartTrim } from './dartJsonString';
+import { useAdminOwnedBack } from './AdminOwnedBackContext';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const getLocale = () => localeController.locale;
@@ -28,16 +30,18 @@ export function useAdminWerka(props: AdminWerkaScreenProps) {
     return () => clearTimeout(timer);
   }, [state.copiedNotice, controller]);
   const generation = controller.interactionGeneration, current = useCallback(() => owner.current() && controller.isCurrent(generation), [owner, controller, generation]);
-  const interactive = () => focus.current && current();
+  const hostInteractive = props.canInteract;
+  const interactive = () => focus.current && current() && (hostInteractive === undefined || isSynchronouslyTrue(hostInteractive)) && current();
   const back = () => { if (interactive()) onBack(controller.getSnapshot().changed); };
+  useAdminOwnedBack(back);
   useFocusEffect(useCallback(() => {
     if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!focus.current || !current()) return false;
+      if (!focus.current || !current() || hostInteractive !== undefined && !isSynchronouslyTrue(hostInteractive) || !current()) return false;
       onBack(controller.getSnapshot().changed); return true;
     });
     return () => subscription.remove();
-  }, [controller, current, onBack]));
+  }, [controller, current, onBack, hostInteractive]));
   const a = (key: string, values?: Record<string, unknown>) => adminText(key, locale, values);
   // Source locale/parent rebuilds read live controllers; a snackbar-only change does not rebuild that parent.
   // eslint-disable-next-line react-hooks/exhaustive-deps

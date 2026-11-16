@@ -6,6 +6,7 @@ import type { AdminUsersScreenProps, AdminUsersRow } from './AdminUsersScreenTyp
 import { adminUserKindLabel, adminUserKinds, adminUserRoleLabel, adminUsersShowFooter } from './adminUsersModel';
 import { dartTrim } from './dartJsonString';
 import { useAdminUsers } from './useAdminUsers';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const getLocale = () => localeController.locale;
@@ -22,7 +23,7 @@ export function useAdminUsersScreen(props: AdminUsersScreenProps) {
   const [refresh, setRefresh] = useState({ controller, generation, active: false });
   const pendingOpen = useRef<{ controller: typeof controller; generation: number; marker: object } | null>(null);
   const lifetimeCurrent = () => mounted.current && controller.isInteractionCurrent(generation) && isCurrent();
-  const interactive = () => focus.current && lifetimeCurrent();
+  const interactive = () => focus.current && lifetimeCurrent() && (props.canInteract === undefined || isSynchronouslyTrue(props.canInteract)) && lifetimeCurrent();
   const a = (key: string) => adminText(key, locale), t = (key: string) => localizedGetter(key, locale);
   const items = controller.visibleItems(locale), occurrences = new Map<string, number>();
   const searchText = search.controller === controller && search.generation === generation && search.edited ? search.text : state.query;
@@ -44,7 +45,7 @@ export function useAdminUsersScreen(props: AdminUsersScreenProps) {
     const ticket = controller.captureDetail(id, locale); if (!ticket) return;
     const marker = {}; pendingOpen.current = { controller, generation, marker };
     try {
-      const changed = await props.onOpenUser(ticket);
+      const changed = await props.onOpenUser(ticket, { isCurrent: lifetimeCurrent, canInteract: interactive });
       // Native focus may be restored after the awaited navigation result. Session/lifetime authority still applies.
       if (lifetimeCurrent()) controller.completeDetail(ticket, changed);
     } catch { controller.completeDetail(ticket, false); }

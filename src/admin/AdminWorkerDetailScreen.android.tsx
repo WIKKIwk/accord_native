@@ -73,6 +73,7 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
   const noticeSerial = state.notice?.serial, notice = model.notice;
   useEffect(() => { if (model.current() && notice && noticeSerial !== shown.current) { shown.current = noticeSerial ?? null; void snackbar.current?.showSnackbar({ message: notice, duration: 'short' }); } }, [model, notice, noticeSerial]);
   if (!model.scopeCurrent()) return null;
+  const chatAction = props.renderChatAction?.(model.scopeCurrent, model.interactive);
   const action = (label: string, click: () => void, id: string) => <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><OutlinedButton onClick={click} colors={{ contentColor: colors.onSurface }} shape={workerDetailShape(14)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 54 }), testID(id)]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{label}</Text></OutlinedButton></BaseHost>;
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost style={styles.header}><Column><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
@@ -92,7 +93,7 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
         <Row verticalAlignment="bottom" modifiers={[fillMaxWidth(), padding(16, 2, 16, 16)]}><FlowRow horizontalArrangement={{ spacedBy: 8 }} verticalArrangement={{ spacedBy: 8 }} modifiers={[weight(1)]}>
           <InfoChip name="phone" label={dartTrim(detail.phone) || a('profile.phone_missing')} /><InfoChip name="badge" label={dartTrim(detail.level) || a('detail.level_missing')} />
           {model.warehouseEnabled ? <InfoChip name="warehouse" label={a('detail.warehouses_count', { count: state.warehouses.length })} /> : null}
-          {props.renderChatAction ? <RNHostView matchContents>{props.renderChatAction(model.scopeCurrent, model.interactive)}</RNHostView> : null}
+          {chatAction ? <RNHostView matchContents>{chatAction}</RNHostView> : null}
         </FlowRow>{!model.readOnly ? <><Spacer modifiers={[size(8, 1)]} /><IconButton onClick={model.toggle} modifiers={[size(48, 48), testID('admin-worker-detail-admin-toggle'), semantics({ contentDescription: a(state.expanded ? 'profile.controls_close' : 'profile.controls_open') })]}>
           <Box modifiers={[graphicsLayer({ rotationZ: animated(state.expanded ? 180 : 0, tween({ durationMillis: 180, easing: 'ease' })) })]}><WorkerDetailIcon name="expand_more" color={colors.onSurfaceVariant} /></Box>
         </IconButton></> : null}</Row>

@@ -8,6 +8,7 @@ import type { AdminSupplierItemsScreenProps } from './AdminSupplierItemsScreenTy
 import type { AdminSupplierItemsPrompt } from './adminSupplierItemsController';
 import { createAdminSupplierItemsSession } from './adminSupplierItemsSession';
 import type { SupplierItem } from '../shared/catalogApi';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener), localeSnapshot = () => localeController.locale;
 export function useAdminSupplierItems(props: AdminSupplierItemsScreenProps) {
@@ -20,14 +21,15 @@ export function useAdminSupplierItems(props: AdminSupplierItemsScreenProps) {
   useEffect(() => { const retire = () => { if (!owner.current()) controller.invalidate(); }; const unsubscribe = subscribeSessionWitness(retire); retire(); return unsubscribe; }, [owner, controller]);
   const generation = controller.interactionGeneration;
   const current = useCallback(() => mounted.current && !leaving.current && owner.current() && controller.isCurrent(generation), [owner, controller, generation]);
-  const interactive = () => focus.current && current();
+  const hostInteractive = props.canInteract;
+  const interactive = () => focus.current && current() && (hostInteractive === undefined || isSynchronouslyTrue(hostInteractive)) && current();
   const back = useCallback(() => {
-    if (!focus.current || !current()) return false;
+    if (!focus.current || !current() || hostInteractive !== undefined && !isSynchronouslyTrue(hostInteractive) || !current()) return false;
     const prompt = controller.getSnapshot().prompt;
     if (prompt) controller.dismiss(prompt);
     else { leaving.current = true; try { onBack(); } catch (error) { leaving.current = false; throw error; } }
     return true;
-  }, [controller, current, onBack]);
+  }, [controller, current, onBack, hostInteractive]);
   useFocusEffect(useCallback(() => {
     if (Platform.OS !== 'android') return; const subscription = BackHandler.addEventListener('hardwareBackPress', back); return () => subscription.remove();
   }, [back]));

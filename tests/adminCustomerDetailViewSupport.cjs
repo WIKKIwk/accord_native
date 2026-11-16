@@ -35,7 +35,7 @@ function runtime() {
     replay() { this.replayCleanup(); this.replaySetup(); } };
 }
 function hooks(r, extra = {}) {
-  return base.compile(path.resolve(__dirname, '../src/admin/useAdminCustomerDetail.ts'), { react: r.react,
+  return base.compile(path.resolve(__dirname, '../src/admin/useAdminCustomerDetail.ts'), { react: r.react, '../shared/camera/synchronousGuard': strict, './AdminOwnedBackContext': { useAdminOwnedBack() {} },
     'expo-router': { useIsFocused: () => true, useFocusEffect: callback => r.react.useEffect(callback, [callback]) },
     'react-native': { Platform: { OS: 'ios' }, BackHandler: {} }, '../auth': { subscribeSessionWitness: () => () => {} },
     '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },

@@ -10,6 +10,8 @@ import type { AdminSupplierDetail } from './adminSupplierDetailModel';
 import { createAdminSupplierDetailSession } from './adminSupplierDetailSession';
 import { adminWerkaInitials } from './adminWerkaPresentation';
 import { dartTrim } from './dartJsonString';
+import { useAdminOwnedBack } from './AdminOwnedBackContext';
+import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const getLocale = () => localeController.locale;
@@ -25,22 +27,24 @@ export function useAdminSupplierDetail(props: AdminSupplierDetailScreenProps) {
   useEffect(() => { if (!state.notice) return; const serial = state.notice.serial, timer = setTimeout(() => controller.dismissNotice(serial), 4000);
     return () => clearTimeout(timer); }, [controller, state.notice]);
   const generation = controller.interactionGeneration, current = useCallback(() => owner.current() && controller.isCurrent(generation), [owner, controller, generation]);
-  const interactive = () => focus.current && current();
+  const hostInteractive = props.canInteract;
+  const interactive = () => focus.current && current() && (hostInteractive === undefined || isSynchronouslyTrue(hostInteractive)) && current();
   const back = () => {
     if (!interactive() || controller.getSnapshot().phase === 'removed') return;
     const prompt = controller.getSnapshot().removePrompt;
     if (prompt) controller.dismissRemove(prompt); else onBack(controller.getSnapshot().changed);
   };
+  useAdminOwnedBack(back);
   useFocusEffect(useCallback(() => {
     if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!focus.current || !current()) return false;
+      if (!focus.current || !current() || hostInteractive !== undefined && !isSynchronouslyTrue(hostInteractive) || !current()) return false;
       if (controller.getSnapshot().phase === 'removed') return true;
       const prompt = controller.getSnapshot().removePrompt;
       if (prompt) controller.dismissRemove(prompt); else onBack(controller.getSnapshot().changed);
       return true;
     }); return () => subscription.remove();
-  }, [controller, current, onBack]));
+  }, [controller, current, onBack, hostInteractive]));
   const a = (key: string, values?: Record<string, unknown>) => adminText(key, locale, values);
   const displayName = dartTrim(state.detail?.name ?? '') || a('detail.supplier_missing');
   const notice = state.notice ? a(state.notice.key, state.notice.key === 'detail.phone_save_failed' ? { error: String(state.notice.error) } : undefined) : null;

@@ -15,6 +15,7 @@ export type AdminCustomerMaterialWarehouseProps = {
 /** Genuine subordinate owners are required before this held screen can be composed into app routes. */
 export type AdminCustomerDetailScreenProps = {
   session: Session; witness: SessionWitness; isCurrent: () => boolean; customerRef: string; entry?: AdminUserListEntry | null; readOnly?: boolean;
+  canInteract?: () => boolean;
   backLabel: string; onBack: (changed: boolean) => void; profileAction: ReactElement; footer?: ReactNode;
   renderAvatar: (props: AdminCustomerAvatarProps) => ReactElement; chatAction?: ReactElement;
   renderApparatusCard: (props: AdminCustomerApparatusProps) => ReactElement;

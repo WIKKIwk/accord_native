@@ -11,7 +11,7 @@ function setup(platform, mode = 'add', patch = {}) {
     title: s.l10n.adminText(mode === 'add' ? 'supplier_items.add_title' : 'supplier_items.view_title', 'uz'), empty: s.l10n.adminText(mode === 'add' ? 'supplier_items.empty_available' : 'supplier_items.empty_assigned', 'uz'),
     back: () => calls.push('back'), request: item => { if (valid && focused && !state.mutating) calls.push(item); }, promptCurrent: prompt => valid && state.prompt === prompt,
     confirm: prompt => calls.push(['confirm', prompt]), dismiss: prompt => calls.push(['dismiss', prompt]) };
-  const hook = s.load('admin/useAdminSupplierItems', { react: runtime.react, 'expo-router': {}, 'react-native': {}, '../auth': {}, '../shared/localization': s.l10n,
+  const hook = s.load('admin/useAdminSupplierItems', { react: runtime.react, '../shared/camera/synchronousGuard': s.strict, 'expo-router': {}, 'react-native': {}, '../auth': {}, '../shared/localization': s.l10n,
     '../shared/localization/runtime': {}, './adminSupplierItemsSession': {} });
   const component = (name, slots = {}) => Object.assign(function Native(props) { return { type: name, props }; }, slots);
   const compose = new Proxy({ Shape: { RoundedCorner: value => value }, TopAppBar: component('TopAppBar', { NavigationIcon: 'TopAppBar.NavigationIcon', Title: 'TopAppBar.Title', Actions: 'TopAppBar.Actions' }) }, { get: (target, name) => target[name] ?? String(name) });
@@ -74,11 +74,11 @@ function realHook() {
     detail: async guard => { guard(); return { name: 'Supplier', assigned_items: [] }; }, assigned: async (guard, witness) => { guard(); assert.equal(witness(), true); return [first]; },
     all: async () => [], mutate: async (item, guard) => { guard(); assert.equal(item, first); mutations++; return write(); } });
   const owner = { controller, current: () => valid }, props = { session: {}, witness: {}, isCurrent: () => valid, mode: 'view', supplierRef: 'raw', onBack: () => { backs++; } };
-  const hook = s.load('admin/useAdminSupplierItems', { react: runtime.react, 'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => runtime.react.useEffect(callback, [callback]) },
+  const hook = s.load('admin/useAdminSupplierItems', { react: runtime.react, '../shared/camera/synchronousGuard': s.strict, 'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => runtime.react.useEffect(callback, [callback]) },
     'react-native': { Platform: { OS: 'ios' }, BackHandler: {} }, '../auth': { subscribeSessionWitness: () => () => {} }, '../shared/localization': s.l10n,
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, './adminSupplierItemsSession': { createAdminSupplierItemsSession: () => owner } });
   const render = () => runtime.render(() => hook.useAdminSupplierItems(props));
-  return { render, runtime, controller, first, get mutations() { return mutations; }, get backs() { return backs; }, retire: () => { valid = false; }, focus: value => { focused = value; }, write: value => { write = value; },
+  return { render, runtime, props, controller, first, get mutations() { return mutations; }, get backs() { return backs; }, retire: () => { valid = false; }, focus: value => { focused = value; }, write: value => { write = value; },
     start: async () => { render(); await s.flush(); return render(); } };
 }
 test('real Supplier Items hook back cancels its original dialog before leaving once; source mutation does not return a changed result', async () => {
@@ -96,4 +96,9 @@ test('real Supplier Items hook accepted write settles while parent is blurred; o
     model.confirm(prompt); assert.equal(f.mutations, 1); f.focus(false); f.render(); if (retire) f.retire(); pending.resolve({}); await s.flush();
     assert.equal(f.controller.getSnapshot().valid, !retire); assert.deepEqual(f.controller.getSnapshot().items, []); f.runtime.unmount();
   }
+});
+test('Supplier Items original host interaction holds new actions but accepted native confirmation keeps its read authority', async () => {
+  const f = realHook(); let allowed = true; f.props.canInteract = () => allowed; const model = await f.start(); model.request(f.first); const prompt = f.controller.getSnapshot().prompt;
+  allowed = false; model.back(); assert.equal(f.backs, 0); assert.equal(model.current(), true); assert.equal(f.controller.getSnapshot().prompt, prompt);
+  model.confirm(prompt); await s.flush(); assert.equal(f.mutations, 1); assert.deepEqual(f.controller.getSnapshot().items, []); f.runtime.unmount();
 });

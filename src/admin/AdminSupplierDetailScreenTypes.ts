@@ -8,6 +8,7 @@ export type AdminSupplierDetailAvatarProps = {
 };
 type Common = {
   session: Session; witness: SessionWitness; isCurrent: () => boolean; supplierRef: string;
+  canInteract?: () => boolean;
   onBack: (changed: boolean) => void; backLabel: string; footer?: ReactNode;
   profileAction: ReactElement; renderAvatar: (props: AdminSupplierDetailAvatarProps) => ReactElement; chatAction?: ReactElement;
 };

@@ -40,7 +40,7 @@ function compile(filename, mocks) {
   return mod.exports;
 }
 function hooks(r, extra = {}) {
-  return compile(path.resolve(__dirname, '../src/admin/useAdminSupplierDetail.ts'), { react: r.react,
+  return compile(path.resolve(__dirname, '../src/admin/useAdminSupplierDetail.ts'), { react: r.react, '../shared/camera/synchronousGuard': strict, './AdminOwnedBackContext': { useAdminOwnedBack() {} },
     'expo-router': { useIsFocused: () => true, useFocusEffect: callback => r.react.useEffect(callback, [callback]) },
     'react-native': { Platform: { OS: 'ios' }, BackHandler: {} }, '../auth': { subscribeSessionWitness: () => () => {} },
     '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
