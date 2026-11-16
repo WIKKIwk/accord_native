@@ -154,3 +154,6 @@ Worker/System native screens, warehouse/material editors and modal hosts now exi
 
 
 Warehouse Main now composes its native search/filter/stock lists, retained page tabs, real create/Settings owners, live summary callback and generic captured-row detail sheets. Genuine item-roll/order/rawQR/raw-edit/material-state providers are required; no app route is exposed. Issued child read/return authority survives expected parent blur; visible native controls and hidden Settings pager events have separate strict interaction guards. The source body bottom reserve and native short-sheet/prefetch/lazy-tab timing remain open.
+
+
+Supplier Items Add/View now have guarded original-ref reads and native tables/confirmations. View uses the separate assigned endpoint; Add excludes detail-assigned exact codes from the complete paged catalog. Confirmation closes before dispatch, single busy disables all rows, acknowledgment removes matching local codes without using its returned DTO, and failure adds no new notice/retry. Genuine profile/dock and app routes remain held; source body bottom reserve and native/device checks are still open.

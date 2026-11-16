@@ -104,4 +104,4 @@ function nodes(node, predicate) {
 const byId = (tree, id) => nodes(tree, node => node.props.modifiers?.some(mod => ['testID', 'accessibilityIdentifier'].includes(mod.name) && mod.args[0] === id))[0];
 const click = (node, platform) => node.props[platform === 'android' ? 'onClick' : 'onPress']();
 const texts = tree => nodes(tree, node => node.type === 'Text').map(node => node.props.children);
-module.exports = { ...s, strict, AdminSupplierDetailController, runtime, hooks, detail, model, view, expand, nodes, byId, click, texts, colors };
+module.exports = { ...s, strict, AdminSupplierDetailController, runtime, hooks, detail, model, view, expand, nodes, byId, click, texts, colors, compile };
