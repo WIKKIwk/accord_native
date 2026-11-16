@@ -82,6 +82,11 @@ export class AdminProgressQrLookupController {
     if (!this.canInteract(generation) || adminProgressQrLookupVisibleReport(this.state) !== null || (this.deps.scanner !== null && this.state.processing)) return null;
     const ticket = Object.freeze({ generation }); this.manual.set(ticket, generation); return ticket;
   }
+  /** Original issued decision only; expected native-dialog blur does not retire it. */
+  isManualCurrent(ticket: AdminProgressQrManualTicket): boolean {
+    const generation = this.manual.get(ticket);
+    return generation !== undefined && this.isCurrent(generation) && this.manual.get(ticket) === generation;
+  }
   /** Call only after the genuine dialog's native removal acknowledges its selected, Source-normalized result. Expected modal blur is not read retirement. */
   async completeManual(ticket: AdminProgressQrManualTicket, normalizedValue: string | null): Promise<void> {
     return this.completeManualInput(ticket, normalizedValue, false);

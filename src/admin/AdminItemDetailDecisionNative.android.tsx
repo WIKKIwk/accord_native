@@ -14,4 +14,4 @@ function Field(props: OutlinedTextFieldProps) {
   return <AdminOutlinedTextField {...props} colors={{ focusedContainerColor: fill, unfocusedContainerColor: fill, focusedTextColor: colors.onSurface, unfocusedTextColor: colors.onSurface,
     focusedIndicatorColor: colors.primary, unfocusedIndicatorColor: colors.outlineVariant, focusedLabelColor: colors.onSurfaceVariant, unfocusedLabelColor: colors.onSurfaceVariant, ...props.colors }} />;
 }
-export const DecisionField = Object.assign(Field, { Label: AdminOutlinedTextField.Label, LeadingIcon: AdminOutlinedTextField.LeadingIcon, TrailingIcon: AdminOutlinedTextField.TrailingIcon });
+export const DecisionField = Object.assign(Field, { Label: AdminOutlinedTextField.Label, Placeholder: AdminOutlinedTextField.Placeholder, LeadingIcon: AdminOutlinedTextField.LeadingIcon, TrailingIcon: AdminOutlinedTextField.TrailingIcon });
