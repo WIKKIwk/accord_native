@@ -5,6 +5,7 @@ import { WorkerControlException } from './workerControlsApi';
 import { adminProductionMapOrderImageUrl, orderImageRequestUri } from './orderImageUri';
 import { OrderImageCache } from './orderImageCacheCore';
 import { FileOrderImageDiskStore } from './orderImageDiskStore';
+import { isSynchronouslyTrue } from './shared/camera/synchronousGuard';
 
 const imageCache = new OrderImageCache(new FileOrderImageDiskStore(), key => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, key));
 registerSessionResetHook(() => imageCache.clear());
@@ -85,4 +86,35 @@ export async function cachedOrderImageBytes(session: Session, imageUrl: string, 
       return { status: response.status, bytes, etag: response.headers.get('etag'), cacheControl: response.headers.get('cache-control') ?? '' };
     } finally { clearTimeout(timer); }
   } });
+}
+
+export type ScopedOrderImageResponse = Readonly<{ status: number; bytes: Uint8Array; etag: string | null; cacheControl: string }>;
+export type ScopedOrderImageCacheOptions = Readonly<{
+  /** Original account/witness authority, deliberately independent of any one image consumer's mount lifetime. */
+  isCurrent: () => boolean;
+  fetch: (uri: URL, etag: string | null) => Promise<ScopedOrderImageResponse>;
+}>;
+/** Additive original-account cache seam. The caller provides guarded transport; all legacy cache keys/defaults remain shared. */
+export async function scopedCachedOrderImageBytes(session: Session, imageUrl: string, thumbnail: boolean, options: ScopedOrderImageCacheOptions): Promise<Uint8Array | null> {
+  if (typeof options?.isCurrent !== 'function' || typeof options.fetch !== 'function') throw new TypeError('Scoped image cache requires its original authority and fetch');
+  if (!imageUrl.trim()) return null;
+  const { uri, internal, key, immutable, isCurrent } = genericImageContext(session, imageUrl, thumbnail);
+  if (internal && !activeSessionToken(session)) throw new Error('No session token');
+  if (uri.protocol !== 'https:') throw new TypeError('API connections require HTTPS');
+  const current = () => isCurrent() && isSynchronouslyTrue(options.isCurrent);
+  if (!current()) return null;
+  const bytes = await imageCache.load({ key, thumbnail, immutable, isCurrent: current, fetch: async etag => {
+    if (!current()) throw new Error('Image session changed'); const result = await options.fetch(new URL(uri), etag);
+    if (!current()) throw new Error('Image session changed'); return result;
+  } });
+  return current() ? bytes : null;
+}
+/** Same first-frame memory seed as the legacy reader, checked under the original account before and after lookup. */
+export function peekScopedCachedOrderImageBytes(session: Session, imageUrl: string, thumbnail: boolean, isCurrent: () => boolean): Uint8Array | null {
+  if (typeof isCurrent !== 'function') throw new TypeError('Scoped image peek requires its original authority');
+  if (!imageUrl.trim()) return null;
+  const context = genericImageContext(session, imageUrl, thumbnail);
+  if (context.internal && !activeSessionToken(session)) return null;
+  const current = () => context.isCurrent() && isSynchronouslyTrue(isCurrent);
+  if (!current()) return null; const bytes = imageCache.peek(context.key, context.immutable, current); return current() ? bytes : null;
 }

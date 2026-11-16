@@ -45,8 +45,14 @@ export async function authorizedFetch(session: Session, path: string, init: Requ
   finally { gate.close(); }
 }
 
-export async function authorizedImageFetch(session: Session, path: string, init: RequestInit = {}): Promise<Response> {
-  return authenticatedRequest(session, path, { ...init, method: 'GET' }, undefined, true, 10_000);
+export async function authorizedImageFetch(session: Session, path: string, init: RequestInit = {},
+  options?: { beforeSend: () => void; readWitness: ReadWitness }): Promise<Response> {
+  if (options === undefined) return authenticatedRequest(session, path, { ...init, method: 'GET' }, undefined, true, 10_000);
+  const gate = witnessGate(options?.readWitness);
+  try {
+    if (typeof options.beforeSend !== 'function') throw new TypeError('Scoped image read requires its original guard');
+    return await authenticatedRequest(session, path, { ...init, method: 'GET' }, options.beforeSend, true, 10_000, gate);
+  } finally { gate.close(); }
 }
 
 async function authenticatedRequest(session: Session, path: string, init: RequestInit, beforeSend: (() => void) | undefined,
