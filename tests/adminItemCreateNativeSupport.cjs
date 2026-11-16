@@ -11,14 +11,14 @@ function model(patch = {}) {
     changeName: value => calls.push(['name', value]), changeCode: value => calls.push(['code', value]), clearCustomer: () => calls.push('clearCustomer'), openPicker: kind => calls.push(['picker', kind]), closeDialog: () => calls.push('close'), save: () => calls.push('save') };
   return { model: result, calls, dialog: form.dialog };
 }
-function card(platform, fixture = model(), r = base.runtime()) {
+function card(platform, fixture = model(), r = base.runtime(), direction = 'leftToRight') {
   const component = name => Object.assign(props => ({ type: name, props }), { Label: 'Label' });
   const state = initial => { const holder = r.react.useRef(null); return holder.current ??= { value: initial, set(value) { this.value = value; }, get() { return this.value; } }; };
   const compose = new Proxy({ useNativeState: state }, { get: (target, key) => target[key] ?? component(String(key)) });
   const swift = new Proxy({ useNativeState: state }, { get: (target, key) => target[key] ?? component(String(key)) });
   const mocks = { react: r.react, '@expo/ui/jetpack-compose': compose, '@expo/ui/swift-ui': swift, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui/modifiers': modifier,
     'react-native': { ScrollView: 'ScrollView', View: 'View', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ height: 900, width: 400 }) },
-    '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors, mode: 'light' }) },
+    '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors, mode: 'light', direction }) },
     './AdminTextFields.android': { AdminOutlinedTextField: component('OutlinedTextField') }, './AdminTypography.android': { AdminText: 'Text' },
     './AdminItemCreateNative.android': { ItemCreateIcon: 'ItemCreateIcon', itemCreateRounded: radius => ({ radius }) }, './dartJsonString': source.strings };
   const module = base.compile(path.resolve(__dirname, `../src/admin/AdminItemCreateDialogCard.${platform}.tsx`), mocks);

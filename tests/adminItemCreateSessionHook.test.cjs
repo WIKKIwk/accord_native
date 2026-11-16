@@ -31,15 +31,15 @@ test('parent throwing or synchronously reentering original owner fails closed', 
   const throwing = f.factory.createAdminItemCreateSession({ ...f.props, isCurrent: () => { throw Error('parent'); } }); assert.equal(throwing.current(), false);
 });
 function hook(overrides = {}) {
-  const f = s.fixture(overrides), r = view.runtime(); let focused = true; const witnessListeners = new Set(), frames = new Map(); let serial = 0;
+  const f = s.fixture(overrides), r = view.runtime(); let focused = true; const witnessListeners = new Set(), frames = new Map(), keyboard = []; let serial = 0;
   const oldRequest = global.requestAnimationFrame, oldCancel = global.cancelAnimationFrame;
   global.requestAnimationFrame = callback => { frames.set(++serial, callback); return serial; }; global.cancelAnimationFrame = id => frames.delete(id);
   const module = view.compile(path.resolve(__dirname, '../src/admin/useAdminItemCreate.ts'), { react: r.react,
-    'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => r.react.useEffect(callback, [callback]) }, 'react-native': { Platform: { OS: 'ios' }, Keyboard: { dismiss() {} }, BackHandler: {} },
+    'expo-router': { useIsFocused: () => focused, useFocusEffect: callback => r.react.useEffect(callback, [callback]) }, 'react-native': { Platform: { OS: 'ios' }, Keyboard: { dismiss() { keyboard.push('dismiss'); } }, BackHandler: {} },
     '../auth': { subscribeSessionWitness: callback => { witnessListeners.add(callback); return () => witnessListeners.delete(callback); } },
     '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, '../shared/profileSessionGuard': s.profile,
     './AdminOwnedBackContext': { useAdminOwnedBack() {} }, './adminItemCreateSession': f.factory, './dartJsonString': s.strings });
-  const result = { ...f, r, frames, render: () => r.render(() => module.useAdminItemCreate(f.props)), focus: value => { focused = value; }, notify: () => witnessListeners.forEach(callback => callback()),
+  const result = { ...f, r, frames, keyboard, render: () => r.render(() => module.useAdminItemCreate(f.props)), focus: value => { focused = value; }, notify: () => witnessListeners.forEach(callback => callback()),
     frame: () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback()); },
     cleanup: () => { r.unmount(); global.requestAnimationFrame = oldRequest; global.cancelAnimationFrame = oldCancel; } };
   return result;
@@ -86,5 +86,16 @@ test('real header blur after detail navigation preserves original mounted author
     const original = model; model.openItem(row); f.render(); original.searchFocus(false); model = f.render(); assert.equal(model.profileVisible, true);
     navigation.resolve(); await s.flush(); f.focus(true); model = f.render(); assert.equal(model.profileVisible, true);
     f.r.replay(); await s.flush(); model = f.render(); model.searchFocus(true); model = f.render(); original.searchFocus(false); assert.equal(f.render().profileVisible, false);
+  } finally { f.cleanup(); }
+});
+test('accepted customer page opening dismisses the original picker keyboard before navigation; blank, pending and retired actions do not', async () => {
+  const pending = s.deferred(), opened = []; let f;
+  f = hook({ props: { onCreateCustomer: async query => { opened.push([query, [...f.keyboard]]); return pending.promise; } } });
+  try {
+    f.render(); await s.flush(); let model = f.render(); model.openDialog(); model = f.render(); model.openPicker('customer'); await s.flush(); model = f.render(); f.keyboard.length = 0;
+    model.pickerSearch('\u0085'); model.createCustomer(false); assert.deepEqual(f.keyboard, []); assert.deepEqual(opened, []);
+    model.createCustomer(true); await s.flush(); assert.deepEqual(opened, [['', ['dismiss']]]); assert.deepEqual(f.keyboard, ['dismiss']);
+    model.createCustomer(true); assert.deepEqual(f.keyboard, ['dismiss']); f.authority.parent = false; model.createCustomer(true); assert.deepEqual(f.keyboard, ['dismiss']);
+    pending.resolve(null); await s.flush(); assert.equal(opened.length, 1);
   } finally { f.cleanup(); }
 });

@@ -36,4 +36,11 @@ for (const platform of ['android', 'ios']) {
     f.model.state.form = { ...f.model.state.form, draft: { ...f.model.state.form.draft, name: '', code: '' }, fillVersion: 1 }; const next = f.render(), nextName = s.nativeId(next, 'admin-item-create-name');
     assert.equal(platform === 'android' ? nextName.props.value : nextName.props.text, nameState); assert.equal(nameState.get(), ''); assert.equal(codeState.get(), '');
   });
+  test(`${platform} source logical end4 close position follows actual theme direction in both render directions`, () => {
+    for (const [direction, yoga] of [['leftToRight', 'ltr'], ['rightToLeft', 'rtl']]) {
+      const f = s.card(platform, s.model(), undefined, direction), tree = f.render(), card = s.nativeId(tree, 'admin-item-create-dialog-card'); assert.equal(card.props.style[1].direction, yoga);
+      const close = s.nodes(tree, node => node.type === 'View' && node.props.style?.position === 'absolute' && node.props.style.top === 4)[0];
+      assert.equal(close.props.style.end, 4); assert.equal('right' in close.props.style, false); assert.equal('left' in close.props.style, false); assert.equal(card.props.style[0].maxWidth, 440); assert.equal(card.props.style[1].maxHeight, 648);
+    }
+  });
 }

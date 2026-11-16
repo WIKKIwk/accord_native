@@ -71,7 +71,10 @@ export function useAdminItemCreate(props: AdminItemCreateScreenProps) {
     pickerScroll: (extentAfter: number) => { if (pickerCurrent()) picker!.controller.scroll(extentAfter); },
     selectPickerString: (item: string) => { if (pickerCurrent() && picker!.kind !== 'customer') picker!.controller.select(item); },
     selectCustomer: (item: Parameters<typeof controller.form.setCustomer>[1]) => { if (pickerCurrent() && picker!.kind === 'customer' && item !== null) picker!.controller.select(item); },
-    createCustomer: (allowEmptyQuery: boolean) => { if (pickerCurrent() && picker!.kind === 'customer' && (allowEmptyQuery || dartTrim(picker!.controller.getSnapshot().query))) void picker!.controller.create(); },
+    createCustomer: (allowEmptyQuery: boolean) => {
+      if (!pickerCurrent() || picker!.kind !== 'customer' || !picker!.controller.canCreate || !allowEmptyQuery && !dartTrim(picker!.controller.getSnapshot().query)) return;
+      Keyboard.dismiss(); void picker!.controller.create();
+    },
     dismissPicker: () => { if (pickerCurrent()) picker!.controller.dismiss(); },
     completePicker: () => { if (current() && picker !== null && controller.getSnapshot().picker === picker) picker.controller.completeClose(); },
   };

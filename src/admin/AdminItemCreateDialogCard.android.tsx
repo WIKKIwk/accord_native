@@ -36,8 +36,8 @@ function PickerBox({ model, kind, dialog }: { model: AdminItemCreateScreenModel;
 }
 /** @v2 _ItemCreateDialogCard */
 export function AdminItemCreateDialogCard({ model, dialog }: { model: AdminItemCreateScreenModel; dialog: AdminItemCreateDialog }) {
-  const { colors } = useBaseTheme(), { height: viewport } = useWindowDimensions();
-  return <View testID="admin-item-create-dialog-card" style={[styles.card, { maxHeight: viewport * .72, backgroundColor: colors.surfaceContainerLowest }]}>
+  const { colors, direction } = useBaseTheme(), { height: viewport } = useWindowDimensions();
+  return <View testID="admin-item-create-dialog-card" style={[styles.card, { maxHeight: viewport * .72, backgroundColor: colors.surfaceContainerLowest, direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }]}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} style={styles.scroll}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <PickerBox model={model} kind="group" dialog={dialog} /><Spacer modifiers={[height(12)]} /><Field model={model} name="name" /><Spacer modifiers={[height(12)]} />
       <PickerBox model={model} kind="uom" dialog={dialog} /><Spacer modifiers={[height(12)]} />{dialog.finishedView ? <PickerBox model={model} kind="customer" dialog={dialog} /> : <Field model={model} name="code" />}
@@ -46,4 +46,4 @@ export function AdminItemCreateDialogCard({ model, dialog }: { model: AdminItemC
     <View style={styles.close}><BaseHost matchContents><IconButton enabled={!dialog.savingView} onClick={() => model.closeDialog()} modifiers={[size(48, 48), semantics({ contentDescription: model.a('item.close') }), testID('admin-item-create-close')]}><ItemCreateIcon name="close" color={colors.onSurfaceVariant} /></IconButton></BaseHost></View>
   </View>;
 }
-const styles = StyleSheet.create({ card: { width: '100%', maxWidth: 440, borderRadius: 18, overflow: 'hidden', elevation: 6 }, fullWidth: { width: '100%' }, scroll: { flexGrow: 0, flexShrink: 1 }, content: { paddingLeft: 12, paddingTop: 48, paddingRight: 12, paddingBottom: 24 }, close: { position: 'absolute', top: 4, right: 4 } });
+const styles = StyleSheet.create({ card: { width: '100%', maxWidth: 440, borderRadius: 18, overflow: 'hidden', elevation: 6 }, fullWidth: { width: '100%' }, scroll: { flexGrow: 0, flexShrink: 1 }, content: { paddingLeft: 12, paddingTop: 48, paddingRight: 12, paddingBottom: 24 }, close: { position: 'absolute', top: 4, end: 4 } });
