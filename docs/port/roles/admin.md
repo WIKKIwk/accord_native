@@ -157,3 +157,6 @@ Warehouse Main now composes its native search/filter/stock lists, retained page 
 
 
 Supplier Items Add/View now have guarded original-ref reads and native tables/confirmations. View uses the separate assigned endpoint; Add excludes detail-assigned exact codes from the complete paged catalog. Confirmation closes before dispatch, single busy disables all rows, acknowledgment removes matching local codes without using its returned DTO, and failure adds no new notice/retry. Genuine profile/dock and app routes remain held; source body bottom reserve and native/device checks are still open.
+
+
+Genuine AdminProfileAvatar/preview is implemented on both platforms with account-scoped public image reads and original-preview authority independent from parent focus. Integration must pass session/witness, mounted/account isCurrent and separate focus canInteract. Preview retains its original URL/title across parent prop changes. Hero arc/release inertia and physical QA remain open; encoded-cache/URL/codec differences are recorded rather than suppressed. App composition remains held.
