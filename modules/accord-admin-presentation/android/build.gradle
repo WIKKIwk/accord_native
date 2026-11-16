@@ -1,0 +1,15 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.accordadminpresentation'
+version = '0.1.0'
+
+android {
+  namespace 'expo.modules.accordadminpresentation'
+  defaultConfig { versionCode 1; versionName '0.1.0' }
+}
+
+// Public ReactFindViewUtil from the app's already installed React SDK; no version/artifact is added.
+dependencies { compileOnly 'com.facebook.react:react-android' }

@@ -1,0 +1,19 @@
+# Admin presentation window observer
+
+Android-only Expo local module. It observes **native window-tree detachment**, not the compositor's last animation frame. It does not present, close or identify a particular dialog implementation.
+
+Precisely, completion means the original root's real `View.OnAttachStateChangeListener.onViewDetachedFromWindow` event was observed after arming. Android calls that listener before clearing `mAttachInfo`, so `isAttachedToWindow` may still be true during the event. The registry does not infer completion from that flag, a child/marker callback, descendant cleanup, or elapsed time. See [AOSP View.dispatchDetachedFromWindow](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/core/java/android/view/View.java).
+
+Place a real `View` with `collapsable={false}` and a unique opaque `nativeID` inside the intended Expo dialog using `RNHostView`. A marker outside the dialog cannot establish that dialog's completion. A zero-size overlay must preserve existing content layout and spacing.
+
+`readAdminPresentationWindowCapability('android')` returns unavailable for old/missing/incompatible native binaries. Available means the protocol exists; it never means a presenter is ready. There is no fallback completion. Rebuilding the development app is required to add this module; no build or device validation has been run for this checkpoint.
+
+1. Capture the actual RN marker's native tag and a never-reused ticket (ASCII letters/digits followed by letters/digits/`:._-`, maximum160 characters).
+2. Await `observer.arm(tag, ticket)`. Native acknowledgment occurs only after the original non-Activity root's attach listener is installed and the marker/root/activity/token checks still pass. An unattached resolved marker waits for its actual attach event; no polling runs. `cancelPending(ticket)` cancels this wait. If it returns false because arming already completed, await the arm result and cancel that exact receipt.
+3. An accepted close can be queued while arming. Remove the React dialog only after acknowledgment, then await `observer.waitForDetach(receipt)` exactly once. Marker/ref removal is not completion. A genuine root detach observed before `waitForDetach` is retained.
+4. Recheck original account, mounted lifetime, dialog ID/generation and accepted closing intent before completing domain work. This module cannot supply those JS guards.
+5. Release original receipts with `cancel(receipt)` on owner retirement. Activity/module destruction cancels pending work; it never reports normal completion. Cancelling does not itself dismiss a window.
+
+The native core keeps opaque used-ticket tombstones for the module lifetime to prevent stale pending cancellation from targeting reused tickets; it releases view/listener/reply references on completion/cancellation. No Compose dependency, reflection, window inventory, timer, marker-detach completion or inferred readiness is used. The new module declares only a versionless compile-only reference to the app's installed React Android SDK for public `ReactFindViewUtil`; native binary/classpath compilation remains unverified. Public Android root/token checks establish a separate native window; actual marker placement inside the intended dialog remains the caller's responsibility.
+
+Source anchors inspected: installed Expo `ConverterContext.findView`/`AppContext`, RN `FabricUIManager.resolveView`, `ReactFindViewUtil`/`BaseViewManager.nativeID`, and Expo UI `RNHostView` native reparenting. Local module autolinking defaults to `./modules`; no existing module/package/config is modified.
