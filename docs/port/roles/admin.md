@@ -139,3 +139,6 @@ Supplier Detail uses the raw widget ref for read/code regenerate/remove, and cap
 
 
 Werka detail now has both native components and guarded commands. Save directly copies the loaded settings snapshot (no reread), trims name/phone, sends werka_code empty and remaining countdown, then changes only code/changed from acknowledgment. Regenerate separately resets countdown and is allowed while waiting/locked. Copy preserves raw code. Local phone editing closes only after successful inline save; collapse/remount retains shared text and retires the old local editor. Android source54/radius14 actions,32 phone icon,204/112/92 header and60+3 topbar are represented; iOS uses native SwiftUI controls. Required genuine profile/avatar/preview/dock/chat ownership and app routing are not composed yet.
+
+
+Supplier Detail has native identity/panel/phone/code/status/delete surfaces on both platforms. Phone empty/failure closes its own still-mounted editor while showing the source failure message; detached editor callbacks cannot alter a newer editor. The delete dialog closes before sending with its authentic prompt, supports outside/back cancellation and returns changed=true after acknowledgment. Editable components require genuine items-view/add callbacks; no app route is exposed until those and avatar/profile/dock/chat dependencies exist.

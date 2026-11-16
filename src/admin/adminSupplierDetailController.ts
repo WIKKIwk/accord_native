@@ -98,7 +98,7 @@ export class AdminSupplierDetailController {
   }
   dismissNotice(serial: number): void { if (this.isCurrent() && this.state.notice?.serial === serial) this.publish({ notice: null }); }
   requestRemove(): void {
-    if (this.editable() && !this.state.removing) this.publish({ removePrompt: Object.freeze({ serial: ++this.serial }) });
+    if (this.editable() && !this.state.removing && !this.state.removePrompt) this.publish({ removePrompt: Object.freeze({ serial: ++this.serial }) });
   }
   dismissRemove(prompt: AdminSupplierDetailRemovePrompt): void { if (this.isCurrent() && this.state.removePrompt === prompt) this.publish({ removePrompt: null }); }
   async confirmRemove(prompt: AdminSupplierDetailRemovePrompt): Promise<boolean> {

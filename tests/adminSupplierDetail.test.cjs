@@ -81,6 +81,11 @@ test('readOnly owner keeps detail visible and refuses every mutation, expansion 
   f.controller.toggle(); await f.controller.toggleBlocked(detail); assert.equal(await f.controller.savePhone(detail, '123'), false); await f.controller.regenerate(); await f.controller.copy(detail.code); f.controller.requestRemove();
   assert.deepEqual(f.calls, ['read']); assert.equal(f.controller.getSnapshot().expanded, false); assert.equal(f.controller.getSnapshot().removePrompt, null); assert.equal(f.controller.getSnapshot().detail, detail);
 });
+test('source modal blocks repeated remove actions, including a synchronous publication listener', async () => {
+  const f = fixture(); await f.start(); let publications = 0;
+  f.controller.subscribe(() => { publications++; f.controller.requestRemove(); }); f.controller.requestRemove();
+  assert.equal(publications, 1); const prompt = f.controller.getSnapshot().removePrompt; f.controller.requestRemove(); assert.equal(f.controller.getSnapshot().removePrompt, prompt);
+});
 test('failed read is retryable without inventing errors and retains changed/expanded after a real mutation', async () => {
   const f = fixture(); await f.start(); f.controller.toggle(); await f.controller.toggleBlocked(f.controller.getSnapshot().detail); f.deps.read = async () => { throw Error('read failed'); };
   await f.controller.reload(); assert.equal(f.controller.getSnapshot().phase, 'error'); assert.equal(f.controller.getSnapshot().changed, true); assert.equal(f.controller.getSnapshot().notice, null);
