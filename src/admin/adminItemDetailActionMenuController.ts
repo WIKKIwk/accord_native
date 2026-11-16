@@ -47,6 +47,12 @@ export class AdminItemDetailActionMenuController {
     const close = Object.freeze({ id: ticket.id }); this.closes.set(close, { generation: this.generation, menu, action }); this.closing.set(ticket, close);
     this.publish(this.state.menus.map(value => value === menu ? Object.freeze({ ...menu, closing: true }) : value)); return close;
   }
+  /** Passive exact-ticket ownership, not native/account readiness or a removal acknowledgment. */
+  isClosePending(close: AdminItemDetailActionMenuClose, ticket: AdminItemDetailActionMenuTicket, generation: number): boolean {
+    if (!this.active || this.retired || generation !== this.generation) return false;
+    const captured = this.closes.get(close);
+    return captured?.generation === generation && captured.menu.ticket === ticket && this.closing.get(ticket) === close && this.state.menus.some(menu => menu.ticket === ticket && menu.closing);
+  }
   async completeClose(close: AdminItemDetailActionMenuClose): Promise<number | null> {
     const captured = this.closes.get(close);
     if (!captured || !this.isCurrent(captured.generation) || this.closing.get(captured.menu.ticket) !== close) return null;

@@ -6,7 +6,7 @@ const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: 
 async function fixture(platform, kind = 'finished', locale = 'uz') {
   const f = domain.fixture({}, domain.detail({ is_finished_goods: true, item_group: kind === 'combo' ? 'Kombo' : 'Tayyor mahsulot' })); await f.start();
   const controller = domain.menus.createAdminItemDetailActionMenus(f.owner); controller.start();
-  const ticket = controller.request(f.initial), r = base.runtime(), closes = []; let interact = () => true, mode = 'light';
+  const ticket = controller.request(f.initial), r = base.runtime(), closes = []; let interact = () => true, current = () => true, mode = 'light';
   const hook = domain.load('admin/useAdminItemDetailActionMenuContent', { react: r.react,
     '../shared/camera/synchronousGuard': domain.sync, './adminItemDetailActionMenuModel': domain.menuModel });
   const native = new Proxy({ Shape: { RoundedCorner: value => value } }, { get: (target, name) => target[name] ?? String(name) });
@@ -17,8 +17,8 @@ async function fixture(platform, kind = 'finished', locale = 'uz') {
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: base.colors, mode }) }, './AdminTypography.android': { AdminText: 'Text' },
     './useAdminItemDetailActionMenuContent': hook,
   }).AdminItemDetailActionMenuContent;
-  const props = { controller, ticket, generation: controller.interactionGeneration, canInteract: () => interact(), onCloseRequested: close => closes.push(close), a: key => domain.l10n.adminText(key, locale) };
-  return { ...f, controller, ticket, props, closes, r, render: () => r.render(() => base.expand(view(props))), interact: value => { interact = value; }, mode: value => { mode = value; } };
+  const props = { surfaceIdentity: {}, controller, ticket, generation: controller.interactionGeneration, isCurrent: () => current(), canInteract: () => interact(), onCloseRequested: close => closes.push(close), a: key => domain.l10n.adminText(key, locale) };
+  return { ...f, controller, ticket, props, closes, r, render: () => r.render(() => base.expand(view(props))), interact: value => { interact = value; }, surface: value => { current = value; }, mode: value => { mode = value; } };
 }
 const rows = tree => base.nodes(tree, node => ['TextButton', 'Button'].includes(node.type));
 const press = (row, platform) => row.props[platform === 'android' ? 'onClick' : 'onPress']();

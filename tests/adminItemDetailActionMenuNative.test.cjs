@@ -39,7 +39,7 @@ for (const platform of ['android', 'ios']) {
   });
   test(`${platform} a retained old row never adopts a replacement menu generation or another host callback`, async () => {
     const f = await s.fixture(platform), old = s.rows(f.render())[0]; f.controller.dispose(); f.controller.start();
-    const next = f.controller.request(f.initial); assert.ok(next); f.props.ticket = next; f.props.generation = f.controller.interactionGeneration;
+    const next = f.controller.request(f.initial); assert.ok(next); f.props.ticket = next; f.props.generation = f.controller.interactionGeneration; f.props.surfaceIdentity = {};
     const fresh = s.rows(f.render())[0]; s.press(old, platform); assert.deepEqual(f.closes, []); s.press(fresh, platform); assert.equal(f.closes.length, 1);
     const g = await s.fixture(platform), previous = s.rows(g.render())[0], nextCloses = []; g.props.onCloseRequested = value => nextCloses.push(value); g.render();
     s.press(previous, platform); assert.deepEqual(g.closes, []); assert.deepEqual(nextCloses, []);
@@ -47,8 +47,34 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} reentrant original-owner retirement during close publication cannot hide a replacement window`, async () => {
     const f = await s.fixture(platform), row = s.rows(f.render())[0]; f.controller.subscribe(() => { if (f.controller.getSnapshot().menus.some(menu => menu.closing)) f.retire(); });
     s.press(row, platform); assert.deepEqual(f.closes, []); assert.deepEqual(f.calls, []);
-    const g = await s.fixture(platform), unmounted = s.rows(g.render())[0]; g.controller.subscribe(() => { if (g.controller.getSnapshot().menus.some(menu => menu.closing)) g.r.unmount(); });
-    s.press(unmounted, platform); assert.deepEqual(g.closes, []); assert.deepEqual(g.calls, []);
+    const g = await s.fixture(platform), row2 = s.rows(g.render())[0]; g.controller.subscribe(() => { if (g.controller.getSnapshot().menus.some(menu => menu.closing)) g.surface(() => false); });
+    s.press(row2, platform); assert.deepEqual(g.closes, []); assert.deepEqual(g.calls, []);
+  });
+  test(`${platform} accepted close survives content-only unmount and top loss until the original host actually acknowledges removal`, async () => {
+    const f = await s.fixture(platform), row = s.rows(f.render())[0];
+    f.controller.subscribe(() => { if (f.controller.getSnapshot().menus.some(menu => menu.closing)) { f.interact(() => false); f.r.unmount(); } });
+    s.press(row, platform); assert.equal(f.closes.length, 1); assert.deepEqual(f.owner.getSnapshot().dialogs, []); assert.deepEqual(f.calls, []);
+    assert.equal(f.controller.isClosePending({ ...f.closes[0] }, f.ticket, f.controller.interactionGeneration), false);
+    s.press(row, platform); assert.equal(f.closes.length, 1);
+    const id = await f.controller.completeClose(f.closes[0]); assert.equal(f.dialog(id).kind, 'edit');
+  });
+  test(`${platform} original surface identity rejects callback retargeting and permits StrictMode replay`, async () => {
+    const f = await s.fixture(platform), row = s.rows(f.render())[0]; f.r.replay(); s.press(row, platform); assert.equal(f.closes.length, 1);
+    const g = await s.fixture(platform), old = s.rows(g.render())[0], replacement = [];
+    g.controller.subscribe(() => { if (g.controller.getSnapshot().menus.some(menu => menu.closing)) { g.props.onCloseRequested = value => replacement.push(value); g.render(); } });
+    s.press(old, platform); assert.deepEqual(g.closes, []); assert.deepEqual(replacement, []);
+    const h = await s.fixture(platform), stale = s.rows(h.render())[0]; h.props.surfaceIdentity = {}; h.render(); s.press(stale, platform); assert.deepEqual(h.closes, []);
+  });
+  test(`${platform} an accepted ticket already completed during publication cannot be handed off twice`, async () => {
+    const f = await s.fixture(platform), row = s.rows(f.render())[0]; let close;
+    const prepare = f.controller.prepareClose.bind(f.controller); f.controller.prepareClose = (...args) => { close = prepare(...args); if (close) void f.controller.completeClose(close); return close; };
+    s.press(row, platform); await s.flush(); assert.ok(close); assert.deepEqual(f.closes, []); assert.equal(f.owner.getSnapshot().dialogs.length, 1);
+  });
+  test(`${platform} actual original hide failure never leaks a rejection or fabricates native completion`, async () => {
+    for (const asyncFailure of [false, true]) {
+      const f = await s.fixture(platform); f.props.onCloseRequested = () => { if (asyncFailure) return Promise.reject(Error('actual hide failed')); throw Error('actual hide failed'); };
+      s.press(s.rows(f.render())[0], platform); await s.flush(); assert.equal(f.controller.getSnapshot().menus[0].closing, true); assert.deepEqual(f.owner.getSnapshot().dialogs, []); assert.deepEqual(f.calls, []);
+    }
   });
 }
 test('missing actual host authority or close target is rejected before native menu content is rendered', async () => {
