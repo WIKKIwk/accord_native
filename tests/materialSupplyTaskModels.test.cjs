@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const canonical = require('./support/workerQueueTransport.cjs').loader()('shared/dartCanonicalApparatus');
 function compile(relative, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${relative}.ts`), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
@@ -17,7 +18,7 @@ const saved = compile('workerProductionMapSaved', { './workerControlsApi': contr
 const dart = compile('shared/dartApparatus', { '../workerControlsApi': controls });
 const errors = compile('shared/mobileApiException');
 const model = compile('shared/supplyTasks/supplyTaskModels', { '../../apparatusApi': apparatus, '../../workerProductionMapSaved': saved,
-  '../dartApparatus': dart, '../mobileApiException': errors });
+  '../dartApparatus': dart, '../dartCanonicalApparatus': canonical, '../mobileApiException': errors });
 const golden = require('./contracts/f11910bb/material_supply_tasks.json');
 function rowJson(row) {
   const { id, code, order_number, title, product_code, customer_name, image_id, position, apparatus_count, task_state } = row;
@@ -65,13 +66,12 @@ test('task rows produce marked immutable presentation shells without graph or op
   assert.throws(() => shell.map.nodes.push({}), TypeError); assert.throws(() => shell.program.operations.push({}), TypeError);
 });
 
-test('non-ASCII canonical apparatus is rejected until Dart/Hermes behavior is reviewed', () => {
+test('non-ASCII canonical apparatus follows the recorded f119 Dart golden value', () => {
   const value = golden.windows.dart_unicode_apparatus;
-  assert.equal(value.expected.ok, true); // Actual f119 Dart result; native restriction is a false negative.
-  assert.throws(() => model.supplyTaskWindowFromJson(value.input), error => error.code === 'supply_tasks_invalid');
+  assert.deepEqual({ ok: true, value: summary(model.supplyTaskWindowFromJson(value.input)) }, value.expected);
 });
 
-test('floating cursor lexical form remains an explicit unported validation gap', () => {
+test('object parser sees only numeric values; the separate wire decoder enforces lexical integer types', () => {
   const text = fs.readFileSync(path.join(__dirname, 'contracts/f11910bb/material_supply_tasks.json'), 'utf8');
   assert.match(text, /"floating_revision"\s*:\s*\{[\s\S]*?"rev"\s*:\s*7\.0\s*,/);
   const value = golden.windows.floating_revision;

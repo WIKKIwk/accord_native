@@ -22,11 +22,11 @@ function setup(initialTransition = false) {
     isSessionWitnessCurrent: witness => { if (!witness || retired.has(witness)) return false;
       if (transition || witness.session !== active || witness.version !== version) { retired.add(witness); return false; } return true; },
     registerSessionResetHook: fn => { reset = fn; return () => {}; }, sessionWitnessVersion: () => version,
-    sessionWitnessTransitioning: () => transition,
+    sessionWitnessTransitioning: () => transition, activeSessionEpoch: value => value === active ? version : null,
     subscribeSessionWitness: listener => { listeners.add(listener); return () => listeners.delete(listener); },
-    logout: async () => { logouts++; if (logoutGate) await logoutGate.promise; } };
+    logout: async (_session, options) => { logouts++; if (logoutGate) await logoutGate.promise; if (active === session) await options?.beforeClearSession?.(); } };
   const bootstrap = compile('materialSessionBootstrap', { '../auth': auth });
-  const hook = compile('useMaterialSession', { react, '../auth': auth, '../appLock': { clearAppLock: async () => { lockClears++; } },
+  const hook = compile('useMaterialSession', { react, '../auth': auth, '../appLock': { clearAppLock: async (_session, current) => { if (!current || current()) lockClears++; } },
     './materialSessionBootstrap': bootstrap, './materialTestSession': { isMaterialTestSession: value => value.token === 'test-mode-token' } }).useMaterialSession;
   const render = () => { slot = 0; return hook(); };
   return { session, render, effects, captures: () => captures, logouts: () => logouts, lockClears: () => lockClears, writes: () => writes,
@@ -85,10 +85,11 @@ test('late logout completion after unmount does not set shell state', async () =
 test('normal logout may clear only its own still-mounted shell', async () => {
   const h = setup(); await mount(h); const gate = h.delayLogout(); h.render().onLogout(); gate.resolve(); await tick();
   assert.equal(h.render().session, null);
+  assert.equal(h.lockClears(), 1);
 });
 
 
-test('Material logout never clears the account lock, including after same-account login', async () => {
+test('old Material logout cannot clear the lock of a newer same-account login', async () => {
   const h = setup(); await mount(h); const gate = h.delayLogout(); h.render().onLogout();
   const sameAccount = { token: 'new', profile: { ...h.session.profile } }; h.start(); h.finish(sameAccount);
   gate.resolve(); await tick(); assert.equal(h.logouts(), 1); assert.equal(h.lockClears(), 0);

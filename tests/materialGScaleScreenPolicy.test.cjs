@@ -6,7 +6,7 @@ const test = require('node:test');
 const ts = require('typescript');
 const file = path.resolve(__dirname, '../src/gscale/gscaleScreenModel.ts'), loaded = new Module(file, module);
 loaded.filename = file; loaded.paths = module.paths;
-loaded.require = name => name === './gscaleArchive' ? { formatArchiveTimestamp: value => value, archiveSessionFromBatch: value => value } : require(name);
+loaded.require = name => name === './gscaleMaterialPresentation' ? { materialArchiveSubtitle: batch => batch.active ? 'ACTIVE' : 'CLOSED' } : name === './gscaleArchive' ? { formatArchiveTimestamp: value => value, archiveSessionFromBatch: value => value } : require(name);
 loaded._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, file);
 const { gscaleDashboardSections } = loaded.exports;
 function fixture(restricted) {

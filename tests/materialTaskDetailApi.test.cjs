@@ -29,6 +29,7 @@ function setup({ change = '', responseId = 'order-a', gate = null } = {}) {
     './workerControlsApi': { productionMapResponseError: () => Error('load failed') },
     './workerProductionMapSaved': { productionMapSavedFromJson: value => value } });
   const api = compile('material/materialTaskDetailApi', { '../auth': auth, '../productionMapReadApi': reader,
+    '../workerControlsApi': { WorkerControlException: class extends Error { constructor(code, message) { super(message); this.code = code; } } },
     '../shared/appRoutes': compile('shared/appRoutes'), '../shared/camera/synchronousGuard': compile('shared/camera/synchronousGuard'),
     './materialTestSession': compile('material/materialTestSession') });
   const original = global.fetch;
@@ -49,7 +50,7 @@ test('full order uses the real read API and requires the selected order ID', asy
 });
 test('a response for another order cannot be shown', async () => {
   const h = setup({ responseId: 'other' }); try {
-    await assert.rejects(h.api.readMaterialTaskDetail(h.session, h.witness, { id: 'order-a' }, h.isCurrent), /Buyurtma mavjud emas/);
+    await assert.rejects(h.api.readMaterialTaskDetail(h.session, h.witness, { id: 'order-a' }, h.isCurrent), error => error.code === 'order_not_available' && error.message === '');
   } finally { h.restore(); }
 });
 for (const change of ['witness', 'role', 'capability', 'test-token']) {

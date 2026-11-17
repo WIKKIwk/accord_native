@@ -1,11 +1,17 @@
 import { Button, Host, List, ProgressView, Section, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
-import type { DevicePickerAdapter, DevicePickerTextHook } from './devicePickerTypes';
+import type { DevicePickerAdapter, DevicePickerTextHook, MaterialDevicePickerContext } from './devicePickerTypes';
+import { MaterialDevicePicker } from './MaterialDevicePicker.ios';
 import { useDevicePicker } from './useDevicePicker';
 
-type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook; safe?: boolean; printerOnly?: boolean };
+type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook; safe?: boolean; printerOnly?: boolean;
+  materialReceipt?: MaterialDevicePickerContext };
 
-export function DeviceSheet({ operator, close, useText, safe, printerOnly = false }: DeviceSheetProps) {
+export function DeviceSheet(props: DeviceSheetProps) {
+  return props.materialReceipt ? <MaterialDevicePicker {...props} materialReceipt={props.materialReceipt} /> : <DefaultDeviceSheet {...props} />;
+}
+
+function DefaultDeviceSheet({ operator, close, useText, safe, printerOnly = false }: DeviceSheetProps) {
   const picker = useDevicePicker(operator, close, safe, printerOnly), address = useNativeState(picker.address), t = useText();
   return <Host style={{ minHeight: 430 }}><VStack><Text>{t('Qurilma tanlash')}</Text><List>
     {picker.device.connection == null ? <Section>

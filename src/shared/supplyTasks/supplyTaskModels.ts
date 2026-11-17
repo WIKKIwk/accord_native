@@ -1,6 +1,7 @@
-import { apparatusFromJson, type AdminApparatus } from '../../apparatusApi';
+import { apparatusFromJsonWithCanonicalId, type AdminApparatus } from '../../apparatusApi';
 import { comboFromJson, orderProductFromJson, productionMapSavedFromJson } from '../../workerProductionMapSaved';
-import { dartTrim, isAsciiCanonicalApparatusId } from '../dartApparatus';
+import { dartTrim } from '../dartApparatus';
+import { dartCanonicalApparatusId } from '../dartCanonicalApparatus';
 import { MobileApiException } from '../mobileApiException';
 
 type Obj = Record<string, unknown>;
@@ -68,9 +69,7 @@ export function supplyTaskWindowFromJson(raw: unknown): SupplyTaskWindow {
   const apparatus = body.apparatus.map(value => {
     if (!object(value)) throw invalid();
     try {
-      const parsed = apparatusFromJson(value);
-      // Fail closed until Dart/Node/Hermes Unicode canonical-ID parity is verified.
-      if (!isAsciiCanonicalApparatusId(parsed.id)) throw invalid();
+      const parsed = apparatusFromJsonWithCanonicalId(value, dartCanonicalApparatusId);
       return freezeFresh(parsed);
     } catch { throw invalid(); }
   });

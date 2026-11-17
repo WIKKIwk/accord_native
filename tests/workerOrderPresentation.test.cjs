@@ -65,6 +65,17 @@ test('planned meters retain 500m rounding and print-side/shaft details retain V2
   }
 });
 
+test('Qolip summary title override and Material information summary coexist with the Worker default', () => {
+  const h = harness();
+  assert.equal(h.render().title, catalog.production['worker.summary.expected.result_title'].uz);
+  h.props.summaryKind = 'information';
+  assert.equal(h.render().title, catalog.production['worker.summary.expected.title'].uz);
+  h.props.summaryTitle = 'Qolip summary';
+  assert.equal(h.render().title, 'Qolip summary');
+  h.props.summaryKind = 'worker';
+  assert.equal(h.render().title, 'Qolip summary');
+});
+
 test('invalid or unavailable numeric metadata stays hidden; missing width keeps the existing dash', () => {
   const h = harness();
   for (const invalid of [undefined, null, 0, -1, NaN, Infinity, '100']) {

@@ -5,9 +5,10 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsx
 function find(node, predicate) { if (!node || typeof node !== 'object') return []; if (Array.isArray(node)) return node.flatMap(n => find(n, predicate));
   return [...(predicate(node) ? [node] : []), ...find(node.props?.children, predicate)]; }
 function compile(file, mocks = {}, isJsx = false) { const filename = path.resolve(__dirname, `../src/${file}`), m = new Module(filename, module);
-  m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : require(id);
+  m.filename = filename; m.paths = module.paths; if (mocks.react && !mocks.react.useRef) mocks.react.useRef = value => ({ current: value }); m.require = id => id === '../../gscale/gscaleDiscovery' ? discovery : Object.hasOwn(mocks, id) ? mocks[id] : id.endsWith('.xml') ? id : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS,
     ...(isJsx ? { jsx: ts.JsxEmit.ReactJSX } : {}) } }).outputText, filename); return m.exports; }
+const discovery = compile('gscale/gscaleDiscovery.ts');
 function hookHarness(connection = null, printerOnly = false) {
   const calls = [], effects = [], state = { device: { connection, scanning: false, scanResult: null, checkingAddress: false, addressError: '' } };
   const operator = { subscribe: () => () => {}, getSnapshot: () => state, selectConnection: value => calls.push(['connection', value]),
@@ -51,10 +52,11 @@ function sheet(platform, connection = null, error = '', safe = false, printerOnl
     'react-native': { ActivityIndicator: 'ActivityIndicator', ScrollView: 'ScrollView', View: 'View', FlatList: 'FlatList', Text: 'NativeText',
       StyleSheet: { create: value => value }, useWindowDimensions: () => ({ height: 800 }) },
     '../../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
-    './useDevicePicker': { useDevicePicker: () => picker } };
+    './MaterialDevicePicker.android': { MaterialDevicePicker: 'MaterialDevicePicker' }, './MaterialDevicePicker.ios': { MaterialDevicePicker: 'MaterialDevicePicker' }, './useDevicePicker': { useDevicePicker: () => picker } };
   compose.OutlinedTextField = Object.assign('OutlinedTextField', { Label: 'OutlinedTextField.Label' });
   const { DeviceSheet } = compile(`shared/printing/DeviceSheet.${platform}.tsx`, mocks, true);
-  const tree = DeviceSheet({ operator: {}, close: () => calls.push('close'), useText: () => x => x, Label: 'Label', Action: 'Action', safe, printerOnly });
+  let tree = DeviceSheet({ operator: {}, close: () => calls.push('close'), useText: () => x => x, Label: 'Label', Action: 'Action', safe, printerOnly });
+  while (typeof tree.type === 'function') tree = tree.type(tree.props);
   return { tree, calls, server, printer };
 }
 const withId = (tree, id) => find(tree, n => n.props.modifiers?.some(modifier => modifier.testID === id))[0];

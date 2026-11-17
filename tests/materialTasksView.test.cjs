@@ -94,31 +94,39 @@ function screenSetup(platform, changes = {}) {
   const Picker = Object.assign(function Picker() {}, { Item: 'Picker.Item' });
   const mocks = { 'react/jsx-runtime': jsx, '@expo/ui': { Picker, Row: 'Row', Spacer: 'Spacer', Text: 'NativeText' },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
-    '@expo/ui/swift-ui': { Button: 'Button', HStack: 'HStack', ProgressView: 'ProgressView', Section: 'Section', Text: 'SwiftText', VStack: 'VStack' },
-    '@expo/ui/swift-ui/modifiers': { frame: value => value, onLongPressGesture: fn => ({ onLongPress: fn }) },
+    '@expo/ui/swift-ui': { Button: 'Button', HStack: 'HStack', Picker: 'SwiftPicker', ProgressView: 'ProgressView', Section: 'Section', Text: 'SwiftText', VStack: 'VStack' },
+    '@expo/ui/swift-ui/modifiers': { disabled: value => ({ disabled: value }), pickerStyle: value => value, tag: value => value,
+      frame: value => value, onLongPressGesture: fn => ({ onLongPress: fn }) },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Text: 'Text', View: 'View' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/filters/DropdownFilter.android': { DropdownFilter: 'DropdownFilter' },
+    '../components/WorkerOrderThumbnail': { WorkerOrderThumbnail: 'WorkerOrderThumbnail' },
     '../preparation/PreparationUI': { PreparationList: 'PreparationList' }, '../shared/localization': { productionText },
     '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
+    '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' },
+    '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' },
     '../shared/supplyTasks/supplyTasksPresentation': presentation, './useMaterialTasksView': { useMaterialTasksView: () => ({ state, openDetail, openReceive }) } };
   const component = compile(`material/MaterialTasks.${platform}`, mocks, '.tsx').MaterialTasks;
-  return { calls, state, controller, Picker, tree: () => component({ controller, session: {}, locale: 'uz', onMenu: () => calls.push('menu'), onProfile: () => calls.push('profile') }) };
+  return { calls, state, controller, Picker, tree: () => {
+    const tree = component({ controller, session: {}, locale: 'uz', onMenu: () => calls.push('menu'), onProfile: () => calls.push('profile') });
+    return platform === 'ios' ? { type: 'RenderedWorkspace', props: { children: [tree, tree.props.children(tree.props.selected, undefined, 'MachinePicker')] } } : tree;
+  } };
 }
 
 for (const platform of ['android', 'ios']) {
   test(`${platform} task screen reuses native search and list, displays rows and real injected callbacks`, async () => {
-    const h = screenSetup(platform), tree = h.tree(), header = nodes(tree, 'OrdersHeader')[0]; assert.ok(header);
+    const h = screenSetup(platform), tree = h.tree(), header = nodes(tree, platform === 'ios' ? 'OrdersWorkspace' : 'OrdersHeader')[0]; assert.ok(header);
     assert.equal(header.props.searchPlaceholder, 'Material vazifalari'); header.props.onSearchChange('film'); header.props.onMenu(); header.props.onProfile();
     if (platform === 'android') {
       const list = nodes(tree, 'OrdersList')[0], filters = nodes(tree, 'DropdownFilter'), cards = nodes(tree, 'WorkerQueueCard');
       assert.ok(list); assert.equal(filters.length, 2); assert.equal(cards.length, 2); filters[0].props.onChange('apparatus:a:one');
       filters[1].props.onChange(20); cards[0].props.onPress(); cards[0].props.onLongPress(); await list.props.onRefresh();
     } else {
-      const list = nodes(tree, 'PreparationList')[0], pickers = nodes(tree, h.Picker), buttons = nodes(tree, 'Button');
-      assert.ok(list); assert.equal(pickers.length, 2); assert.equal(buttons.length, 2); pickers[0].props.onValueChange('apparatus:a:one');
-      pickers[1].props.onValueChange(20); buttons[0].props.onPress(); buttons[0].props.modifiers[0].onLongPress(); await list.props.refresh();
+      const list = nodes(tree, 'OrdersList')[0], pickers = nodes(tree, 'SwiftPicker'), rows = nodes(tree, 'OrderListItem');
+      assert.ok(list); assert.equal(pickers.length, 1); assert.equal(rows.length, 2); header.props.onSelect('apparatus:a:one');
+      assert.equal(rows[0].props.orderId, 'zakaz-17'); assert.equal(rows[0].props.statusText, 'Qisman');
+      pickers[0].props.onSelectionChange(20); rows[0].props.onPress(); rows[0].props.onLongPress(); await list.props.onRefresh();
     }
     assert.deepEqual(h.calls, [['search', 'film'], 'menu', 'profile', ['apparatus', 'apparatus:a:one'], ['limit', 20],
       ['detail', 'zakaz-17'], ['receive', 'zakaz-17'], 'refresh']);

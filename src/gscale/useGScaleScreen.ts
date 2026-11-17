@@ -40,8 +40,10 @@ export function useGScaleSession() {
   return { session, signOut };
 }
 
-function createScreenGroup(session: Session, args: GScaleModeArgs) {
-  const operator = createGScaleOperatorStore(session, args);
+export type GScaleScreenOptions = { materialReceipt?: { isCurrent(): boolean } };
+
+function createScreenGroup(session: Session, args: GScaleModeArgs, options: GScaleScreenOptions) {
+  const operator = createGScaleOperatorStore(session, args, options);
   const catalog = createGScaleCatalogRuntime(session, () => materialAssignedWarehouseNames(session));
   const order = new GScaleOrderSelectionStore(args.order ?? null, true, catalog.orders, selected => operator.setOrder(selected));
   const lifecycle = { mounts: 0, started: false };
@@ -56,8 +58,9 @@ function createScreenGroup(session: Session, args: GScaleModeArgs) {
   } };
 }
 
-export function useGScaleScreen(session: Session, args: GScaleModeArgs) {
-  const group = useMemo(() => createScreenGroup(session, args), [session, args]);
+export function useGScaleScreen(session: Session, args: GScaleModeArgs, options: GScaleScreenOptions = {}) {
+  const materialReceipt = options.materialReceipt;
+  const group = useMemo(() => createScreenGroup(session, args, { materialReceipt }), [session, args, materialReceipt]);
   const state = useSyncExternalStore(group.operator.subscribe, group.operator.getSnapshot, group.operator.getSnapshot);
   const order = useSyncExternalStore(group.order.subscribe, group.order.getSnapshot, group.order.getSnapshot);
   const role = String(session.profile.role ?? ''), controlOnly = ['material_taminotchi', 'tayyorlov_masteri'].includes(role);
@@ -135,7 +138,7 @@ export function useGScaleScreen(session: Session, args: GScaleModeArgs) {
         .map(value => ({ key: value.warehouse, title: value.warehouse, subtitle: value.company ?? undefined,
           select: () => group.operator.setWarehouseSetup('default', value.warehouse) })) };
   }
-  return { ...group, session, orderStore: group.order, state, order, role, controlOnly, usesOrder, orderLocked, control,
+  return { ...group, materialReceipt: !!materialReceipt, session, orderStore: group.order, state, order, role, controlOnly, usesOrder, orderLocked, control,
     orderPicker, itemPicker, warehousePicker, defaultWarehousePicker };
 }
 
@@ -196,7 +199,8 @@ export function useGScalePicker(spec: GScalePickerSpec, session: Session) {
       if (alive.current) setPhotoError(message); return null;
     } finally { if (alive.current) setPhotoLoading(false); }
   };
-  return { ...state, query: search.query, setQuery, photoLoading, photoError, photoSearch, retry: () => void load(0),
+  const dismissPhotoError = useCallback(() => setPhotoError(''), []);
+  return { ...state, query: search.query, setQuery, photoLoading, photoError, photoSearch, dismissPhotoError, retry: () => void load(0),
     photoLabels: { take: localizedGetter('aiSearchTakePhoto', localeController.locale),
       choose: localizedGetter('aiSearchChoosePhoto', localeController.locale) },
     loadMore: () => { if (!state.loading && state.more) void load(state.items.length); } };

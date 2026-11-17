@@ -1,13 +1,14 @@
-import { parseSupplyTaskJson } from './supplyTaskJson';
 import { activeSessionToken, type Session } from '../../auth';
 import { authorizedFetch, currentQueueSnapshotReadEpoch } from '../../authorizedFetch';
 import { sessionReadScope } from '../../sessionReadScope';
 import { productionMapResponseError } from '../../workerControlsApi';
 import { appRoutes, canOpenRoute } from '../appRoutes';
 import { isSynchronouslyTrue } from '../camera/synchronousGuard';
-import { dartTrim, isAsciiCanonicalApparatusId } from '../dartApparatus';
+import { dartTrim } from '../dartApparatus';
+import { dartCanonicalApparatusId } from '../dartCanonicalApparatus';
 import { MobileApiException } from '../mobileApiException';
 import { supplyTaskWindowFromJson, type SupplyTaskKind, type SupplyTaskWindow } from './supplyTaskModels';
+import { parseSupplyTaskJson } from './supplyTaskJson';
 
 type SupplyTaskRequest = { kind: SupplyTaskKind; apparatus?: string; limit?: number; search?: string };
 type Pending = Map<string, Promise<SupplyTaskWindow>>;
@@ -25,7 +26,7 @@ const invalid = () => new MobileApiException({ code: 'supply_tasks_invalid', mes
 export function readSupplyTaskWindow(session: Session, input: SupplyTaskRequest, isCurrent: () => boolean): Promise<SupplyTaskWindow> {
   const kind = input.kind, apparatus = input.apparatus ?? '', limit = input.limit ?? 10, search = dartTrim(input.search ?? '');
   if ((kind !== 'material' && kind !== 'qolip') || ![5, 10, 20, 50].includes(limit) ||
-      (apparatus !== '' && !isAsciiCanonicalApparatusId(apparatus))) throw new TypeError('Invalid supply task window');
+      (apparatus !== '' && !dartCanonicalApparatusId(apparatus))) throw new TypeError('Invalid supply task window');
   // Dart and JS Unicode case tables can differ; the user may search in their language rather than having input silently rejected.
   const normalizedSearch = search.toLowerCase();
   const scope = sessionReadScope(session), route = kind === 'material' ? appRoutes.materialTasks : appRoutes.qolipTasks;
@@ -57,7 +58,7 @@ export function readSupplyTaskWindow(session: Session, input: SupplyTaskRequest,
     const raw = await response.text();
     guard();
     let body: unknown;
-    try { body = response.status === 200 && kind === 'qolip' ? parseSupplyTaskJson(raw) : JSON.parse(raw); }
+    try { body = parseSupplyTaskJson(raw); }
     catch {
       if (response.status !== 200) throw productionMapResponseError(response.status, null, 'supply_tasks_failed');
       throw invalid();

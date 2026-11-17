@@ -1,6 +1,14 @@
 import type { AdminRawMaterialAssignment } from './workerRawMaterials';
 export type MaterialRow = Partial<AdminRawMaterialAssignment> & { material_name?: string };
-export type WorkerMaterialListProps = { rows: MaterialRow[]; scanned: string[]; orderId?: string; onLongPress: (row: MaterialRow) => void; showBalances?: boolean };
+export type WorkerMaterialListProps = { rows: MaterialRow[]; scanned: string[]; orderId?: string; onLongPress: (row: MaterialRow) => void; showBalances?: boolean;
+  onUnlink?: (row: MaterialRow) => void; canUnlink?: (row: MaterialRow) => boolean; unlinkingBarcode?: string };
+
+/** @v2 _rawMaterialAssignmentStatusText */
+export function assignedMaterialStatus(row: MaterialRow, text: (key: string) => string) {
+  const status = row.stock_status?.trim().toLowerCase() ?? '';
+  if (status === 'consumed' || (row.consumed_qty ?? 0) > 0) return text('worker.material.status.consumed');
+  return status === 'in_use' ? text('worker.material.status.in_use') : status === '' || status === 'available' ? '' : text('worker.material.status.attached');
+}
 
 /** @v2 _ScannedItemsExpansionHeader */
 export function materialSectionExpansion({ loading, error, count, expanded }: {

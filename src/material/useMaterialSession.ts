@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { currentSession, isSessionWitnessCurrent, logout, registerSessionResetHook,
+import { activeSessionEpoch, currentSession, isSessionWitnessCurrent, logout, registerSessionResetHook,
   sessionWitnessTransitioning, sessionWitnessVersion, subscribeSessionWitness } from '../auth';
 import { startMaterialSessionBootstrap, type MaterialSession } from './materialSessionBootstrap';
 import { isMaterialTestSession } from './materialTestSession';
+import { clearAppLock } from '../appLock';
 
 export function useMaterialSession() {
   const [entry, setEntry] = useState<MaterialSession | null | undefined>();
@@ -23,7 +24,9 @@ export function useMaterialSession() {
   const onLogout = () => {
     if (!current || isMaterialTestSession(current.session) || !isSessionWitnessCurrent(current.witness)) return;
     const owner = current.session;
-    void logout(owner).catch(() => {}).finally(() => {
+    const epoch = activeSessionEpoch(owner), identity = JSON.stringify([owner.baseUrl, owner.profile.role, owner.profile.ref]);
+    void logout(owner, { beforeClearSession: () => clearAppLock(owner, () => currentSession() === owner &&
+      activeSessionEpoch(owner) === epoch && JSON.stringify([owner.baseUrl, owner.profile.role, owner.profile.ref]) === identity) }).catch(() => {}).finally(() => {
       const active = currentSession();
       if (mounted.current && !sessionWitnessTransitioning() && (active === owner || active === null)) setEntry(value => value?.session === owner ? null : value);
     });

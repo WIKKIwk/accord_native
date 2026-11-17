@@ -6,6 +6,7 @@ function loader(mocks = {}) {
   mocks = { './workerQueueLimit': { DEFAULT_QUEUE_LIMIT: 10 }, './authorizedFetch': {}, ...mocks };
   const cache = new Map();
   return function load(name) {
+    if (name.endsWith('.json')) return require(path.resolve(__dirname, '../../src', name));
     const filename = path.resolve(__dirname, '../../src', name.endsWith('.ts') ? name : `${name}.ts`);
     if (cache.has(filename)) return cache.get(filename).exports;
     const loaded = new Module(filename, module); loaded.filename = filename; loaded.paths = module.paths; cache.set(filename, loaded);

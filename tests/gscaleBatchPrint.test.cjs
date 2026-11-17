@@ -32,6 +32,17 @@ const context = { preparationConflict: '', transport: 'bluetooth', server: null,
   linkedOrderId: 'order-1', grossQtyKg: 10, printCount: 2, isMaterialReceipt: true,
   materialSupplier: 'Supplier', offlinePrinter: null, bluetoothPrinter: { address: 'AA', name: 'XP' } };
 
+test('Material print deadline preserves the source Dart timeout text; other roles keep their existing timeout', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  for (const material of [true,false]) {
+    const pending = printActiveGScaleBatch({ ...context, transport:'wifi', server:{endpoint:{baseUrl:'http://scale'},handshake:{serverRef:'scale',serverName:'scale'}}, isMaterialReceipt:material }, {
+      printRemote:()=>new Promise(()=>{}), refreshBatch:async()=>{},
+    });
+    const checked = assert.rejects(pending, error => material ? String(error)==='TimeoutException after 0:00:15.000000: Future not completed' : error.message==='Request timed out');
+    t.mock.timers.tick(15_000); await checked;
+  }
+});
+
 // @v2-test test/gscale_material_receipt_print_test.dart
 test('local duplicate printing prepares, prints and confirms a distinct EPC for each label', async () => {
   const calls = []; let count = 0;

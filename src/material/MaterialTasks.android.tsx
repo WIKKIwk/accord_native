@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
+import { WorkerOrderThumbnail } from '../components/WorkerOrderThumbnail';
 import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
 import { productionText } from '../shared/localization';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
@@ -11,8 +12,8 @@ import { materialTaskEmptyMessage, materialTaskRowPresentation, materialTaskSumm
 import type { MaterialTasksProps } from './materialTasksProps';
 import { useMaterialTasksView } from './useMaterialTasksView';
 
-/** Source-derived compact material task view; its route, reader and detail/receipt handlers are supplied separately. */
-export function MaterialTasks({ controller, locale, onMenu, onProfile, handlers }: MaterialTasksProps) {
+/** @v2 _QolipTasksPage: compact Material task rows share the native Worker search, filter and list controls. */
+export function MaterialTasks({ controller, session, locale, onMenu, onProfile, handlers }: MaterialTasksProps) {
   const { state, openDetail, openReceive } = useMaterialTasksView(controller, handlers);
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const window = state.window, selected = window?.apparatus.find(item => item.id === window.apparatus_id);
@@ -35,12 +36,21 @@ export function MaterialTasks({ controller, locale, onMenu, onProfile, handlers 
           {!window.rows.length ? <Text style={{ color: colors.onSurfaceVariant, padding: 24, textAlign: 'center' }}>{materialTaskEmptyMessage(window, locale)}</Text> :
             window.rows.map((row, index) => { const item = materialTaskRowPresentation(row, locale);
               return <WorkerQueueCard key={`${row.id}:${index}`} first={index === 0} last={index === window.rows.length - 1}
-                backgroundColor={colors.surface} onPress={openDetail ? () => openDetail(window, row) : undefined}
-                onLongPress={openReceive ? () => openReceive(window, row) : undefined}>
-                <Text style={{ color: colors.onSurfaceVariant, paddingHorizontal: 8 }}>{item.position}</Text>
-                <View style={{ flex: 1, paddingVertical: 8 }}><Text style={{ color: colors.onSurface }} numberOfLines={1}>{[item.code, item.title].filter(Boolean).join(' • ')}</Text>
-                  {!!item.subtitle && <Text style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>{item.subtitle}</Text>}</View>
-                {!!item.status && <Text style={{ color: colors.onSecondaryContainer, backgroundColor: colors.secondaryContainer, padding: 6 }}>{item.status}</Text>}
+                backgroundColor={colors.surfaceContainerLowest} onPress={openDetail ? () => openDetail(window, row) : undefined}
+                onLongPress={openReceive ? () => openReceive(window, row) : undefined}
+                style={{ paddingLeft: 80, paddingRight: 12, paddingVertical: 8, minHeight: 61 }}>
+                <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 68, overflow: 'hidden' }}>
+                  <WorkerOrderThumbnail session={session} orderId={row.id} imageId={row.image_id} active size={68}
+                    backgroundColor={colors.surfaceContainerHigh} iconColor={colors.onSurfaceVariant} />
+                </View>
+                <View style={{ width: 28, height: 28, borderRadius: 14, marginRight: 12, backgroundColor: colors.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '600' }}>{item.position}</Text>
+                </View>
+                <View style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.onSurface, fontSize: 14, fontWeight: '500' }} numberOfLines={1}>
+                  {item.code ? <Text style={{ fontWeight: '700' }}>{item.code}{' • '}</Text> : null}{item.title}</Text>
+                  {!!item.subtitle && <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, lineHeight: 13 }} numberOfLines={1}>{item.subtitle}</Text>}</View>
+                {!!item.status && <Text style={{ color: colors.onSecondaryContainer, backgroundColor: colors.secondaryContainer,
+                  marginRight: 8, marginLeft: 6, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5, fontSize: 11, fontWeight: '800' }}>{item.status}</Text>}
               </WorkerQueueCard>;
             })}
         </>}

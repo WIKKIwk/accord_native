@@ -1,5 +1,6 @@
 import type { productionMapDefinitionFromJson } from '../workerProductionMapSaved';
-import { dartTrim, isAscii, isAsciiCanonicalApparatusId } from './dartApparatus';
+import { dartTrim, isAscii } from './dartApparatus';
+import { dartCanonicalApparatusId } from './dartCanonicalApparatus';
 
 type ProductionMap = ReturnType<typeof productionMapDefinitionFromJson>;
 type Node = ProductionMap['nodes'][number];
@@ -17,7 +18,7 @@ function routeBranchAllowed(node: Node, branch: string): boolean {
  * @v2 productionMapAuthorizedOrderApparatus
  */
 export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assignedApparatus: readonly string[]): readonly string[] {
-  const assigned = new Set(assignedApparatus.filter(isAsciiCanonicalApparatusId).map(dartTrim));
+  const assigned = new Set(assignedApparatus.filter(dartCanonicalApparatusId).map(dartTrim));
   const firstStart = map.nodes.find(node => node.kind === 'start');
   if (!firstStart) return Object.freeze([]);
 
@@ -38,13 +39,13 @@ export function productionMapAuthorizedOrderApparatus(map: ProductionMap, assign
       const group = node.kind === 'apparatus' ? dartTrim(node.alternative_group_id) : '';
       const stages: { nodeId: string; apparatusId: string | null }[] = group
         ? map.nodes.filter(candidate => candidate.kind === 'apparatus' && dartTrim(candidate.alternative_group_id) === group &&
-            isAsciiCanonicalApparatusId(candidate.apparatus_id))
+            dartCanonicalApparatusId(candidate.apparatus_id))
           .map(candidate => ({ nodeId: candidate.id, apparatusId: dartTrim(candidate.apparatus_id) }))
         : node.kind === 'apparatus'
           ? (() => {
               const assignedId = dartTrim(node.alternative_assigned_apparatus_id);
               const apparatusId = assignedId || dartTrim(node.apparatus_id);
-              return isAsciiCanonicalApparatusId(apparatusId) ? [{ nodeId: node.id, apparatusId }] : [];
+              return dartCanonicalApparatusId(apparatusId) ? [{ nodeId: node.id, apparatusId }] : [];
             })()
           : [{ nodeId: node.id, apparatusId: null }];
       if (node.kind === 'apparatus' && stages.length) encounteredApparatus = true;

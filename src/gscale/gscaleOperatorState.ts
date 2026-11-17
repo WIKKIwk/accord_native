@@ -4,13 +4,13 @@ import { GScaleDeviceStore, type GScaleDeviceState } from './gscaleDeviceState';
 import type { GScaleLiveMonitor } from './gscaleLive';
 import { emptyMonitorSnapshot, mergeLiveMonitorWithRsBatch, monitorSnapshotWithBatch, type MonitorSnapshot } from './gscaleMonitor';
 import { emptyOperatorControlDraft, restoreOperatorDraft, type OperatorControlDraft } from './gscaleDraft';
-import { autoBatchPrintKey, canTriggerGrossPrint, hasCompleteRpsBatchPrintContext, normalizePrinterChoice, normalizeQuantitySource,
+import { autoBatchPrintKey, buildPrintSuccessMessage, canTriggerGrossPrint, hasCompleteRpsBatchPrintContext, normalizePrinterChoice, normalizeQuantitySource,
   parseManualDuplicateCount, parsePositiveKg, parseScaleDisplayKg, rpsBatchActionErrorMessage, shouldTriggerAutoBatchPrint } from './gscaleControlLogic';
 import { formatCompactKg, preparationPresetConflict } from './gscalePreparation';
 import type { GScaleModeArgs } from './gscaleRouteArgs';
 import type { GScaleStartContext } from './gscaleBatchStart';
 import type { GScalePrintContext } from './gscaleBatchPrint';
-import type { DiscoveredServer } from './gscaleDiscovery';
+import { printTargetLabel, type DiscoveredServer } from './gscaleDiscovery';
 import { MobileApiException } from '../shared/mobileApiException';
 import type { ArchivePrintEntry, ArchiveSession } from './gscaleArchive';
 import type { GScaleArchiveContext } from './gscaleArchiveRuntime';
@@ -39,10 +39,10 @@ export type GScaleOperatorDependencies = {
 export type GScaleOperatorState = { draft: OperatorControlDraft; draftRestored: boolean; device: GScaleDeviceState; batch: GScaleBatchState;
   monitor: MonitorSnapshot; materialWarehouses: string[]; presetLoading: boolean; presetApplied: boolean; presetItem: Item | null;
   presetError: string; contextEditing: boolean; actionLoading: boolean; manualPrintLoading: boolean; simpleLoading: boolean;
-  requestInFlight: boolean; startConflict: boolean; error: string; notice: string; lastReceipt: Receipt | null;
+  requestInFlight: boolean; startConflict: boolean; error: string; notice: string; noticeRevision: number; lastReceipt: Receipt | null;
   archive: ArchiveSession[]; archiveLoading: boolean; archiveError: string; archivePrintingId: string; printerStatusOverride: string };
 
-export type GScaleWritePolicy = { readonly restrictPrinter: boolean; isPrinterChoiceAllowed(value: string): boolean;
+export type GScaleWritePolicy = { readonly restrictPrinter: boolean; readonly receiptPresentation?: boolean; isPrinterChoiceAllowed(value: string): boolean;
   assertOperation(operation: MaterialGScaleOperation, state: GScaleOperatorState): void };
 
 /** Shared dashboard state. Platform views bind to this controller. */
@@ -53,6 +53,7 @@ export class GScaleOperatorStore {
   private live: GScaleLiveMonitor | null = null;
   private deviceKey = '';
   private lastBatch: GScaleBatchSession | null = null;
+  private lastLateBatchErrorKey = '';
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private printerStatusTimer: ReturnType<typeof setTimeout> | null = null;
   private autoPrintKey = '';
@@ -74,13 +75,14 @@ export class GScaleOperatorStore {
     this.state = { draft, draftRestored: false, device: deps.devices.getSnapshot(), batch: deps.batch.getSnapshot(), monitor: emptyMonitorSnapshot(),
       materialWarehouses: [], presetLoading: this.controlOnly && !!args.freshForm, presetApplied: false, presetItem: null,
       presetError: '', contextEditing: false, actionLoading: false, manualPrintLoading: false, simpleLoading: false,
-      requestInFlight: false, startConflict: false, error: '', notice: '', lastReceipt: null,
+      requestInFlight: false, startConflict: false, error: '', notice: '', noticeRevision: 0, lastReceipt: null,
       archive: [], archiveLoading: false, archiveError: '', archivePrintingId: '', printerStatusOverride: '' };
     this.deviceKey = `${this.state.device.transport}|`;
   }
   getSnapshot = () => this.state;
   isActive = () => this.alive;
   isPrinterRestricted = () => this.writePolicy?.restrictPrinter === true;
+  dismissNotice = () => this.update({ notice: '' });
   private operationError(operation: MaterialGScaleOperation): string {
     try { this.writePolicy?.assertOperation(operation, this.state); return ''; }
     catch (error) { return error instanceof Error ? error.message : String(error); }
@@ -89,7 +91,7 @@ export class GScaleOperatorStore {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   private update(patch: Partial<GScaleOperatorState>) {
     if (!this.alive) return;
-    this.state = { ...this.state, ...patch };
+    this.state = { ...this.state, ...patch, ...(patch.notice ? { noticeRevision: this.state.noticeRevision + 1 } : {}) };
     for (const listener of this.listeners) listener();
   }
   private scheduleSave() {
@@ -115,9 +117,10 @@ export class GScaleOperatorStore {
     const saved = await this.deps.loadDraft();
     if (!this.alive) return;
     const active = this.state.batch.batch?.active === true;
-    const draft = restoreOperatorDraft(this.state.draft, saved, { materialReceipt: this.controlOnly && this.role === 'material_taminotchi',
+    let draft = restoreOperatorDraft(this.state.draft, saved, { materialReceipt: this.controlOnly && this.role === 'material_taminotchi',
       linkedOrderId: this.linkedOrderId, linkedOrderWidthMm: this.args.order?.width_mm ?? null,
       initialWarehouse: this.args.warehouse ?? null, activeBatch: active, freshForm: this.controlOnly && !!this.args.freshForm });
+    if (this.writePolicy && !this.writePolicy.isPrinterChoiceAllowed(draft.printer)) draft = { ...draft, printer: 'zebra' };
     this.setDraft(draft, false);
     this.update({ draftRestored: true });
     if (this.controlOnly && this.args.freshForm) {
@@ -248,6 +251,11 @@ export class GScaleOperatorStore {
     this.update({ batch: batchState, ...(batchState.error ? { error: batchState.error } : {}) });
     if (!batch || batch === this.lastBatch) return;
     this.lastBatch = batch;
+    const lateError = batch.last_error.trim(), lateKey = lateError ? `${batch.id}|${batch.last_error_at}|${lateError}` : '';
+    if (this.writePolicy?.receiptPresentation && lateKey && lateKey !== this.lastLateBatchErrorKey) {
+      this.lastLateBatchErrorKey = lateKey;
+      this.update({ notice: `ERPNext tasdiqlashda xatolik yuz berdi: ${lateError}` });
+    }
     let draft = this.state.draft;
     if (batch.active && !this.state.contextEditing) {
       draft = { ...draft, ...(this.usesOrder ? { order_id: batch.order_id, item_code: batch.item_code, item_name: batch.item_name,
@@ -343,7 +351,7 @@ export class GScaleOperatorStore {
       this.update({ error: 'Order yoki batch holati o‘zgardi. Qayta tekshiring.' }); return false;
     }
     this.setDraft({ ...this.state.draft, context_saved: true });
-    this.update({ contextEditing: false, error: '' });
+    this.update({ contextEditing: false, error: '', ...(this.writePolicy?.receiptPresentation ? { notice: 'Sozlamalar saqlandi' } : {}) });
     return true;
   }
 
@@ -413,7 +421,9 @@ export class GScaleOperatorStore {
         materialSupplier: this.state.draft.material_supplier,
         offlinePrinter: selection?.transport === 'offline' ? selection.offlinePrinter : null,
         bluetoothPrinter: selection?.transport === 'bluetooth' ? selection.bluetoothPrinter : null });
-      this.update({ lastReceipt: response });
+      this.update({ lastReceipt: response, ...(this.writePolicy?.receiptPresentation ? { notice: buildPrintSuccessMessage(response,
+        selection?.transport === 'offline' ? 'Offline • USB printer' : selection?.transport === 'bluetooth' ? 'Bluetooth • XP-P323B'
+          : selection?.transport === 'wifi' ? printTargetLabel(selection.server) : 'Tanlanmagan') } : {}) });
       this.scheduleSave(); void this.refresh();
     } catch (error) { this.update({ error: rpsBatchActionErrorMessage(error) }); }
     finally { this.update(auto ? { actionLoading: false } : { manualPrintLoading: false }); }
@@ -450,7 +460,8 @@ export class GScaleOperatorStore {
 
   private archiveContext(): GScaleArchiveContext {
     return { controlOnly: this.controlOnly, transport: this.state.device.transport, selection: this.state.device.selection,
-      server: this.selectedServer, monitor: this.state.monitor, batchPrinter: this.state.draft.printer };
+      server: this.selectedServer, monitor: this.state.monitor, batchPrinter: this.state.draft.printer,
+      ...(this.writePolicy?.receiptPresentation ? { materialReceipt: true } : {}) };
   }
 
   async refreshArchive(): Promise<void> {

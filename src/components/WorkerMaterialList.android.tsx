@@ -1,9 +1,10 @@
-import { Box, Column, Icon, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Box, CircularProgressIndicator, Column, Icon, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { SymbolView } from 'expo-symbols';
 import { background, clip, combinedClickable, fillMaxWidth, paddingAll, size, weight } from '@expo/ui/jetpack-compose/modifiers';
-import { assignedMaterialPresentation, rawMaterialBalances, type WorkerMaterialListProps } from '../workerMaterialPresentation';
+import { assignedMaterialPresentation, assignedMaterialStatus, rawMaterialBalances, type WorkerMaterialListProps } from '../workerMaterialPresentation';
 import { useWorkerOrderText } from './useWorkerOrderText';
 import { BaseHost } from './BaseHost';
-export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBalances = true }: WorkerMaterialListProps) {
+export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBalances = true, onUnlink, canUnlink, unlinkingBarcode }: WorkerMaterialListProps) {
   const { locale, t, p } = useWorkerOrderText();
   const colors = useMaterialColors({});
   const secondaryText = colors.onSurfaceVariant ?? colors.onSurface;
@@ -21,10 +22,20 @@ export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBa
           <Icon source={item.confirmed ? require('../../assets/icons/gscale/check_circle.xml') : require('../../assets/icons/worker/material.xml')} size={20}
             tint={item.confirmed ? colors.onPrimaryContainer : secondaryText} />
         </Box>
-        <Text color={item.confirmed ? colors.onPrimaryContainer : secondaryText} style={{ typography: 'bodySmall' }} maxLines={2} overflow="ellipsis" modifiers={[weight(1)]}>
+        {onUnlink ? <Column modifiers={[weight(1)]}>
+        <Text color={item.confirmed ? colors.onPrimaryContainer : secondaryText} style={{ typography: 'bodySmall' }} maxLines={2} overflow="ellipsis" modifiers={[]}>
           <Text color={item.confirmed ? colors.onPrimaryContainer : colors.onSurface} style={{ fontSize: 14, fontWeight: '700' }}>{item.title}</Text>
           {item.subtitle ? `${item.title ? ' • ' : ''}${item.subtitle}` : ''}
         </Text>
+          {!!assignedMaterialStatus(row, p) && <Text color={secondaryText} style={{ typography: 'labelSmall', fontWeight: '700' }}>{assignedMaterialStatus(row, p)}</Text>}
+        </Column> : <Text color={item.confirmed ? colors.onPrimaryContainer : secondaryText} style={{ typography: 'bodySmall' }} maxLines={2} overflow="ellipsis" modifiers={[weight(1)]}>
+          <Text color={item.confirmed ? colors.onPrimaryContainer : colors.onSurface} style={{ fontSize: 14, fontWeight: '700' }}>{item.title}</Text>
+          {item.subtitle ? `${item.title ? ' • ' : ''}${item.subtitle}` : ''}
+        </Text>}
+        {onUnlink && <IconButton enabled={!unlinkingBarcode && (canUnlink?.(row) ?? false)} onClick={() => onUnlink(row)}>
+          {unlinkingBarcode === row.barcode?.trim().toUpperCase() ? <CircularProgressIndicator modifiers={[size(18, 18)]} />
+            : <RNHostView matchContents><SymbolView name={{ android: 'link_off' }} size={20} tintColor={secondaryText} accessibilityLabel={p('worker.material.unlink')} /></RNHostView>}
+        </IconButton>}
       </Row>; })}
   </Column></BaseHost>;
 }

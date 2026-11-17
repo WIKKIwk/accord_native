@@ -36,8 +36,8 @@ test('history card rows retain source action, two-decimal quantity, both activit
   assert.equal(actual[0][1], '100.12 m'); assert.equal(actual[3][1], 'Bosma'); assert.equal(actual[4][1], 'worker.wip.action.pause');
   assert.equal(actual[6][1], '—'); assert.equal(actual[7][1], 'worker:123456', 'source list card deliberately retains the legacy worker fallback');
 });
-function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = false) {
-  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [], longPressDetails: false, parentCloses: 0, reads: 0 };
+function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = false, detailOptions = {}) {
+  const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [], longPressDetails: false, parentCloses: 0, reads: 0, transportCalls: [], producedCalls: [] };
   runner.react.useContext = () => null;
   runner.react.useImperativeHandle = () => {};
   const sheet = { isOpen: () => false, close() {}, open: (content, options) => state.opened.push({ content, options }) };
@@ -48,20 +48,21 @@ function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = fa
     react: runner.react, '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', RNHostView: 'RNHostView', Row: 'Row', Text: 'NativeText' },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-camera': { CameraView: 'Camera', useCameraPermissions: () => [{ granted: false, status: 'undetermined' }, async () => {}] },
     'react-native': { ActivityIndicator: 'Spinner', FlatList: 'FlatList', Platform: { OS: platform }, PlatformColor: value => value, Pressable: 'Pressable', StyleSheet: { create: value => value }, Text: 'Text', View: 'View' },
-    '../authorizedFetch': {}, './useWorkerWipSheet': inlinePresenter ?? { useWorkerWipSheet: () => ({ sheet, dialogs: null }) }, './WorkerOrderControls': { WorkerOrderButton: 'Button' },
+    '../authorizedFetch': { authorizedFetch: async (...args) => { state.transportCalls.push(args); return new Response('{"records":[]}', { status: 200 }); } },
+    './useWorkerWipSheet': inlinePresenter ?? { useWorkerWipSheet: () => ({ sheet, dialogs: null }) }, './WorkerOrderControls': { WorkerOrderButton: 'Button' },
     './useWorkerColors': { useWorkerColors: () => ({}) }, './workerSheetContext': { WorkerSheetCloseContext: {} },
     './useWorkerWipHistoryPalette': { useWorkerWipHistoryPalette: () => ({ summary: 'summary', summaryText: 'on-summary', summaryChip: 'summary-chip',
       card: 'card', cardText: 'card-text', cardMuted: 'card-muted', number: 'number', numberText: 'number-text', onPrimary: 'on-primary',
       status: { waiting: { backgroundColor: 'waiting', color: 'on-waiting' }, inUse: { backgroundColor: 'in-use', color: 'on-in-use' }, processed: { backgroundColor: 'processed', color: 'on-processed' } } }) },
     './WorkerAlert': { WorkerAlert: 'Alert' }, './WorkerFormDialog': { WorkerFormDialog: 'Search' }, './WorkerFormField': { WorkerFormField: 'Field' }, './WorkerIconButton': { WorkerIconButton: 'IconButton' },
-    './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async () => { state.reads++; if (state.error) throw state.error; return state.rows; } },
+    './WorkerOrderSheet': {}, '../workerWip': { ...wip, loadWorkerWipBatches: async (...args) => { state.producedCalls.push(args); state.reads++; if (state.error) throw state.error; return state.rows; } },
     './WorkerWipBatchDetails': { WorkerWipBatchDetails: 'Details' }, './WorkerOrderDetails': {}, './useWorkerOrderText': { useWorkerOrderText: () => ({ p, t: key => key }) },
     './useWorkerWipReactivation': { useWorkerWipReactivation: options => ({ isBusy: () => false, open: item => {
       state.actions.push(item); if (state.longPressDetails) options.showDetails(item);
     }, dialogs: null }) },
     '../workerWipHistoryPresentation': api, '../workerWipDetailsPresentation': details,
   });
-  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() { state.parentCloses++; } };
+  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() { state.parentCloses++; }, ...detailOptions };
   return { state, render() { runner.begin(); const tree = WorkerWipHistory(props); runner.flush(); return tree; }, dispose: runner.dispose };
 }
 for (const platform of ['ios', 'android']) test(`${platform}: history renders localized summary, partial totals, states and QR details with no lost source action row`, async () => {
@@ -203,5 +204,33 @@ for (const scenario of ['empty', 'error', 'forbidden']) test(`history ${scenario
     assert.ok(find(tree, node => node.props?.children === key));
     assert.equal(!!find(tree, node => node.type === 'Button' && node.props.label === 'worker.action.retry'), scenario !== 'empty');
     assert.equal(find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr').props.disabled, true);
+  } finally { h.dispose(); }
+});
+
+for (const platform of ['ios', 'android']) test(`${platform}: Material stage history explicitly suppresses reprints and retires original details`, async () => {
+  let current = true;
+  const h = harness(platform, [batch()], 'material_taminotchi', false, { allowReprint: false, isCurrent: () => current });
+  try {
+    h.render(); await tick(); const tree = h.render();
+    const row = find(tree, node => node.type === 'FlatList').props.renderItem({ item: h.state.rows[0], index: 0 });
+    row.props.onPress(); assert.equal(h.state.opened.length, 1);
+    assert.equal(h.state.opened[0].content.props.allowReprint, false);
+    assert.equal(h.state.opened[0].content.props.isCurrent(), true);
+    current = false; row.props.onPress(); assert.equal(h.state.opened.length, 1);
+    assert.equal(h.state.opened[0].content.props.isCurrent(), false);
+  } finally { h.dispose(); }
+});
+
+for (const readPolicy of ['legacy', 'witness']) test(`history forwards the explicit ${readPolicy} policy to both WIP reads`, async () => {
+  const h = harness('ios', [], readPolicy === 'legacy' ? 'material_taminotchi' : 'qolipchi', false,
+    { stageHistory: true, isCurrent: () => true, ...(readPolicy === 'legacy' ? { readPolicy } : {}) });
+  try {
+    h.render(); await tick(); h.render();
+    const opening = h.state.transportCalls[0], produced = h.state.producedCalls[0];
+    assert.equal(opening.length, readPolicy === 'legacy' ? 4 : 6);
+    assert.equal(typeof opening[3], 'function');
+    if (readPolicy === 'witness') assert.equal(opening[5].readWitness(), true);
+    else assert.equal(opening[5], undefined);
+    assert.deepEqual(produced[5], readPolicy === 'legacy' ? { readPolicy: 'legacy' } : undefined);
   } finally { h.dispose(); }
 });

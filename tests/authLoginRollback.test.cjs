@@ -204,6 +204,21 @@ test('logout continues when the push token reader fails and no account store is 
   } finally { global.fetch = original; }
 });
 
+for (const noAccountStore of [false, true]) test(`Material cleanup runs before session clear and is best-effort (no account store: ${noAccountStore})`, async () => {
+  const original = global.fetch;
+  global.fetch = async () => ({ status: 200, json: async () => ({ token: 'material-token', profile: { role: 'material_taminotchi', ref: 'material' } }) });
+  try {
+    const api = auth({}, 'web', undefined, noAccountStore), session = await api.login('https://example.test', 'one', 'code');
+    let cleaned = 0;
+    await api.logout(session, { beforeClearSession: async () => {
+      cleaned++; assert.equal(api.currentSession(), session);
+      if (!noAccountStore) assert.equal(api.testAccountStore.accounts.length, 0);
+      throw Error('native lock cleanup failed');
+    } });
+    assert.equal(cleaned, 1); assert.equal(api.currentSession(), null); assert.equal(await api.loadSession(), null);
+  } finally { global.fetch = original; }
+});
+
 test('logout unregisters push even when the active saved session is missing', async () => {
   const original = global.fetch, requests = [];
   global.fetch = async (url, init) => {

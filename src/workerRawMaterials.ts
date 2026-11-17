@@ -43,15 +43,17 @@ export function rawMaterialAssignment(value: unknown): AdminRawMaterialAssignmen
   };
 }
 
-async function assignments(session: Session, path: string, query: URLSearchParams, fallback: string, current?: () => boolean) {
-  const guard = () => { if (current && current() !== true) throw new WorkerControlException('session_scope_changed', ''); };
-  guard();
+async function assignments(session: Session, path: string, query: URLSearchParams, fallback: string, current?: () => boolean,
+  options?: { beforeSend: () => void }) {
+  const guard = () => { options?.beforeSend(); if (current && current() !== true) throw new WorkerControlException('session_scope_changed', ''); };
+  if (current) guard();
   await Promise.resolve();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     const response = current ? await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal }, guard, 10_000, { readWitness: current })
-      : await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal });
+      : options ? await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal }, options.beforeSend)
+        : await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal });
     guard();
     if (response.status !== 200) {
       let payload: unknown;
@@ -66,11 +68,13 @@ async function assignments(session: Session, path: string, query: URLSearchParam
 }
 
 /** @v2 adminRawMaterialAssignments */
-export async function adminRawMaterialAssignments(session: Session, orderId = '', apparatus = '', current?: () => boolean) {
+// A boolean read witness and a legacy before-send guard have different 401 recovery policies.
+export async function adminRawMaterialAssignments(session: Session, orderId = '', apparatus = '', current?: () => boolean,
+  options?: { beforeSend: () => void }) {
   const station = apparatusId(apparatus, true), query = new URLSearchParams();
   if (orderId.trim()) query.set('order_id', orderId.trim());
   if (station) query.set('apparatus', station);
-  return assignments(session, '/v1/mobile/admin/raw-material-assignments', query, 'raw_material_assignments', current);
+  return assignments(session, '/v1/mobile/admin/raw-material-assignments', query, 'raw_material_assignments', current, options);
 }
 
 /** @v2 adminRawMaterialIntakeCandidates */

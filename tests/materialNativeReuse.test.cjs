@@ -33,7 +33,7 @@ function setup() {
     '@expo/ui/swift-ui/modifiers': { font: value => value, foregroundStyle: value => value, frame: value => value, lineLimit: value => value },
     'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { Stack: { Screen: 'Stack.Screen' }, router: { canGoBack: () => true, back: () => calls.push('back'), navigate() {} } },
-    'react-native': { ActivityIndicator: 'ActivityIndicator', PlatformColor: value => value, Text: 'Text', View: 'View' },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', PlatformColor: value => value, Text: 'Text', View: 'View', useColorScheme: () => 'light' },
     'react-native-reanimated': { useSharedValue: value => ({ value }) },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
     '../auth': { activeSessionToken: () => 'token', registerSessionResetHook: () => () => {},
@@ -44,6 +44,7 @@ function setup() {
     '../preparation/PreparationUI.android': { PreparationText: 'PreparationText' },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
+    '../shared/navigation/RoleFab.ios': { RoleFab: 'RoleFab' },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open() {} }) },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     './MaterialContext': { useMaterialContext: () => ({ session, witness }) },
@@ -63,10 +64,13 @@ function setup() {
     historyIos: load('material/MaterialHistory.ios.tsx', mocks).MaterialHistory };
 }
 
-test('Android Material shell reuses the existing OrdersList and preparation text', async () => {
+test('Android Material shell reuses OrdersList and retains both V2 scope notice lines', async () => {
   const h = setup(), tree = h.homeAndroid(), list = nodes(tree, n => n.type === 'OrdersList')[0];
   assert.ok(list); assert.equal(list.props.active, true); assert.equal(list.props.passthrough({}), true);
-  assert.equal(nodes(tree, n => n.type === 'PreparationText').length, 2); await list.props.onRefresh();
+  const text = nodes(tree, n => n.type === 'Text').map(node => node.props.children);
+  assert.ok(text.includes('Mahsulot guruhi biriktirilmagan'));
+  assert.ok(text.includes('Homashyo qabul qilish va zakazga ulash uchun admin avval material guruhini biriktirishi kerak.'));
+  await list.props.onRefresh();
   assert.deepEqual(h.calls, ['refresh']);
 });
 

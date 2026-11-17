@@ -72,7 +72,7 @@ const colors = Object.fromEntries(['onSurface', 'onSurfaceVariant', 'surface', '
   'onPrimaryContainer', 'secondaryContainer', 'onSecondaryContainer'].map(name => [name, name]));
 function nativeComponent(name, platform, palette = colors, systemPalette = palette) {
   return load(`components/${name}.${platform}.tsx`, {
-    'react/jsx-runtime': jsx, '@expo/ui/swift-ui': new Proxy({}, { get: (_target, key) => key }),
+    'react/jsx-runtime': jsx, 'expo-symbols': { SymbolView: 'SymbolView' }, '@expo/ui/swift-ui': new Proxy({}, { get: (_target, key) => key }),
     '@expo/ui/jetpack-compose': new Proxy({ useMaterialColors: options => { assert.deepEqual(options, {}); return systemPalette; } },
       { get: (target, key) => target[key] ?? key }),
     '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers,

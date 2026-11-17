@@ -30,6 +30,15 @@ const model = load('gscale/gscaleBatchModel.ts');
 const base = { controlOnly: false, transport: 'wifi', selection: null, server: { endpoint: { baseUrl: 'http://scale:39117' } },
   monitor: { printerKind: 'godex', printerLabel: 'ulangan' }, batchPrinter: 'zebra' };
 
+test('Material archive deadline uses the source Dart timeout string and keeps the same 15-second budget', async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});const previous=history;history=new Promise(()=>{});
+  try {
+    const pending=runtime.loadGScaleArchive({}, {...base,controlOnly:true,materialReceipt:true});
+    const checked=assert.rejects(pending,error=>String(error)==='TimeoutException after 0:00:15.000000: Future not completed');
+    t.mock.timers.tick(15_000);await checked;
+  } finally {history=previous;}
+});
+
 test('standalone archive loads the local driver and decodes quantities', async () => {
   const previous = global.fetch, urls = [];
   global.fetch = async url => { urls.push(url); return { status: 200, text: async () => JSON.stringify({ archive: [

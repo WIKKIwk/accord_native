@@ -4,6 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
+const canonical = require('./support/workerQueueTransport.cjs').loader()('shared/dartCanonicalApparatus');
 function compile(relative, mocks = {}) {
   const filename = path.resolve(__dirname, `../src/${relative}.ts`), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = module.paths;
@@ -36,10 +37,10 @@ function setup(plan, change = '') {
   const saved = compile('workerProductionMapSaved', { './workerControlsApi': controls });
   const dart = compile('shared/dartApparatus', { '../workerControlsApi': controls }), errors = compile('shared/mobileApiException');
   const model = compile('shared/supplyTasks/supplyTaskModels', { '../../apparatusApi': apparatus, '../../workerProductionMapSaved': saved,
-    '../dartApparatus': dart, '../mobileApiException': errors });
+    '../dartApparatus': dart, '../dartCanonicalApparatus': canonical, '../mobileApiException': errors });
   const api = compile('shared/supplyTasks/supplyTaskApi', { '../../auth': auth, '../../authorizedFetch': authorized,
     '../../sessionReadScope': scope, '../../workerControlsApi': controls, '../appRoutes': compile('shared/appRoutes'),
-    '../dartApparatus': dart, '../mobileApiException': errors, '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'),
+    '../dartApparatus': dart, '../dartCanonicalApparatus': canonical, '../mobileApiException': errors, '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'),
     './supplyTaskModels': model, './supplyTaskJson': compile('shared/supplyTasks/supplyTaskJson') });
   const original = global.fetch;
   global.fetch = async (url, init) => {
@@ -142,10 +143,19 @@ test('scope, capability, argument and unsupported apparatus ID failures send no 
     assert.throws(() => h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => true), /Hisob o‘zgardi/);
     h.session.capabilities = ['raw_material.assign'];
     for (const input of [{ kind: 'admin' }, { kind: 'material', limit: 11 }, { kind: 'material', apparatus: 'Bosma' },
-      { kind: 'material', apparatus: 'apparatus:default:\u037f' }]) {
+      { kind: 'material', apparatus: 'apparatus:default:UPPER' }]) {
       assert.throws(() => h.api.readSupplyTaskWindow(h.session, input, () => true), /Invalid supply task window/);
     }
     assert.equal(h.calls.length, 0);
+  } finally { h.restore(); }
+});
+
+test('Dart-valid Unicode apparatus identity survives the actual window HTTP boundary', async () => {
+  const value = fixture.windows.dart_unicode_apparatus.input, h = setup([response(value)]);
+  try {
+    const result = await h.api.readSupplyTaskWindow(h.session, { kind: 'material', apparatus: value.apparatus_id }, () => true);
+    assert.equal(result.apparatus_id, value.apparatus_id);
+    assert.equal(new URL(h.calls[0].url).searchParams.get('apparatus'), value.apparatus_id);
   } finally { h.restore(); }
 });
 
@@ -183,12 +193,22 @@ test('malformed non-200 body keeps the source fallback error instead of becoming
   } finally { h.restore(); }
 });
 
-test('7.0 raw revision remains an explicit unported lexical-validation blocker', async () => {
+test('7.0 raw revision is rejected exactly as the f119 Dart integer validator', async () => {
   const raw = JSON.stringify(wire).replace('"rev":7,', '"rev":7.0,');
   assert.match(raw, /"rev":7\.0,/); assert.equal(fixture.windows.floating_revision.expected.ok, false);
   const h = setup([{ status: 200, body: raw }]);
-  try { assert.equal((await h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => true)).revision, 7); }
+  try { await assert.rejects(h.api.readSupplyTaskWindow(h.session, { kind: 'material' }, () => true), error => error.code === 'supply_tasks_invalid'); }
   finally { h.restore(); }
+});
+
+test('merged task JSON decoding preserves both role contracts without rejecting unrelated nested fields', () => {
+  const { parseSupplyTaskJson: parse } = compile('shared/supplyTasks/supplyTaskJson');
+  assert.throws(() => parse('{"ok":true,"window":{"rev":7.0}}'), /integer JSON token/);
+  assert.ok(Number.isNaN(parse('{"rev":7.0}').rev));
+  const value = parse('{"ok":true,"rev":7.0,"rev":8,"metadata":{"rev":3.0},"products":[{"qty":1.5}]}');
+  assert.equal(value.rev, 8); assert.equal(value.metadata.rev, 3); assert.equal(value.products[0].qty, 1.5);
+  assert.equal(parse('{"ok":false,"rev":1.0,"error":"forbidden"}').rev, 1);
+  assert.throws(() => parse('{"ok":true,"upsert":[{"position":0e0}]}'), /integer JSON token/);
 });
 
 test('supply reader rejects async, truthy non-boolean and throwing guards before network', async () => {

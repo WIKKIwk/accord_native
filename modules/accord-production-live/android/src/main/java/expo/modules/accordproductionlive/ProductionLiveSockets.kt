@@ -95,7 +95,7 @@ internal class ProductionLiveSockets(
     }
 
     fun openSupplyTasks(id: String, origin: String, target: String) {
-        openRequest(id, supplyTasksSocketRequest(origin, target))
+        openRequest(id, supplyTasksSocketRequest(origin, target), warehouseClient)
     }
 
     private fun openRequest(id: String, request: Request, transport: OkHttpClient = client) {

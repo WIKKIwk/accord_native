@@ -27,7 +27,7 @@ import { WorkerOrderButton } from './WorkerOrderControls';
 
 type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames;
   operation?: string; allowReactivation?: boolean; onReactivationAttempted?: () => void; onWritePending?: (pending: boolean) => void;
-  allowReprint?: boolean; isCurrent?: () => boolean };
+  allowReprint?: boolean; isCurrent?: () => boolean; readPolicy?: 'witness' | 'legacy' };
 export type WorkerWipHistorySheetHandle = { open: (order: CompletedOrder, apparatusNames?: WipApparatusNames, apparatus?: Apparatus,
   onReactivationAttempted?: () => void, onWritePending?: (pending: boolean) => void) => void };
 
@@ -57,11 +57,14 @@ export function WorkerWipHistorySheet({ ref, session, onDismiss, presentationId 
   </WorkerOrderSheet>;
 }
 
-async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSignal, isCurrent?: () => boolean): Promise<WipBatch[]> {
+async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSignal, isCurrent?: () => boolean,
+  readPolicy: 'witness' | 'legacy' = 'witness'): Promise<WipBatch[]> {
   const guard = () => { if (isCurrent && isCurrent() !== true) throw new Error('session_scope_changed'); };
   guard();
   const query = new URLSearchParams({ order_id: order.id, status: 'all', limit: '500' });
-  const response = isCurrent ? await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal }, guard, 10_000, { readWitness: isCurrent })
+  const response = isCurrent ? readPolicy === 'legacy'
+    ? await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal }, guard)
+    : await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal }, guard, 10_000, { readWitness: isCurrent })
     : await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal });
   guard();
   if (!response.ok) throw new Error(`Opening WIP yuklanmadi (${response.status}).`);
@@ -81,7 +84,7 @@ async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSi
   });
 }
 
-export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {}, operation, allowReactivation, onReactivationAttempted, onWritePending, allowReprint, isCurrent }: Props) {
+export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {}, operation, allowReactivation, onReactivationAttempted, onWritePending, allowReprint, isCurrent, readPolicy = 'witness' }: Props) {
   const colors = useWorkerColors(), palette = useWorkerWipHistoryPalette(), { p, t } = useWorkerOrderText();
   const android = Platform.OS === 'android';
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -105,8 +108,11 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     } });
   useEffect(() => {
     const controller = new AbortController();
-    const opening = stageHistory ? loadOpeningWip(session, order, controller.signal, isCurrent) : Promise.resolve([]);
-    void Promise.all([loadWorkerWipBatches(session, order.id, order.apparatusId, controller.signal, isCurrent), opening]).then(([result, openingBatches]) => {
+    if (isCurrent && isCurrent() !== true) return () => controller.abort();
+    const opening = stageHistory ? loadOpeningWip(session, order, controller.signal, isCurrent, readPolicy) : Promise.resolve([]);
+    const produced = readPolicy === 'legacy' ? loadWorkerWipBatches(session, order.id, order.apparatusId, controller.signal, isCurrent, { readPolicy })
+      : loadWorkerWipBatches(session, order.id, order.apparatusId, controller.signal, isCurrent);
+    void Promise.all([produced, opening]).then(([result, openingBatches]) => {
       if (controller.signal.aborted || isCurrent && isCurrent() !== true) return;
       const merged = new Map(openingBatches.map(batch => [batch.batch_id, batch]));
       for (const batch of result) merged.set(batch.batch_id, batch);
@@ -118,7 +124,7 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
       setLoading(false);
     });
     return () => controller.abort();
-  }, [reload, stageHistory, session, order, isCurrent]);
+  }, [reload, stageHistory, session, order, isCurrent, readPolicy]);
 
   const totals = batches.reduce((total, batch) => { total[wipBatchKind(batch)]++; return total; }, { waiting: 0, inUse: 0, processed: 0 });
   const outputTotals = workerWipHistoryTotals(batches);

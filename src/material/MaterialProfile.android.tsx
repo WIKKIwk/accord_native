@@ -14,6 +14,6 @@ export function MaterialProfile() {
     <RoleHeader title="Profil" navigation={{ icon: 'back', label: 'Orqaga', onPress: () => {
       if (router.canGoBack()) router.back(); else router.navigate('/android-material' as Href);
     } }} />
-    <View style={{ flex: 1 }}><ProfileScreen session={session} onLogout={onLogout} isCurrent={current} settingsUnavailableMessage="Sozlamalar vaqtincha mavjud emas." /></View>
+    <View style={{ flex: 1 }}><ProfileScreen session={session} onLogout={onLogout} isCurrent={current} /></View>
   </View>;
 }

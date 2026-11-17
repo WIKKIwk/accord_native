@@ -37,15 +37,18 @@ export function openingWipRecordFromJson(value: unknown) {
 }
 
 /** @v2 adminOpeningWipRecords */
-export async function adminOpeningWipRecords(session: Session, input: { order_id?: string; status?: string; limit?: number } = {}, current?: () => boolean) {
-  const guard = () => { if (current && current() !== true) throw new Error('session_scope_changed'); };
-  guard();
+// Keep legacy refresh behavior explicit rather than inferring it from a callback's return value.
+export async function adminOpeningWipRecords(session: Session, input: { order_id?: string; status?: string; limit?: number } = {}, current?: () => boolean,
+  options?: { beforeSend: () => void }) {
+  const guard = () => { options?.beforeSend(); if (current && current() !== true) throw new Error('session_scope_changed'); };
+  if (current) guard();
   const limit = Math.min(500, Math.max(1, Math.trunc(input.limit ?? 100)));
   const query = new URLSearchParams({ limit: String(limit) });
   if (input.order_id?.trim()) query.set('order_id', input.order_id.trim());
   if (input.status?.trim()) query.set('status', input.status.trim());
   const response = current ? await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, {}, guard, 10_000, { readWitness: current })
-    : await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`);
+    : options ? await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, {}, options.beforeSend)
+      : await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`);
   guard();
   if (response.status !== 200) {
     let payload: unknown;

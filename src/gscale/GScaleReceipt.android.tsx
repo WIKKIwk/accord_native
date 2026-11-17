@@ -1,4 +1,4 @@
-import { Button, Column, Host, Icon, IconButton, OutlinedButton, OutlinedTextField, RNHostView, Row, Shape, Switch, Text, TextButton,
+import { Button, CircularProgressIndicator, Column, Host, Icon, IconButton, OutlinedButton, OutlinedTextField, RNHostView, Row, Shape, Switch, Text, TextButton,
   useMaterialColors, useNativeState } from '@expo/ui/jetpack-compose';
 import { background, cornerRadius, defaultMinSize, fillMaxWidth, onGloballyPositioned, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { router, type Href } from 'expo-router';
@@ -98,7 +98,7 @@ function ReceiptToggle({ row }: { row: Extract<GScaleRow, { kind: 'toggle' }> })
   return <Row verticalAlignment="center" modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 })]}>
       <Column modifiers={[weight(1)]}>
         <Text color={colors.onSurface} style={{ typography: 'titleMedium' }}>{t(babina ? 'Babina' : 'Miqdor (kg)')}</Text>
-        <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t(babina ? row.value ? 'Bor' : 'Yo‘q' : row.label)}</Text>
+        <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t(row.detail ?? (babina ? row.value ? 'Bor' : 'Yo‘q' : row.label))}</Text>
       </Column>
       <Switch value={row.value} enabled={!row.disabled} onCheckedChange={row.change}
         modifiers={[semantics({ contentDescription: t(babina ? 'Babina' : 'Miqdor (kg)') })]} />
@@ -136,7 +136,7 @@ function ReceiptRowGroups({ rows, stacked }: { rows: readonly GScaleRow[]; stack
     const row = group.rows[0], key = row.kind === 'field' ? row.key : row.kind === 'action' ? row.id ?? row.label : `${row.kind}:${index}`;
     if (row.kind === 'field') return <ReceiptField key={key} row={row} />;
     if (row.kind === 'toggle') return <ReceiptToggle key={key} row={row} />;
-    if (row.kind === 'text') return <ReceiptLabel key={key} text={row.text} />;
+    if (row.kind === 'text') return row.loading ? <CircularProgressIndicator key={key} /> : <ReceiptLabel key={key} text={row.text} />;
     if (['gscale-order', 'gscale-warehouse', 'gscale-item'].includes(row.id ?? '')) return <ReceiptPicker key={key} row={row} />;
     return <ReceiptAction key={key} row={row} />;
   })}</>;
@@ -146,7 +146,7 @@ function ReceiptControl({ control, connected }: { control: GScaleSection[]; conn
   const colors = useMaterialColors(), t = useGScaleText(), { width, fontScale } = useWindowDimensions();
   const stacked = width < 360 || fontScale > 1.2;
   const order = control.find(group => group.title === 'Order'), device = control[0]?.rows[0];
-  const status = control[0]?.rows.slice(1) ?? [];
+  const status = control[0]?.rows.slice(1).filter(row => row.kind !== 'action' || row.id !== 'gscale-device-change') ?? [];
   return <Column verticalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth()]}>
     {order ? <ReceiptRowGroups rows={order.rows} stacked={stacked} /> : null}
     {connected && device?.kind === 'action' ? <Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 12 }}
@@ -236,9 +236,10 @@ function ReceiptScroll({ pagerGesture, refreshing, onRefresh, children }: {
 
 type Props = { session: Session; title: string; section: 'control' | 'history'; onSelect(id: 'control' | 'history'): void;
   control: GScaleSection[]; history: GScaleSection[]; connected: boolean; attention: boolean; refreshing: boolean;
-  onRefresh(): void; onDevices(): void; onBack(): void };
+  onRefresh(): void; onDevices(): void; onBack(): void; embedded?: boolean; onMenu?(): void; onProfile?(): void };
 
-export function GScaleReceipt({ session, title, section, onSelect, control, history, connected, attention, refreshing, onRefresh, onDevices, onBack }: Props) {
+export function GScaleReceipt({ session, title, section, onSelect, control, history, connected, attention, refreshing, onRefresh, onDevices, onBack,
+  embedded = false, onMenu, onProfile }: Props) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = useGScaleText();
   const { height: windowHeight } = useWindowDimensions();
   const [frame, setFrame] = useState({ bottom: 0, fullBottom: 0, keyboardOverlap: 0 });
@@ -272,15 +273,16 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
   const resizeOffset = frame.bottom - frame.fullBottom;
   return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
     <View ref={root} collapsable={false} style={[styles.root, { paddingTop: insets.top }]} onLayout={measureFrame}>
-    <KeyboardAvoidingView behavior="height" style={[styles.scrollViewport, { marginBottom: Math.max(0, dockHeight + resizeOffset, frame.keyboardOverlap) }]}>
+    <KeyboardAvoidingView behavior="height" style={[styles.scrollViewport, { marginBottom: Math.max(0, embedded ? 0 : dockHeight + resizeOffset, frame.keyboardOverlap) }]}>
     <View style={styles.header}>
-      <RoleHeaderButton icon="back" label={t('Orqaga')} tintColor={colors.onSurfaceVariant} onPress={onBack} />
+      <RoleHeaderButton icon={onMenu ? 'menu' : 'back'} label={t(onMenu ? 'Material bo‘limlari' : 'Orqaga')}
+        tintColor={colors.onSurfaceVariant} onPress={onMenu ?? onBack} />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }}>{title}</Text></Host>
       <Host style={{ width: 48, height: 48 }}><IconButton onClick={onDevices} modifiers={[
         testID('gscale-device'), semantics({ contentDescription: t('Printer yoki tarozi tanlash') }),
       ]}><Icon source={icons.devices} size={26} tint={attention || !connected ? colors.error : colors.primary} /></IconButton></Host>
       <RoleHeaderButton icon="profile" label={t('Profil')} tintColor={colors.onSurfaceVariant}
-        onPress={() => router.navigate('/android-preparation/profile' as Href)} />
+        onPress={onProfile ?? (() => router.navigate('/android-preparation/profile' as Href))} />
     </View>
     <OrdersWorkspace session={session} tabs={[{ id: 'control', name: t('Print') }, { id: 'history', name: t('Print tarixi') }]}
       selected={section} onSelect={id => { if (id === 'control' || id === 'history') onSelect(id); }}>
@@ -291,10 +293,10 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
       </ReceiptScroll>}
     </OrdersWorkspace>
     </KeyboardAvoidingView>
-    <View style={[styles.dockOverlay, { bottom: resizeOffset }]}
+    {!embedded && <View style={[styles.dockOverlay, { bottom: resizeOffset }]}
       onLayout={event => setDockHeight(event.nativeEvent.layout.height)}>
       <PreparationDock avoidKeyboard={false} />
-    </View>
+    </View>}
     </View>
   </GestureHandlerRootView>;
 }
