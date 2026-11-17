@@ -49,7 +49,7 @@ test('materials use the warehouse list and retain search, refresh and row action
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const tree = mod.exports.PreparationMaterialsScreen();
   const list = nodes(tree, node => node.type === 'OrdersList')[0];
-  assert.ok(list); assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 1);
+  assert.ok(list); assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 0);
   await list.props.onRefresh(); assert.deepEqual(calls.at(-1), ['load', true]);
   const header = nodes(tree, node => node.type === 'OrdersHeader')[0];
   assert.equal(header.props.search, '');

@@ -11,9 +11,8 @@ import { useNativeSheet } from '../nativeSheet';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { usePreparationContext } from './PreparationContext.android';
-import { usePreparationFab } from './PreparationFab.android';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationButton, PreparationDock, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { preparationWarehouseChoices } from './preparationLogic';
 import { preparationMaterialDeleteMessage, preparationMaterialsEmptyMessage, preparationMaterialsErrorMessage } from './usePreparationMaterials';
 import { usePreparationMaterialsView } from './usePreparationAndroidView.android';
@@ -111,8 +110,6 @@ export function PreparationMaterialsScreen() {
   const { session, home } = usePreparationContext(), state = usePreparationMaterialsView(session), dialogs = usePreparationDialogs(), t = usePreparationText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
-  const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
-    openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   const assignmentSheet = useNativeSheet(), notice = usePreparationNotice();
   const afterAssignment = useRef<(() => void) | null>(null);
   const blocked = state.actionsBlocked;
@@ -152,7 +149,6 @@ export function PreparationMaterialsScreen() {
       subtitle={item.warehouses.length ? item.warehouses.join(', ') : t('Ombor biriktirilmagan')}
       blocked={blocked} first={index === 0} last={index === state.filtered.length - 1} choose={action => { if (!blocked) void perform(item, action); }} />)}
     </OrdersList>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     <PreparationNotice message={notice.message} />
   </View>;
 }

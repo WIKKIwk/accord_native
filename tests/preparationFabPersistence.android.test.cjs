@@ -21,7 +21,7 @@ function load(mocks) {
   return mod.exports;
 }
 
-test('home, orders, production and warehouse keep the same dock outside the screen stack', () => {
+test('home, orders, production, warehouse and materials keep the same dock outside the screen stack', () => {
   let pathname = '/android-preparation', cursor = 0;
   const state = [];
   const react = {
@@ -66,6 +66,12 @@ test('home, orders, production and warehouse keep the same dock outside the scre
   assert.equal(nodes(warehouse[2], node => node.type === 'RoleFab')[0].props.bottomOffset, 120);
 
   pathname = '/android-preparation/materials';
+  const materials = children(render());
+  assert.equal(materials[1].type, home[1].type);
+  assert.equal(materials[1].key, home[1].key);
+  assert.equal(materials[1].props.children.type, home[1].props.children.type);
+
+  pathname = '/android-preparation/history';
   assert.equal(children(render())[1], null);
 });
 
