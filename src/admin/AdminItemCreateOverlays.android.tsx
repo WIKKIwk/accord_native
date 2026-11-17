@@ -19,16 +19,16 @@ export function AdminItemCreateOverlays({ model, portal, observer }: { model: Ad
   const { create, move, controller } = presented;
   return <>
     {create ? portal.render({ identity: create.identity, kind: 'create', visible: presented.createVisible, isCurrent: () => model.current() && controller.getSnapshot().create?.identity === create.identity,
-      isClosing: () => model.current() && controller.getSnapshot().create?.identity === create.identity && !controller.getSnapshot().createVisible && model.owner.controller.getSnapshot().closingDialog?.id === create.dialog.id && model.owner.controller.getSnapshot().closingDialog?.generation === create.dialog.generation, canInteract: model.nativeCurrent,
+      isClosing: () => model.current() && controller.getSnapshot().create?.identity === create.identity && !controller.getSnapshot().createVisible && model.owner.controller.getSnapshot().closingDialog?.id === create.dialog.id && model.owner.controller.getSnapshot().closingDialog?.generation === create.dialog.generation, canInteract: () => model.dialogNativeCurrent(create.dialog),
       scrimOpacity: .32, horizontalInset: 20, maxWidth: 440, onDismissRequest: () => model.closeDialog(true), onDismissed: () => controller.completeCreate(create),
       children: <><AdminItemCreateDialogCard model={model} dialog={create.dialog} />{model.state.picker ? <BaseHost style={styles.overlay}><AdminItemCreatePicker key={model.state.picker.id} model={model} observer={observer} /></BaseHost> : null}</> }) : null}
     {move ? portal.render({ identity: move.identity, kind: 'move', visible: presented.moveVisible, isCurrent: () => model.current() && controller.getSnapshot().move?.identity === move.identity,
-      isClosing: () => model.current() && controller.getSnapshot().move?.identity === move.identity && !controller.getSnapshot().moveVisible, canInteract: model.nativeCurrent,
-      scrimOpacity: .54, horizontalInset: 40, maxWidth: 560, onDismissRequest: () => controller.chooseMove(move, false), onDismissed: () => { void controller.completeMove(move); },
+      isClosing: () => model.current() && controller.getSnapshot().move?.identity === move.identity && !controller.getSnapshot().moveVisible, canInteract: model.moveNativeCurrent,
+      scrimOpacity: .54, horizontalInset: 40, maxWidth: 560, onDismissRequest: () => presented.chooseMove(move, false), onDismissed: () => { void controller.completeMove(move); },
       children: <View style={[styles.confirmation, { backgroundColor: colors.surfaceContainerHigh }]}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth(), padding(24, 24, 24, 24)]}>
         <Text style={{ typography: 'headlineSmall' }}>{model.a('bulk_move.move_title')}</Text><Spacer modifiers={[height(16)]} /><Text style={{ typography: 'bodyMedium' }}>{model.a('bulk_move.confirm', { count: move.prompt.codes.length, group: move.prompt.group })}</Text><Spacer modifiers={[height(24)]} />
-        <Button onClick={() => controller.chooseMove(move, true)} shape={itemCreateRounded(20)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID('admin-items-move-confirm')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('bulk_move.yes')}</Text></Button><Spacer modifiers={[height(8)]} />
-        <Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}><TextButton onClick={() => controller.chooseMove(move, false)} modifiers={[testID('admin-items-move-cancel')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('bulk_move.no')}</Text></TextButton></Column>
+        <Button onClick={() => presented.chooseMove(move, true)} shape={itemCreateRounded(20)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 }), testID('admin-items-move-confirm')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('bulk_move.yes')}</Text></Button><Spacer modifiers={[height(8)]} />
+        <Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}><TextButton onClick={() => presented.chooseMove(move, false)} modifiers={[testID('admin-items-move-cancel')]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{model.a('bulk_move.no')}</Text></TextButton></Column>
       </Column></BaseHost></View> }) : null}
   </>;
 }

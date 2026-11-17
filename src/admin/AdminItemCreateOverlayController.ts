@@ -12,7 +12,7 @@ export class AdminItemCreateOverlayController {
   private state: Snapshot = { create: null, move: null, createVisible: false, moveVisible: false }; private readonly listeners = new Set<() => void>();
   private active = false; private retired = false; private publishing = false; private handling = false; private checking = false; private unsubscribe: (() => void) | null = null;
   private accepted: { identity: object; commit: () => Promise<void> } | null = null; private settling: object | null = null;
-  constructor(private readonly owner: Owner, private readonly authority: () => boolean, private readonly nativeCurrent: () => boolean) {}
+  constructor(private readonly owner: Owner, private readonly authority: () => boolean, private readonly nativeCurrent?: () => boolean) {}
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private current() { if (!this.active || this.retired) return false; if (this.checking) { this.retired = true; return false; } this.checking = true;
@@ -35,10 +35,10 @@ export class AdminItemCreateOverlayController {
     const closing = this.owner.controller.getSnapshot().closingDialog; if (closing?.id !== ticket.dialog.id || closing.generation !== ticket.dialog.generation) return;
     this.publish({ create: null, createVisible: false }); if (this.current()) this.owner.controller.completeDialog(ticket.dialog.id);
   }
-  chooseMove(ticket: AdminItemCreatePresentedMove, confirmed: boolean) {
+  chooseMove(ticket: AdminItemCreatePresentedMove, confirmed: boolean, commandGuard = this.nativeCurrent) {
     if (this.publishing || this.handling || this.settling === ticket.identity || this.state.move !== ticket || !this.state.moveVisible) return;
     this.handling = true;
-    try { if (!this.current() || !isSynchronouslyTrue(this.nativeCurrent) || !this.current()) return; this.settling = ticket.identity;
+    try { if (!this.current() || typeof commandGuard !== 'function' || !isSynchronouslyTrue(commandGuard) || !this.current()) return; this.settling = ticket.identity;
       const commit = this.owner.controller.list.chooseMove(ticket.prompt, confirmed); this.accepted = typeof commit === 'function' ? { identity: ticket.identity, commit } : null; }
     finally { this.handling = false; }
   }

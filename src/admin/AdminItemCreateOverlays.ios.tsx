@@ -26,17 +26,17 @@ export function AdminItemCreateOverlays({ model }: { model: AdminItemCreateScree
   const { create, move, controller } = presented;
   return <>
     {create ? <Dialog identity={create.identity} kind="create" visible={presented.createVisible} isCurrent={() => model.current() && controller.getSnapshot().create?.identity === create.identity}
-      isClosing={() => model.current() && controller.getSnapshot().create?.identity === create.identity && !controller.getSnapshot().createVisible} canInteract={model.nativeCurrent} scrimOpacity={.32} horizontalInset={20} maxWidth={440}
+      isClosing={() => model.current() && controller.getSnapshot().create?.identity === create.identity && !controller.getSnapshot().createVisible} canInteract={() => model.dialogNativeCurrent(create.dialog)} scrimOpacity={.32} horizontalInset={20} maxWidth={440}
       onDismissRequest={() => model.closeDialog(true)} onDismissed={() => controller.completeCreate(create)}>
       <AdminItemCreateDialogCard model={model} dialog={create.dialog} />{model.state.picker ? <BaseHost style={styles.overlay}><AdminItemCreatePicker key={model.state.picker.id} model={model} /></BaseHost> : null}
     </Dialog> : null}
     {move ? <Dialog identity={move.identity} kind="move" visible={presented.moveVisible} isCurrent={() => model.current() && controller.getSnapshot().move?.identity === move.identity}
-      isClosing={() => model.current() && controller.getSnapshot().move?.identity === move.identity && !controller.getSnapshot().moveVisible} canInteract={model.nativeCurrent} scrimOpacity={.54} horizontalInset={40} maxWidth={560}
-      onDismissRequest={() => controller.chooseMove(move, false)} onDismissed={() => { void controller.completeMove(move); }}>
+      isClosing={() => model.current() && controller.getSnapshot().move?.identity === move.identity && !controller.getSnapshot().moveVisible} canInteract={model.moveNativeCurrent} scrimOpacity={.54} horizontalInset={40} maxWidth={560}
+      onDismissRequest={() => presented.chooseMove(move, false)} onDismissed={() => { void controller.completeMove(move); }}>
       <View style={[styles.confirmation, { backgroundColor: colors.surfaceContainerHigh }]}><BaseHost matchContents={{ vertical: true }} style={styles.width}><VStack alignment="leading" spacing={0} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
         <Text modifiers={[font({ textStyle: 'title2' })]}>{model.a('bulk_move.move_title')}</Text><Spacer modifiers={[frame({ height: 16 })]} /><Text>{model.a('bulk_move.confirm', { count: move.prompt.codes.length, group: move.prompt.group })}</Text><Spacer modifiers={[frame({ height: 24 })]} />
-        <Button label={model.a('bulk_move.yes')} onPress={() => controller.chooseMove(move, true)} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ maxWidth: Infinity, minHeight: 56 }), accessibilityIdentifier('admin-items-move-confirm')]} /><Spacer modifiers={[frame({ height: 8 })]} />
-        <VStack modifiers={[frame({ maxWidth: Infinity })]}><Button label={model.a('bulk_move.no')} onPress={() => controller.chooseMove(move, false)} modifiers={[buttonStyle('plain'), accessibilityIdentifier('admin-items-move-cancel')]} /></VStack>
+        <Button label={model.a('bulk_move.yes')} onPress={() => presented.chooseMove(move, true)} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ maxWidth: Infinity, minHeight: 56 }), accessibilityIdentifier('admin-items-move-confirm')]} /><Spacer modifiers={[frame({ height: 8 })]} />
+        <VStack modifiers={[frame({ maxWidth: Infinity })]}><Button label={model.a('bulk_move.no')} onPress={() => presented.chooseMove(move, false)} modifiers={[buttonStyle('plain'), accessibilityIdentifier('admin-items-move-cancel')]} /></VStack>
       </VStack></BaseHost></View>
     </Dialog> : null}
   </>;

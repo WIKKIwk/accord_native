@@ -7,7 +7,7 @@ const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: 
 async function fixture(platform, options = {}) {
   const one = s.owner(options); one.controller.start(); await s.flush(); const generation = one.controller.getSnapshot().generation, r = s.runtime(); let focused = true, available = true;
   const owner = { controller: one.controller }, current = () => one.controller.isCurrent(generation), nativeCurrent = () => focused && current();
-  const model = { owner, current, nativeCurrent, state: one.controller.getSnapshot(), a: (key, values) => s.l10n.adminText(key, 'uz', values), closeDialog: outside => { const dialog = one.controller.form.getSnapshot().dialog; if (dialog && nativeCurrent()) one.controller.closeDialog(dialog, outside); } };
+  const model = { owner, current, nativeCurrent, moveNativeCurrent: nativeCurrent, dialogNativeCurrent: dialog => nativeCurrent() && one.controller.form.dialogCurrent(dialog), state: one.controller.getSnapshot(), a: (key, values) => s.l10n.adminText(key, 'uz', values), closeDialog: outside => { const dialog = one.controller.form.getSnapshot().dialog; if (dialog && nativeCurrent()) one.controller.closeDialog(dialog, outside); } };
   const domain = s.load('admin/AdminItemCreateOverlayController', { '../shared/camera/synchronousGuard': s.strict }), hook = s.load('admin/useAdminItemCreateOverlays', { react: r.react, './AdminItemCreateOverlayController': domain });
   const native = new Proxy({}, { get: (_target, name) => Object.assign(props => ({ type: String(name), props }), { Label: 'Label' }) });
   const observer = {}, portal = { isAvailable: () => available, render: props => ({ type: 'ActualRootPortal', props }) };

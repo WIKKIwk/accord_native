@@ -39,11 +39,104 @@ function hook(overrides = {}) {
     '../auth': { subscribeSessionWitness: callback => { witnessListeners.add(callback); return () => witnessListeners.delete(callback); } },
     '../shared/localization': s.l10n, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, '../shared/profileSessionGuard': s.profile,
     './AdminOwnedBackContext': { useAdminOwnedBack() {} }, './adminItemCreateSession': f.factory, './dartJsonString': s.strings });
-  const result = { ...f, r, frames, keyboard, render: () => r.render(() => module.useAdminItemCreate(f.props)), focus: value => { focused = value; }, notify: () => witnessListeners.forEach(callback => callback()),
+  const overlayDomain = s.load('admin/AdminItemCreateOverlayController', { '../shared/camera/synchronousGuard': s.strict });
+  const overlayModule = view.compile(path.resolve(__dirname, '../src/admin/useAdminItemCreateOverlays.ts'), { react: r.react, './AdminItemCreateOverlayController': overlayDomain });
+  const result = { ...f, r, frames, keyboard, render: () => r.render(() => { const model = module.useAdminItemCreate(f.props); return overrides.overlays ? { ...model, overlay: overlayModule.useAdminItemCreateOverlays(model) } : model; }), focus: value => { focused = value; }, notify: () => witnessListeners.forEach(callback => callback()),
     frame: () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback()); },
     cleanup: () => { r.unmount(); global.requestAnimationFrame = oldRequest; global.cancelAnimationFrame = oldCancel; } };
   return result;
 }
+test('genuine OWN native dialog remains interactive through expected page blur without enabling covered page controls', async () => {
+  let ownTop = true; const seen = [], f = hook({ props: { canInteractOwnedSurface: surface => { seen.push(surface); return ownTop; } } });
+  try {
+    f.render(); await s.flush(); let model = f.render(); model.openDialog(); model = f.render(); const originalDialog = model.state.form.dialog;
+    f.focus(false); f.props.canInteract = () => false; model = f.render(); assert.equal(model.nativeCurrent(), false); assert.equal(model.dialogNativeCurrent(originalDialog), true);
+    model.changeName('actual own dialog'); model.search('covered page search'); assert.equal(model.owner.controller.form.getSnapshot().draft.name, 'actual own dialog'); assert.equal(model.owner.controller.list.getSnapshot().query, '');
+    assert.ok(seen.some(surface => surface.kind === 'dialog' && surface.dialog === originalDialog));
+    ownTop = false; model.changeName('covered dialog'); assert.equal(model.owner.controller.form.getSnapshot().draft.name, 'actual own dialog'); ownTop = true; model.changeName('returned own dialog'); assert.equal(model.owner.controller.form.getSnapshot().draft.name, 'returned own dialog');
+  } finally { f.cleanup(); }
+});
+test('genuine OWN picker authority uses its exact original object while parent page is blurred and native ACK remains separate', async () => {
+  let allowed = true; const seen = [], f = hook({ props: { canInteractOwnedSurface: surface => { seen.push(surface); return allowed; } } });
+  try {
+    f.render(); await s.flush(); let model = f.render(); model.openDialog(); model = f.render(); model.openPicker('group'); await s.flush(); f.focus(false); model = f.render(); const picker = model.state.picker;
+    assert.equal(model.nativeCurrent(), false); assert.equal(model.pickerNativeCurrent(picker), true); assert.equal(model.dialogNativeCurrent(model.state.form.dialog), false);
+    model.pickerSearch('own query'); assert.equal(picker.controller.getSnapshot().searchDraft, 'own query'); allowed = false; model.pickerSearch('covered'); assert.equal(picker.controller.getSnapshot().searchDraft, 'own query');
+    allowed = true; model.dismissPicker(); assert.equal(picker.controller.getSnapshot().closing, true); assert.equal(model.owner.controller.getSnapshot().picker, picker); model.completePicker(); assert.equal(model.owner.controller.getSnapshot().picker, null);
+    assert.ok(seen.some(surface => surface.kind === 'picker' && surface.picker === picker));
+  } finally { f.cleanup(); }
+});
+test('old dialog version cannot adopt fresh native authority even with the same original native window id', async () => {
+  const f = hook({ props: { canInteractOwnedSurface: () => true } });
+  try { f.render(); await s.flush(); let old = f.render(); old.openDialog(); old = f.render(); old.owner.controller.form.refreshDialog(old.state.form.dialog.id); const fresh = f.render(); assert.equal(old.state.form.dialog.id, fresh.state.form.dialog.id); assert.notEqual(old.state.form.dialog, fresh.state.form.dialog); old.changeName('old snapshot'); assert.equal(fresh.owner.controller.form.getSnapshot().draft.name, ''); fresh.changeName('current snapshot'); assert.equal(fresh.owner.controller.form.getSnapshot().draft.name, 'current snapshot'); }
+  finally { f.cleanup(); }
+});
+test('same-page OWN resolver replacement does not retarget retained native controls to a new host callback', async () => {
+  let oldReads = 0, newReads = 0; const f = hook({ props: { canInteractOwnedSurface: () => { oldReads++; return true; } } });
+  try { f.render(); await s.flush(); let old = f.render(); old.openDialog(); old = f.render(); f.props.canInteractOwnedSurface = () => { newReads++; return true; }; const fresh = f.render(); old.changeName('retargeted'); assert.equal(oldReads, 0); assert.equal(newReads, 0); fresh.changeName('new current host'); assert.equal(fresh.owner.controller.form.getSnapshot().draft.name, 'new current host'); assert.equal(newReads, 1); }
+  finally { f.cleanup(); }
+});
+test('legacy and OWN mode replacement retires old native dialog callbacks in both directions', async () => {
+  const f = hook();
+  try {
+    f.render(); await s.flush(); let legacy = f.render(); legacy.openDialog(); legacy = f.render();
+    f.props.canInteractOwnedSurface = () => false; const held = f.render(); legacy.changeName('old legacy bypass'); held.changeName('own not top'); assert.equal(held.owner.controller.form.getSnapshot().draft.name, '');
+    f.props.canInteractOwnedSurface = () => true; const owned = f.render(); owned.changeName('actual own'); assert.equal(owned.owner.controller.form.getSnapshot().draft.name, 'actual own');
+    delete f.props.canInteractOwnedSurface; const freshLegacy = f.render(); owned.changeName('retired own'); assert.equal(freshLegacy.owner.controller.form.getSnapshot().draft.name, 'actual own'); freshLegacy.changeName('current legacy'); assert.equal(freshLegacy.owner.controller.form.getSnapshot().draft.name, 'current legacy');
+  } finally { f.cleanup(); }
+});
+test('legacy native guard replacing OWN mode during dispatch cannot authorize an old dialog edit', async () => {
+  let replace = false; const f = hook({ props: { canInteract: () => { if (replace) { replace = false; f.props.canInteractOwnedSurface = () => false; f.render(); } return true; } } });
+  try { f.render(); await s.flush(); let model = f.render(); model.openDialog(); model = f.render(); replace = true; model.changeName('mode changed during guard'); assert.equal(model.owner.controller.form.getSnapshot().draft.name, ''); }
+  finally { f.cleanup(); }
+});
+test('OWN surface guard rejects async/throwing/reentrant callbacks without leaking rejected promises or sending a mutation', async () => {
+  let model, mode = 'async'; const f = hook({ props: { canInteractOwnedSurface: () => { if (mode === 'async') return Promise.reject(Error('not synchronous')); if (mode === 'throw') throw Error('not ready'); if (mode === 'reenter') model.changeName('nested'); return true; } } });
+  try { f.render(); await s.flush(); model = f.render(); model.openDialog(); model = f.render(); for (mode of ['async', 'throw', 'reenter']) { model.changeName(mode); assert.equal(model.owner.controller.form.getSnapshot().draft.name, ''); } await s.flush(); mode = 'valid'; model.changeName('genuine current'); assert.equal(model.owner.controller.form.getSnapshot().draft.name, 'genuine current'); assert.equal(f.calls.some(call => call[0] === 'create'), false); }
+  finally { f.cleanup(); }
+});
+test('OWN resolver reentrantly removing its actual dialog or unmounting its page cannot authorize a queued edit', async () => {
+  for (const mode of ['dialog', 'unmount']) {
+    let model; const f = hook({ props: { canInteractOwnedSurface: () => { if (mode === 'unmount') f.r.unmount(); else model.owner.controller.closeDialog(model.state.form.dialog, true); return true; } } });
+    try { f.render(); await s.flush(); model = f.render(); model.openDialog(); model = f.render(); model.changeName('stale'); assert.equal(model.owner.controller.form.getSnapshot().draft.name, ''); assert.equal(f.calls.some(call => call[0] === 'create'), false); }
+    finally { f.cleanup(); }
+  }
+});
+test('original account retirement precedes OWN surface dispatch and cannot be revived by a positive native top receipt', async () => {
+  let checks = 0; const f = hook({ props: { canInteractOwnedSurface: () => { checks++; return true; } } });
+  try { f.render(); await s.flush(); let model = f.render(); model.openDialog(); model = f.render(); f.authority.witness = false; f.notify(); model.changeName('private'); assert.equal(checks, 0); assert.equal(model.owner.controller.form.getSnapshot().valid, false); f.authority.witness = true; model.changeName('revived'); assert.equal(checks, 0); }
+  finally { f.cleanup(); }
+});
+test('accepted OWN native dialog Save can run through page blur, but created return still waits for genuine dialog completion', async () => {
+  const returned = [], f = hook({ props: { returnOnCreate: true, onReturnCreated: item => returned.push(item), canInteractOwnedSurface: () => true } });
+  try { f.render(); await s.flush(); let model = f.render(); model.openDialog(); f.focus(false); model = f.render(); model.changeCode('NEW'); model.changeName('Actual own dialog'); model.save(); await s.flush();
+    const closing = model.owner.controller.getSnapshot().closingDialog; assert.ok(closing); assert.equal(f.calls.filter(call => call[0] === 'create').length, 1); assert.deepEqual(returned, []); model.completeDialog(closing.id); assert.equal(returned.length, 1); assert.equal(returned[0].code, 'created'); }
+  finally { f.cleanup(); }
+});
+test('OWN move confirmation checks the actual prompt while covered page input stays blocked; acceptance still waits native ACK', async () => {
+  let top = false; const seen = [], f = hook({ props: { canInteractOwnedSurface: surface => { seen.push(surface); return surface.kind === 'move' && top; } } });
+  try { f.render(); await s.flush(); let model = f.render(); model.owner.controller.list.toggleItem(s.item('A')); model.owner.controller.list.changeGroup('G'); await s.flush(); model.owner.controller.list.requestMove(); f.focus(false); model = f.render(); assert.ok(model.state.list.prompt); assert.equal(model.nativeCurrent(), false);
+    const Module = s.load('admin/AdminItemCreateOverlayController', { '../shared/camera/synchronousGuard': s.strict }); const overlays = new Module.AdminItemCreateOverlayController(model.owner, model.current, model.moveNativeCurrent); overlays.start(); const original = overlays.getSnapshot().move;
+    overlays.chooseMove(original, false); assert.equal(overlays.getSnapshot().moveVisible, true); top = true; assert.equal(model.moveNativeCurrent(), true); overlays.chooseMove(original, false); assert.equal(overlays.getSnapshot().moveVisible, false); assert.equal(overlays.getSnapshot().move, original); assert.ok(seen.some(surface => surface.kind === 'move' && surface.prompt === original.prompt)); await overlays.completeMove(original); assert.equal(overlays.getSnapshot().move, null); assert.equal(f.calls.some(call => call[0] === 'move'), false); overlays.dispose(); }
+  finally { f.cleanup(); }
+});
+test('accepted original move survives OWN resolver replacement and commits only after its original native completion', async () => {
+  const f = hook({ overlays: true, props: { canInteractOwnedSurface: () => true } });
+  try {
+    f.render(); await s.flush(); let model = f.render(); model.owner.controller.list.toggleItem(s.item('A')); model.owner.controller.list.changeGroup('G'); await s.flush(); model.owner.controller.list.requestMove(); model = f.render();
+    const original = model.overlay.controller, ticket = model.overlay.move; model.overlay.chooseMove(ticket, true); assert.equal(model.owner.controller.list.getSnapshot().moving, true); assert.equal(f.calls.some(call => call[0] === 'move'), false);
+    f.props.canInteractOwnedSurface = () => true; const fresh = f.render(); assert.equal(fresh.overlay.controller, original); assert.equal(fresh.overlay.move, ticket); assert.equal(fresh.overlay.moveVisible, false);
+    await original.completeMove(ticket); await s.flush(); assert.equal(f.calls.filter(call => call[0] === 'move').length, 1); assert.equal(model.owner.controller.list.getSnapshot().moving, false); await original.completeMove(ticket); assert.equal(f.calls.filter(call => call[0] === 'move').length, 1);
+  } finally { f.cleanup(); }
+});
+test('stable overlay owner does not retarget retained old move commands to a replacement OWN resolver', async () => {
+  const f = hook({ overlays: true, props: { canInteractOwnedSurface: () => true } });
+  try {
+    f.render(); await s.flush(); let old = f.render(); old.owner.controller.list.toggleItem(s.item('A')); old.owner.controller.list.changeGroup('G'); await s.flush(); old.owner.controller.list.requestMove(); old = f.render(); const ticket = old.overlay.move;
+    f.props.canInteractOwnedSurface = () => true; const fresh = f.render(); old.overlay.chooseMove(ticket, true); assert.equal(fresh.overlay.controller.getSnapshot().moveVisible, true); assert.equal(fresh.owner.controller.list.getSnapshot().prompt, ticket.prompt); assert.equal(f.calls.some(call => call[0] === 'move'), false);
+    fresh.overlay.chooseMove(ticket, false); assert.equal(fresh.overlay.controller.getSnapshot().moveVisible, false); await fresh.overlay.controller.completeMove(ticket); assert.equal(f.calls.some(call => call[0] === 'move'), false);
+  } finally { f.cleanup(); }
+});
 test('actual hook waits postframe to open source initial dialog and retires saved native callbacks across StrictMode replay', async () => {
   const f = hook({ props: { openCreateDialog: true } }); try {
     const initial = f.render(); assert.equal(initial.state.form.dialog, null); assert.equal(initial.current(), false); await s.flush(); f.frame(); let model = f.render(); assert.ok(model.state.form.dialog);

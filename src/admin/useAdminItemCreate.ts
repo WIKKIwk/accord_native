@@ -5,7 +5,7 @@ import { subscribeSessionWitness } from '../auth';
 import { adminText, localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { createProfileSessionGuard } from '../shared/profileSessionGuard';
-import type { AdminItemCreateScreenProps } from './AdminItemCreateScreenTypes';
+import type { AdminItemCreateOwnedSurface, AdminItemCreateScreenProps } from './AdminItemCreateScreenTypes';
 import { useAdminOwnedBack } from './AdminOwnedBackContext';
 import { createAdminItemCreateSession } from './adminItemCreateSession';
 import type { AdminItemCreateNotice } from './adminItemCreateModel';
@@ -18,7 +18,14 @@ export function useAdminItemCreate(props: AdminItemCreateScreenProps) {
   const { controller } = owner, state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot), locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale);
   const focused = useIsFocused(), focus = useRef(focused), mounted = useRef(false), [searchFocused, setSearchFocused] = useState(false);
   const interaction = useMemo(() => props.canInteract === undefined ? null : createProfileSessionGuard(props.canInteract), [props.canInteract]), committedInteraction = useRef(interaction);
+  const ownedInteraction = useMemo(() => {
+    const resolve = props.canInteractOwnedSurface; if (resolve === undefined) return null;
+    let surface: AdminItemCreateOwnedSurface | null = null;
+    const guard = createProfileSessionGuard(() => typeof resolve === 'function' && surface !== null && resolve(surface));
+    return (candidate: AdminItemCreateOwnedSurface) => { const previous = surface; surface = candidate; try { return guard(); } finally { surface = previous; } };
+  }, [props.canInteractOwnedSurface]), committedOwnedInteraction = useRef(ownedInteraction);
   useLayoutEffect(() => { committedInteraction.current = interaction; return () => { if (committedInteraction.current === interaction) committedInteraction.current = null; }; }, [interaction]);
+  useLayoutEffect(() => { committedOwnedInteraction.current = ownedInteraction; return () => { if (committedOwnedInteraction.current === ownedInteraction) committedOwnedInteraction.current = null; }; }, [ownedInteraction]);
   useLayoutEffect(() => { focus.current = focused; return () => { focus.current = false; }; }, [focused]);
   useLayoutEffect(() => { mounted.current = true; if (owner.ready) controller.start(); return () => { mounted.current = false; controller.dispose(); }; }, [controller, owner.ready]);
   useEffect(() => { const check = () => { if (!owner.current()) controller.invalidate(); }; const unsubscribe = subscribeSessionWitness(check); check(); return unsubscribe; }, [owner, controller]);
@@ -35,8 +42,22 @@ export function useAdminItemCreate(props: AdminItemCreateScreenProps) {
   }, [current, interaction]);
   const interactive = () => nativeCurrent() && !controller.getSnapshot().picker && !controller.getSnapshot().closingDialog && !controller.form.getSnapshot().dialog;
   const dialog = state.form.dialog, picker = state.picker, prompt = state.list.prompt;
-  const dialogCurrent = () => nativeCurrent() && dialog !== null && controller.form.dialogCurrent(dialog) && !controller.getSnapshot().picker;
-  const pickerCurrent = () => nativeCurrent() && picker !== null && controller.getSnapshot().picker === picker && picker.controller.isCurrent();
+  const ownedSurfaceCurrent = useCallback((surface: AdminItemCreateOwnedSurface) => {
+    if (committedOwnedInteraction.current !== ownedInteraction) return false;
+    if (ownedInteraction === null) return nativeCurrent() && committedOwnedInteraction.current === ownedInteraction;
+    if (!current() || committedOwnedInteraction.current !== ownedInteraction || !ownedInteraction(surface)) return false;
+    return current() && committedOwnedInteraction.current === ownedInteraction;
+  }, [current, nativeCurrent, ownedInteraction]);
+  const dialogNativeCurrent = useCallback((candidate: NonNullable<typeof dialog>) => !!candidate && controller.form.dialogCurrent(candidate) && !controller.getSnapshot().picker &&
+    ownedSurfaceCurrent({ kind: 'dialog', dialog: candidate }) && controller.form.dialogCurrent(candidate) && !controller.getSnapshot().picker, [controller, ownedSurfaceCurrent]);
+  const pickerNativeCurrent = useCallback((candidate: NonNullable<typeof picker>) => !!candidate && controller.getSnapshot().picker === candidate && candidate.controller.isCurrent() &&
+    ownedSurfaceCurrent({ kind: 'picker', picker: candidate }) && candidate.controller.isCurrent() && controller.getSnapshot().picker === candidate, [controller, ownedSurfaceCurrent]);
+  const moveNativeCurrent = useCallback(() => {
+    const candidate = controller.list.getSnapshot().prompt;
+    return candidate !== null && ownedSurfaceCurrent({ kind: 'move', prompt: candidate }) && controller.list.getSnapshot().prompt === candidate;
+  }, [controller, ownedSurfaceCurrent]);
+  const dialogCurrent = () => dialog !== null && dialogNativeCurrent(dialog);
+  const pickerCurrent = () => picker !== null && pickerNativeCurrent(picker);
   const back = useCallback(() => {
     if (!nativeCurrent()) return; const current = controller.getSnapshot();
     if (current.closingDialog) return;
@@ -51,7 +72,7 @@ export function useAdminItemCreate(props: AdminItemCreateScreenProps) {
   }, [nativeCurrent, back]));
   const a = useCallback((key: string, values?: Record<string, unknown>) => adminText(key, locale, values), [locale]), t = (key: string) => localizedGetter(key, locale);
   const noticeText = (notice: AdminItemCreateNotice | null) => notice?.literal ?? (notice?.getter ? t(notice.getter) : notice?.key ? a(notice.key, notice.values) : null);
-  return { state, owner, locale, a, t, current, nativeCurrent, interactive, focused, searchFocused, profileVisible: !searchFocused,
+  return { state, owner, locale, a, t, current, nativeCurrent, dialogNativeCurrent, pickerNativeCurrent, moveNativeCurrent, interactive, focused, searchFocused, profileVisible: !searchFocused,
     formNotice: noticeText(state.form.notice), listNotice: noticeText(state.list.notice), pickerNotice: noticeText(state.pickerState?.notice ?? null),
     back, search: (value: string) => { if (interactive()) controller.list.changeSearch(value); }, searchFocus: (value: boolean) => { if (value ? nativeCurrent() : current()) setSearchFocused(value); },
     reload: () => { if (interactive()) void controller.list.reload(); }, loadMore: () => { if (interactive()) void controller.list.loadMore(); }, scroll: (extentAfter: number) => { if (interactive()) controller.list.scroll(extentAfter); },
