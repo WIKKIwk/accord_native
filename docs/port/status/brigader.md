@@ -509,3 +509,31 @@ detection, error/retry, permission and manual-entry rules are implemented. GoDEX
 The pre-existing shared Work Map surface differences are outside these 25 routes and have not been relabeled complete.
 The broad text-script diagnostics remain a tooling/audit limitation, not a passing gate.
 A development client containing react-native-webview and the existing local native modules is required for physical acceptance.
+
+
+## Remaining-routes integration — 2026-11-17
+
+Implementation and final audit checkpoint `7b3ecfa4` was fast-forwarded into `main` from `2f69ad22` without conflicts.
+All 25 requested route compositions and their actual private child flows are now in the main checkout.
+The user's three tracked edits remain unstaged; all 128 pre-existing dirty/untracked files retain their exact SHA-256
+contents and modes. Both unstaged and staged Git patches are identical to the pre-merge snapshot.
+Backup: parent `.codex-merge-backups/brigader-remaining-routes.9a4u00wu` (manifest, original files and patches).
+
+Post-integration checks in the actual main checkout:
+
+| Check | Actual result |
+|---|---|
+| Android TypeScript | passed, exit 0 |
+| iOS TypeScript | passed, exit 0 |
+| Focused Brigader + changed shared UI/API lint | passed, zero errors/warnings |
+| Entire changed-source lint | exit 0; only 12 ignored-file warnings for copied Source factory renderer assets |
+| git diff --check | passed |
+| User work preservation | 128/128 content/mode hashes; original unstaged/staged patches unchanged |
+| Native dependencies | react-native-webview 14.0.1 and esbuild 0.28.2 installed from the merged lock; no lock change |
+| Visible literal AST inventory | all 17 direct occurrences found in V2 |
+| Static localization/text-call inventory | all 821 calls found in V2; dynamic text separately covered by source surface comparison |
+| Legacy role text gate | still nonzero: 33 missing on each platform; 325/330 added, 611/617 global-only; zero blanket exceptions |
+| Unit/device/emulator/simulator tests | not run; user explicitly owns testing |
+
+No push, reset, rebase, V2 write or modification of the user's files was performed.
+The native camera and inherited Work Map limitations above remain explicit; they are not certified as 1:1 physical behavior.
