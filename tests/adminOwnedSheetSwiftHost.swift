@@ -46,7 +46,21 @@ import Foundation
       shown(value); _ = value.interactiveWillDismiss(); let transaction = value.transaction!
       _ = value.didDismiss(transaction: transaction)
       check(value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: "replacement-gesture") == nil && !value.joined, "foreign joined")
-      check(value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: nil) == nil, "absent receipt joined")
+      check(value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: transaction)?.last?.kind == "closeJoined", "exact native receipt lost")
+    case "independent-source-close-crosses-native-gesture":
+      shown(value); _ = value.interactiveWillDismiss(); let transaction = value.transaction!
+      let accepted = value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: nil)
+      check(accepted?.first?.transaction == transaction && accepted?.map(\.kind) == ["closeAccepted"] && !value.joined, "same-original atomic binding")
+      check(value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: nil)?.isEmpty == true, "original null repeat lost")
+      check(value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: transaction) == nil, "accepted intent retargeted")
+      check(value.didDismiss(transaction: transaction).last?.kind == "closeJoined", "actual bound receipt lost")
+    case "independent-source-close-crosses-physical-dismissal":
+      shown(value); _ = value.interactiveWillDismiss(); let transaction = value.transaction!
+      _ = value.didDismiss(transaction: transaction)
+      check(value.acceptClose(presentation: "replacement-sheet", ticket: "source-close", transaction: nil) == nil && !value.joined, "replacement presentation adopted")
+      let accepted = value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: nil)
+      check(accepted?.map(\.kind) == ["closeAccepted", "closeJoined"] && accepted?.last?.transaction == transaction, "actual early receipt lost")
+      check(value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: nil)?.isEmpty == true, "null repeat after physical lost")
     case "foreign-completion-cannot-remove-original":
       shown(value); _ = value.acceptClose(presentation: "original-sheet", ticket: "source-close", transaction: nil)
       check(value.didDismiss(transaction: "replacement-transaction").isEmpty && !value.physicalDismissed, "foreign physical ACK")

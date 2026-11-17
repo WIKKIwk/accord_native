@@ -15,9 +15,31 @@ class AccordAdminPresentationModule : Module() {
   private val main = Handler(Looper.getMainLooper())
   @Volatile private var destroyed = false
   private val windows by lazy { PresentationWindowRegistry(AndroidHost()) }
+  private var ownedSheets: AdminSheetPortalRegistry? = null
+  private fun sheetRegistry(): AdminSheetPortalRegistry = ownedSheets ?: AdminSheetPortalRegistry().also { ownedSheets = it }
 
   override fun definition() = ModuleDefinition {
     Name("AccordAdminPresentation")
+    AsyncFunction("sheetCapability") {
+      if (destroyed) null else mapOf("protocol" to 1, "platform" to "android", "guarantee" to "owned-android-presentation-and-dismissal", "viewName" to "AdminSheetPortal")
+    }.runOnQueue(Queues.MAIN)
+    View(AdminSheetPortalView::class) {
+      Name("AdminSheetPortal")
+      Events("onSheetEvent")
+      Prop("configuration") { view: AdminSheetPortalView, value: AdminSheetConfiguration -> view.pendingConfiguration = value }
+      Prop("acceptedClose") { view: AdminSheetPortalView, value: AdminSheetAcceptedClose? -> view.pendingAcceptedClose = value }
+      Prop("layoutRoot") { view: AdminSheetPortalView, value: Boolean -> view.layoutRoot = value }
+      Prop("dismissalEnabled") { view: AdminSheetPortalView, value: Boolean -> view.dismissalEnabled = value }
+      OnViewDidUpdateProps { view: AdminSheetPortalView -> view.commitProps(sheetRegistry()) }
+      OnViewDestroys { view: AdminSheetPortalView -> view.retireResources() }
+      GroupView<AdminSheetPortalView> {
+        AddChildView<View> { parent, child, index -> parent.mountOriginalChild(child, index) }
+        GetChildCount { parent -> parent.logicalChildCount() }
+        GetChildViewAt<View> { parent, index -> parent.logicalChildAt(index) }
+        RemoveChildViewAt { parent, index -> parent.removeOriginalChild(index) }
+        RemoveChildView<View> { parent, child -> parent.removeOriginalChild(child) }
+      }
+    }
     AsyncFunction("capabilities") {
       check(!destroyed) { "Presentation module destroyed" }
       mapOf("protocol" to 1, "platform" to "android", "guarantee" to PresentationWindowRegistry.GUARANTEE)
@@ -37,8 +59,8 @@ class AccordAdminPresentationModule : Module() {
     AsyncFunction("cancel") { handle: String, ticket: String ->
       if (destroyed) false else windows.cancel(handle, ticket)
     }.runOnQueue(Queues.MAIN)
-    OnActivityDestroys { onMain { windows.activityDestroyed() } }
-    OnDestroy { destroyed = true; onMain { windows.destroy() } }
+    OnActivityDestroys { onMain { windows.activityDestroyed(); ownedSheets?.invalidateActivity() } }
+    OnDestroy { destroyed = true; onMain { windows.destroy(); ownedSheets?.destroy() } }
   }
 
   private fun onMain(action: () -> Unit) {

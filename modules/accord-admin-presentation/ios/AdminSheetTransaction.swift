@@ -69,7 +69,12 @@ final class AdminSheetTransaction {
     guard !used.contains(ticket) else { return nil }
     if phase == .shown || phase == .presenting {
       guard expected == nil, newTransaction(excluding: ticket) else { return nil }
-    } else { guard let expected, expected == transaction else { return nil } }
+    } else {
+      // A programmatic Source close may cross an in-flight native gesture on the bridge.
+      // Null is an independent accepted Source intent; bind this SAME presentation's actual receipt.
+      // An explicit native cancellation receipt must still match exactly.
+      if let expected, expected != transaction { return nil }
+    }
     acceptedClose = ticket; acceptedOriginTransaction = expected; used.insert(ticket)
     if phase == .shown { phase = .dismissing }
     var result = [event("closeAccepted")]

@@ -11,5 +11,10 @@ android {
   defaultConfig { versionCode 1; versionName '0.1.0' }
 }
 
-// Public ReactFindViewUtil from the app's already installed React SDK; no version/artifact is added.
-dependencies { compileOnly 'com.facebook.react:react-android' }
+// Public APIs/resources from the app's existing SDK artifacts. Android AARs require implementation.
+dependencies {
+  implementation 'com.facebook.react:react-android'
+  // Already present at runtime through @expo/ui 58.0.26; no new JS package or Compose plugin.
+  implementation 'com.google.android.material:material:1.13.0'
+  implementation 'androidx.core:core-ktx:1.18.0'
+}

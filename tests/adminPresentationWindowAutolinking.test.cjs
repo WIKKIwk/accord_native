@@ -13,5 +13,7 @@ for (const platform of ['android', 'apple']) test(`installed Expo autolinker ${p
   assert.ok(value); assert.equal(value.projects.length, 1); assert.equal(value.projects[0].sourceDir, path.join(root, 'modules/accord-admin-presentation/android'));
   assert.deepEqual(value.projects[0].modules, [{ classifier: 'expo.modules.accordadminpresentation.AccordAdminPresentationModule', name: null }]);
   assert.equal(value.coreFeatures, undefined);
-  const gradle = fs.readFileSync(path.join(value.projects[0].sourceDir, 'build.gradle'), 'utf8'); assert.equal(gradle.includes('compose'), false); assert.match(gradle, /compileOnly 'com\.facebook\.react:react-android'/);
+  const gradle = fs.readFileSync(path.join(value.projects[0].sourceDir, 'build.gradle'), 'utf8'); assert.equal(gradle.includes("id 'org.jetbrains.kotlin.plugin.compose'"), false);
+  assert.match(gradle, /implementation 'com\.facebook\.react:react-android'/);
+  assert.match(gradle, /implementation 'com\.google\.android\.material:material:1\.13\.0'/);
 });
