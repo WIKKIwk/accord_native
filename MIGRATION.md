@@ -39,3 +39,6 @@ No synthetic API response fixtures were invented. Physical printing and device a
 
 | lib/src/features/admin/presentation/admin_progress_qr* | src/brigader/BrigaderProgressQr*, src/admin/adminProgressQrPassport.ts, adminProgressQrPdf.ts | composed |
 | lib/src/features/admin/logic/factory_map* and presentation/admin_factory_map* | src/admin/factoryMap{Live,Stock,Status,Bindings,Mapping}, BrigaderFactoryMap*, BrigaderFactoryOrderDetail | composed |
+
+| lib/src/features/admin/presentation/admin_calculate_orders_screen.dart | BrigaderCalculateOrders*, brigaderCalculateOrdersModel.ts, BrigaderCalculateStore.tsx | composed; editor dependency pending |
+| lib/src/features/admin/presentation/admin_create_hub_screen.dart | BrigaderCreateHub*, reused role destinations | composed; calculation dependency pending |

@@ -389,3 +389,15 @@ Revision-checked attach/unlink, native close completion, actual camera focus cal
 resizable sheets, filters, current-order expansion, material/WIP rows and nested read-only order sections are wired.
 Both platform TypeScript and focused lint pass; user owns device tests. Twenty-one of 25 routes are composed.
 Final role-wide text/platform audit remains open along with the four remaining calculation/create routes.
+
+
+## Calculation archive and create hub compositions — 2026-11-17
+
+Composed both platform archive rows/search/delete/cover preview and the complete six Source create-hub rows
+(including normal Source permission denial for ERP settings). The five allowed hub destinations reuse existing
+Brigader pages. Templates share one original-account store across archive and editor; no controller or profile
+is fabricated. Original template DTOs are handed to the private editor route.
+
+Both platform TypeScript and focused lint pass. The calculator and graph editor are the remaining two page
+compositions; their actual navigation support must be registered only after those pages exist. Archive opening
+and hub calculation entry therefore remain dependent work, not finished user flows. No unit/device tests ran.

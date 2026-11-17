@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import type { Session, SessionWitness } from '../auth';
 import { AdminShellContextProvider } from '../admin/AdminShellContext';
+import { BrigaderCalculateStoreProvider } from './BrigaderCalculateStore';
 import { AdminStore } from '../admin/adminStore';
 import { adminHomeSummaryReader } from '../admin/adminHomeSummaryReader';
 import { adminActivityReader } from '../admin/adminActivityReader';
@@ -19,5 +20,5 @@ export function BrigaderShellProvider({ session, witness, onLogout, children }: 
   const isRouteAvailable = useCallback((route: string) => !!owner.destination(route, 'ios') || !!owner.destination(route, 'android'), [owner]);
   const value = useMemo(() => ({ session, witness, store, onLogout, isCurrent: owner.isCurrent,
     destination: owner.destination, isRouteAvailable, activityBinding }), [session, witness, store, onLogout, owner, isRouteAvailable, activityBinding]);
-  return <AdminShellContextProvider value={value}>{children}</AdminShellContextProvider>;
+  return <AdminShellContextProvider value={value}><BrigaderCalculateStoreProvider>{children}</BrigaderCalculateStoreProvider></AdminShellContextProvider>;
 }
