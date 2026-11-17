@@ -19,7 +19,7 @@ const withAlpha = (rgba: string, alpha: number) => `${rgba.slice(0, 7)}${Math.ro
 
 // The shared shell supplies the existing role drawer and appropriate dock; this screen does not invent navigation.
 // @v2 AdminAdditionalSettingsScreen
-export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer }: AdditionalSettingsScreenProps) {
+export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice }: AdditionalSettingsScreenProps) {
   const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), colors = useMaterialColors();
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), snackbar = useRef<SnackbarHostRef>(null);
@@ -38,6 +38,7 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
         <SymbolView name={{ android: 'refresh' }} size={24} tintColor={colors.onSurface} />
       </RNHostView></IconButton></Host>
     </View>
+    {topNotice}
     <Host style={styles.content}>
       <Column modifiers={[fillMaxWidth(), verticalScroll(), padding(12, 12, 12, 144)]}>
         {state.screen === 'loading' ? <CircularProgressIndicator /> : null}

@@ -7,6 +7,7 @@ export type AdminSettingsScreenProps = {
   footer?: ReactNode;
   /** Original-account profile/account action, supplied by the real navigation host. */
   profileAction?: ReactElement;
+  topNotice?: ReactNode;
   onNavigate: (route: string) => void;
   isRouteAvailable?: (route: string) => boolean;
 };

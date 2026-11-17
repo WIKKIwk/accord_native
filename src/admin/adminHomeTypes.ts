@@ -15,5 +15,6 @@ export type AdminHomeScreenProps = {
   navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null;
   /** A genuine shell-owned profile/account control, when that destination is available. */
   profileAction?: ReactNode;
+  topNotice?: ReactNode;
   footer?: ReactNode;
 };

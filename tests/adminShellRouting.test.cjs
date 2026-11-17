@@ -31,6 +31,27 @@ const brigader = session('brigader', ['brigader.access']);
 const worker = session('aparatchi', ['apparatus.queue.read']);
 const prep = session('tayyorlov_masteri', ['preparation.access']);
 
+test('new Roles drawer destination retains its source icon and selection on either native platform', () => {
+  for (const platform of ['android', 'ios']) {
+    const value = session('admin', ['admin.access', 'role.capability.read']);
+    const shell = { session: value, isCurrent: () => true, onLogout() {},
+      destination: route => route === r.adminRoles ? `/${platform}-admin/roles` : `/${platform}-admin` };
+    const Drawer = load('admin/AdminDrawer.tsx', {
+      react: { useMemo: fn => fn(), useEffect() {}, useSyncExternalStore: (_subscribe, get) => get() },
+      'react-native': { Platform: { OS: platform } }, 'expo-router': { router: {}, usePathname: () => `/${platform}-admin/roles`, useNavigationContainerRef: () => ({}) },
+      '../shared/appRoutes': routes, '../shared/localization': { localizedGetter: key => key },
+      '../shared/localization/runtime': { localeController: { locale: 'uz' } },
+      '../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../shared/navigation/roleDrawerContext': { useRoleDrawerState: () => ({}) },
+      '../shared/navigation/roleDrawerLogout': {}, './adminDrawerNavigation': drawerNavigation,
+      './adminHomeSymbols': load('admin/adminHomeSymbols.ts'), './AdminShellContext': { useAdminShell: () => shell },
+      './adminDrawerModel': { adminDrawerDestinations: () => [{ routeName: r.adminHome, label: 'Home' },
+        { routeName: r.adminRoles, label: 'Roles', materialIcon: 'admin_panel_settings_outlined' }] },
+    }).AdminDrawer;
+    const tree = Drawer({ children: 'child' }); assert.equal(tree.props.active, r.adminRoles);
+    assert.deepEqual(tree.props.items[1].symbol, { ios: 'person.badge.shield.checkmark', android: 'admin_panel_settings' });
+  }
+});
+
 test('Admin home is held while separately ported roles retain their targets', () => {
   for (const value of [admin, session('customer', ['catalog.item.read'])]) {
     assert.equal(access.adminShellMayEnter(value), true);

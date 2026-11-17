@@ -20,10 +20,11 @@ export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
     { id: 'item-group-move', label: t('item_group.move_parent'), icon: { ios: 'folder' as const, android: 'drive_file_move' as const }, onPress: () => { void controller.open('move'); } },
   ], [controller, t]);
   if (!state.valid || !model.current()) return null;
-  const notice = state.notice ? <View pointerEvents="none" accessibilityRole="alert" style={[styles.notice, state.notice.success ? styles.success : styles.failure]}>
+  const notice = state.notice && (!state.notice.success || !props.showTopNotice) ? <View pointerEvents="none" accessibilityRole="alert" style={[styles.notice, state.notice.success ? styles.success : styles.failure]}>
     <NativeText style={{ color: PlatformColor('label') }}>{t(state.notice.key, state.notice.values)}</NativeText></View> : null;
   return <View style={{ flex: 1 }}>
     <Stack.Screen options={{ headerShown: true, title: t('item_group.title'), headerLeft: props.navigation ? () => <RoleHeaderButton {...props.navigation!} tintColor={PlatformColor('label')} /> : undefined }} />
+    {props.topNotice}
     <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
       <Picker label="" selection={state.tab} onSelectionChange={value => { if (value === 'tree' || value === 'items') controller.setTab(value); }}
         modifiers={[pickerStyle('segmented'), padding({ horizontal: 12, bottom: 4 })]}>

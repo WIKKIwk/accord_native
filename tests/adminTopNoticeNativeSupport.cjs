@@ -4,7 +4,7 @@ const { flattenStyle } = require('./adminShellFrameViewSupport.cjs');
 const Bezier = view.compile(path.resolve(__dirname, '../node_modules/react-native-reanimated/src/Bezier.ts'), {}).Bezier;
 const Easing = view.compile(path.resolve(__dirname, '../node_modules/react-native-reanimated/src/Easing.ts'), { './Bezier': { Bezier } }).Easing;
 const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) });
-function fixture(platform = 'android', accessibleNavigation = false) {
+function fixture(platform = 'android', accessibleNavigation = false, retainChildrenWhileUnresolved = false) {
   const f = s.fixture(), r = view.runtime(), animations = [], tasks = [], values = [], contexts = [];
   let activeRuntime = r;
   const react = new Proxy({ createContext(initial) { const context = { current: initial }; context.Provider = ({ value, children }) => { context.current = value; return children; }; contexts.push(context); return context; }, useContext: context => context.current }, { get: (target, name) => target[name] ?? activeRuntime.react[name] });
@@ -19,6 +19,7 @@ function fixture(platform = 'android', accessibleNavigation = false) {
     const theme = { colors: { onSurface: '#111111' }, direction: 'leftToRight' }, hostReact = { ...hostRuntime.react, useContext: context => context.current };
     const content = view.compile(path.resolve(__dirname, `../src/admin/AdminTopNoticeContent.${platform}.tsx`), {
       '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
+      'expo-symbols': { SymbolView: 'NativeMaterialSymbol' },
       'react-native': { Text: 'RNText', StyleSheet: { create: value => value } }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
       '../components/useBaseTheme': { useBaseTheme: () => theme }, './adminFontFamily.android': { adminFontNames: { regular: 'ActualRegisteredAdminRegular' } }, './AdminTypography.android': { useAdminFontsReady: () => true }, './adminTopNoticeModel': s.noticeModel,
     });
@@ -29,7 +30,7 @@ function fixture(platform = 'android', accessibleNavigation = false) {
     hosts.push(state); return state;
   };
   let accessible = accessibleNavigation;
-  const renderWith = (runtime, children) => { activeRuntime = runtime; try { return runtime.render(() => view.expand(provider.AdminTopNoticeProvider({ messenger: f.target, accessibleNavigation: accessible, children }))); } finally { activeRuntime = r; } };
+  const renderWith = (runtime, children) => { activeRuntime = runtime; try { return runtime.render(() => view.expand(provider.AdminTopNoticeProvider({ messenger: f.target, accessibleNavigation: accessible, children, retainChildrenWhileUnresolved }))); } finally { activeRuntime = r; } };
   const render = () => { const child = { type: 'GenuineStackContent', props: {} }; renderWith(r, child); return renderWith(r, child); };
   const makeDuplicateProvider = () => { const runtime = view.runtime(), stats = { mountedChildren: 0 }, child = { type: () => { stats.mountedChildren++; return { type: 'DuplicateStack', props: {} }; }, props: {} };
     return { runtime, stats, render: () => { renderWith(runtime, child); return renderWith(runtime, child); } }; };

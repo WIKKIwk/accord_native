@@ -42,7 +42,7 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
         <TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null}</TopAppBar.Actions>
       </TopAppBar><Spacer modifiers={[height(3)]} /></Column>
     </BaseHost></SafeAreaView>
-    <AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
+    {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
     {view === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
       view === 'error' ? <View style={styles.error}><BaseHost matchContents={{ vertical: true }} style={{ width: retryWidth, maxWidth: '100%' }}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }}>

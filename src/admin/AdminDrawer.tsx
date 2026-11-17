@@ -30,7 +30,7 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
     .map(item => ({ id: item.routeName, label: item.label, symbol: item.routeName === home ? { ios: 'house' as const, android: 'home' as const }
       : item.routeName === appRoutes.profile ? { ios: 'person' as const, android: 'person' as const }
         : item.routeName === appRoutes.adminProductionMapOrders || item.routeName === appRoutes.adminFactoryLocations ||
-          item.routeName === appRoutes.adminItemGroupCreate ? adminHomeSymbol(item.materialIcon)
+          item.routeName === appRoutes.adminItemGroupCreate || item.routeName === appRoutes.adminRoles ? adminHomeSymbol(item.materialIcon)
         : item.routeName === appRoutes.adminAdditionalSettings ? adminHomeSymbol('tune_rounded')
         : { ios: 'scalemass' as const, android: 'scale' as const } }));
   const select = (id: string) => {
@@ -40,6 +40,7 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
   const active = pathname.endsWith('/profile') ? appRoutes.profile : pathname.endsWith('/work-map') ? appRoutes.adminProductionMapOrders
     : pathname.endsWith('/factory-locations') ? appRoutes.adminFactoryLocations : pathname.endsWith('/activity') ? appRoutes.adminActivity
     : pathname.endsWith('/additional-settings') ? appRoutes.adminAdditionalSettings : pathname.endsWith('/item-groups') ? appRoutes.adminItemGroupCreate
+    : pathname.endsWith('/roles') ? appRoutes.adminRoles : pathname.endsWith('/queue-policies') ? appRoutes.adminApparatusSettings
     : pathname.endsWith('/settings') ? appRoutes.adminSettings : home;
   return <RoleDrawer {...state} title={localizedGetter('adminDrawerSections', locale)} items={items} active={active} onSelect={select}
     closeAccessibilityLabel={localizedGetter('closeAction', locale)}

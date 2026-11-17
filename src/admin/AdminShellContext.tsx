@@ -15,7 +15,8 @@ const Context = createContext<AdminShell | null>(null);
 // These reviewed child compositions remain behind the actual Admin root hold.
 const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.adminHome, appRoutes.profile,
   appRoutes.adminProductionMapOrders, appRoutes.adminActivity, appRoutes.adminFactoryLocations,
-  appRoutes.adminSettings, appRoutes.adminAdditionalSettings, appRoutes.adminItemGroupCreate]);
+  appRoutes.adminSettings, appRoutes.adminAdditionalSettings, appRoutes.adminItemGroupCreate, appRoutes.adminInactiveSuppliers,
+  appRoutes.adminQueuePolicies, appRoutes.adminRoles]);
 export function AdminShellProvider({ session, witness, onLogout, children }: { session: Session; witness: SessionWitness; onLogout: () => void; children: ReactNode }) {
   const scope = useMemo(() => sessionReadScope(session), [session]);
   const isCurrent = useCallback(() => isSessionWitnessCurrent(witness) && sessionReadScope(session) === scope && adminShellMayEnter(session), [session, scope, witness]);

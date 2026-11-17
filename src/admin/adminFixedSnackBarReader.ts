@@ -122,7 +122,11 @@ export class AdminFixedSnackBarReaderOwner {
       record.frame = event.frame; this.publish(record, { ...(event.dock ? this.viewportPatch(record, event.dock.viewport) : {}), phase: 'bound', dockHeight: event.dock?.dockHeight ?? null });
     } else if (watch.kind === 'pair') {
       const pair = event.pair, identity = record.snapshot.windowIdentity;
-      if (event.frame < record.frame) return;
+      if (event.frame < record.frame) {
+        // The original viewport/IME already advanced. Retire the old pair's
+        // published geometry until a matching native sample arrives.
+        this.receiveLocal(watch, null); this.receive(watch, null); return;
+      }
       record.frame = event.frame;
       if (pair) this.publish(record, { ...this.viewportPatch(record, pair.viewport), phase: 'bound', dockHeight: pair.dockHeight });
       // A record listener/guard may synchronously deliver a newer sample from this SAME native watch.

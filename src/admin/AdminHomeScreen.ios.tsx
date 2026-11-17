@@ -30,7 +30,7 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
       headerRight: props.profileAction ? () => props.profileAction : undefined,
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined }} />
     <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
-      <AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
+      {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
       <BaseHost style={styles.content}>
         {view === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView modifiers={[accessibilityLabel('Loading')]} /></VStack> :
           view === 'error' ? <VStack spacing={16}><Text>{localizedGetter('serverDisconnectedRetry', locale)}</Text>

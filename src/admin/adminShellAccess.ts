@@ -19,6 +19,9 @@ export function adminDestinationPath(session: Session, route: string, platform: 
   if (route === appRoutes.adminSettings) return `/${platform}-admin/settings`;
   if (route === appRoutes.adminAdditionalSettings) return `/${platform}-admin/additional-settings`;
   if (route === appRoutes.adminItemGroupCreate) return `/${platform}-admin/item-groups`;
+  if (route === appRoutes.adminInactiveSuppliers) return `/${platform}-admin/inactive-suppliers`;
+  if (route === appRoutes.adminQueuePolicies) return `/${platform}-admin/queue-policies`;
+  if (route === appRoutes.adminRoles) return `/${platform}-admin/roles`;
   if (route === appRoutes.adminProductionMapOrders) return `/${platform}-admin/work-map`;
   if (route === appRoutes.profile) return `/${platform}-admin/profile`;
   if (route === appRoutes.adminActivity) return `/${platform}-admin/activity`;

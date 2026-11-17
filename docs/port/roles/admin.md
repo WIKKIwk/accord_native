@@ -1,5 +1,31 @@
 # Admin UI contract (partial)
 
+## 2026-11-17: Inactive suppliers
+
+Source: `admin_inactive_suppliers_screen.dart` at f119. `AdminInactiveSuppliersScreen.*` uses `useAdminInactiveSuppliers` and the shared existing supplier parsers/status API. GET `/admin/suppliers/inactive` returns the source list in response order; restore POST preserves the original untrimmed ref in its query and has no body/content type. Unblock reuses the existing PUT status with `blocked:false`.
+
+- The title is `users.inactive_title`; initial and replacement reads show loading, failures show the shared retry state, and an empty response shows `users.inactive_empty`. Populated lists have pull refresh. Source refresh requires actual scroll extent above 0.5 because this screen does not opt into short-content refresh.
+- Cards show name, removed-or-blocked badge (removed wins), phone, selectable access code, then actions. Removed rows show restore/restoring; blocked nonremoved rows show unblock/unblocking. A removed-and-blocked row retains the source 12-point spacer but does not gain an unblock button. Other rows have no action. The single source busyRef disables only matching rows; other rows remain actionable. Success reloads the list; failures clear busy state without inventing notices or changed-route results.
+- Android preserves SoftCard padding18/radius24/theme border, top4/gap12 list geometry and source56/r20 buttons; iOS uses native UIKit list scrolling with SwiftUI selectable text/cards and large prominent/bordered actions. Original account retirement hides content and prevents late response publication. The real shell supplies profile/account navigation, dock, Back/menu and the sibling notice Scaffold. Both platforms measure actual scroll extent with their native list container; physical/native geometry, selection and gestures still require validation.
+
+## 2026-11-17: Queue policies
+
+Source: `admin_queue_policy_screen.dart` and its parts, with the queue-state API. `AdminQueuePolicyScreen.*` uses the shared controller/session and existing apparatus/policy decoders. Bootstrap reads apparatus(limit300) and policies concurrently, retaining Dart Future.wait's non-eager failure settlement. Cached content remains visible during silent background reload. Each row has the source strict-sequence/free-pick order, effective revision fallback and locked/saving enable conditions. Independent row saves submit the canonical ID, expected revision and discipline, with the native microsecond/base36 idempotency header; failures use the original top notice and no new success message is added.
+
+The actual held Admin child route supplies the common original Messenger, inline top-notice host, profile/account control and settings-active dock. Both platforms reuse existing list/control primitives. The embedded panel's shrinkWrap/custom-padding variant, physical native clock/selection/accessibility/RTL and deferred shared test mode remain Open. V2's single unscoped static warm cache is preserved, including showing its previous rows while a newly opened panel refreshes; this is a Deviations candidate rather than a silent correction.
+
+## 2026-11-17: Roles and assignments
+
+Source: `admin_roles_screen.dart` and four parts. The native views use one source-backed Roles controller, the existing role/assignment/customer/settings/apparatus models and APIs, and three additional capability/supplier-list/role-upsert adapters. Bootstrap retains the seven concurrent source reads and first-arriving failure after all settle. The two tabs preserve source order; custom role editor and assignment sheet preserve capability choices, principal/role compatibility, required apparatus and selected apparatus behavior. A sheet's accepted result is held until its actual native dismissal before issuing the role/assignment write. Success/failure messages use source localization and the real shell's original top-notice host; missing required apparatus uses the local snackbar surface.
+
+The held child route supplies actual profile/Back/menu/dock and notice dependencies. Native sheet sizing/IME, Android expansion/entry animation, source parser/large-number edge cases and physical accessibility/RTL remain subject to audit. These screens do not establish the full role's global admission or complete text audit.
+
+## 2026-11-17: Push configuration (device integration pending)
+
+Source: `admin_push_config_screen.dart`, `mobile_api_push_config.dart` and `FirebaseClientConfig`. Native forms/controller implement the source GET/PUT/check/test/mobile API methods, 40-second write timeout, service-account paste/file validation, Android JSON/iOS plist parsing, source-order metadata and action/notice states. The DOM parser is a declared pure-JavaScript dependency; uploaded credentials are not stored in source/tests/logs.
+
+`AdminPushConfigScreen` requires a genuine Firebase device adapter for initialization, registration status and test token preparation. No fake adapter or reachable route is supplied. Source client-file application-ID validation still expects V2's IDs; V4's separate application identity requires actual matching Firebase configuration/runtime integration before exposing this flow. MIME-picker/UTF-8/XML target-runtime edges, native file/device behavior and shared persistent test mode remain Open.
+
 Source: V2 `f11910bb2c8c7081ce26770e69811b03fd0739ed`. This is an incremental contract for Admin home, the Sequence, Orders, Move, Closed and Audit parts of Work Map, activity, factory locations, additional settings, and parts of the drawer and dock only. Other screens, sheets, dialogs and create overlay still need complete contracts and V2/V4 audits; this file does not establish role completion or authorize a placeholder screen.
 
 ## AdminHomeScreen

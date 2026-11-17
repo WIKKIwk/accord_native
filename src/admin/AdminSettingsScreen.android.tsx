@@ -68,7 +68,7 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
         <TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null}</TopAppBar.Actions>
       </TopAppBar><Spacer modifiers={[height(3)]} />
     </Column></BaseHost></SafeAreaView>
-    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}>
+    {props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}>
       {state.phase === 'error' ? <View style={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(width * .88, 280), 360), maxWidth: '100%' }}>
         <Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{t('serverDisconnectedRetry')}</Text><Spacer modifiers={[height(16)]} />
           <TextButton onClick={() => { model.reload(); }} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, end: 12, top: 8, bottom: 8 }} modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 })]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{t('retry')}</Text></TextButton>
