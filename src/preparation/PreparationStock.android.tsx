@@ -131,7 +131,7 @@ export function PreparationWarehouseScreen() {
     else if (id === 'scale' && warehouse && !manual) openPreparationScale({ warehouse });
     else if (id === 'warehouse' && data?.assigned_warehouses.length && data.material_warehouses.length) setShowCreate(true);
   };
-  const setDockHeight = usePreparationFab('warehouse', { actions: fabActions, onSelect: selectFabAction,
+  usePreparationFab('warehouse', { actions: fabActions, onSelect: selectFabAction,
     enabled: !home.locked && !managing, visible: !!fabActions.length || home.loading,
     openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
@@ -154,7 +154,6 @@ export function PreparationWarehouseScreen() {
     {warehouse && materials.map((item, index) => <WarehouseMaterialRow key={item.code} item={item} warehouse={warehouse} last={index === materials.length - 1} />)}
     {fabActions.length ? <View style={styles.fabSpace} /> : null}
     </OrdersList>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     <PreparationNotice message={notice.message} />
     {showCreate && data && <PreparationWarehouseCreateDialog warehouses={data.material_warehouses} selected={warehouse}
       close={() => setShowCreate(false)} create={createWarehouse} />}

@@ -24,7 +24,7 @@ function compile(filename, mocks) {
 
 function setupWarehouse() {
   const calls = [], slots = [];
-  let index = 0, sheetContent, fab, dockHeight;
+  let index = 0, sheetContent, fab;
   const home = { warehouse: 'Own', loading: false, saving: false, locked: false, error: null,
     snapshot: { assigned_warehouses: ['Own', 'Other'], managed_warehouses: ['Other'], material_warehouses: ['Own'],
       materials: [{ code: 'A1', name: 'Kley', visible_warehouses: ['own'], balances: { Own: '12' }, can_receive: true },
@@ -59,7 +59,7 @@ function setupWarehouse() {
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../nativeSheet': { useNativeSheet: () => ({ open: content => { sheetContent = content; }, close() {} }) },
     './PreparationContext.android': { usePreparationContext: () => ({ home, session: {} }) },
-    './PreparationFab.android': { usePreparationFab: (scope, options) => { fab = { scope, ...options }; return height => { dockHeight = height; }; } },
+    './PreparationFab.android': { usePreparationFab: (scope, options) => { fab = { scope, ...options }; return () => {}; } },
     './PreparationUI.android': ui, './preparationLogic': logic,
     './preparationModel': { preparationDisplay: value => value },
     './PreparationSeriyoPicker.android': { PreparationSeriyoPicker: 'PreparationSeriyoPicker' },
@@ -74,7 +74,7 @@ function setupWarehouse() {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
-  return { calls, home, sheetContent: () => sheetContent, fab: () => fab, dockHeight: () => dockHeight,
+  return { calls, home, sheetContent: () => sheetContent, fab: () => fab,
     render() { index = 0; return mod.exports.PreparationWarehouseScreen(); } };
 }
 
@@ -84,7 +84,7 @@ test('warehouse reuses worker search and list while retaining warehouse selectio
   const header = nodes(tree, node => node.type === 'OrdersHeader')[0];
   assert.equal(header.props.searchPlaceholder, 'Qidirish');
   assert.ok(nodes(tree, node => node.type === 'OrdersList').length);
-  assert.ok(nodes(tree, node => node.type === 'PreparationDock').length);
+  assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, 0);
   header.props.onBack(); header.props.onProfile();
   assert.deepEqual(view.calls.slice(0, 2), [['back'], ['navigate', '/android-preparation/profile']]);
 
@@ -121,9 +121,6 @@ test('warehouse FAB contains the available actions and preserves their behavior'
   assert.equal(fab.scope, 'warehouse');
   assert.deepEqual(fab.actions.map(action => action.label), ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish']);
   assert.equal(nodes(tree, node => node.type === 'RoleFab').length, 0);
-  nodes(tree, node => node.props?.onLayout && nodes(node, child => child.type === 'PreparationDock').length)[0]
-    .props.onLayout({ nativeEvent: { layout: { height: 104 } } });
-  assert.equal(view.dockHeight(), 104);
   assert.equal(nodes(tree, node => node.type === 'PreparationButton' && ['Kirim', 'Homashyo qo‘shish', 'Ombor qo‘shish'].includes(node.props.label)).length, 0);
   fab.onSelect('receive');
   assert.equal(view.sheetContent().type, 'PreparationSeriyoPicker');
