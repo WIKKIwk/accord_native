@@ -14,16 +14,17 @@ function load(file, mocks = {}) {
 }
 const routes = load('shared/appRoutes'), nav = load('material/materialNavigation', { '../shared/appRoutes': routes });
 const session = caps => ({ token: 'x', profile: { role: 'material_taminotchi', ref: 'material-1' }, capabilities: caps });
-test('authorized Material drawer exposes the real task route and omits held destinations', () => {
+test('authorized Material drawer exposes V2 destinations in source order with their capability guards', () => {
   const labels = { home: 'Bosh sahifa', profile: 'Profil' }, material = session(['raw_material.assign', 'gscale.print', 'inventory.movement.manage']);
-  assert.deepEqual(nav.materialDrawerItems(material, labels).map(item => item.id), ['home', 'tasks', 'profile']);
-  assert.deepEqual(nav.materialDrawerItems(session(['gscale.print']), labels).map(item => item.id), ['home', 'profile']);
+  assert.deepEqual(nav.materialDrawerItems(material, labels).map(item => item.id), ['home', 'tasks', 'sequence', 'receipt', 'history', 'assignments', 'movements', 'profile']);
+  assert.deepEqual(nav.materialDrawerItems(session(['gscale.print']), labels).map(item => item.id), ['home', 'receipt', 'history', 'profile']);
   for (const platform of ['ios', 'android']) {
     assert.equal(nav.materialRoute('home', platform), `/${platform}-material`);
     assert.equal(nav.materialRoute('profile', platform), `/${platform}-material/profile`);
     assert.equal(nav.materialRoute('tasks', platform), `/${platform}-material/tasks`);
     assert.equal(nav.materialDrawerActive(`/${platform}-material/tasks`), 'tasks');
-    for (const id of ['history', 'chat', 'scale', 'assignment', 'inventory']) assert.equal(nav.materialRoute(id, platform), null);
+    for (const id of ['history', 'chat', 'sequence', 'receipt', 'assignments', 'movements']) assert.equal(nav.materialRoute(id, platform), `/${platform}-material/${id}`);
+    for (const id of ['scale', 'assignment', 'inventory']) assert.equal(nav.materialRoute(id, platform), null);
   }
   assert.deepEqual(nav.materialDrawerItems(session(['inventory.movement.manage']), labels), []);
   assert.deepEqual(nav.materialDrawerItems({ ...material, profile: { ...material.profile, role: 'admin' } }, labels), []);
@@ -40,7 +41,7 @@ test('home target opens Material on both platforms without changing Worker or Pr
   assert.equal(routes.homeTarget(material, 'web'), null);
 });
 
-test('Expo Router discovers gated History and no other held destinations', () => {
+test('Expo Router discovers all connected Material role destinations on both platforms', () => {
   const walk = (directory, prefix = '.') => fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? walk(path.join(directory, entry.name), `${prefix}/${entry.name}`)
       : /\.[jt]sx?$/.test(entry.name) ? [`${prefix}/${entry.name}`] : []);
@@ -57,18 +58,19 @@ test('Expo Router discovers gated History and no other held destinations', () =>
       assert.ok(paths.includes(`./${other}-material/tasks.tsx`));
       assert.ok(paths.includes(other === 'ios' ? './ios-material/(home)/history.tsx' : './android-material/history.tsx'));
     }
-    assert.equal(paths.some(key => /^\.\/(ios|android)-material\/.*(?:chat|gscale|assignment|inventory)/.test(key)), false);
+    for (const other of ['ios', 'android']) for (const route of ['assignments', 'movements', 'sequence']) {
+      assert.ok(paths.includes(other === 'ios' ? `./ios-material/(home)/${route}.tsx` : `./android-material/${route}.tsx`));
+    }
+    assert.ok(paths.includes('./android-material/receipt.tsx')); assert.ok(paths.includes('./ios-material/receipt/index.tsx'));
+    assert.ok(paths.includes('./android-material/chat/index.tsx')); assert.ok(paths.includes('./ios-material/chat/index.tsx'));
   }
 });
 
 
-test('both direct History routes export the passive gate, never the History screen', () => {
+test('both direct History routes export the guarded actual History screen', () => {
   for (const file of ['../src/app/android-material/history.tsx', '../src/app/ios-material/(home)/history.tsx']) {
     const source = fs.readFileSync(path.resolve(__dirname, file), 'utf8');
-    assert.match(source, /export \{ MaterialHistoryUnavailable as default \} from ['"][^'"]+MaterialHistoryUnavailable['"]/);
-    assert.doesNotMatch(source, /from ['"][^'"]+MaterialHistory['"]/);
+    assert.match(source, /export \{ MaterialHistory as default \} from ['"][^'"]+MaterialHistory(?:\.android)?['"]/);
+    assert.doesNotMatch(source, /MaterialHistoryUnavailable/);
   }
-  const gate = fs.readFileSync(path.resolve(__dirname, '../src/material/MaterialHistoryUnavailable.tsx'), 'utf8');
-  assert.match(gate, /Harakatlar tarixi hozircha mavjud emas/);
-  assert.doesNotMatch(gate, /useMaterialHistory|MaterialHistoryApi|fetch\s*\(/);
 });

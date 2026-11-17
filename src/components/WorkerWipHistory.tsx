@@ -26,7 +26,8 @@ import { useWorkerWipSheet } from './useWorkerWipSheet';
 import { WorkerOrderButton } from './WorkerOrderControls';
 
 type Props = { session: Session; order: WipOrder; onClose: () => void; stageHistory?: boolean; apparatusNames?: WipApparatusNames;
-  operation?: string; allowReactivation?: boolean; onReactivationAttempted?: () => void; onWritePending?: (pending: boolean) => void };
+  operation?: string; allowReactivation?: boolean; onReactivationAttempted?: () => void; onWritePending?: (pending: boolean) => void;
+  allowReprint?: boolean; isCurrent?: () => boolean };
 export type WorkerWipHistorySheetHandle = { open: (order: CompletedOrder, apparatusNames?: WipApparatusNames, apparatus?: Apparatus,
   onReactivationAttempted?: () => void, onWritePending?: (pending: boolean) => void) => void };
 
@@ -56,11 +57,16 @@ export function WorkerWipHistorySheet({ ref, session, onDismiss, presentationId 
   </WorkerOrderSheet>;
 }
 
-async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSignal): Promise<WipBatch[]> {
+async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSignal, isCurrent?: () => boolean): Promise<WipBatch[]> {
   const query = new URLSearchParams({ order_id: order.id, status: 'all', limit: '500' });
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal });
+  const guard = () => { if (isCurrent && !isCurrent()) throw new Error('WIP history account changed'); };
+  guard();
+  const response = isCurrent ? await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal }, guard)
+    : await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, { signal });
+  guard();
   if (!response.ok) throw new Error(`Opening WIP yuklanmadi (${response.status}).`);
   const payload = await response.json();
+  guard();
   if (!Array.isArray(payload.records)) throw new Error('Opening WIP javobi noto‘g‘ri.');
   return payload.records.flatMap((record: WipBatch) => {
     const intake = record.intake;
@@ -75,7 +81,8 @@ async function loadOpeningWip(session: Session, order: WipOrder, signal: AbortSi
   });
 }
 
-export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {}, operation, allowReactivation, onReactivationAttempted, onWritePending }: Props) {
+export function WorkerWipHistory({ session, order, onClose, stageHistory = false, apparatusNames = {}, operation, allowReactivation, onReactivationAttempted, onWritePending,
+  allowReprint, isCurrent }: Props) {
   const colors = useWorkerColors(), palette = useWorkerWipHistoryPalette(), { p, t } = useWorkerOrderText();
   const android = Platform.OS === 'android';
   const sheetBackground = Platform.OS === 'ios' ? PlatformColor('systemGroupedBackground') : colors.field;
@@ -99,20 +106,21 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     } });
   useEffect(() => {
     const controller = new AbortController();
-    const opening = stageHistory ? loadOpeningWip(session, order, controller.signal) : Promise.resolve([]);
-    void Promise.all([loadWorkerWipBatches(session, order.id, order.apparatusId, controller.signal), opening]).then(([result, openingBatches]) => {
-      if (controller.signal.aborted) return;
+    if (isCurrent && !isCurrent()) return () => controller.abort();
+    const opening = stageHistory ? loadOpeningWip(session, order, controller.signal, isCurrent) : Promise.resolve([]);
+    void Promise.all([loadWorkerWipBatches(session, order.id, order.apparatusId, controller.signal, isCurrent), opening]).then(([result, openingBatches]) => {
+      if (controller.signal.aborted || isCurrent && !isCurrent()) return;
       const merged = new Map(openingBatches.map(batch => [batch.batch_id, batch]));
       for (const batch of result) merged.set(batch.batch_id, batch);
       setBatches([...merged.values()].sort((a, b) => Math.max(b.completed_at_unix || 0, b.started_at_unix || 0) - Math.max(a.completed_at_unix || 0, a.started_at_unix || 0) || String(b.batch_id).localeCompare(String(a.batch_id))));
       setLoading(false);
     }, reason => {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || isCurrent && !isCurrent()) return;
       setError(reason?.statusCode === 403 || reason?.code === 'forbidden' ? 'worker.wip.access_denied' : 'worker.wip.history.error');
       setLoading(false);
     });
     return () => controller.abort();
-  }, [reload, stageHistory, session, order]);
+  }, [reload, stageHistory, session, order, isCurrent]);
 
   const totals = batches.reduce((total, batch) => { total[wipBatchKind(batch)]++; return total; }, { waiting: 0, inUse: 0, processed: 0 });
   const outputTotals = workerWipHistoryTotals(batches);
@@ -134,7 +142,7 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     setSearching(false);
   }
   function openBatch(batch: WipBatch, afterActions = false) {
-    if (detailsSheet.isOpen() || !afterActions && reactivation.isBusy()) return;
+    if (detailsSheet.isOpen() || !afterActions && reactivation.isBusy() || isCurrent && !isCurrent()) return;
     if (!wipText(batch.qr_payload)) {
       setAlert({ title: p('worker.daily.wip_qr_missing'), message: p('worker.daily.wip_qr_missing.body'), confirmLabel: p('worker.action.close') });
       return;
@@ -142,7 +150,7 @@ export function WorkerWipHistory({ session, order, onClose, stageHistory = false
     const operatorReprint = android && session.profile.role === 'aparatchi' &&
       wipText(batch.payload_json?.input_wip_source_kind).toLowerCase() !== 'opening_wip';
     detailsSheet.open(<WorkerWipBatchDetails session={session} order={order} batch={batch}
-      apparatusNames={apparatusNames} onClose={detailsSheet.close} allowReprint={operatorReprint ? true : undefined} />, { dismissible: true });
+      apparatusNames={apparatusNames} onClose={detailsSheet.close} allowReprint={allowReprint ?? (operatorReprint ? true : undefined)} isCurrent={isCurrent} />, { dismissible: true });
   }
   function beginSearch() {
     searchHandled.current = false;

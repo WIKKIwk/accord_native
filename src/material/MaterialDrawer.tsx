@@ -23,7 +23,7 @@ export function MaterialDrawer({ children }: { children: ReactNode }) {
     if (id === 'tasks' && !canOpenRoute(session, appRoutes.materialTasks)) return;
     const destination = materialRoute(id, Platform.OS === 'ios' ? 'ios' : 'android');
     if (!destination) return;
-    if (id === 'history') router.push(destination as Href); else router.navigate(destination as Href);
+    if (id === 'home') router.dismissTo(destination as Href); else router.push(destination as Href);
   };
   return <RoleDrawer {...state} title="Material bo‘limlari" items={items} active={materialDrawerActive(path)} onSelect={select}
     closeAccessibilityLabel="Yopish" footerAction={{ id: 'logout', label: localizedGetter('logoutTitle', current),

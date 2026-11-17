@@ -6,7 +6,7 @@ const test = require('node:test');
 const ts = require('typescript');
 const filename = path.resolve(__dirname, '../src/gscale/gscaleScreenModel.ts');
 const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-mod.require = name => name === './gscaleArchive' ? { formatArchiveTimestamp: value => value, archiveSessionFromBatch: value => value } : require(name);
+mod.require = name => name === './gscaleMaterialPresentation' ? { materialArchiveSubtitle: batch => batch.active ? 'ACTIVE' : 'CLOSED', materialReceiptContextSummary: () => [] } : name === './gscaleArchive' ? { formatArchiveTimestamp: value => value, archiveSessionFromBatch: value => value } : require(name);
 mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
 const { gscaleDashboardSections } = mod.exports;
 
@@ -66,4 +66,42 @@ test('server exposes saved default warehouse and ERP endpoint', () => {
   assert.ok(items.some(row => row.text === 'https://test.example'));
   items.find(row => row.label === 'Qo‘lda').press();
   assert.deepEqual(calls, [['warehouse', 'manual', 'W']]);
+});
+
+test('Material receipt uses exact source device status, two-line switches, picker empties and edit label without changing defaults', () => {
+  const { screen, actions } = fixture(); screen.materialReceipt = true;
+  screen.state.device.selection.bluetoothPrinter.displayName = '';
+  screen.state.draft.item_name = ''; screen.state.draft.item_code = ''; screen.control.targetWarehouse = '';
+  const items = rows(gscaleDashboardSections(screen, 'control', actions));
+  assert.equal(items.find(row => row.id === 'gscale-device').label, 'XP-P323B • Bluetooth');
+  assert.equal(items.find(row => row.id === 'gscale-item').detail, 'Tanlash uchun bosing');
+  assert.equal(items.find(row => row.id === 'gscale-warehouse').detail, 'Tanlash uchun bosing');
+  assert.deepEqual(items.filter(row => row.kind === 'toggle').map(row => [row.label,row.detail]), [['Miqdor (kg)','Qo‘lda kg'],['Babina','Yo‘q']]);
+  screen.state.device.selection = { transport:'offline', offlinePrinter: { displayName:'Zebra', printer:'zebra', printMode:'label' } };
+  screen.control.draftSummary = true;
+  const offline = rows(gscaleDashboardSections(screen, 'control', actions));
+  assert.equal(offline.find(row => row.id === 'gscale-device').label, 'USB printer • Offline');
+  assert.equal(offline.find(row => row.id === 'gscale-context-edit').label, 'Batch ma’lumotini tahrirlash');
+  screen.materialReceipt = false;
+  const legacy = rows(gscaleDashboardSections(screen, 'control', actions));
+  assert.equal(legacy.find(row => row.id === 'gscale-device').label, 'USB printer · Offline');
+  assert.equal(legacy.find(row => row.id === 'gscale-context-edit').label, 'O‘zgartirish');
+});
+
+test('Material snackbar notices are not repeated inline, while existing dashboard notices remain inline', () => {
+  const {screen,actions}=fixture();screen.state.notice='Sozlamalar saqlandi';screen.materialReceipt=true;
+  assert.equal(rows(gscaleDashboardSections(screen,'control',actions)).some(row=>row.text===screen.state.notice),false);
+  screen.materialReceipt=false;
+  assert.equal(rows(gscaleDashboardSections(screen,'control',actions)).some(row=>row.text===screen.state.notice),true);
+});
+
+test('Material source order loading is a spinner and printer settings use their actual option labels',()=>{
+  const {screen,actions}=fixture();screen.materialReceipt=true;screen.order.loading=true;screen.state.device.needsAttention=true;
+  screen.control.showPrinterSettings=true;screen.control.selectedPrinter='zebra';
+  const items=rows(gscaleDashboardSections(screen,'control',actions));
+  assert.deepEqual(items.find(row=>row.loading),{kind:'text',text:'',loading:true});
+  assert.equal(items.find(row=>row.id==='gscale-device').detail,undefined);
+  assert.equal(items.find(row=>row.id==='gscale-device-change').label,'Almashtirish');
+  const settings=gscaleDashboardSections(screen,'control',actions).find(group=>group.title==='Printer sozlamalari');
+  assert.deepEqual(settings.rows.filter(row=>row.kind==='action').map(row=>row.label),['Zebra','RFID']);
 });

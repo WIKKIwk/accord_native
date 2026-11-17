@@ -37,18 +37,21 @@ export function openingWipRecordFromJson(value: unknown) {
 }
 
 /** @v2 adminOpeningWipRecords */
-export async function adminOpeningWipRecords(session: Session, input: { order_id?: string; status?: string; limit?: number } = {}) {
+export async function adminOpeningWipRecords(session: Session, input: { order_id?: string; status?: string; limit?: number } = {}, beforeSend?: () => void) {
   const limit = Math.min(500, Math.max(1, Math.trunc(input.limit ?? 100)));
   const query = new URLSearchParams({ limit: String(limit) });
   if (input.order_id?.trim()) query.set('order_id', input.order_id.trim());
   if (input.status?.trim()) query.set('status', input.status.trim());
-  const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`);
+  const response = beforeSend ? await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`, {}, beforeSend)
+    : await authorizedFetch(session, `/v1/mobile/admin/production-maps/opening-wip?${query}`);
+  beforeSend?.();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'opening_wip_list', response.headers);
   }
   const payload = object(await response.json());
+  beforeSend?.();
   if (!payload) throw new TypeError('Invalid opening WIP response');
   if (payload.records != null && !Array.isArray(payload.records)) throw new TypeError('Invalid opening WIP records');
   return (payload.records as unknown[] | null | undefined ?? []).filter(item => object(item)).map(openingWipRecordFromJson);

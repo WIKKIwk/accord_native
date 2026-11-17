@@ -17,3 +17,6 @@ export type DevicePickerAdapter = {
   isSelectionCurrent?: (token: number) => boolean;
 };
 export type DevicePickerTextHook = () => (value: string) => string;
+
+/** Original Material route lifetime plus the V2 configured manual-server address. */
+export type MaterialDevicePickerContext = { apiBaseUrl: string; isCurrent(): boolean };

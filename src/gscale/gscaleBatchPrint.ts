@@ -20,11 +20,14 @@ export type GScalePrintContext = {
   grossQtyKg: number; printCount?: number; materialSupplier?: string; isMaterialReceipt: boolean;
   offlinePrinter: UsbPrinterProfile | null; bluetoothPrinter: BluetoothPrinterProfile | null;
 };
-async function timed<T>(work: Promise<T>, milliseconds: number): Promise<T> {
+class MaterialTimeout extends Error { toString() { return this.message; } }
+async function timed<T>(work: Promise<T>, milliseconds: number, material = false): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([work, new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Request timed out')), milliseconds);
+      timer = setTimeout(() => reject(material
+        ? new MaterialTimeout(`TimeoutException after 0:00:${String(milliseconds / 1000).padStart(2, '0')}.000000: Future not completed`)
+        : new Error('Request timed out')), milliseconds);
     })]);
   } finally { if (timer) clearTimeout(timer); }
 }
@@ -46,17 +49,17 @@ export async function printActiveGScaleBatch(context: GScalePrintContext, api: G
     expected_item_code: batch.item_code, expected_warehouse: batch.warehouse, gross_qty: context.grossQtyKg,
     driver_url: local ? offlineUsbDriverUrl : driverUrlForRs(context.server!), unit: 'kg', print_count: count };
   try {
-    if (!local) return await timed(api.printRemote(request), 15000);
+    if (!local) return await timed(api.printRemote(request), 15000, context.isMaterialReceipt);
     const single = { ...request, print_count: 1 };
     let last: Receipt | null = null, completed = 0;
     for (let index = 0; index < count; index++) {
       try {
-        const prepared = await timed(api.prepare(single), 15000);
+        const prepared = await timed(api.prepare(single), 15000, context.isMaterialReceipt);
         const print = await api.printLocal(receiptToUsbPrintRequest(prepared, 'material_product',
           context.isMaterialReceipt ? context.materialSupplier ?? '' : ''), { transport: context.transport,
           printerProfile: context.offlinePrinter, bluetoothPrinter: context.bluetoothPrinter });
         if (!print.ok) throw new Error('Printer QR kodini chop etmadi');
-        last = await timed(api.confirm(single, prepared.epc), 15000);
+        last = await timed(api.confirm(single, prepared.epc), 15000, context.isMaterialReceipt);
         completed++;
       } catch (error) {
         if (!completed) throw error;

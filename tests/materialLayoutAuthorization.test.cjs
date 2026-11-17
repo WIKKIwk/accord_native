@@ -32,6 +32,8 @@ function setup(platform, initial) {
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener: () => () => {} } },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     './MaterialContext': { MaterialProvider: 'MaterialProvider' }, './MaterialDrawer': { MaterialDrawer: 'MaterialDrawer' },
+    './MaterialBottomBar.android': { MaterialBottomBar: 'MaterialBottomBar' },
+    './materialRouteAccess': load('material/materialRouteAccess', { '../shared/appRoutes': routes }),
     './materialTestSession': load('material/materialTestSession'), './MaterialTestNotice': { MaterialTestNotice: 'MaterialTestNotice' },
     './useMaterialSession': { useMaterialSession: () => ({ session: state.session, witness: {}, onLogout() {} }) } };
   const module = load(`material/MaterialLayout.${platform}`, mocks, '.tsx'); return { state, render: () => module.MaterialLayout() };
@@ -71,6 +73,6 @@ test('both Material Profile wrappers reuse ProfileScreen without a daily-work ca
     const profile = nodes(screen, 'ProfileScreen')[0]; assert.ok(profile); assert.equal(profile.props.session, session);
     assert.equal(profile.props.onLogout, logout); assert.equal(profile.props.onDailyWork, undefined);
     assert.equal(profile.props.isCurrent(), true); current = false; assert.equal(profile.props.isCurrent(), false);
-    assert.equal(profile.props.settingsUnavailableMessage, 'Sozlamalar vaqtincha mavjud emas.');
+    assert.equal(profile.props.settingsUnavailableMessage, undefined);
   }
 });

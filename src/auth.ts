@@ -309,7 +309,7 @@ export async function clearSession(): Promise<void> {
   } finally { endWitness(); }
 }
 
-export async function logout(session: Session): Promise<void> {
+export async function logout(session: Session, options?: { beforeClearSession?(): Promise<void> }): Promise<void> {
   if (activeSession !== session) return;
   const endWitness = beginWitnessTransition();
   try {
@@ -325,7 +325,10 @@ export async function logout(session: Session): Promise<void> {
       const { logoutSavedSession } = await import('./logoutSavedSession');
       await logoutSavedSession(session.token, session.baseUrl);
     } catch { /* Server logout is best-effort. */ }
-    if (activeSession === session) await clearSession();
+    if (activeSession === session) {
+      if (options?.beforeClearSession) { try { await options.beforeClearSession(); } catch { /* Source logout cleanup is best-effort. */ } }
+      if (activeSession === session) await clearSession();
+    }
     return;
   }
   await store.runAccountOperation(async () => {
@@ -344,7 +347,10 @@ export async function logout(session: Session): Promise<void> {
       }
       if (id != null) await store.remove(id);
     } finally {
-      if (activeSession === session) await clearSession();
+      if (activeSession === session) {
+        if (options?.beforeClearSession) { try { await options.beforeClearSession(); } catch { /* Source logout cleanup is best-effort. */ } }
+        if (activeSession === session) await clearSession();
+      }
     }
   });
   } finally { endWitness(); }

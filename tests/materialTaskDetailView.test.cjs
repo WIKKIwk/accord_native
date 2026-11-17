@@ -64,30 +64,50 @@ test('only one detail opens while a sheet is already active', async () => {
 });
 
 function bodySetup() {
-  const session = {}, witness = { session }, row = { id: 'one', code: 'C1', order_number: '', title: 'Summary', customer_name: 'Customer' };
-  const effects = [], slots = [], calls = []; let cursor = 0, current = true, pending = null;
-  const react = { useState: initial => { const i = cursor++; if (!(i in slots)) slots[i] = initial;
-      return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next; }]; },
-    useEffect: fn => { effects.push(fn); }, useSyncExternalStore: (_s, get) => get() };
-  const mocks = { 'react/jsx-runtime': jsx, react, 'react-native': { ActivityIndicator: 'ActivityIndicator', ScrollView: 'ScrollView', Text: 'Text', View: 'View' },
+  const calls = [], session = {}, witness = { session }, row = { id: 'one' };
+  const model = { current: () => true, order: null, shown: null, code: 'FULL', title: 'Full order', customer: 'Buyer', imageId: 'image',
+    materials: { value: [], loading: false, error: '' }, molds: { value: [], loading: false, error: '' }, moldItems: [],
+    materialsExpanded: false, moldsExpanded: false, mapExpanded: false, mapFacts: { loading: false, error: '', value: [] }, mapRows: [],
+    p: key => key, a: key => key, canReceive: true, notice: '', noticeId: 0, mapProgress: '0/2',
+    retry: () => calls.push('retry'), receive: () => calls.push('receive'), toggleMaterials() {}, toggleMolds() {}, toggleMap() {},
+    dismissNotice() {}, openMaterialQr: value => calls.push(['qr', value]), unlink: value => calls.push(['unlink', value]), canUnlink: () => true,
+    openMoldQr: value => calls.push(['mold', value]), openStage: (...args) => calls.push(['stage', ...args]) };
+  const view = compile('material/MaterialTaskDetail', {
+    'react/jsx-runtime': jsx, react: { useState: value => [value, () => {}], useSyncExternalStore: (_s, get) => get() },
+    'react-native': { ActivityIndicator: 'ActivityIndicator', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View' },
     '../auth': { sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
-    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' }, '../components/WorkerOrderOverview': { WorkerOrderOverview: 'WorkerOrderOverview' },
-    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../components/useWorkerColors': { useWorkerColors: () => ({}) },
-    '../shared/camera/synchronousGuard': { isSynchronouslyTrue: fn => fn() === true },
-    './materialTaskDetailApi': { readMaterialTaskDetail: (_s, _w, _r, guard) => { calls.push(guard); return pending; } } };
-  const view = compile('material/MaterialTaskDetail', mocks).MaterialTaskDetail;
-  return { session, witness, row, effects, calls, setPending: value => { pending = value; }, setCurrent: value => { current = value; },
-    render: () => { cursor = 0; return view({ session, witness, row, isCurrent: () => current, onClose: () => calls.push('close') }); } };
+    '../components/WorkerExpansion': { WorkerExpansion: 'WorkerExpansion' }, '../components/WorkerMaterialList': { WorkerMaterialList: 'WorkerMaterialList' },
+    '../components/WorkerOrderHeader': { WorkerOrderHeader: 'WorkerOrderHeader', WorkerOrderImage: 'WorkerOrderImage' },
+    '../components/WorkerOrderOverview': { WorkerOrderOverview: 'WorkerOrderOverview' }, '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
+    '../components/useWorkerColors': { useWorkerColors: () => ({}) }, '../customer/CustomerSnackbar': { CustomerSnackbar: 'CustomerSnackbar' },
+    './useMaterialTaskDetailContent': { useMaterialTaskDetailContent: () => model },
+  }).MaterialTaskDetail;
+  return { calls, model, row, render: () => view({ session, witness, row, isCurrent: model.current, onClose: () => calls.push('close') }) };
 }
-test('detail reuses the native order overview after full data loads', async () => {
-  const h = bodySetup(); h.setPending(Promise.resolve({ map: { id: 'one', code: 'FULL', title: 'Full order', customer_name: 'Buyer' } }));
-  const loading = h.render(); assert.equal(nodes(loading, 'ActivityIndicator').length, 1); h.effects.shift()(); await new Promise(resolve => setImmediate(resolve));
-  const ready = h.render(), summary = nodes(ready, 'WorkerOrderOverview')[0]; assert.ok(summary); assert.equal(summary.props.code, 'FULL');
+test('detail renders the shared native information summary and full-order image identity', () => {
+  const h = bodySetup(); assert.equal(nodes(h.render(), 'ActivityIndicator').length, 1);
+  h.model.order = { map: { id: 'one' } }; h.model.shown = { order: h.model.order };
+  const ready = h.render(), summary = nodes(ready, 'WorkerOrderOverview')[0];
+  assert.equal(summary.props.code, 'FULL'); assert.equal(summary.props.summaryKind, 'information');
   assert.equal(summary.props.detail.customer, 'Buyer'); assert.deepEqual(summary.props.detail.stages, []);
-  nodes(ready, 'WorkerIconButton')[0].props.onPress(); assert.equal(h.calls.at(-1), 'close');
+  nodes(ready, 'WorkerOrderHeader')[0].props.onClose(); assert.equal(h.calls.at(-1), 'close');
+  nodes(ready, 'WorkerSheetButton').find(node => node.props.label === 'action.assign').props.onPress();
+  assert.equal(h.calls.at(-1), 'receive');
 });
-test('detail shows retry on read failure and hides after lifetime expires', async () => {
-  const h = bodySetup(); h.setPending(Promise.reject(Error('network'))); h.render(); h.effects.shift()(); await new Promise(resolve => setImmediate(resolve));
-  const failed = h.render(), retry = nodes(failed, 'WorkerSheetButton')[0]; assert.ok(retry); retry.props.onPress();
-  assert.equal(nodes(h.render(), 'ActivityIndicator').length, 1); h.setCurrent(false); assert.equal(h.render(), null);
+test('detail renders native assigned-material balance/unlink controls and readonly mold QR', () => {
+  const h = bodySetup(), material = { barcode: 'R' }, mold = { qolip_code: 'Q' };
+  h.model.order = { map: {} }; h.model.shown = { order: h.model.order };
+  h.model.materials.value = [material]; h.model.materialsExpanded = true;
+  h.model.molds.value = [mold]; h.model.moldsExpanded = true; h.model.moldItems = [{ product: mold, details: 'Blue', color: null }];
+  const tree = h.render(), list = nodes(tree, 'WorkerMaterialList')[0];
+  assert.equal(list.props.showBalances, undefined, 'existing aggregate balance display stays enabled');
+  list.props.onUnlink(material); list.props.onLongPress(material);
+  assert.deepEqual(h.calls.slice(-2), [['unlink', material], ['qr', material]]);
+  nodes(tree, 'Pressable').find(node => node.props.onLongPress).props.onLongPress();
+  assert.deepEqual(h.calls.at(-1), ['mold', mold]);
+});
+test('detail renders retry on read failure and hides after its original lifetime expires', () => {
+  const h = bodySetup(); h.model.shown = { order: null, error: 'network' };
+  nodes(h.render(), 'WorkerSheetButton')[0].props.onPress(); assert.equal(h.calls.at(-1), 'retry');
+  h.model.current = () => false; assert.equal(h.render(), null);
 });

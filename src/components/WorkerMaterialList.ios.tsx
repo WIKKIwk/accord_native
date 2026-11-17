@@ -1,10 +1,10 @@
-import { HStack, Image, Text, VStack } from '@expo/ui/swift-ui';
-import { background, contentShape, font, foregroundStyle, frame, lineLimit, onLongPressGesture, padding, shapes } from '@expo/ui/swift-ui/modifiers';
-import { assignedMaterialPresentation, rawMaterialBalances, type WorkerMaterialListProps } from '../workerMaterialPresentation';
+import { Button, HStack, Image, ProgressView, Text, VStack } from '@expo/ui/swift-ui';
+import { accessibilityLabel, background, buttonStyle, contentShape, disabled, font, foregroundStyle, frame, labelStyle, lineLimit, onLongPressGesture, padding, shapes } from '@expo/ui/swift-ui/modifiers';
+import { assignedMaterialPresentation, assignedMaterialStatus, rawMaterialBalances, type WorkerMaterialListProps } from '../workerMaterialPresentation';
 import { BaseHost } from './BaseHost';
 import { useBaseTheme } from './useBaseTheme';
 import { useWorkerOrderText } from './useWorkerOrderText';
-export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBalances = true }: WorkerMaterialListProps) {
+export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBalances = true, onUnlink, canUnlink, unlinkingBarcode }: WorkerMaterialListProps) {
   const { locale, t, p } = useWorkerOrderText();
   const { colors } = useBaseTheme();
   const secondaryText = colors.onSurfaceVariant ?? colors.onSurface;
@@ -23,11 +23,22 @@ export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBa
         <Image systemName={item.confirmed ? 'checkmark' : 'shippingbox'} size={20} modifiers={[
           foregroundStyle(item.confirmed ? colors.onPrimaryContainer : secondaryText), frame({ width: 36, height: 36 }),
           background(item.confirmed ? colors.surfaceContainerHigh : colors.surface, shapes.roundedRectangle({ cornerRadius: 12 }))]} />
+        {onUnlink ? <VStack alignment="leading" spacing={2} modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>
         <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle(item.confirmed ? colors.onPrimaryContainer : secondaryText),
           frame({ maxWidth: Infinity, alignment: 'leading' }), lineLimit(2)]}>
           <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), foregroundStyle(item.confirmed ? colors.onPrimaryContainer : colors.onSurface)]}>{item.title}</Text>
           {item.subtitle ? `${item.title ? ' • ' : ''}${item.subtitle}` : ''}
         </Text>
+          {!!assignedMaterialStatus(row, p) && <Text modifiers={[font({ textStyle: 'caption2', weight: 'semibold' }), foregroundStyle(secondaryText)]}>{assignedMaterialStatus(row, p)}</Text>}
+        </VStack> : <Text modifiers={[font({ textStyle: 'caption' }), foregroundStyle(item.confirmed ? colors.onPrimaryContainer : secondaryText),
+          frame({ maxWidth: Infinity, alignment: 'leading' }), lineLimit(2)]}>
+          <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }), foregroundStyle(item.confirmed ? colors.onPrimaryContainer : colors.onSurface)]}>{item.title}</Text>
+          {item.subtitle ? `${item.title ? ' • ' : ''}${item.subtitle}` : ''}
+        </Text>}
+        {onUnlink && (unlinkingBarcode === row.barcode?.trim().toUpperCase() ? <ProgressView />
+          : <Button label={p('worker.material.unlink')} systemImage="link" onPress={() => onUnlink(row)}
+            modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(p('worker.material.unlink')),
+              disabled(!!unlinkingBarcode || !(canUnlink?.(row) ?? false))]} />)}
       </HStack>; })}
   </VStack></BaseHost>;
 }

@@ -11,19 +11,22 @@ import type { MonitorSnapshot } from './gscaleMonitor';
 import type { PrintDeviceSelection } from './gscalePreferences';
 
 export type GScaleArchiveContext = { controlOnly: boolean; transport: PrintTransport; selection: PrintDeviceSelection | null;
-  server: DiscoveredServer | null; monitor: MonitorSnapshot; batchPrinter: string };
-async function timed<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  server: DiscoveredServer | null; monitor: MonitorSnapshot; batchPrinter: string; materialReceipt?: boolean };
+class MaterialTimeout extends Error { toString() { return this.message; } }
+async function timed<T>(promise: Promise<T>, milliseconds: number, material = false): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  try { return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Request timed out')), milliseconds); })]); }
+  try { return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(material
+    ? new MaterialTimeout(`TimeoutException after 0:00:${String(milliseconds / 1000).padStart(2, '0')}.000000: Future not completed`)
+    : new Error('Request timed out')), milliseconds); })]); }
   finally { if (timer) clearTimeout(timer); }
 }
-async function request(server: DiscoveredServer | null, path: string, init: RequestInit, timeout: number) {
+async function request(server: DiscoveredServer | null, path: string, init: RequestInit, timeout: number, material = false) {
   if (!server) throw new Error('Avval printer yoki tarozini tanlang');
   return timed((async () => {
     const response = await fetch(`${server.endpoint.baseUrl}${path}`, init);
     const body = await response.text();
     return { status: response.status, body };
-  })(), timeout);
+  })(), timeout, material);
 }
 function parseObject(body: string): Record<string, unknown> {
   try { const value: unknown = JSON.parse(body); return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
@@ -44,7 +47,7 @@ export function currentArchivePrinterChoice(context: GScaleArchiveContext): stri
 
 /** @v2 _refreshArchive */
 export async function loadGScaleArchive(session: Session, context: GScaleArchiveContext): Promise<ArchiveSession[]> {
-  if (context.controlOnly) return (await timed(gscaleRpsBatchHistory(session, 50), 15000)).map(archiveSessionFromBatch);
+  if (context.controlOnly) return (await timed(gscaleRpsBatchHistory(session, 50), 15000, context.materialReceipt)).map(archiveSessionFromBatch);
   const response = await request(context.server, '/v1/mobile/archive?limit=50', {}, 4000);
   if (response.status < 200 || response.status > 299) throw new Error(`archive ${response.status}`);
   const payload: unknown = JSON.parse(response.body);
@@ -73,7 +76,7 @@ export async function printGScaleArchiveSession(context: GScaleArchiveContext, s
   beforeWrite?.();
   const response = await request(context.server, context.controlOnly ? '/v1/mobile/driver/print' : '/v1/mobile/archive/print', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  }, 5000);
+  }, 5000, context.materialReceipt);
   if (response.status < 200 || response.status > 299) {
     const payload = parseObject(response.body);
     throw new Error(String(payload.error || 'Arxiv chop etish muvaffaqiyatsiz'));
@@ -93,7 +96,7 @@ export function reprintGScaleArchiveReceipt(session: Session, context: GScaleArc
         bluetoothPrinter: context.selection?.transport === 'bluetooth' ? context.selection.bluetoothPrinter : null });
       const response = await request(context.server, '/v1/mobile/driver/print', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(label.toJson()),
-      }, 15000);
+      }, 15000, context.materialReceipt);
       const payload = parseObject(response.body);
       if (response.status < 200 || response.status > 299 || payload.ok !== true) {
         throw new Error(String(payload.detail || payload.error || 'Printer QR kodini chop etmadi'));

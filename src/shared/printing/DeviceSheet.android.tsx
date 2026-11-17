@@ -3,13 +3,14 @@ import { background, clip, defaultMinSize, fillMaxWidth, semantics, Shapes, size
 import type { ComponentType } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text as NativeText, View, useWindowDimensions } from 'react-native';
 import { WorkerQueueCard } from '../../components/WorkerQueueCard.android';
-import type { DevicePickerAdapter, DevicePickerTextHook } from './devicePickerTypes';
+import type { DevicePickerAdapter, DevicePickerTextHook, MaterialDevicePickerContext } from './devicePickerTypes';
+import { MaterialDevicePicker } from './MaterialDevicePicker.android';
 import { useDevicePicker } from './useDevicePicker';
 
 type LabelProps = { children: string };
 type ActionProps = { label: string; detail?: string; onPress(): void; disabled?: boolean; id?: string };
 type DeviceSheetProps = { operator: DevicePickerAdapter; close(): void; useText: DevicePickerTextHook;
-  Label: ComponentType<LabelProps>; Action: ComponentType<ActionProps>; safe?: boolean; printerOnly?: boolean };
+  Label: ComponentType<LabelProps>; Action: ComponentType<ActionProps>; safe?: boolean; printerOnly?: boolean; materialReceipt?: MaterialDevicePickerContext };
 const icons = {
   usb: require('../../../assets/icons/gscale/usb.xml'), bluetooth: require('../../../assets/icons/gscale/bluetooth.xml'),
   wifi: require('../../../assets/icons/gscale/wifi.xml'), back: require('../../../assets/icons/gscale/arrow_back.xml'),
@@ -32,7 +33,12 @@ function DeviceRow({ title, detail, icon, first, last, onPress }: {
   </WorkerQueueCard>;
 }
 
-export function DeviceSheet({ operator, close, useText, Label, safe, printerOnly = false }: DeviceSheetProps) {
+export function DeviceSheet(props: DeviceSheetProps) {
+  if (props.materialReceipt) return <MaterialDevicePicker {...props} materialReceipt={props.materialReceipt} />;
+  return <StandardDeviceSheet {...props} />;
+}
+
+function StandardDeviceSheet({ operator, close, useText, Label, safe, printerOnly = false }: DeviceSheetProps) {
   const picker = useDevicePicker(operator, close, safe, printerOnly), address = useNativeState(picker.address), t = useText();
   const colors = useMaterialColors(), { height } = useWindowDimensions(), connection = picker.device.connection;
   const listLimit = Math.max(88, Math.min(400, height * 0.7 - (connection === 'wifi' ? 240 : 144)));

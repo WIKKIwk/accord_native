@@ -62,7 +62,7 @@ export function gscaleControlViewModel(input: GScaleControlInputs) {
   return { hasScaleDevice, hasPrintDevice, showPrinterSettings, activeBatch: active, showFields, draftSummary,
     fieldsLocked, printerLocked: snapshot.batchActive || input.batchActionLoading || input.manualPrintLoading,
     selectedItem: selected, selectedWarehouse, targetWarehouse: warehouse, simpleReceiptMode: simple,
-    quantitySource, babinaEnabled: babina, manualQty, duplicateCount, width, micron, length, widthRangeError,
+    quantitySource, babinaEnabled: babina, tareKg: lockedContext ? active!.tare_kg : parsePositiveKg(draft.babina_text) ?? 0, scaleQty, manualQty, duplicateCount, width, micron, length, widthRangeError,
     manualQtyInvalid: quantitySource === 'manual' && !!draft.manual_qty_text.trim() && manualQty == null,
     duplicateInvalid: quantitySource === 'manual' && !!draft.manual_duplicate_text.trim() && duplicateCount == null,
     babinaInvalid: babina && !!draft.babina_text.trim() && parsePositiveKg(draft.babina_text) == null,

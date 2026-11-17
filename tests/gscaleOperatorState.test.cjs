@@ -23,7 +23,7 @@ const { GScaleBatchStateStore } = load('gscale/gscaleBatchState.ts');
 const { batchSessionFromJson, materialReceiptPrintResponseFromJson } = load('gscale/gscaleBatchModel.ts');
 const { emptyOperatorControlDraft } = load('gscale/gscaleDraft.ts');
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function setup(role = 'material_taminotchi', args = { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }) {
+function setup(role = 'material_taminotchi', args = { order: { id: 'o1', code: '', title: '', order_kg: '0', saved: false } }, policy) {
   const listeners = new Set();
   const deviceState = { selection: { transport: 'bluetooth', bluetoothPrinter: { name: 'XP', address: 'AA', printer: 'xp-p323b', printMode: 'label' } },
     transport: 'bluetooth', needsAttention: false, connection: null, scanning: false, scanResult: null, checkingAddress: false, addressError: '' };
@@ -41,9 +41,22 @@ function setup(role = 'material_taminotchi', args = { order: { id: 'o1', code: '
     submitSimple: async () => {}, loadArchive: async () => [], printArchive: async () => '', reprintArchiveReceipt: async () => null,
     refreshMonitor: async () => { throw new Error('unexpected'); },
     makeLive: () => { throw new Error('unexpected'); } };
-  const store = new GScaleOperatorStore(role, args, deps);
+  const store = new GScaleOperatorStore(role, args, deps, policy);
   return { store, calls, active, batch, deps };
 }
+
+test('Material source snackbar revisions repeat identical saves and emit a late ERP error once while retaining inline error', async()=>{
+  const {store,batch}=setup('material_taminotchi',undefined,{restrictPrinter:false,receiptPresentation:true,isPrinterChoiceAllowed:()=>true,assertOperation(){}});
+  store.start();await flush();store.editDraft({item_code:'PET',item_name:'PET',warehouse:'W',length_text:'125',quantity_source:'manual'});
+  await store.saveContext();assert.equal(store.getSnapshot().notice,'Sozlamalar saqlandi');assert.equal(store.getSnapshot().noticeRevision,1);
+  store.beginContextEdit();await store.saveContext();assert.equal(store.getSnapshot().noticeRevision,2);
+  store.dismissNotice();assert.equal(store.getSnapshot().notice,'');
+  const failed=batchSessionFromJson({id:'failed',active:false,revision:3,item_code:'PET',warehouse:'W',last_error:'ERP down',last_error_at:'now'});
+  batch.apply(failed);assert.equal(store.getSnapshot().notice,'ERPNext tasdiqlashda xatolik yuz berdi: ERP down');
+  const revision=store.getSnapshot().noticeRevision;batch.apply({...failed});
+  assert.equal(store.getSnapshot().noticeRevision,revision);assert.equal(store.getSnapshot().error,'ERPNext tasdiqlashda xatolik yuz berdi: ERP down');
+  store.dispose();
+});
 
 test('operator saves valid context, starts a batch and can edit manual weight while batch is active', async () => {
   const { store, calls } = setup(); store.start(); await flush();

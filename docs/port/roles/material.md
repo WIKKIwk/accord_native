@@ -16,6 +16,8 @@ The f119 details header includes the event icon, title and subtitle. The whole h
 
 Drawer `Material bo‘limlari`: home (`homeNavTitle`), `Vazifalar`, `Ketma-ketlik`, `Kirim`, `Harakatlar tarixi`, conditional `Homashyo biriktirish`, conditional `Joylashtirish va transfer`, profile (`profileTitle`). Drawer closes current destination without navigation; the other entries push except home. Logout uses shared `showLogoutPrompt`. Dock order is home, `Kirim`, `Vazifalar`, profile, Chat; V2 appends Chat in `RoleDock`. Reuse real shared Chat/unread and hide the dock in a conversation. Profile uses the existing shared Profile screen with no `onDailyWork` callback because V2 Material does not expose that row. Its settings/PIN use existing native pages. Deep links apply the same source capabilities; denied routes show centered localized `accessDenied`.
 
+Logout preserves `AccountSwitchController.logoutCurrent` ordering: best-effort push/server logout, saved-account removal, best-effort original-account PIN/biometric cleanup, then session clear. The existing serialized account/lock owners are reused; an older logout cannot clear a newer login’s lock.
+
 ## GScale and shared operational pages
 
 `_MaterialGScaleControlScreen` reuses Preparation’s control-only dashboard, APIs, durable draft, command owner and print transports with `Homashyo kirimi`, `Print`, `Print tarixi`, linked-order loading and refreshed scope. Material retains its own shell. Its opt-in presentation and policy preserve shared defaults.

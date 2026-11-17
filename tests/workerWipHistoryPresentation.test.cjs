@@ -36,7 +36,7 @@ test('history card rows retain source action, two-decimal quantity, both activit
   assert.equal(actual[0][1], '100.12 m'); assert.equal(actual[3][1], 'Bosma'); assert.equal(actual[4][1], 'worker.wip.action.pause');
   assert.equal(actual[6][1], '—'); assert.equal(actual[7][1], 'worker:123456', 'source list card deliberately retains the legacy worker fallback');
 });
-function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = false) {
+function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = false, detailOptions = {}) {
   const runner = hooks(), state = { rows: initial, error: null, opened: [], actions: [], longPressDetails: false, parentCloses: 0, reads: 0 };
   runner.react.useContext = () => null;
   runner.react.useImperativeHandle = () => {};
@@ -61,7 +61,7 @@ function harness(platform = 'ios', initial = [], role = 'aparatchi', inline = fa
     }, dialogs: null }) },
     '../workerWipHistoryPresentation': api, '../workerWipDetailsPresentation': details,
   });
-  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() { state.parentCloses++; } };
+  const props = { session: { profile: { ref: 'worker', role } }, order: { id: 'o', code: '0304', title: 'Film', apparatusId: 'apparatus:default:press' }, apparatusNames: { 'apparatus:default:press': 'Bosma' }, onClose() { state.parentCloses++; }, ...detailOptions };
   return { state, render() { runner.begin(); const tree = WorkerWipHistory(props); runner.flush(); return tree; }, dispose: runner.dispose };
 }
 for (const platform of ['ios', 'android']) test(`${platform}: history renders localized summary, partial totals, states and QR details with no lost source action row`, async () => {
@@ -203,5 +203,19 @@ for (const scenario of ['empty', 'error', 'forbidden']) test(`history ${scenario
     assert.ok(find(tree, node => node.props?.children === key));
     assert.equal(!!find(tree, node => node.type === 'Button' && node.props.label === 'worker.action.retry'), scenario !== 'empty');
     assert.equal(find(tree, node => node.type === 'Button' && node.props.label === 'worker.wip.history.search_qr').props.disabled, true);
+  } finally { h.dispose(); }
+});
+
+for (const platform of ['ios', 'android']) test(`${platform}: Material stage history explicitly suppresses reprints and retires original details`, async () => {
+  let current = true;
+  const h = harness(platform, [batch()], 'material_taminotchi', false, { allowReprint: false, isCurrent: () => current });
+  try {
+    h.render(); await tick(); const tree = h.render();
+    const row = find(tree, node => node.type === 'FlatList').props.renderItem({ item: h.state.rows[0], index: 0 });
+    row.props.onPress(); assert.equal(h.state.opened.length, 1);
+    assert.equal(h.state.opened[0].content.props.allowReprint, false);
+    assert.equal(h.state.opened[0].content.props.isCurrent(), true);
+    current = false; row.props.onPress(); assert.equal(h.state.opened.length, 1);
+    assert.equal(h.state.opened[0].content.props.isCurrent(), false);
   } finally { h.dispose(); }
 });

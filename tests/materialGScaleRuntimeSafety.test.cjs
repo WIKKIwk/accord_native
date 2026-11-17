@@ -17,8 +17,8 @@ const usb = { transport: 'offline', offlinePrinter: { kind: 'zebra', printer: 'z
   deviceName: '/dev/usb/1', manufacturerName: 'Zebra', productName: 'ZD' } };
 const wifi = { transport: 'wifi', server: { endpoint: { baseUrl: 'http://scale:39117' } } };
 const activeBatch = { id: 'b', revision: 3, active: true, printer: 'zebra', driver_url: 'usb://local' };
-function harness(role = 'material_taminotchi', restricted = true) {
-  const calls = [], pending = deferred(); let current = true, scope = 'one', batchStore, deviceOptions;
+function harness(role = 'material_taminotchi', restricted = true, receipt = false) {
+  const calls = [], pending = deferred(); let current = true, receiptCurrent = true, scope = 'one', batchStore, deviceOptions;
   class FakeBatch {
     constructor(api, options) { this.api = api; this.options = options; batchStore = this; }
     getSnapshot() { return { resolved: true, batch: null }; }
@@ -45,15 +45,16 @@ function harness(role = 'material_taminotchi', restricted = true) {
     './gscaleDeviceRuntime': { createGScaleDeviceStore: options => { deviceOptions = options; return {}; } },
     './gscaleDraft': {}, './gscaleLive': {}, './gscaleLiveRuntime': {}, './gscalePreparation': {},
     './gscaleOperatorState': { GScaleOperatorStore: FakeOperator }, './gscaleCatalogRuntime': { createGScaleCatalogRuntime: () => ({}) },
-    './gscaleArchiveRuntime': { loadGScaleArchive: async () => [],
+    './gscaleArchiveRuntime': { loadGScaleArchive: async () => [], currentArchivePrinterChoice: context => context.batchPrinter ?? 'zebra',
       printGScaleArchiveSession: async (_context, _entry, guard) => { await pending.promise; guard?.(); calls.push('archive-print'); return ''; },
       reprintGScaleArchiveReceipt: async (_s, _context, _entry, guard) => { await pending.promise; guard?.(); calls.push('reprint-post'); return null; } },
     './gscaleMaterialPolicy': policy,
   };
   const runtime = compile('gscale/gscaleOperatorRuntime', mocks), session = { profile: { role }, assigned_warehouses: [], capabilities: [] };
-  const store = runtime.createGScaleOperatorStore(session, {}, restricted ? { materialPrinterSafety: true } : {});
+  const store = runtime.createGScaleOperatorStore(session, {}, receipt ? { materialReceipt: { isCurrent: () => receiptCurrent } }
+    : restricted ? { materialPrinterSafety: true } : {});
   return { calls, pending, store, batch: batchStore, options: deviceOptions, switchAccount: () => { current = false; },
-    changeScope: () => { scope = 'two'; }, runtime, session };
+    changeScope: () => { scope = 'two'; }, retireReceipt: () => { receiptCurrent = false; }, runtime, session };
 }
 const startContext = { transport: 'offline', offlinePrinter: usb.offlinePrinter, bluetoothPrinter: null, server: null };
 const printContext = { transport: 'offline', offlinePrinter: usb.offlinePrinter, bluetoothPrinter: null, server: null, batch: activeBatch };
@@ -116,4 +117,33 @@ test('restricted start and automatic stop pass the same current-scope guard to t
   const autoGuard = stop.batch.options.prepareAutomaticStop(activeBatch); assert.equal(autoGuard(), true);
   await stop.batch.api.stop('b', 3); const stopGuard = stop.calls.find(item => Array.isArray(item) && item[0] === 'stop-guard')?.[1];
   assert.equal(typeof stopGuard, 'function'); stop.changeScope(); assert.equal(autoGuard(), false); assert.throws(stopGuard, /Sessiya tugagan/);
+});
+
+test('routed Material receipt preserves Wi-Fi and remembered device preferences', async () => {
+  const h = harness('material_taminotchi', false, true);
+  assert.equal(h.options.allowSelection(wifi), true); assert.equal(h.options.allowSelection(usb), true);
+  assert.equal(h.options.rememberBluetooth, undefined);
+  await h.options.storage.setItem('device', 'wifi'); assert.deepEqual(h.calls, ['shared-save']);
+  h.store.state.device = { selection: wifi, transport: 'wifi' };
+  const work = h.store.deps.startBatch({ ...startContext, transport: 'wifi', server: wifi.server }, () => null);
+  h.pending.resolve(); await work; assert.ok(h.calls.includes('start-post'));
+});
+
+test('routed Material receipt checks its original route lifetime again before each delayed write', async () => {
+  for (const operation of ['start', 'print', 'archive', 'reprint']) {
+    const h = harness('material_taminotchi', false, true);
+    if (operation === 'print') h.store.state.batch.batch = activeBatch;
+    const work = operation === 'start' ? h.store.deps.startBatch(startContext, () => null)
+      : operation === 'print' ? h.store.deps.printBatch(printContext)
+        : operation === 'archive' ? h.store.deps.printArchive(archiveContext, {}) : h.store.deps.reprintArchiveReceipt(archiveContext, {});
+    h.retireReceipt(); h.pending.resolve(); await assert.rejects(work, /Sessiya tugagan/, operation);
+    assert.deepEqual(h.calls, [], operation);
+  }
+});
+
+test('routed Material receipt excludes a captured GoDEX archive request before dispatch', () => {
+  const h = harness('material_taminotchi', false, true);
+  assert.throws(() => h.store.deps.printArchive({ ...archiveContext, batchPrinter: 'godex' }, {}), /Printer ulanmagan/);
+  assert.throws(() => h.store.deps.reprintArchiveReceipt({ ...archiveContext, batchPrinter: 'godex' }, {}), /Printer ulanmagan/);
+  assert.deepEqual(h.calls, []);
 });

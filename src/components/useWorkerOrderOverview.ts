@@ -9,6 +9,7 @@ import { WorkerWipHistory } from './WorkerWipHistory';
 
 export type WorkerOrderOverviewProps = {
   session: Session; orderId: string; code: string; title: string; imageId: string; detail: WorkerOrderDetail | null;
+  summaryKind?: 'worker' | 'information';
 };
 const stageStates: Record<string, string> = {
   pending: 'Kutilmoqda', waiting: 'Kutilmoqda', in_progress: 'Ish jarayonida', paused: 'Pauzada',
@@ -19,7 +20,7 @@ const positive = (value: unknown) => typeof value === 'number' && Number.isFinit
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const snapshot = () => localeController.locale;
 
-export function useWorkerOrderOverview({ session, orderId, code, title, imageId, detail }: WorkerOrderOverviewProps) {
+export function useWorkerOrderOverview({ session, orderId, code, title, imageId, detail, summaryKind = 'worker' }: WorkerOrderOverviewProps) {
   const [expanded, setExpanded] = useState(false), history = useNativeSheet();
   const locale = useSyncExternalStore(subscribe, snapshot, snapshot);
   const text = (key: string, values?: Record<string, unknown>) => productionText(key, locale, values);
@@ -36,7 +37,7 @@ export function useWorkerOrderOverview({ session, orderId, code, title, imageId,
 
   return {
     expanded, enabled: !!detail, toggle: () => { if (detail) setExpanded(value => !value); }, metrics, facts,
-    title: text('worker.summary.expected.result_title'), subtitle: text('worker.summary.expected.subtitle'),
+    title: text(summaryKind === 'information' ? 'worker.summary.expected.title' : 'worker.summary.expected.result_title'), subtitle: text('worker.summary.expected.subtitle'),
     stagesTitle: text('worker.qr.report.stages'),
     stages: detail?.stages.map((stage, index) => ({ ...stage, number: index + 1, stateLabel: workerOrderText(stageStates[stage.state] ?? '', locale) })) ?? [],
     openStage(apparatusId: string) {

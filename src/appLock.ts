@@ -75,13 +75,18 @@ export async function verifyAppPin(session: Session, pin: string): Promise<boole
   return !!activeSessionToken(session) && digest === record.digest;
 }
 
-export async function clearAppLock(session: Session): Promise<void> {
+export async function clearAppLock(session: Session, current?: () => boolean): Promise<void> {
   if (Platform.OS === 'web') return;
+  const check = () => { if (current && current() !== true) throw new Error('Akkaunt o‘zgargan'); };
   return inStorageOrder(async () => {
+    check();
     const key = await keyFor(session);
+    check();
     // Overwrite the PIN before cleanup so a failed native delete cannot restore it.
     await SecureStore.setItemAsync(key, disabledLockRecord);
+    check();
     if (await SecureStore.getItemAsync(key) !== disabledLockRecord) throw new Error('PIN’ni o‘chirib bo‘lmadi.');
+    check();
     await SecureStore.deleteItemAsync(`${key}_biometric`).catch(() => {});
   });
 }

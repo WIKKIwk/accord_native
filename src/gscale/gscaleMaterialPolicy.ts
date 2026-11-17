@@ -8,6 +8,39 @@ export type MaterialGScaleExpectation = { selection?: string; batchId?: string; 
 const denied = () => new Error('Printer ulanmagan');
 const canonical = (value: string) => value.trim().toLowerCase();
 
+/** Stable selection identity for the same Wi-Fi, Bluetooth and USB choices V2 offers. */
+export function materialReceiptPrinterSelectionKey(selection: PrintDeviceSelection | null): string | null {
+  if (!selection) return null;
+  if (selection.transport === 'wifi') return `wifi:${selection.server.endpoint.baseUrl}`;
+  if (selection.transport === 'bluetooth') return `bluetooth:${selection.bluetoothPrinter.address.trim().toLowerCase()}`;
+  const printer = selection.offlinePrinter;
+  if (canonical(printer.kind) === 'godex' || canonical(printer.printer) === 'godex') return null;
+  return `usb:${printer.vendorId}:${printer.productId}:${printer.deviceName.trim()}`;
+}
+
+/** Material's V2 receipt flow, with the project's explicit GoDEX exclusion (D13). */
+export class MaterialReceiptPrinterPolicy {
+  readonly receiptPresentation = true;
+  readonly restrictPrinter = true;
+  constructor(private readonly isCurrent: () => boolean) {}
+  isPrinterChoiceAllowed(value: string): boolean { return canonical(value) === 'zebra'; }
+  allowSelection(selection: PrintDeviceSelection): boolean { return this.isCurrent() && !!materialReceiptPrinterSelectionKey(selection); }
+  assertOperation(_operation: MaterialGScaleOperation, state: GScaleOperatorState, expected: MaterialGScaleExpectation = {}): void {
+    if (!this.isCurrent()) throw new Error('Sessiya tugagan. Qayta kiring.');
+    const key = materialReceiptPrinterSelectionKey(state.device.selection);
+    if (!key || state.device.needsAttention || state.device.transport !== state.device.selection?.transport ||
+        (expected.selection != null && expected.selection !== key) ||
+        !this.isPrinterChoiceAllowed(state.draft.printer) ||
+        canonical(state.batch.batch?.printer ?? '') === 'godex' ||
+        canonical(state.monitor?.printerKind ?? '') === 'godex' ||
+        /^(?:godex|go-dex)/.test(canonical(state.monitor?.printerLabel ?? '')) ||
+        (expected.requestPrinter != null && canonical(expected.requestPrinter) === 'godex')) throw denied();
+    const batch = state.batch.batch;
+    if (expected.batchId != null && batch?.id !== expected.batchId) throw denied();
+    if (expected.batchRevision != null && batch?.revision !== expected.batchRevision) throw denied();
+  }
+}
+
 /**
  * The existing USB bridge classifies Zebra by its USB vendor or descriptor; Bluetooth discovery filters XP-P323B.
  * This is a previously observed selection, not an atomic connection to a physical device.

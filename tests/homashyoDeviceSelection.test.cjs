@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict'); const fs = require('node:fs'); const Module = require('node:module');
 const path = require('node:path'); const test = require('node:test'); const ts = require('typescript');
 function load(file, mocks = {}) { const filename = path.resolve(__dirname, `../src/${file}.ts`), m = new Module(filename, module);
-  m.filename = filename; m.paths = module.paths; m.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  m.filename = filename; m.paths = module.paths; if (mocks.react && !mocks.react.useRef) mocks.react.useRef = value => ({ current: value }); m.require = id => id === '../../gscale/gscaleDiscovery' ? discovery : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
   return m.exports; }
 const discovery = load('gscale/gscaleDiscovery');

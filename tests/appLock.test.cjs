@@ -120,3 +120,26 @@ test('a failed disable write leaves the existing PIN active', async () => {
   assert.deepEqual(await api.loadAppLock(session), { hasPin: true, biometric: false });
   assert.equal(await api.verifyAppPin(session, '1234'), true);
 });
+
+test('Material logout guard retiring while the storage key is derived preserves the PIN', async () => {
+  const { api } = fixture(); await api.saveAppPin(session, '1234');
+  let checks = 0;
+  await assert.rejects(api.clearAppLock(session, () => ++checks === 1), /Akkaunt/);
+  assert.equal(await api.verifyAppPin(session, '1234'), true);
+});
+
+test('a newer same-account PIN save survives an already-dispatched logout disable write', async () => {
+  const { api, store } = fixture(); await api.saveAppPin(session, '1234');
+  let current = true, release, entered;
+  const holding = new Promise(resolve => { release = resolve; }), started = new Promise(resolve => { entered = resolve; });
+  const original = store.setItemAsync;
+  store.setItemAsync = async (key, value) => {
+    if (value.includes('"disabled":true')) { entered(); await holding; }
+    return original(key, value);
+  };
+  const oldClear = api.clearAppLock(session, () => current); await started;
+  current = false; const newPin = api.saveAppPin({ ...session }, '5678'); release();
+  await assert.rejects(oldClear, /Akkaunt/); await newPin;
+  assert.equal(await api.verifyAppPin(session, '5678'), true);
+  assert.equal(await api.verifyAppPin(session, '1234'), false);
+});

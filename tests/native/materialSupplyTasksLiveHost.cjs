@@ -23,7 +23,9 @@ try {
     jar('org.jetbrains', 'annotations', '13.0'), jar('org.jetbrains.kotlinx', 'kotlinx-coroutines-core-jvm', '1.8.0')];
   const dependencies = [kotlin('kotlin-stdlib'), jar('org.jetbrains', 'annotations', '13.0'),
     jar('com.squareup.okhttp3', 'okhttp', '4.12.0'), jar('com.squareup.okio', 'okio-jvm', '3.6.0')];
-  const classes = path.join(temporary, 'classes'), java = '/Users/wikki/Desktop/Accord_project/.tools/jdk-17/Contents/Home/bin/java';
+  const classes = path.join(temporary, 'classes');
+  const localJava = path.resolve(__dirname, '../../../.tools/jdk-17/Contents/Home/bin/java');
+  const java = process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin/java') : fs.existsSync(localJava) ? localJava : 'java';
   run(java, ['-cp', compiler.join(path.delimiter), 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect', '-classpath', dependencies.join(path.delimiter),
     '-d', classes, 'modules/accord-production-live/android/src/main/java/expo/modules/accordproductionlive/ProductionLiveSockets.kt', 'tests/native/MaterialSupplyTasksLiveHost.kt']);
   run(java, ['-cp', [classes, ...dependencies].join(path.delimiter), 'expo.modules.accordproductionlive.MaterialSupplyTasksLiveHostKt']);
