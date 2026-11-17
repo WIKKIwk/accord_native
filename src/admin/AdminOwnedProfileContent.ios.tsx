@@ -18,7 +18,7 @@ export function AdminOwnedProfileContent(props: AdminOwnedRouteContentProps) {
     headerStyle: { backgroundColor: colors.surfaceContainerHigh }, headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={() => { if (props.canInteract()) props.onBack(false); }}
       modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), foregroundStyle(colors.onSurface), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-profile-back')]} /></BaseHost> }} />
     <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-profile-body-frame"><ProfileScreen session={props.session} isCurrent={props.isCurrent} onLogout={props.onLogout}
-      showDirectLogout={false} settingsDisabled /></AdminShellBodyFrame>
+      showDirectLogout={false} settingsDisabled={props.session.profile.role !== 'brigader'} /></AdminShellBodyFrame>
       <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     </View>
   </>;

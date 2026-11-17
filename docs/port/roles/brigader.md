@@ -33,7 +33,7 @@ Use `AdminDrawer` and its existing navigation planner with the Brigader namespac
 
 Source dock `widgets/admin_dock.dart`: Home, User, Create, Activity. Create opens five source actions:
 user creation, item creation, progress QR, saved calculations, calculate order. No substitute destinations.
-Missing Users/Create integration stays an explicit Open item, never a fake control.
+Users and its real nested detail routes are connected. The genuine Create owner currently exposes only implemented destinations; the remaining four default actions are explicit Open items. No placeholder action is substituted.
 
 ## Ready shared compositions
 
@@ -68,3 +68,24 @@ The exact 47 routes from `app_router_AppRouter_resplit_class_AppRouter_resplit2_
 
 Always-open shared source routes include profile, Chat and PIN; these still require an actual native owner.
 Remaining shared Admin/Chat/PIN compositions are tracked individually in the session status.
+
+## Connected Users, creation, warehouse and Chat follow-up
+
+Source `AdminSuppliersScreen` and AppRouter detail branches reuse `AdminUsersPage` and `AdminOwnedRoutePage` on both platforms.
+The registry holds original DTOs and settles changed results only after native detach. Customer/material-supplier assignments,
+supplier item view/add and worker activity are the existing shared native flows. Brigader entry is checked separately from Admin.
+
+Source `AdminUserCreateScreen` reuses its shared controller and native role/group/code presenters; Android receives the actual
+native window-detachment observer. `AdminSupplierCreateScreen` and `AdminCustomerCreateScreen` use distinct native
+`AdminPartyCreateScaffold` forms: name, phone, then submit; no validation, retry or success message is added. Saving disables
+submit, successful creation invalidates Users and returns. V2's source error path adds no extra presentation.
+
+Source `AdminWarehousesScreen` reuses `AdminWarehouseScreen(scope: admin)` with the original Brigader session, preserving
+its settings and nested stock/roll/QR/reserved-order providers.
+
+Source `ChatProfileActionButton` uses the actual shared account chat runtime, DM API, conversation cache/header metadata,
+and native conversation route. Self-target suppression comes from `adminProfileChatTarget`; failure messages reuse the existing
+source mapping. Android keeps the compact tonal source control; iOS uses a native button with a 44-point minimum height.
+
+All iOS Brigader routes now share one native stack so awaited child returns remain attached to their real parent. Both native
+docks use the same source Home/User/Activity policy plus a genuine creation owner. Full 47-route coverage remains open in status.

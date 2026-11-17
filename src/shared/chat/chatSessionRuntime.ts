@@ -57,6 +57,18 @@ export class ChatSessionRuntime {
   get value(): number { return this.unread.value; }
   subscribe = (listener: () => void): (() => void) => this.unread.subscribe(listener);
   getSnapshot = (): number => this.unread.value;
+  /** @v2 ChatStore._upsertConversation
+   * Profiles use the same original-session cache/live owner as the conversation list.
+   */
+  async rememberConversation(conversation: ChatConversation): Promise<void> {
+    if (!this.current()) return;
+    const next = this.unread.snapshot(), index = next.findIndex(item => item.id === conversation.id);
+    if (index < 0) next.unshift(conversation); else next[index] = conversation;
+    next.sort((left, right) => right.updatedAt - left.updatedAt);
+    this.unread.replaceConversations(next);
+    try { await this.deps.saveConversations([conversation]); } catch { /* V2 retains the in-memory conversation. */ }
+    if (this.current()) for (const listener of [...this.invalidationListeners]) listener();
+  }
   subscribeInvalidation = (listener: () => void): (() => void) => {
     this.invalidationListeners.add(listener);
     return () => { this.invalidationListeners.delete(listener); };

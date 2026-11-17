@@ -1,7 +1,7 @@
 # Brigader
 
 Status: partial — native workspace and the available shared flows are implemented; full Brigader parity is not complete.
-Stopped at: finish the missing shared Admin source compositions and their surfaces, then complete the full text and physical-device acceptance gates.
+Stopped at: the native Users/detail/creation/warehouse/chat connections are now composed. The 25 remaining shared Admin source routes listed below still need their actual feature implementations; full Brigader parity is not complete.
 Branch: `port/brigader`, isolated worktree `accord_mobile_v4-brigader`, based on main `b6aee7b9`.
 Source: baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`; Brigader core is unchanged at current V2 `052655a4`.
 Scope: Brigader only; the ledger combines Sales Manager with this id, but Sales Manager is outside this request.
@@ -23,7 +23,7 @@ Source references: `core/api/calculate/mobile_api_calculate_models_part_01.dart`
 | Where | V2 reference | Required result |
 |---|---|---|
 | Complete Brigader scope | `AppRouter.canOpenRoute`, `test/brigader_role_test.dart` | All 47 allowed routes, 17 source Home actions (or four summary shortcuts), 16 drawer entries, four dock entries and five Create actions must have real compositions. The existing Admin dependency is partial; do not mark this complete by counting tags or hiding unavailable entries. |
-| Shared Admin source presentation | `AdminDock`, `showAdminCreateHubSheet`, `AdminUsersScreen`, shared root/sheet callers | Complete the original source-root/FAB/Users/Create and owned feature compositions. Existing held components are not exposed as fake pages. |
+| Shared Admin source presentation | `AdminDock`, `showAdminCreateHubSheet`, `AdminUsersScreen`, shared root/sheet callers | Users and its original owned child compositions are now connected in the follow-up below. The complete default Create flow and the remaining source-root feature compositions still require their actual pages; no placeholders are exposed. |
 | Work Map | `AdminProductionMapOrdersScreen` and its details/Closed/Move controls | Existing reused view remains partial; full action/detail/closed-history/drag and source surface audit remain required. |
 | Saved calculations UI | `AdminCalculateOrdersScreen`, `AdminCalculateScreen` | APIs, serializer and scoped template store are implemented; saved-list/editor/calculator native screens and their nested product/customer/catalog flows still require the real shared Admin composition. |
 | Camera parity | V2 ReliableMobileScanner / Inventory QR | Existing shared Expo camera does not reproduce source restricted detection window, tap-to-focus and auto-zoom. Do not claim hardware parity. |
@@ -37,7 +37,7 @@ Source references: `core/api/calculate/mobile_api_calculate_models_part_01.dart`
 |---|---|---|---|---|
 | AdminHomeScreen | `src/brigader/BrigaderHomeRoute.*.tsx`, reused `AdminHomeScreen.*` | partial | partial | Source title/store/summary/return refresh reused; unavailable Admin actions remain missing. |
 | AdminNavigationDrawer | shared `AdminDrawer`, Brigader namespace | partial | partial | Actual Brigader stack and source planner; missing Admin destinations not claimed as ported. |
-| AdminDock | native Brigader tabs / BrigaderBottomBar | partial | partial | Source Home/Activity ready; Users/Create source dependencies remain open. |
+| AdminDock | native Brigader tabs / BrigaderBottomBar | partial | partial | Home, Users and Activity are connected; the genuine Create adapter currently exposes implemented user creation only. Four Create destinations remain open. |
 | Profile, Settings, PIN and logout | `BrigaderProfileRoute.*`, guarded existing Profile/Settings/Security | code checked | code checked | Native screens reused; original account guard now reaches delayed PIN/hash/remove/biometric storage; source logout before-clear hook clears app PIN and switch PIN. Physical input/sheets still untested. |
 | Activity | shared AdminActivityRouteCore | reused | reused | Original hidden-notification store, load/clear confirmation and source return lifecycle; fallback now returns to actual Brigader Home. |
 | Factory Locations | shared AdminFactoryLocationsRoute | reused | reused | Native editor/picker/controller and source guards; no separate API or fake grant. Device surface audit remains open. |
@@ -177,3 +177,47 @@ Both Admin and Brigader native home mappings and their separate admission checks
 The user's three unstaged tracked files and 125 untracked build files were backed up outside the repository
 and verified byte-for-byte before committing. They remain outside the merge commit.
 This integration does not mark the unfinished Brigader source routes or text/device audits complete.
+
+## Follow-up: real Brigader connections
+
+- The shared private route owner now accepts an explicit original-role predicate and workspace path, preserving its Admin defaults.
+  Brigader supplies `brigaderMayEnter` and its own native stack. IDs remain opaque; original customer/supplier/worker arguments,
+  nested item pickers and awaited changed results stay in the existing guarded registry.
+- Connected native Users, customer/material-supplier detail and assignments, supplier detail/items view/items add,
+  worker detail/activity profile, Werka detail and guarded Profile/Settings/PIN. No Admin identity or capability is fabricated.
+- Connected the existing general user-creation controller/screens (including role choice, Brigader restrictions and issued codes),
+  plus the two distinct V2 supplier/customer party forms. Those forms retain name/phone order, trimmed input, disabled saving,
+  cache invalidation and source return behavior; no new validation or error surface was invented.
+- Connected the fully composed shared Admin warehouse screen with scope `admin` for the real Brigader. Existing item-roll,
+  reserved-order, raw-stock QR and settings flows are reused.
+- Connected profile chat actions to the actual chat runtime/cache, guarded direct-message API, header metadata and native thread.
+  Self-chat stays absent. Opening remains busy until the original profile regains focus; failures use the existing source notice.
+- iOS now uses one native stack for genuine parent/child returns, with the existing SwiftUI dock on shared pages.
+  Android retains the Material dock and existing worker components. Both expose the actual Users and creation connections.
+- The root Hub is genuine. Only the currently implemented user-creation action is exposed by the source-derived creation action
+  adapter. Item creation, progress QR, saved calculations and calculator actions remain absent until their actual Admin pages exist;
+  this remains a source parity gap, not a completed five-action Create flow.
+- FAB obstruction now follows actual mounted named/private profile routes, including a profile covered by another native route.
+
+### Remaining software routes (25 of 47)
+
+`adminFactoryMap`, `adminCalculateOrders`, `adminCalculate`, `adminProductionMapTest`, `adminItemBulkMove`,
+`adminOpeningWip`, `adminWipBatches`, `adminNotifications`, `adminApparatusSettings`, `adminApparatusGroups`,
+`adminRawMaterialSettings`, `adminRawMaterialRules`, `adminRawMaterialAssignments`, `adminCalculateMaterials`,
+`adminWorkerSettings`, `adminCreateHub` (full five-action flow), `adminItemCreate`, `adminItemDetail`,
+`adminApparatusCreate`, `adminProgressQrScan`, `apparatusQueue`, `apparatusWorkInstructions`,
+`apparatusDailyWork`, `apparatusPaddons`, `apparatusPaddonDetail`.
+
+15 source routes have direct native destinations; seven additional source routes are reachable with their required original
+arguments through the real private registry. This is 22/47 routing coverage, not a claim of complete feature/surface parity.
+Earlier Work Map and camera differences remain open. No missing route was mapped to an unrelated page or a placeholder.
+
+### Follow-up verification
+
+The focused original-role/private-navigation/dock/composition regressions cover 72 cases. The initial run passed 69,
+two old profile fixtures lacked their now-required profile metadata and one new asynchronous test omitted the registry
+read that settles a retired argument. After correcting those fixtures, all 33 cases in the affected two files passed;
+the other 39 had already passed. Both platform TypeScript checks pass. The final lint result follows in the completion record.
+No device, simulator or emulator was used; manual device acceptance is left to the user as requested.
+
+Final follow-up lint: zero errors, one pre-existing warning at `AdminClosedHistoryOwner.tsx:36`; no new warning.

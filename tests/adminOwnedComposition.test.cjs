@@ -100,8 +100,10 @@ for (const platform of ['android', 'ios']) {
       './AdminProfileHeader.android': { AdminProfileHeader: 'AdminProfileHeader' }, './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(),
       '@expo/ui/swift-ui': { Button: 'Button' }, '@expo/ui/swift-ui/modifiers': new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) }), '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     });
-    const props = { session: {}, isCurrent: current, canInteract: () => interactive, onBack: value => calls.push(value), onLogout: () => calls.push('logout'), footer: { type: 'ActualDock' }, backLabel: 'Back' }, tree = AdminOwnedProfileContent(props), profile = nodes(tree, node => node.type === 'ActualProfileScreen')[0];
+    const props = { session: { profile: { role: 'admin' } }, isCurrent: current, canInteract: () => interactive, onBack: value => calls.push(value), onLogout: () => calls.push('logout'), footer: { type: 'ActualDock' }, backLabel: 'Back' }, tree = AdminOwnedProfileContent(props), profile = nodes(tree, node => node.type === 'ActualProfileScreen')[0];
     assert.equal(profile.props.session, props.session); assert.equal(profile.props.isCurrent, current); assert.equal(profile.props.onLogout, props.onLogout); assert.equal(profile.props.showDirectLogout, false); assert.equal(profile.props.settingsDisabled, true); assert.equal(profile.props.settingsUnavailableMessage, undefined);
+    const brigader = AdminOwnedProfileContent({ ...props, session: { profile: { role: 'brigader' } } });
+    assert.equal(nodes(brigader, node => node.type === 'ActualProfileScreen')[0].props.settingsDisabled, false);
     const back = platform === 'android' ? nodes(tree, node => node.type === 'AdminProfileHeader')[0].props.onBack : nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerLeft().props.children.props.onPress;
     interactive = false; back(); assert.deepEqual(calls, []); interactive = true; back(); assert.deepEqual(calls, [false]); assert.ok(nodes(tree, node => node.type === 'View' && node.props.style?.position === 'absolute').length);
   });

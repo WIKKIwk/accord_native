@@ -14,7 +14,7 @@ export function AdminOwnedProfileContent(props: AdminOwnedRouteContentProps) {
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
     <AdminProfileHeader title={localizedGetter('profileTitle', locale)} backLabel={props.backLabel} onBack={() => { if (props.canInteract()) props.onBack(false); }} />
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-profile-body-frame"><ProfileScreen session={props.session} isCurrent={props.isCurrent} onLogout={props.onLogout}
-      showDirectLogout={false} settingsDisabled /></AdminShellBodyFrame>
+      showDirectLogout={false} settingsDisabled={props.session.profile.role !== 'brigader'} /></AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
   </View>;
 }

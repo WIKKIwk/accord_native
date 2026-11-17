@@ -63,7 +63,7 @@ test('reused source models retain 17 actions, 4 shortcuts, 16 drawer rows, 4 doc
   assert.deepEqual(dock.adminDefaultCreateActions(actor, 'uz').map(row => row.routeName), [r.adminUserCreate, r.adminItemCreate, r.adminProgressQrScan, r.adminCalculateOrders, r.adminCalculate]);
   const coverage = access.brigaderRouteCoverage(actor);
   for (const name of allowed) assert.ok(coverage.some(row => row.name === name), name);
-  assert.ok(coverage.some(row => row.route === r.adminUserCreate && row.ios === null && row.android === null));
+  assert.ok(coverage.some(row => row.route === r.adminUserCreate && row.ios === '/ios-brigader/user-create' && row.android === '/android-brigader/user-create'));
 });
 test('original Brigader owner rejects late work, role/grant/scope changes, and cannot revive', () => {
   const scope = load('sessionReadScope'), strict = load('shared/camera/synchronousGuard');
@@ -109,4 +109,13 @@ test('child Notice layout replay precedes parent passive replay without retiring
   assert.equal(messenger.current(), true); assert.equal(clears, 1);
   stopReplayed(); releaseReplayed(); await Promise.resolve();
   assert.equal(owner.isCurrent(), false); assert.equal(messenger.current(), false); assert.equal(clears, 2);
+});
+
+test('source profile presence retains covered named and private profiles within the original Brigader workspace', () => {
+  const { brigaderProfileOnStack } = load('brigader/brigaderProfilePresence');
+  const state = routes => ({ routes: [{ name: 'ios-brigader', state: { index: routes.length - 1, routes } }] });
+  assert.equal(brigaderProfileOnStack(state([{ name: 'index' }, { name: 'profile' }, { name: 'user-create' }]), 'ios-brigader'), true);
+  assert.equal(brigaderProfileOnStack(state([{ name: 'owned/[id]', params: { id: 'original' } }, { name: 'chat' }]), 'ios-brigader', id => id === 'original'), true);
+  assert.equal(brigaderProfileOnStack(state([{ name: 'owned/[id]', params: { id: 'retired' } }]), 'ios-brigader', () => false), false);
+  assert.equal(brigaderProfileOnStack({ routes: [{ name: 'ios-admin', state: { routes: [{ name: 'profile' }] } }] }, 'ios-brigader'), false);
 });

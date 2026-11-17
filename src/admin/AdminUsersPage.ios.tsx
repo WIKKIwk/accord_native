@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, type Href } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { localeController } from '../shared/localization/runtime';
@@ -13,7 +13,7 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 export function AdminUsersPage() {
   const shell = useAdminShell(), page = useAdminUsersPage(), locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale), providers = page.context.providers;
   if (!page.context.current()) return null;
-  if (!page.context.ready() || !providers) return <Redirect href="/ios-admin" />;
+  if (!page.context.ready() || !providers) return <Redirect href={(page.context.rootPath ?? "/ios-admin") as Href} />;
   if (!page.admitted) return null;
   return <View style={styles.screen}><AdminUsersRoute session={shell.session} witness={shell.witness} isCurrent={page.current} canInteract={page.interactive}
     backLabel={adminActivityBackLabel(locale)} onBack={page.back} onOpenUser={page.openUser}

@@ -37,7 +37,7 @@ function gate(options = {}) {
   let current = active;
   const mayEnter = () => allowed;
   const component = load('brigader/BrigaderLayout.ios.tsx', {
-    react, 'expo-router': { Redirect: 'Redirect' }, 'expo-router/native-tabs': { NativeTabs },
+    react, 'expo-router': { Redirect: 'Redirect', Stack: 'Stack' }, 'expo-router/native-tabs': { NativeTabs },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: os }, View: 'View' },
     '../auth': { isSessionWitnessCurrent: value => value === witness && current,
       sessionWitnessVersion: () => 7, subscribeSessionWitness() {} },
@@ -76,17 +76,14 @@ test('old Brigader logout callback cannot log out a replacement session', async 
   assert.deepEqual(stale.calls, []);
 });
 
-test('native tabs expose a real Activity destination only with its bound original storage', () => {
-  for (const [binding, available, hidden] of [[null, true, true], [{}, false, true], [{}, true, false]]) {
-    const tree = gate({ shell: { activityBinding: binding, destination: route => available && route === r.adminActivity ? '/ios-brigader/activity' : null } }).tree;
-    const tabElement = tree.props.children.props.children.props.children.props.children;
-    const tabs = tabElement.type(tabElement.props);
-    const triggers = tabs.props.children;
-    assert.deepEqual(triggers.map(item => item.props.name), ['(home)', 'activity']);
-    assert.equal(triggers[1].props.hidden, hidden);
-    assert.equal(triggers[0].props.children[1].props.children, 'adminHomeNavTitle');
-    assert.equal(triggers[1].props.children[1].props.children, 'adminActivityNavTitle');
-  }
+test('one native iOS stack retains the genuine Brigader provider around all owned pages', () => {
+  const tree = gate().tree;
+  const notice = tree.props.children.props.children;
+  const navigation = notice.props.children;
+  const stack = navigation.props.children.props.children;
+  assert.equal(stack.type, 'Stack');
+  assert.equal(stack.props.screenOptions.headerShown, false);
+  assert.equal(stack.props.screenOptions.headerBackButtonDisplayMode, 'minimal');
 });
 
 test('Brigader native home forwards the original store, return lifecycle and source screen guards', () => {
@@ -122,7 +119,7 @@ test('profile keeps original ownership for edit/logout and refuses a missing des
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
   }).BrigaderProfileRoute;
   available = false; assert.equal(Profile().type, 'Redirect'); available = true;
-  const tree = Profile(), profile = tree.props.children[1].props.children.props.children;
+  const tree = Profile(), profile = nodes(tree, node => node.type === 'ProfileScreen')[0];
   assert.equal(profile.type, 'ProfileScreen'); assert.equal(profile.props.session, account); assert.equal(profile.props.isCurrent, shell.isCurrent);
   assert.equal(profile.props.settingsDisabled, undefined); assert.equal(profile.props.showDirectLogout, false);
   const back = tree.props.children[0].props.options.headerLeft();

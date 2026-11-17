@@ -186,3 +186,20 @@ test('cache and cursor failures do not prevent online startup', async () => {
   assert.ok(f.calls.some(call => call[0] === 'sync' && call[1] === 0));
   f.runtime.close();
 });
+
+test('profile-opened conversations merge into the existing unread owner and persist only the returned conversation', async () => {
+  const persisted = [], f = fixture({ saveConversations: async items => { persisted.push(items.map(item => [item.id, item.unreadCount])); } }, false);
+  await f.runtime.start(); await tick(); persisted.length = 0;
+  await f.runtime.rememberConversation({ ...conversation(5), id: 'new', updatedAt: 2 });
+  assert.equal(f.runtime.value, 7);
+  await f.runtime.rememberConversation(conversation(1));
+  assert.equal(f.runtime.value, 6);
+  assert.deepEqual(persisted, [[['new', 5]], [['a', 1]]]);
+  f.runtime.close();
+});
+test('a retired profile chat runtime cannot merge or persist another conversation', async () => {
+  const persisted = [], f = fixture({ saveConversations: async items => { persisted.push(items); } }, false);
+  await f.runtime.start(); await tick(); persisted.length = 0;
+  f.stopSession(); await f.runtime.rememberConversation({ ...conversation(5), id: 'new' });
+  assert.equal(f.runtime.value, 2); assert.deepEqual(persisted, []); f.runtime.close();
+});

@@ -34,7 +34,8 @@ function fixture({ focused = true, active = 'home', screen = 'index' } = {}) {
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' }, '../admin/AdminShellContext': { useAdminShell: () => shell },
     '../admin/adminDockModel': dock, '../admin/adminRootNavigation': { adminRootNavigation: { schedule: (route, context) => calls.push({ route, context }) } },
   }).BrigaderBottomBar;
-  return { tree: component({ active }), calls, expire() { current = false; } };
+  const frame = component({ active });
+  return { tree: frame.props.children.find(node => node?.type === 'RoleBottomBar'), calls, expire() { current = false; } };
 }
 
 test('Brigader uses native dock with source labels and only live destinations, without fabricating Users/Create actions', () => {

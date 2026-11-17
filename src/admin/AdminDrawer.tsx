@@ -30,6 +30,8 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
   const items = destinations
     .map(item => ({ id: item.routeName, label: item.label, symbol: item.routeName === home ? { ios: 'house' as const, android: 'home' as const }
       : item.routeName === appRoutes.profile ? { ios: 'person' as const, android: 'person' as const }
+      : item.routeName === appRoutes.adminSuppliers ? { ios: 'person.3' as const, android: 'groups' as const }
+      : item.routeName === appRoutes.adminWarehouses ? { ios: 'building.2' as const, android: 'warehouse' as const }
         : item.routeName === appRoutes.adminProductionMapOrders || item.routeName === appRoutes.adminFactoryLocations ||
           item.routeName === appRoutes.adminItemGroupCreate || item.routeName === appRoutes.adminRoles ? adminHomeSymbol(item.materialIcon)
         : item.routeName === appRoutes.adminAdditionalSettings ? adminHomeSymbol('tune_rounded')
@@ -39,6 +41,8 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
     const entry = destinations.find(item => item.routeName === id); if (entry) owner.select(entry);
   };
   const active = pathname.endsWith('/profile') ? appRoutes.profile : pathname.endsWith('/work-map') ? appRoutes.adminProductionMapOrders
+    : pathname.endsWith('/users') || pathname.includes('/owned/') ? appRoutes.adminSuppliers
+    : pathname.endsWith('/warehouses') ? appRoutes.adminWarehouses
     : pathname.endsWith('/factory-locations') ? appRoutes.adminFactoryLocations : pathname.endsWith('/activity') ? appRoutes.adminActivity
     : pathname.endsWith('/additional-settings') ? appRoutes.adminAdditionalSettings : pathname.endsWith('/item-groups') ? appRoutes.adminItemGroupCreate
     : pathname.endsWith('/roles') ? appRoutes.adminRoles : pathname.endsWith('/queue-policies') ? appRoutes.adminApparatusSettings
