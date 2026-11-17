@@ -9,7 +9,7 @@ export class QolipMileageState {
   private generation = 0;
   private readonly listeners = new Set<() => void>();
   constructor(private readonly read: () => Promise<QolipMileage>) {}
-  static forSession(session: Session, code: string) { return new QolipMileageState(() => qolipMileage(session, code)); }
+  static forSession(session: Session, code: string, guard?: () => boolean) { return new QolipMileageState(() => qolipMileage(session, code, guard)); }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.value;
   private update(patch: Partial<State>) {

@@ -50,6 +50,17 @@ test('historical V2 detail recording reuses the existing product parser', async 
   assert.ok(Object.isFrozen(result)); assert.ok(Object.isFrozen(result[0])); replay.assertDone();
 });
 
+test('PDF exact-product molds reader sends only the source item_code and retires a stale response', async t => {
+  const previous = global.fetch; t.after(() => { global.fetch = previous; });
+  const h = harness(), calls = []; global.fetch = async (url, init) => { calls.push({ url: String(url), init }); return json({ products: [product()] }); };
+  const rows = await h.readers.molds(' ITEM ', h.lifetime);
+  assert.equal(new URL(calls[0].url).pathname, '/v1/mobile/qolip/shared-sets');
+  assert.equal(new URL(calls[0].url).search, '?item_code=ITEM'); assert.equal(rows[0].qolip_code, 'Q-1');
+  const pending = deferred(); global.fetch = () => pending.promise;
+  const read = h.readers.molds('ITEM', h.lifetime); await tick(); h.invalidate(); pending.resolve(json({ products: [product()] }));
+  await assert.rejects(read, /qolip_read_expired/);
+});
+
 test('page and detail preserve source query, raw ID, limit bounds and immutable results', async t => {
   const h = harness(), urls = [], previous = global.fetch; t.after(() => { global.fetch = previous; });
   global.fetch = async (url, init) => { urls.push(url); assert.equal(init.method ?? 'GET', 'GET');
@@ -167,7 +178,7 @@ test('open-reworks reader replays the exact f119 read contract without exposing 
   const session = { ...recordedSession(stem, name), profile: { role: 'qolipchi', ref: 'A' }, capabilities: ['qolip.manage'] };
   const h = harness({ account: session }), replay = contractFetch(stem, name), previous = global.fetch; t.after(() => { global.fetch = previous; }); global.fetch = replay;
   assert.deepEqual(await h.readers.reworks(h.lifetime), []); replay.assertDone();
-  assert.deepEqual(Object.keys(h.readers).sort(), ['details', 'page', 'reworks']);
+  assert.deepEqual(Object.keys(h.readers).sort(), ['details', 'molds', 'page', 'reworks']);
   assert.throws(() => h.readers.reworks(undefined), /qolip_read_expired/);
 });
 

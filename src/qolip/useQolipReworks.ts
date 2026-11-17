@@ -6,14 +6,14 @@ import { qolipReworks, qolipReturnFromRework } from './qolipReworkApi';
 import { newQolipReworkRequestId } from './qolipReworkRequestId';
 import { QolipReworksState } from './qolipReworksState';
 
-export function useQolipReworks(session: Session, nextRequestId: () => Promise<string> = newQolipReworkRequestId) {
+export function useQolipReworks(session: Session, nextRequestId: () => Promise<string> = newQolipReworkRequestId, isCurrent?: () => boolean) {
   const controller = useMemo(() => new QolipReworksState({
-    load: () => qolipReworks(session, 'all'),
-    returnFromRework: (requestId, reworkIds) => qolipReturnFromRework(session, { requestId, reworkIds }),
+    load: () => qolipReworks(session, 'all', isCurrent),
+    returnFromRework: (requestId, reworkIds) => qolipReturnFromRework(session, { requestId, reworkIds }, isCurrent),
     nextRequestId,
-    scope: () => { const current = currentSession(); return current ? sessionReadScope(current) : ''; },
+    scope: () => { const current = currentSession(); return isCurrent?.() !== false && current ? sessionReadScope(current) : ''; },
     notifyLocationsChanged: () => qolipDataRevision.notifyLocationsChanged(),
-  }), [session, nextRequestId]);
+  }), [session, nextRequestId, isCurrent]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
     controller.activate();

@@ -7,10 +7,11 @@ import { qolipErrorMessage } from './qolipErrorMessage';
 import type { QolipSetNameDialogProps } from './qolipSetNameDialogProps';
 import { useQolipSetName } from './useQolipSetName';
 import { useQolipText } from './useQolipText';
+import { qolipLimitGraphemes } from './qolipGraphemes';
 
-// QolipSetNameDialog remains unwired until the sets screen is ported.
-export function QolipSetNameDialog({ session, entry, close, saved }: QolipSetNameDialogProps) {
-  const { locale, text } = useQolipText(), state = useQolipSetName(session, entry), colors = useWorkerColors();
+// @v2 QolipSetNameDialog
+export function QolipSetNameDialog({ session, entry, close, saved, isCurrent }: QolipSetNameDialogProps) {
+  const { locale, text } = useQolipText(), state = useQolipSetName(session, entry, isCurrent), colors = useWorkerColors();
   const input = useNativeState(entry.name), management = (key: string) => extensionText('qolipManagementText', key, locale);
   const dismiss = () => { if (!state.controller.getSnapshot().saving) close(); };
   const submit = () => {
@@ -21,12 +22,12 @@ export function QolipSetNameDialog({ session, entry, close, saved }: QolipSetNam
   const error = state.error === null ? '' : qolipErrorMessage(state.error, locale, management('rename_failed'));
   return <Modal visible transparent animationType="fade" onRequestClose={dismiss}>
     <KeyboardAvoidingView behavior="padding" style={styles.backdrop}>
-      <Pressable disabled={state.saving} style={StyleSheet.absoluteFill} onPress={dismiss} />
+      <Pressable disabled style={StyleSheet.absoluteFill} />
       <View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: colors.surface }]}>
         <Host matchContents={{ vertical: true }}><VStack spacing={14}>
           <Text>{management('rename')}</Text>
-          <TextField text={input} autoFocus maxLength={160} placeholder={management('name')}
-            onTextChange={value => state.controller.setName(value)}
+          <TextField text={input} autoFocus placeholder={management('name')}
+            onTextChange={value => { const limited = qolipLimitGraphemes(value, 160); if (limited !== value) input.set(limited); state.controller.setName(limited); }}
             modifiers={[disabled(state.saving), textInputAutocapitalization('sentences'), submitLabel('done'), onSubmit(submit)]} />
           {!!error && <Text>{error}</Text>}
           {state.saving ? <ProgressView /> : <Button label={text('action.save')} onPress={submit} />}

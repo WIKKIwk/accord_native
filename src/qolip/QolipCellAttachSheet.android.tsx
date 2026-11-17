@@ -7,7 +7,7 @@ import type { QolipCellAttachSheetProps } from './qolipCellAttachSheetProps';
 import { qolipPlacementFormProductLabel } from './qolipCellPlacement';
 import { useQolipCellAttach } from './useQolipCellAttach';
 
-// Cell placement only. Scanner and the home-grid caller remain open.
+/** @v2 _QolipAttachSheet (cellPlacement; Home grid and QR actions bind its real callbacks) */
 export function QolipCellAttachSheet(props: QolipCellAttachSheetProps) {
   const state = useQolipCellAttach(props, QolipCellPicker), { width, height } = useWindowDimensions();
   const item = state.selected[0], selectedLabel = state.selected.length > 1

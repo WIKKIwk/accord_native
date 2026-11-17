@@ -6,6 +6,7 @@ import { useQolipBlockCreate } from './useQolipBlockCreate';
 import { useQolipText } from './useQolipText';
 
 // Content only. No Home/Add opener or route; sent-write settlement and production retry remain held.
+/** @v2 _QolipBlockCreateSheet */
 export function QolipBlockCreateSheet(props: QolipBlockCreateSheetProps) {
   const state = useQolipBlockCreate(props), name = useNativeState(''), { text } = useQolipText();
   if (state.invalid) return null;

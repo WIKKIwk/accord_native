@@ -1,5 +1,5 @@
 import { Button, Host, HStack, ProgressView, Text, VStack } from '@expo/ui/swift-ui';
-import { background, font, foregroundStyle, frame, lineLimit, shapes } from '@expo/ui/swift-ui/modifiers';
+import { background, buttonStyle, font, foregroundStyle, frame, labelStyle, lineLimit, shapes } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 import { PlatformColor, StyleSheet, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,7 @@ export function QolipHomeContent(props: QolipHomeContentProps) {
       </Host></View>
       : home.kind === 'blocks' ? <View style={styles.root}>
         <QolipHomeBlockTabs tabs={home.tabs} onSelect={props.onSelectBlock} onReorder={props.onReorderBlocks}
+          trailing={props.onAddBlock && <Host matchContents><Button label={text('blocks.add')} systemImage="plus" onPress={props.onAddBlock} modifiers={[labelStyle('iconOnly'), buttonStyle('bordered'), frame({ minWidth: 44, minHeight: 44 })]} /></Host>}
           colors={{ surface: PlatformColor('secondarySystemBackground'), selected: PlatformColor('tertiarySystemFill'),
             dragging: PlatformColor('tertiarySystemBackground'), underline: PlatformColor('systemBlue'), match: matchColor }}
           label={tab => tab.matchCount > 0 ? `${tab.block.name}, ${text('products.mold_count', { count: tab.matchCount })}` : tab.block.name}

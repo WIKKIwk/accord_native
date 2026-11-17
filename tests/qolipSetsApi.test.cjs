@@ -29,7 +29,8 @@ function harness(response, options = {}) {
     '../sessionReadScope': { sessionReadScope: value => JSON.stringify([value.baseUrl, value.profile]) },
     '../qolipCatalogApi': productParser, '../shared/mobileApiException': { MobileApiException }, './qolipApiCommon': common,
     '../shared/qolipCatalogRuntime': { qolipCatalogRuntimeFor: () => ({ applyResponse: (data, scope) => applied.push({ data, scope }) }) },
-    '../authorizedFetch': { authorizedFetch: async (value, target, init = {}) => {
+    '../authorizedFetch': { authorizedFetch: async (value, target, init = {}, beforeSend) => {
+      beforeSend?.();
       calls.push({ session: value, target, init });
       const result = typeof response === 'function' ? response(calls.length, init) : response;
       options.afterResponse?.(session);
@@ -38,6 +39,17 @@ function harness(response, options = {}) {
   });
   return { api, calls, applied, session };
 }
+
+test('role-bound set create/edit/rename reject an expired original owner without publishing', async () => {
+  const denied = harness(json({ set: rawSet() }));
+  await assert.rejects(denied.api.qolipCreateSet(denied.session, { warehouse: 'W', members: [{ code: 'Q', size: 42 }] }, () => false), /qolip_read_expired/);
+  await assert.rejects(denied.api.qolipRenameSet(denied.session, 'S-1', 'Valid', () => false), /qolip_read_expired/);
+  assert.equal(denied.calls.length, 0);
+  let valid = true; const stale = harness(json({ set: rawSet() }), { afterResponse: () => { valid = false; } });
+  const entry = stale.api.qolipManagedSetFromJson(rawSet());
+  await assert.rejects(stale.api.qolipEditSet(stale.session, { current: entry, remove: ['Q-1'] }, () => valid), /qolip_read_expired/);
+  assert.equal(stale.applied.length, 0);
+});
 
 // @v2-test test/qolip_set_names_test.dart
 test('f119 rename replay retains the name and conflict code', async () => {

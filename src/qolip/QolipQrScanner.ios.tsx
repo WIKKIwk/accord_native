@@ -15,6 +15,7 @@ export function QolipRawQrScanScreen(props: Props) { return <QolipQrScannerScree
 export function QolipUniversalQrScanScreen(props: Props) { return <QolipQrScannerScreen {...props} mode="universal" />; }
 
 /** Render as a real Stack page; it adds no standalone unguarded app route. */
+/** @v2 _QolipQrScanScreen */
 export function QolipQrScannerScreen(props: QolipQrScannerProps) {
   const scan = useQolipQrScanner(props), { text } = scan;
   if (!scan.valid) return null;

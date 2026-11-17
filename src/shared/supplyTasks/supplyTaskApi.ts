@@ -1,3 +1,4 @@
+import { parseSupplyTaskJson } from './supplyTaskJson';
 import { activeSessionToken, type Session } from '../../auth';
 import { authorizedFetch, currentQueueSnapshotReadEpoch } from '../../authorizedFetch';
 import { sessionReadScope } from '../../sessionReadScope';
@@ -56,7 +57,7 @@ export function readSupplyTaskWindow(session: Session, input: SupplyTaskRequest,
     const raw = await response.text();
     guard();
     let body: unknown;
-    try { body = JSON.parse(raw); }
+    try { body = response.status === 200 && kind === 'qolip' ? parseSupplyTaskJson(raw) : JSON.parse(raw); }
     catch {
       if (response.status !== 200) throw productionMapResponseError(response.status, null, 'supply_tasks_failed');
       throw invalid();

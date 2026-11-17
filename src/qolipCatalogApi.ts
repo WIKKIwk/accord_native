@@ -62,11 +62,16 @@ export async function qolipCatalogPage(session: Session, input: { query?: string
   return { items, next_cursor: data.has_more ? next as string : null };
 }
 /** @v2 qolipProductMolds */
-export async function qolipProductMolds(session: Session, itemCode: string) {
+export async function qolipProductMolds(session: Session, itemCode: string, isCurrent?: () => boolean) {
+  const guard = () => { if (isCurrent && isCurrent() !== true) throw new Error('qolip_read_expired'); };
+  guard();
   const query = new URLSearchParams({ item_code: itemCode.trim() });
-  const response = await authorizedFetch(session, `/v1/mobile/qolip/shared-sets?${query}`);
+  const response = isCurrent ? await authorizedFetch(session, `/v1/mobile/qolip/shared-sets?${query}`, {}, guard, 10_000, { readWitness: isCurrent })
+    : await authorizedFetch(session, `/v1/mobile/qolip/shared-sets?${query}`);
+  guard();
   if (response.status !== 200) throw await qolipResponseError(response, 'qolip_set_load_failed');
   const data = object(await response.json());
+  guard();
   if (!data || !Array.isArray(data.products)) throw new TypeError('Invalid Qolip products');
   return data.products.map(qolipProductFromJson);
 }

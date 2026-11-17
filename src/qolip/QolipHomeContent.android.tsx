@@ -1,5 +1,6 @@
-import { Box, Column, Host, Row, Text, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { background, clip, Shapes, size, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { Box, Column, Host, IconButton, RNHostView, Row, Text, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { background, clip, Shapes, semantics, size, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ export function QolipHomeContent(props: QolipHomeContentProps) {
       </Host></View>
       : home.kind === 'blocks' ? <View style={styles.root}>
         <QolipHomeBlockTabs tabs={home.tabs} onSelect={props.onSelectBlock} onReorder={props.onReorderBlocks}
+          trailing={props.onAddBlock && <Host matchContents><IconButton onClick={props.onAddBlock} modifiers={[testID('qolip-add-block-tab'), semantics({ contentDescription: text('blocks.add') })]}><RNHostView matchContents><SymbolView name={{ android: 'add' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView></IconButton></Host>}
           colors={{ surface: colors.surfaceContainer, selected: colors.primaryContainer, dragging: colors.surfaceContainerHigh,
             underline: colors.primary, match: matchColor }}
           label={tab => tab.matchCount > 0 ? `${tab.block.name}, ${text('products.mold_count', { count: tab.matchCount })}` : tab.block.name}

@@ -104,5 +104,15 @@ export function createQolipCatalogReaders(session: Session, originalBoundary: Qo
         assertQolipReadCurrent(guard); return Object.freeze(products);
       });
     },
+    /** Exact product read for sharing, independent of the loaded page and search. */
+    molds(itemCode: string, lifetime: QolipReadGuard): Promise<readonly Product[]> {
+      const guard = composeGuard(lifetime);
+      return guarded(guard, async () => {
+        const result = await data(`/v1/mobile/qolip/shared-sets?${dartQuery({ item_code: trimDart(itemCode) })}`, guard);
+        if (!Array.isArray(result.products)) throw new TypeError('Invalid Qolip products');
+        const products = result.products.map(value => Object.freeze(qolipProductFromJson(value)));
+        assertQolipReadCurrent(guard); return Object.freeze(products);
+      });
+    },
   });
 }

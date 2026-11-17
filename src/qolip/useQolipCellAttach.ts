@@ -13,7 +13,7 @@ import { useQolipText } from './useQolipText';
 type PickerResult = { kind: 'single'; item: QolipPlacementProduct } | { kind: 'multi'; items: QolipPlacementProduct[] };
 export function useQolipCellAttach(props: QolipCellAttachSheetProps, Picker: ComponentType<QolipCellPickerProps>) {
   const state = useQolipCellPlacement(props.session, props.blocks, { initialBlock: props.initialBlock, rowLetter: props.rowLetter,
-    columnNumber: props.columnNumber, product: props.initialProduct });
+    columnNumber: props.columnNumber, product: props.initialProduct, boundary: props.boundary });
   const { text, locale } = useQolipText(), sheet = useNativeSheet(), notice = useQolipNotice();
   const [pending, setPending] = useState<QolipCellPlacementPrepared | null>(null);
   const picked = useRef<PickerResult | null>(null);

@@ -22,9 +22,9 @@ export function QolipPaddonCreateDialog(props: QolipPaddonCreateDialogProps) {
             {state.warehouses.map((warehouse, index) => <Button key={`${warehouse}:${index}`} label={warehouse} onPress={() => state.choose(warehouse)} />)}
           </Menu>
           <Button label={text('create')} onPress={state.submit}
-            modifiers={[buttonStyle('borderedProminent'), disabled(!state.canSubmit), frame({ maxWidth: Infinity }), accessibilityIdentifier('qolip-paddon-create-submit')]} />
+            modifiers={[buttonStyle('borderedProminent'), disabled(!state.canSubmit), frame({ maxWidth: Infinity, minHeight: 48 }), accessibilityIdentifier('qolip-paddon-create-submit')]} />
           <Button label={text('cancel')} role="cancel" onPress={state.dismiss}
-            modifiers={[buttonStyle('bordered'), frame({ maxWidth: Infinity }), accessibilityIdentifier('qolip-paddon-create-cancel')]} />
+            modifiers={[buttonStyle('bordered'), frame({ maxWidth: Infinity, minHeight: 48 }), accessibilityIdentifier('qolip-paddon-create-cancel')]} />
         </VStack></Host>
       </View>
     </View>

@@ -12,7 +12,7 @@ export type WorkerLiveOptions = {
   onReady?: (message: Record<string, unknown>) => void;
   onError?: (error: unknown) => void;
   isCurrent?: () => boolean;
-  manageAppState?: boolean;
+  manageAppState?: boolean; workerScope?: boolean; omitQueueLimit?: boolean; deterministicReconnect?: boolean;
 };
 const patchFields = new Set(['worker_list_rows', 'worker_display_states', 'worker_report_prompts', 'worker_pending_report_ids',
   'maps', 'map_order', 'map_order_edit', 'sequences', 'sequence_versions', 'sequence_revisions', 'sequence_positions_by_apparatus',
@@ -53,7 +53,7 @@ export function subscribeWorkerLive(
   const reconnect = () => {
     if (!foreground || !current() || retryTimer !== undefined) return;
     const delay = Math.min(30000, 1000 * 2 ** Math.min(attempts++, 5));
-    retryTimer = setTimeout(() => { retryTimer = undefined; connect(); }, delay * (0.5 + Math.random() * 0.5));
+    retryTimer = setTimeout(() => { retryTimer = undefined; connect(); }, options.deterministicReconnect ? delay : delay * (0.5 + Math.random() * 0.5));
   };
   const failed = (ws: WorkerLiveSocket | null, error: unknown) => {
     if (ws !== socket || !current()) { if (ws === socket) detach(); return; }
@@ -70,7 +70,7 @@ export function subscribeWorkerLive(
     if (!token) return;
     const cursor = workerSnapshotCursor(getSnapshot?.());
     const url = adminProductionMapLiveUri(session.baseUrl, token, { stateDelta: true,
-      compactStateDelta: protocol === 'state_delta_v2', workerScope: true, queueLimit, queueSearch: search,
+      compactStateDelta: protocol === 'state_delta_v2', workerScope: options.workerScope ?? true, queueLimit: options.omitQueueLimit ? undefined : queueLimit, queueSearch: search,
       epoch: cursor?.epoch ?? '', scope: cursor?.scope ?? '', revision: cursor?.rev });
     let ws: WorkerLiveSocket;
     try { ws = openWorkerLiveSocket(session, url.toString()); }

@@ -6,6 +6,7 @@ declare class NativeAccordProductionLive extends NativeModule<{ onProductionSock
   open(origin: string, target: string): string;
   /** Dedicated endpoint admission; absent in older development binaries. */
   openWarehouse?(origin: string, target: string): string;
+  openSupplyTasks?(origin: string, target: string): string;
   stop(id: string): void;
 }
 

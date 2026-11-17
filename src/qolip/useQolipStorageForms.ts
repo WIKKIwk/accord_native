@@ -6,7 +6,7 @@ import { useQolipPassiveBoundary } from './useQolipPassiveBoundary';
 export type QolipPaddonCreateDialogProps = { boundary: QolipHomeReadBoundary; warehouses: readonly string[];
   initial?: Partial<QolipPaddonCreateDraft> | null; close: (draft: QolipPaddonCreateDraft | null) => void };
 export type QolipInspectionDialogProps = { boundary: QolipHomeReadBoundary; expected: readonly string[];
-  scan: () => Promise<string | null>; close: (codes: readonly string[] | null) => void };
+  scan: () => Promise<string | null>; close: (codes: readonly string[] | null) => void; barrierDismissible?: boolean };
 
 export function useQolipPaddonCreate(props: QolipPaddonCreateDialogProps) {
   const boundary = props.boundary;

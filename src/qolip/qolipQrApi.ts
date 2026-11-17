@@ -81,14 +81,17 @@ export async function qolipCellQrLookup(session: Session, qrPayload: string, gua
 }
 
 /** @v2 qolipScanQr */
-export async function qolipScanQr(session: Session, qrPayload: string): Promise<QolipScanResult> {
+export async function qolipScanQr(session: Session, qrPayload: string, guard?: QolipReadGuard): Promise<QolipScanResult> {
   const qr = trimDart(qrPayload);
   if (!qr) throw new MobileApiException({ code: 'qolip_qr_required', message: 'QR bo‘sh.' });
   const query = dartQuery({ qr });
-  const response = await get(session, `/v1/mobile/qolip/scan?${query}`);
+  const response = await get(session, `/v1/mobile/qolip/scan?${query}`, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response,
     'qolip_scan_failed', 'QR bo‘yicha qolip yoki yacheyka topilmadi.');
-  return qolipScanResultFromJson(await response.json());
+  const data: unknown = await response.json();
+  assertQolipReadCurrent(guard);
+  return qolipScanResultFromJson(data);
 }
 
 /** @v2 qolipProductByQr */

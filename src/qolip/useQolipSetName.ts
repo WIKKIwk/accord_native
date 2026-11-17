@@ -3,8 +3,8 @@ import { registerSessionResetHook, type Session } from '../auth';
 import { QolipSetNameState } from './qolipSetNameState';
 import type { QolipManagedSet } from './qolipSetsApi';
 
-export function useQolipSetName(session: Session, entry: QolipManagedSet) {
-  const controller = useMemo(() => QolipSetNameState.forSession(session, entry), [session, entry]);
+export function useQolipSetName(session: Session, entry: QolipManagedSet, guard?: () => boolean) {
+  const controller = useMemo(() => QolipSetNameState.forSession(session, entry, guard), [session, entry, guard]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {
     controller.activate();

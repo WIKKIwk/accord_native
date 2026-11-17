@@ -75,6 +75,14 @@ test('archive kind/status/warehouse/dates preserve source query fields and clear
   const count = h.calls.length; await h.owner.chooseDates(null); assert.equal(h.calls.length, count);
   await h.owner.clearFilters(); input = h.calls.at(-1)[1]; assert.equal(input.status, 'all'); assert.equal(input.query, 'Q'); assert.equal(input.view, ''); assert.equal(input.warehouse, ''); assert.equal(input.from, undefined); h.owner.suspend();
 });
+
+test('clearing only archive dates retains source query, warehouse, kind and history', async () => {
+  const h = harness(); h.activate(); h.owner.setQuery('Q'); await h.owner.chooseKind('qolip'); await h.owner.setHistory(true); await h.owner.chooseWarehouse('W');
+  await h.owner.chooseDates({ from: new Date(2026, 0, 1), to: new Date(2026, 0, 2) }); await h.owner.clearDates();
+  const state = h.owner.getSnapshot(), input = h.calls.at(-1)[1];
+  assert.equal(state.dates, null); assert.equal(state.kind, 'qolip'); assert.equal(state.warehouse, 'W'); assert.equal(state.history, true); assert.equal(state.query, 'Q');
+  assert.equal(input.from, undefined); assert.equal(input.to, undefined); h.owner.suspend();
+});
 test('saving locks the source history toggle while kind/warehouse filters retain their source behavior', async () => {
   const h = harness(); h.activate(); h.owner.setSaving(true); await h.owner.setHistory(true); assert.equal(h.calls.length, 0);
   await h.owner.chooseKind('paddon'); assert.equal(h.calls.length, 1); assert.equal(h.owner.getSnapshot().history, false); h.owner.suspend();

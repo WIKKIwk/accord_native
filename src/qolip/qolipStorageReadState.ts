@@ -65,6 +65,7 @@ export class QolipStorageReadState {
     this.value = { ...this.value, loading: false, loadingMore: false, warehouseLoading: false, searchPending: false };
   }
   setSaving(saving: boolean) { this.publish({ saving }); }
+  removePaddon(code: string) { this.publish({ paddons: this.value.paddons.filter(item => item.code !== code) }); }
   setQuery(query: string) {
     if (!this.canAct()) return;
     if (this.debounce !== null) clearTimeout(this.debounce);
@@ -122,6 +123,10 @@ export class QolipStorageReadState {
   chooseDates(dates: QolipStorageDateRange | null): Promise<void> {
     if (!this.canAct() || dates === null) return Promise.resolve();
     this.publish({ dates: { from: new Date(dates.from.getTime()), to: new Date(dates.to.getTime()) } }); return this.load();
+  }
+  clearDates(): Promise<void> {
+    if (!this.canAct()) return Promise.resolve();
+    this.publish({ dates: null }); return this.load();
   }
   clearFilters(): Promise<void> {
     if (!this.canAct()) return Promise.resolve();

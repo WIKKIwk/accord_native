@@ -126,34 +126,36 @@ export async function qolipReworks(session: Session, status: 'open' | 'returned'
 }
 
 /** @v2 qolipSendToRework */
-export async function qolipSendToRework(session: Session, input: { requestId: string; qolipCodes: string[] }): Promise<QolipReworkEntry[]> {
+export async function qolipSendToRework(session: Session, input: { requestId: string; qolipCodes: string[] }, guard?: QolipReadGuard): Promise<QolipReworkEntry[]> {
+  assertQolipReadCurrent(guard);
   const codes = [...new Set(input.qolipCodes.map(code => trim(code).toLowerCase()))].sort();
   if (!trim(input.requestId) || !codes.length || codes.length > 1000 || codes.some(code => !code)) throw new TypeError('Select mold codes');
   const rows = decodeReworks(await request(session, '/v1/mobile/qolip/reworks/send', 'qolip_rework_failed',
-    'Qoliplar peredelkaga berilmadi', { request_id: input.requestId, qolip_codes: codes }));
+    'Qoliplar peredelkaga berilmadi', { request_id: input.requestId, qolip_codes: codes }, guard));
   const returned = new Set(rows.map(row => row.qolip_code.toLowerCase()));
   if (rows.length !== codes.length || returned.size !== codes.length || codes.some(code => !returned.has(code)) ||
       rows.some(row => !row.is_open)) throw new TypeError('Incomplete mold rework response');
-  return rows;
+  assertQolipReadCurrent(guard); return rows;
 }
 
 /** @v2 qolipReturnFromRework */
-export async function qolipReturnFromRework(session: Session, input: { requestId: string; reworkIds: string[] }): Promise<QolipReworkEntry[]> {
+export async function qolipReturnFromRework(session: Session, input: { requestId: string; reworkIds: string[] }, guard?: QolipReadGuard): Promise<QolipReworkEntry[]> {
+  assertQolipReadCurrent(guard);
   const ids = [...new Set(input.reworkIds.map(trim))].sort();
   if (!trim(input.requestId) || !ids.length || ids.length > 1000 || ids.some(id => !id)) throw new TypeError('Select rework records');
   const rows = decodeReworks(await request(session, '/v1/mobile/qolip/reworks/return', 'qolip_rework_failed',
-    'Qoliplar qaytarilmadi', { request_id: input.requestId, rework_ids: ids }));
+    'Qoliplar qaytarilmadi', { request_id: input.requestId, rework_ids: ids }, guard));
   const returned = new Set(rows.map(row => row.id));
   if (rows.length !== ids.length || returned.size !== ids.length || ids.some(id => !returned.has(id)) ||
       rows.some(row => row.is_open)) throw new TypeError('Incomplete mold return response');
-  return rows;
+  assertQolipReadCurrent(guard); return rows;
 }
 
 /** @v2 qolipMileage */
-export async function qolipMileage(session: Session, qolipCode: string): Promise<QolipMileage> {
+export async function qolipMileage(session: Session, qolipCode: string, guard?: QolipReadGuard): Promise<QolipMileage> {
   const code = trim(qolipCode), query = dartQuery({ qolip_code: code });
-  const data = await request(session, `/v1/mobile/qolip/mileage?${query}`, 'qolip_mileage_failed', 'Probeg yuklanmadi');
+  const data = await request(session, `/v1/mobile/qolip/mileage?${query}`, 'qolip_mileage_failed', 'Probeg yuklanmadi', undefined, guard);
   const result = qolipMileageFromJson(data.mileage);
   if (result.qolip_code.toLowerCase() !== code.toLowerCase()) throw new TypeError('Mold mileage identity changed');
-  return result;
+  assertQolipReadCurrent(guard); return result;
 }

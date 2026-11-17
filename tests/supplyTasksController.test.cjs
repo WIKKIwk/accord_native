@@ -46,6 +46,15 @@ test('activation loads once, deduplicates the same in-flight refresh, and uses t
   assert.equal(state.query.apparatus, 'apparatus:a:one'); assert.equal(state.error, null); h.controller.dispose();
 });
 
+test('a live snapshot canonical apparatus becomes the next source HTTP query without counting as a user query change', async () => {
+  const seen = [], h = setup({ loadWindow: async query => { seen.push(query); return windowFor(query, { apparatus_id: query.apparatus || 'apparatus:a:one' }); } });
+  await h.controller.activate(); const revision = h.controller.queryRevision();
+  assert.equal(h.controller.adoptLive(windowFor(h.controller.getSnapshot().query, { apparatus_id: 'apparatus:a:two', revision: 2 })), true);
+  assert.equal(h.controller.queryRevision(), revision); assert.equal(h.controller.getSnapshot().query.apparatus, 'apparatus:a:two');
+  await h.controller.refresh(); assert.equal(seen[1].apparatus, 'apparatus:a:two');
+  await h.controller.selectLimit(20); assert.equal(h.controller.queryRevision(), revision + 1); h.controller.dispose();
+});
+
 test('changing the limit while loading discards late results from the previous generation', async () => {
   const waits = [], h = setup({ loadWindow: query => { const d = deferred(); waits.push({ query, ...d }); return d.promise; } });
   const old = h.controller.activate(); await Promise.resolve(); const fresh = h.controller.selectLimit(5); await Promise.resolve();

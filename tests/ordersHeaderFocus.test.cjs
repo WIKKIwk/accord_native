@@ -42,6 +42,14 @@ function loadHeader(os) {
 }
 
 for (const platform of ['ios', 'android']) {
+  test(`${platform}: optional disabled search retains Back and blocks editing/clearing`, () => {
+    const OrdersHeader = loadHeader(platform), calls = [];
+    const tree = OrdersHeader({ search: 'selected', enabled: false, onSearchChange: value => calls.push(value), onBack: () => calls.push('back') });
+    const input = nodes(tree, node => node.type === 'OrdersSearchInput')[0];
+    assert.equal(input.props.enabled, false); input.props.onChangeText('late'); assert.deepEqual(calls, []);
+    const clear = nodes(tree, node => node.type === 'Pressable')[0]; assert.equal(clear.props.disabled, true);
+    nodes(tree, node => node.type === 'RoleHeaderButton')[0].props.onPress(); assert.deepEqual(calls, ['back']);
+  });
   test(`${platform}: existing header defaults retain menu, profile and search without caller focus callbacks`, () => {
     const OrdersHeader = loadHeader(platform), calls = [];
     const tree = OrdersHeader({ search: 'abc', onSearchChange: value => calls.push(['search', value]),

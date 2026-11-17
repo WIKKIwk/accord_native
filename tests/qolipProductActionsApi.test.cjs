@@ -29,7 +29,8 @@ function harness(response, options = {}) {
     '../shared/mobileApiException': { MobileApiException },
     '../shared/qolipCatalogRuntime': { qolipCatalogRuntimeFor: () => ({ applyResponse: (data, scope) => applied.push({ data, scope }) }) },
     './qolipApiCommon': common,
-    '../authorizedFetch': { authorizedFetch: async (value, target, init = {}) => {
+    '../authorizedFetch': { authorizedFetch: async (value, target, init = {}, beforeSend) => {
+      beforeSend?.();
       calls.push({ session: value, target, init });
       const result = typeof response === 'function' ? response(calls.length, init) : response;
       options.afterResponse?.(session);
@@ -39,6 +40,24 @@ function harness(response, options = {}) {
   return { api, calls, applied, session };
 }
 const product = productParser.qolipProductFromJson(rawProduct());
+
+test('Edit size keeps the exact Dart int64 JSON token instead of rounding through Number', async () => {
+  const h = harness(json({ product: rawProduct() }));
+  await h.api.qolipSaveProductSpec(h.session, { product, qolipCode: 'Q-1', size: 9223372036854775807n });
+  assert.match(h.calls[0].init.body, /"size":9223372036854775807[},]/);
+  assert.doesNotMatch(h.calls[0].init.body, /"size":"/);
+  assert.equal(h.api.qolipSpecRequestJson({ size: 1n }), '{"size":1}');
+  assert.throws(() => h.api.qolipSpecRequestJson({ size: 9223372036854775808n }), RangeError);
+});
+
+test('role-bound spec writes reject an expired original owner before send or catalog publication', async () => {
+  const denied = harness(json({ product: rawProduct() }));
+  await assert.rejects(denied.api.qolipSaveProductSpec(denied.session, { product, qolipCode: 'Q', size: 42 }, () => false), /qolip_read_expired/);
+  assert.equal(denied.calls.length, 0);
+  let valid = true; const stale = harness(json({ product: rawProduct() }), { afterResponse: () => { valid = false; } });
+  await assert.rejects(stale.api.qolipSaveProductSpecsBatch(stale.session, { product, specs: [{ qolipCode: 'Q', size: 42 }] }, () => valid), /qolip_read_expired/);
+  assert.equal(stale.applied.length, 0);
+});
 
 function fixtureHarness(stem, name) {
   const replay = contractFetch(stem, name), recorded = recordedSession(stem, name);

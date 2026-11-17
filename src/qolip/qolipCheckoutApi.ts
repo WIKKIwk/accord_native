@@ -60,13 +60,14 @@ function invalidateCatalogIfCurrent(session: Session, scope: string): void {
 }
 
 /** @v2 qolipWorkers */
-export async function qolipWorkers(session: Session, query = ''): Promise<QolipWorkerOption[]> {
+export async function qolipWorkers(session: Session, query = '', guard?: QolipReadGuard): Promise<QolipWorkerOption[]> {
   const params: Record<string, string> = {};
   if (trimDart(query)) params.q = trimDart(query);
   params.limit = '100';
-  const response = await send(session, `/v1/mobile/qolip/workers?${dartQuery(params)}`);
+  const response = await send(session, `/v1/mobile/qolip/workers?${dartQuery(params)}`, undefined, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_workers_failed', 'Qolipchilar yuklanmadi.');
-  const data = await responseData(response);
+  const data = await responseData(response, guard);
   if (data.workers == null) return [];
   if (!Array.isArray(data.workers)) throw new TypeError('Invalid Qolip workers');
   return data.workers.map(qolipWorkerFromJson);
@@ -101,27 +102,29 @@ export async function qolipCheckouts(session: Session, input: { block?: string; 
 /** @v2 qolipIssueCheckout */
 export async function qolipIssueCheckout(session: Session, input: {
   locationId: string; quantity: number; workerId: string;
-}): Promise<QolipCheckoutEntry> {
+}, guard?: QolipReadGuard): Promise<QolipCheckoutEntry> {
   const scope = sessionReadScope(session);
   const response = await send(session, '/v1/mobile/qolip/checkouts', {
     location_id: trimDart(input.locationId), quantity: input.quantity, worker_id: trimDart(input.workerId),
-  });
+  }, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_checkout_failed', 'Qolip olish amalga oshmadi.');
-  const data = await responseData(response);
+  const data = await responseData(response, guard);
   invalidateCatalogIfCurrent(session, scope);
   return qolipCheckoutFromJson(data.checkout);
 }
 
 /** @v2 qolipReturnCheckout */
 export async function qolipReturnCheckout(session: Session, checkoutId: string,
-  input: { rowLetter?: string; columnNumber?: number | null } = {}): Promise<QolipCheckoutEntry> {
+  input: { rowLetter?: string; columnNumber?: number | null } = {}, guard?: QolipReadGuard): Promise<QolipCheckoutEntry> {
   const scope = sessionReadScope(session), row = trimDart(input.rowLetter ?? '');
   const response = await send(session, '/v1/mobile/qolip/checkouts/return', {
     checkout_id: trimDart(checkoutId), ...(row ? { row_letter: row.toUpperCase() } : {}),
     ...(input.columnNumber != null ? { column_number: input.columnNumber } : {}),
-  });
+  }, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_checkout_return_failed', 'Qolip qaytarilmadi.');
-  const data = await responseData(response);
+  const data = await responseData(response, guard);
   invalidateCatalogIfCurrent(session, scope);
   return qolipCheckoutFromJson(data.checkout);
 }

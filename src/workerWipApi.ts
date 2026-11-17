@@ -15,7 +15,7 @@ function optionalStation(value: string): string {
 export async function adminWipBatches(session: Session, options: {
   status?: string; apparatus?: string; nextApparatus?: string; currentLocation?: string; orderId?: string;
   producerApparatus?: string; ownWorkerOnly?: boolean; limit?: number; signal?: AbortSignal;
-  current?: () => boolean;
+  current?: () => boolean; readWitness?: () => boolean;
 } = {}): Promise<Obj[]> {
   const scope = sessionReadScope(session), producer = optionalStation(options.producerApparatus ?? ''),
     apparatus = optionalStation(options.apparatus ?? ''), next = optionalStation(options.nextApparatus ?? ''),
@@ -43,8 +43,9 @@ export async function adminWipBatches(session: Session, options: {
     options.signal?.addEventListener('abort', abort, { once: true });
     const timer = setTimeout(abort, 10_000);
     try {
-      const response = await authorizedFetch(session, `/v1/mobile/admin/production-maps/wip-batches?${query}`,
-        { signal: controller.signal }, guard);
+      const path = `/v1/mobile/admin/production-maps/wip-batches?${query}`;
+      const response = options.readWitness ? await authorizedFetch(session, path, { signal: controller.signal }, guard, 10_000, { readWitness: options.readWitness })
+        : await authorizedFetch(session, path, { signal: controller.signal }, guard);
       guard();
       if (response.status !== 200) {
         let payload: unknown; try { payload = await response.json(); } catch { payload = null; }

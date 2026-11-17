@@ -20,6 +20,7 @@ export type QolipHomeContentProps = {
   retry: () => Promise<void>;
   refreshBlock: (blockName: string) => Promise<void>;
   dock?: ReactNode;
+  onAddBlock?: () => void;
 } & ({
   renderBlock: (block: QolipBlock, content: QolipHomeBlockContent) => ReactNode;
   renderRetainedBlocks?: never;

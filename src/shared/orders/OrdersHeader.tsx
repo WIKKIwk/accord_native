@@ -16,12 +16,13 @@ type Props = {
   trailing?: ReactNode;
   actions?: ReactNode;
   onSearchFocus?: () => void; onSearchBlur?: () => void;
+  enabled?: boolean;
 } & ({ onMenu: () => void; onBack?: never } | { onMenu?: never; onBack: () => void });
 
 export type { Props as OrdersHeaderProps };
 
 /** The worker queue uses the same menu and search layout as V2. */
-export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, trailing, actions, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash' }: Props) {
+export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, trailing, actions, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash', enabled = true }: Props) {
   const colors = useWorkerColors();
   const [searchFocused, setSearchFocused] = useState(false);
   const input = useRef<OrdersSearchInputHandle>(null);
@@ -32,9 +33,10 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
     if (textSync.current!.reactChanged(search)) nativeSearch.set(search);
   }, [nativeSearch, search]);
   const changeSearch = useCallback((value: string) => {
+    if (!enabled) return;
     textSync.current!.nativeChanged(value);
     onSearchChange(value);
-  }, [onSearchChange]);
+  }, [onSearchChange, enabled]);
 
   return (
     <View style={styles.row}>
@@ -43,11 +45,11 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
         {!searchFocused && <View pointerEvents="none" accessible={false} style={styles.searchIcon}>
           <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }} size={24} tintColor={colors.icon} />
         </View>}
-        <OrdersSearchInput inputRef={input} value={nativeSearch} onChangeText={changeSearch}
+        <OrdersSearchInput inputRef={input} value={nativeSearch} onChangeText={changeSearch} enabled={enabled}
           onFocus={() => { setSearchFocused(true); onSearchFocus?.(); }} onBlur={() => { setSearchFocused(false); onSearchBlur?.(); }}
           placeholder={searchPlaceholder} color={colors.text} placeholderColor={colors.muted} />
         {(searchFocused || search.length > 0) && (
-          <Pressable accessibilityRole="button" accessibilityLabel={searchFocused ? 'Yopish' : 'Qidiruvni tozalash'} onPress={() => {
+          <Pressable accessibilityRole="button" disabled={!enabled} accessibilityLabel={searchFocused ? 'Yopish' : 'Qidiruvni tozalash'} onPress={() => {
             if (searchFocused) input.current?.blur();
             else { nativeSearch.set(''); changeSearch(''); }
           }} style={styles.clear} hitSlop={5}>

@@ -1,0 +1,228 @@
+{
+ "source": "test/qolip_reworks_screen_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "return patches only its rows without reloading or losing search and scroll",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=all",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-KEEP-0-A\",\"qolip_code\":\"KEEP-0-A\",\"qolip_set_id\":\"set-0\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 0\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-0-B\",\"qolip_code\":\"KEEP-0-B\",\"qolip_set_id\":\"set-0\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 0\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-1-A\",\"qolip_code\":\"KEEP-1-A\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 1\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-1-B\",\"qolip_code\":\"KEEP-1-B\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 1\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-2-A\",\"qolip_code\":\"KEEP-2-A\",\"qolip_set_id\":\"set-2\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 2\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-2-B\",\"qolip_code\":\"KEEP-2-B\",\"qolip_set_id\":\"set-2\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 2\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-3-A\",\"qolip_code\":\"KEEP-3-A\",\"qolip_set_id\":\"set-3\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 3\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-3-B\",\"qolip_code\":\"KEEP-3-B\",\"qolip_set_id\":\"set-3\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 3\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-4-A\",\"qolip_code\":\"KEEP-4-A\",\"qolip_set_id\":\"set-4\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 4\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-4-B\",\"qolip_code\":\"KEEP-4-B\",\"qolip_set_id\":\"set-4\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 4\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-5-A\",\"qolip_code\":\"KEEP-5-A\",\"qolip_set_id\":\"set-5\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 5\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-5-B\",\"qolip_code\":\"KEEP-5-B\",\"qolip_set_id\":\"set-5\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 5\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-6-A\",\"qolip_code\":\"KEEP-6-A\",\"qolip_set_id\":\"set-6\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 6\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-6-B\",\"qolip_code\":\"KEEP-6-B\",\"qolip_set_id\":\"set-6\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 6\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-7-A\",\"qolip_code\":\"KEEP-7-A\",\"qolip_set_id\":\"set-7\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 7\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-7-B\",\"qolip_code\":\"KEEP-7-B\",\"qolip_set_id\":\"set-7\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 7\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-8-A\",\"qolip_code\":\"KEEP-8-A\",\"qolip_set_id\":\"set-8\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 8\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-8-B\",\"qolip_code\":\"KEEP-8-B\",\"qolip_set_id\":\"set-8\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 8\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-9-A\",\"qolip_code\":\"KEEP-9-A\",\"qolip_set_id\":\"set-9\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 9\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-9-B\",\"qolip_code\":\"KEEP-9-B\",\"qolip_set_id\":\"set-9\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 9\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-10-A\",\"qolip_code\":\"KEEP-10-A\",\"qolip_set_id\":\"set-10\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 10\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-10-B\",\"qolip_code\":\"KEEP-10-B\",\"qolip_set_id\":\"set-10\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 10\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-11-A\",\"qolip_code\":\"KEEP-11-A\",\"qolip_set_id\":\"set-11\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 11\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-11-B\",\"qolip_code\":\"KEEP-11-B\",\"qolip_set_id\":\"set-11\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 11\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "return patches only its rows without reloading or losing search and scroll",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1794900215338117-779915490c12e4dd8dedeb2e633878f6\",\"rework_ids\":[\"retry-KEEP-3-A\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-KEEP-3-A\",\"qolip_code\":\"KEEP-3-A\",\"qolip_set_id\":\"set-3\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 3\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"}]}"
+   }
+  },
+  {
+   "test": "return patches only its rows without reloading or losing search and scroll",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=all",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-KEEP-0-A\",\"qolip_code\":\"KEEP-0-A\",\"qolip_set_id\":\"set-0\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 0\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-0-B\",\"qolip_code\":\"KEEP-0-B\",\"qolip_set_id\":\"set-0\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 0\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-1-A\",\"qolip_code\":\"KEEP-1-A\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 1\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-1-B\",\"qolip_code\":\"KEEP-1-B\",\"qolip_set_id\":\"set-1\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 1\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-2-A\",\"qolip_code\":\"KEEP-2-A\",\"qolip_set_id\":\"set-2\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 2\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-2-B\",\"qolip_code\":\"KEEP-2-B\",\"qolip_set_id\":\"set-2\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 2\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-3-A\",\"qolip_code\":\"KEEP-3-A\",\"qolip_set_id\":\"set-3\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 3\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"},{\"id\":\"retry-KEEP-3-B\",\"qolip_code\":\"KEEP-3-B\",\"qolip_set_id\":\"set-3\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 3\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-4-A\",\"qolip_code\":\"KEEP-4-A\",\"qolip_set_id\":\"set-4\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 4\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-4-B\",\"qolip_code\":\"KEEP-4-B\",\"qolip_set_id\":\"set-4\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 4\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-5-A\",\"qolip_code\":\"KEEP-5-A\",\"qolip_set_id\":\"set-5\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 5\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-5-B\",\"qolip_code\":\"KEEP-5-B\",\"qolip_set_id\":\"set-5\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 5\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-6-A\",\"qolip_code\":\"KEEP-6-A\",\"qolip_set_id\":\"set-6\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 6\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-6-B\",\"qolip_code\":\"KEEP-6-B\",\"qolip_set_id\":\"set-6\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 6\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-7-A\",\"qolip_code\":\"KEEP-7-A\",\"qolip_set_id\":\"set-7\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 7\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-7-B\",\"qolip_code\":\"KEEP-7-B\",\"qolip_set_id\":\"set-7\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 7\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-8-A\",\"qolip_code\":\"KEEP-8-A\",\"qolip_set_id\":\"set-8\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 8\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-8-B\",\"qolip_code\":\"KEEP-8-B\",\"qolip_set_id\":\"set-8\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 8\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-9-A\",\"qolip_code\":\"KEEP-9-A\",\"qolip_set_id\":\"set-9\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 9\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-9-B\",\"qolip_code\":\"KEEP-9-B\",\"qolip_set_id\":\"set-9\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 9\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-10-A\",\"qolip_code\":\"KEEP-10-A\",\"qolip_set_id\":\"set-10\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 10\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-10-B\",\"qolip_code\":\"KEEP-10-B\",\"qolip_set_id\":\"set-10\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 10\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-11-A\",\"qolip_code\":\"KEEP-11-A\",\"qolip_set_id\":\"set-11\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 11\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-KEEP-11-B\",\"qolip_code\":\"KEEP-11-B\",\"qolip_set_id\":\"set-11\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Keep group 11\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "a pending refresh cannot undo a successful return",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=all",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-RW-A1\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-RW-A2\",\"qolip_code\":\"RW-A2\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "a pending refresh cannot undo a successful return",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1794900219386255-d5db46c98efef50a44c37cd33c08ebf8\",\"rework_ids\":[\"retry-RW-A1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-RW-A1\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"}]}"
+   }
+  },
+  {
+   "test": "a pending refresh cannot undo a successful return",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=all",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-RW-A1\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-RW-A2\",\"qolip_code\":\"RW-A2\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "send retry keeps the request ID after a lost response",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/page?limit=200",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"items\":[{\"id\":\"retry-hotlunch\",\"name\":\"Hotlunch\"}],\"has_more\":false}"
+   }
+  },
+  {
+   "test": "send retry keeps the request ID after a lost response",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=open",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[]}"
+   }
+  },
+  {
+   "test": "send retry keeps the request ID after a lost response",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/products/detail?id=retry-hotlunch",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"products\":[{\"code\":\"DEMO-HOTLUNCH\",\"name\":\"Hotlunch\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true},{\"code\":\"DEMO-HOTLUNCH\",\"name\":\"Hotlunch\",\"item_group\":\"Demo tayyor mahsulotlar\",\"qolip_code\":\"RW-A2\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"size\":40,\"color\":\"Panton 1\",\"has_qolip_spec\":true}]}"
+   }
+  },
+  {
+   "test": "send retry keeps the request ID after a lost response",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1794900221915582-74ef2560d590d54ca48dec8ccccf97df\",\"qolip_codes\":[\"rw-a1\",\"rw-a2\"]}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "send retry keeps the request ID after a lost response",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/send",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1794900221915582-74ef2560d590d54ca48dec8ccccf97df\",\"qolip_codes\":[\"rw-a1\",\"rw-a2\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-RW-A1\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null},{\"id\":\"retry-RW-A2\",\"qolip_code\":\"RW-A2\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "return retry keeps the request ID after a lost response",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks?status=all",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-RW-A1\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":null}]}"
+   }
+  },
+  {
+   "test": "return retry keeps the request ID after a lost response",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1794900224102748-0f457711ce861f19f4a91f3aca909b1e\",\"rework_ids\":[\"retry-RW-A1\"]}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "return retry keeps the request ID after a lost response",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/reworks/return",
+   "requestHeaders": {
+    "Authorization": "Bearer rework-widget-token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"request_id\":\"qolip-rework-1794900224102748-0f457711ce861f19f4a91f3aca909b1e\",\"rework_ids\":[\"retry-RW-A1\"]}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"reworks\":[{\"id\":\"retry-RW-A1\",\"qolip_code\":\"RW-A1\",\"qolip_set_id\":\"950100000001\",\"warehouse\":\"Qolip ombori\",\"item_code\":\"DEMO-HOTLUNCH\",\"item_name\":\"Hotlunch\",\"color\":\"Panton 1\",\"size\":40,\"sent_at\":\"2026-10-24T10:00:00Z\",\"returned_at\":\"2026-10-24T11:00:00Z\"}]}"
+   }
+  }
+ ]
+}

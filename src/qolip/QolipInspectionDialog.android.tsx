@@ -12,7 +12,7 @@ export function QolipInspectionDialog(props: QolipInspectionDialogProps) {
   const text = (key: string) => extensionText('qolipStorageText', key, locale);
   if (state.invalid) return null;
   return <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
-    <AlertDialog onDismissRequest={state.dismiss}>
+    <AlertDialog onDismissRequest={state.dismiss} properties={{ dismissOnClickOutside: props.barrierDismissible ?? true }}>
       <AlertDialog.Title><Text>{text('inspect')}</Text></AlertDialog.Title>
       <AlertDialog.Text><Column verticalArrangement={{ spacedBy: 12 }} modifiers={[verticalScroll()]}>
         <Text>{text('inspect_hint')}</Text>

@@ -43,29 +43,34 @@ export function rawMaterialAssignment(value: unknown): AdminRawMaterialAssignmen
   };
 }
 
-async function assignments(session: Session, path: string, query: URLSearchParams, fallback: string) {
+async function assignments(session: Session, path: string, query: URLSearchParams, fallback: string, current?: () => boolean) {
+  const guard = () => { if (current && current() !== true) throw new WorkerControlException('session_scope_changed', ''); };
+  guard();
   await Promise.resolve();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal });
+    const response = current ? await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal }, guard, 10_000, { readWitness: current })
+      : await authorizedFetch(session, `${path}?${query}`, { signal: controller.signal });
+    guard();
     if (response.status !== 200) {
       let payload: unknown;
       try { payload = await response.json(); } catch { payload = null; }
       throw productionMapResponseError(response.status, payload, fallback, response.headers);
     }
     const data: unknown = await response.json();
+    guard();
     if (!Array.isArray(data)) throw new TypeError('Invalid material assignments');
     return data.map(rawMaterialAssignment);
   } finally { clearTimeout(timer); }
 }
 
 /** @v2 adminRawMaterialAssignments */
-export async function adminRawMaterialAssignments(session: Session, orderId = '', apparatus = '') {
+export async function adminRawMaterialAssignments(session: Session, orderId = '', apparatus = '', current?: () => boolean) {
   const station = apparatusId(apparatus, true), query = new URLSearchParams();
   if (orderId.trim()) query.set('order_id', orderId.trim());
   if (station) query.set('apparatus', station);
-  return assignments(session, '/v1/mobile/admin/raw-material-assignments', query, 'raw_material_assignments');
+  return assignments(session, '/v1/mobile/admin/raw-material-assignments', query, 'raw_material_assignments', current);
 }
 
 /** @v2 adminRawMaterialIntakeCandidates */

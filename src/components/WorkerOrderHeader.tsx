@@ -10,8 +10,8 @@ import { useWorkerOrderText } from './useWorkerOrderText';
 
 type Identity = { session: Session; orderId: string; imageId: string };
 
-export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOpenImage, onClose, onScannedWips }: Identity & {
-  code: string; title?: string; onOpenImage: () => void; onClose: () => void; onScannedWips?: () => void;
+export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOpenImage, onClose, onScannedWips, codeLabel }: Identity & {
+  code: string; title?: string; codeLabel?: string; onOpenImage: () => void; onClose: () => void; onScannedWips?: () => void;
 }) {
   const colors = useWorkerColors();
   const { p } = useWorkerOrderText();
@@ -21,7 +21,7 @@ export function WorkerOrderHeader({ session, orderId, imageId, code, title, onOp
         backgroundColor={colors.surface} iconColor={colors.icon} />
     </Pressable>
     <View style={styles.fill}>
-      <Text style={[styles.label, { color: colors.muted }]}>Buyurtma raqami:</Text>
+      <Text style={[styles.label, { color: colors.muted }]}>{codeLabel ?? 'Buyurtma raqami:'}</Text>
       <Text numberOfLines={1} style={[styles.code, { color: colors.text }]}>{code}</Text>
       {title ? <Text numberOfLines={2} style={[styles.label, { color: colors.muted }]}>{title}</Text> : null}
     </View>

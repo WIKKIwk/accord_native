@@ -11,6 +11,7 @@ type Props = {
   onReorder: (oldIndex: number, newIndex: number) => void;
   label: (tab: QolipHomeTab) => string;
   renderLabel: (tab: QolipHomeTab) => ReactNode;
+  trailing?: ReactNode;
   colors: { surface: ColorValue; selected: ColorValue; dragging: ColorValue; underline: ColorValue; match: ColorValue };
 };
 type DragActions = {
@@ -94,6 +95,7 @@ export function QolipHomeBlockTabs(props: Props) {
       {displayed.map(tab => <BlockTab key={tab.key} tab={tab} dragging={drag?.key === tab.key} colors={props.colors}
         label={props.label(tab)} renderLabel={props.renderLabel} actions={actions}
         recordLayout={(key, layout) => { layouts.current.set(key, { x: layout.x, width: layout.width }); }} />)}
+      {props.trailing}
     </ScrollView>
   </View>;
 }

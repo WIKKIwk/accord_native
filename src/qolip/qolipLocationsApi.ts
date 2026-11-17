@@ -55,7 +55,7 @@ type Product = ReturnType<typeof qolipProductFromJson>;
 export async function qolipSaveLocation(session: Session, input: {
   block: QolipBlock; product?: Product | null; qolipCode?: string; size?: number; quantity: number;
   rowLetter?: string; columnNumber?: number | null;
-}): Promise<QolipLocationEntry> {
+}, guard?: QolipReadGuard): Promise<QolipLocationEntry> {
   const code = trimDart(input.qolipCode ?? '') || trimDart(input.product?.qolip_code ?? '');
   const size = (input.size ?? 0) > 0 ? input.size! : input.product?.size ?? 0;
   const row = trimDart(input.rowLetter ?? '');
@@ -63,9 +63,11 @@ export async function qolipSaveLocation(session: Session, input: {
     ...(input.product ? { item_code: trimDart(input.product.code), item_name: trimDart(input.product.name) } : {}),
     ...(code ? { qolip_code: code } : {}), ...(size > 0 ? { size } : {}), quantity: input.quantity,
     ...(row ? { row_letter: row } : {}), ...(input.columnNumber != null ? { column_number: input.columnNumber } : {}) };
-  const response = await send(session, '/v1/mobile/qolip/locations', payload);
+  const response = await send(session, '/v1/mobile/qolip/locations', payload, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw new Error('Qolip location save failed');
   const data = jsonObject(await response.json());
+  assertQolipReadCurrent(guard);
   return qolipLocationFromJson(data?.location);
 }
 
@@ -77,18 +79,20 @@ function moveBody(locationId: string, targetBlock: QolipBlock, quantity: number,
 /** @v2 qolipMoveLocation */
 export async function qolipMoveLocation(session: Session, input: {
   locationId: string; targetBlock: QolipBlock; quantity: number; rowLetter: string; columnNumber: number;
-}): Promise<QolipLocationEntry> {
+}, guard?: QolipReadGuard): Promise<QolipLocationEntry> {
   const response = await send(session, '/v1/mobile/qolip/locations/move',
-    moveBody(input.locationId, input.targetBlock, input.quantity, input.rowLetter, input.columnNumber));
+    moveBody(input.locationId, input.targetBlock, input.quantity, input.rowLetter, input.columnNumber), guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_location_move_failed', 'Ko‘chirish amalga oshmadi.');
   const data = jsonObject(await response.json());
+  assertQolipReadCurrent(guard);
   return qolipLocationFromJson(data?.location);
 }
 
 /** @v2 qolipMoveLocations */
 export async function qolipMoveLocations(session: Session, input: {
   locations: QolipLocationEntry[]; targetBlock: QolipBlock; rowLetter: string; columnNumber: number;
-}): Promise<QolipLocationEntry[]> {
+}, guard?: QolipReadGuard): Promise<QolipLocationEntry[]> {
   const ids = new Set<string>();
   for (const location of input.locations) {
     const id = trimDart(location.id);
@@ -98,10 +102,12 @@ export async function qolipMoveLocations(session: Session, input: {
   if (!input.locations.length) throw new MobileApiException({ code: 'location_invalid', message: 'location_invalid' });
   const response = await send(session, '/v1/mobile/qolip/locations/move-batch', {
     moves: input.locations.map(location => moveBody(location.id, input.targetBlock, location.quantity, input.rowLetter, input.columnNumber)),
-  });
+  }, guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response,
     'qolip_location_move_batch_failed', 'Tanlangan qoliplar ko‘chirilmay qoldi.');
   const data = jsonObject(await response.json()), locations = data?.locations;
+  assertQolipReadCurrent(guard);
   if (!Array.isArray(locations) || locations.length !== input.locations.length) {
     throw new MobileApiException({ code: 'qolip_location_move_batch_invalid_response',
       message: 'Tanlangan qoliplar ko‘chirish javobi noto‘g‘ri.' });

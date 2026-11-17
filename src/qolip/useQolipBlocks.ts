@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { Session } from '../auth';
 import { QolipBlocksState, type QolipBlocksNotice } from './qolipBlocksState';
 
-export function useQolipBlocks(session: Session) {
+export function useQolipBlocks(session: Session, isCurrent?: () => boolean) {
   const [queue, setQueue] = useState<{ session: Session; notice: QolipBlocksNotice }[]>([]);
   const controller = useMemo(() => QolipBlocksState.forSession(session, notice =>
-    setQueue(current => [...current.filter(item => item.session === session), { session, notice }])), [session]);
+    setQueue(current => [...current.filter(item => item.session === session), { session, notice }]), isCurrent), [session, isCurrent]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => { controller.activate(); void controller.reload().catch(() => {}); return () => controller.dispose(); }, [controller]);
   const dismissNotice = useCallback(() => setQueue(current => {
