@@ -1,9 +1,9 @@
 import { dartTrim } from './dartJsonString';
 import { adminProgressQrDisplayNumber } from './adminProgressQrTechnicalMaterialPresentation';
-import type { AdminProgressQrInfoSection, AdminProgressQrInfoSectionRow, AdminProgressQrOrderDetailsProps, AdminProgressQrQueueStatesProps } from './AdminProgressQrInfoSectionsTypes';
+import type { AdminProgressQrRowsSection, AdminProgressQrInfoSectionRow, AdminProgressQrOrderDetailsProps, AdminProgressQrQueueStatesProps } from './AdminProgressQrInfoSectionsTypes';
 
 /** @v2 _OrderDetailsSection / _InfoRow */
-export function adminProgressQrOrderDetails(order: AdminProgressQrOrderDetailsProps['order'], p: (key: string) => string): AdminProgressQrInfoSection | null {
+export function adminProgressQrOrderDetails(order: AdminProgressQrOrderDetailsProps['order'], p: (key: string) => string): AdminProgressQrRowsSection | null {
   if (order === null) return null;
   const rows: AdminProgressQrInfoSectionRow[] = [];
   const add = (id: string, key: string, value: string) => { if (dartTrim(value)) rows.push(Object.freeze({ id, label: p(key), value })); };
@@ -32,7 +32,7 @@ export function adminProgressQrQueueStateLabel(value: string, p: (key: string) =
 }
 /** @v2 _QueueStatesSection / _canonicalApparatusLabel / _InfoRow
  * The actual report parent separately gates OUTER map nonemptiness; this leaf keeps a titled card even with zero visible rows. */
-export function adminProgressQrQueueStates(queue: AdminProgressQrQueueStatesProps['queueStates'], names: ReadonlyMap<string, string>, p: (key: string) => string): AdminProgressQrInfoSection {
+export function adminProgressQrQueueStates(queue: AdminProgressQrQueueStatesProps['queueStates'], names: ReadonlyMap<string, string>, p: (key: string) => string): AdminProgressQrRowsSection {
   const rows: AdminProgressQrInfoSectionRow[] = [];
   let index = 0;
   for (const [apparatus, orders] of queue) {
