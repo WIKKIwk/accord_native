@@ -2,7 +2,10 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 export type AdminTopNoticeTone = 'success' | 'error';
 /** Original bundled native icons, never a network resource or a mutable renderer. */
-export type AdminTopNoticeIcon = Readonly<{ androidSource: number; iosSystemName: SFSymbol }>;
+export type AdminTopNoticeSymbol = 'verified_user' | 'assignment_turned_in' | 'error' | 'error_outline';
+export type AdminTopNoticeIcon = Readonly<{ iosSystemName: SFSymbol } &
+  ({ androidSource: number; androidSymbol?: never } | { androidSource?: never; androidSymbol: AdminTopNoticeSymbol })>;
+const noticeSymbols: ReadonlySet<string> = new Set(['verified_user', 'assignment_turned_in', 'error', 'error_outline']);
 export type AdminTopNoticeMessage = Readonly<{ message: string; tone: AdminTopNoticeTone; icon?: AdminTopNoticeIcon }>;
 export type AdminTopNoticeBanner = AdminTopNoticeMessage & Readonly<{
   identity: object; attachText: (identity: object) => (() => void); abandon: () => void;
@@ -18,7 +21,16 @@ export function captureAdminTopNoticeMessage(value: AdminTopNoticeMessage): Admi
   try {
     if (!value) return null; const { message, tone, icon } = value;
     if (typeof message !== 'string' || !['success', 'error'].includes(tone)) return null;
-    if (icon !== undefined && (!icon || !Number.isInteger(icon.androidSource) || icon.androidSource <= 0 || typeof icon.iosSystemName !== 'string' || !icon.iosSystemName)) return null;
-    return Object.freeze({ message, tone, ...(icon ? { icon: Object.freeze({ androidSource: icon.androidSource, iosSystemName: icon.iosSystemName }) } : {}) });
+    if (icon !== undefined) {
+      if (!icon || typeof icon.iosSystemName !== 'string' || !icon.iosSystemName) return null;
+      const valid = icon.androidSymbol === undefined
+        ? typeof icon.androidSource === 'number' && Number.isInteger(icon.androidSource) && icon.androidSource > 0
+        : icon.androidSource === undefined && noticeSymbols.has(icon.androidSymbol);
+      if (!valid) return null;
+    }
+    const capturedIcon = icon ? Object.freeze(icon.androidSymbol === undefined
+      ? { androidSource: icon.androidSource!, iosSystemName: icon.iosSystemName }
+      : { androidSymbol: icon.androidSymbol, iosSystemName: icon.iosSystemName }) : null;
+    return Object.freeze({ message, tone, ...(capturedIcon ? { icon: capturedIcon } : {}) });
   } catch { return null; }
 }

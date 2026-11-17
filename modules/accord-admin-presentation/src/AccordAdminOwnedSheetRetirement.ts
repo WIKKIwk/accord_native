@@ -15,6 +15,7 @@ type Available = Readonly<{
 export type AdminOwnedSheetRetirementCapability = Readonly<{ status: 'unavailable' }> | Available;
 const unavailable: AdminOwnedSheetRetirementCapability = Object.freeze({ status: 'unavailable' });
 const issued = new WeakSet<object>();
+const showOwners = new WeakMap<object, object>();
 const cache = new WeakMap<object, Promise<AdminOwnedSheetRetirementCapability>>();
 const receipts = new WeakMap<object, Readonly<{ capability: Available; request: AdminOwnedSheetRetirementRequest }>>();
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -40,7 +41,7 @@ function captureReceipt(value: unknown, platform: AdminOwnedSheetPlatform, origi
     return Object.freeze({ protocol: 1, platform, ...original, receiptID: nativeReceiptID, disposition });
   } catch { return null; }
 }
-async function bind(original: NonNullable<ReturnType<typeof adminOwnedSheetOriginalModule>>): Promise<AdminOwnedSheetRetirementCapability> {
+async function bind(original: NonNullable<ReturnType<typeof adminOwnedSheetOriginalModule>>, showCapability: object): Promise<AdminOwnedSheetRetirementCapability> {
   try {
     const native = original.native, read = original.readRetirement, retire = original.retireSheet;
     if (typeof read !== 'function' || typeof retire !== 'function') return unavailable;
@@ -69,17 +70,21 @@ async function bind(original: NonNullable<ReturnType<typeof adminOwnedSheetOrigi
         receiptOwners.set(receipt.receiptID, request.presentationTicket); entry.receipt = receipt;
         receipts.set(receipt, Object.freeze({ capability, request: entry.request })); return receipt;
       } });
-    issued.add(capability); return capability;
+    issued.add(capability); showOwners.set(capability, showCapability); return capability;
   } catch { return unavailable; }
 }
 /** Availability of the implemented cleanup protocol only. No presentation readiness, Source acceptance or child-absence proof. */
 export function readAdminOwnedSheetRetirementCapability(showCapability: unknown): Promise<AdminOwnedSheetRetirementCapability> {
   const original = adminOwnedSheetOriginalModule(showCapability); if (!original || !object(showCapability)) return Promise.resolve(unavailable);
   let pending = cache.get(showCapability);
-  if (!pending) { pending = bind(original); cache.set(showCapability, pending); }
+  if (!pending) { pending = bind(original, showCapability); cache.set(showCapability, pending); }
   return pending;
 }
 export function isAdminOwnedSheetRetirementCapability(value: unknown): value is Available { return object(value) && issued.has(value); }
+/** A genuine cleanup binding from a different original show owner cannot clean this presentation. */
+export function isAdminOwnedSheetRetirementForShow(value: unknown, showCapability: unknown): value is Available {
+  return isAdminOwnedSheetRetirementCapability(value) && showOwners.get(value) === showCapability;
+}
 /** Receipt identity is specific to its actual original module binding and request. A spread/JSON copy proves no cleanup. */
 export function isAdminOwnedSheetRetirementReceipt(capability: unknown, value: unknown, original: AdminOwnedSheetRetirementRequest): value is AdminOwnedSheetRetirementReceipt {
   if (!isAdminOwnedSheetRetirementCapability(capability) || !object(value)) return false;

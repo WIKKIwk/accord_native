@@ -31,7 +31,7 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
   return <><Stack.Screen options={{ headerShown: true, title: t('adminSettingsTitle'), gestureEnabled: false, headerBackVisible: false,
     headerRight: props.profileAction ? () => props.profileAction : undefined,
     headerLeft: () => <BaseHost matchContents><Button onPress={model.navigation!.onPress} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), accessibilityLabel(model.navigation!.label), frame({ minWidth: 44, minHeight: 44 })]}><Image systemName={model.navigation!.icon === 'back' ? 'chevron.left' : 'line.3.horizontal'} size={20} /></Button></BaseHost> }} />
-    <View style={[styles.root, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}><BaseHost style={styles.body}>
+    <View style={[styles.root, { backgroundColor: colors.surfaceContainerHigh }]}>{props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}><BaseHost style={styles.body}>
       {state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         state.phase === 'error' ? <VStack spacing={16} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
           <Text>{t('serverDisconnectedRetry')}</Text><Button label={t('retry')} onPress={() => { model.reload(); }} /></VStack> :

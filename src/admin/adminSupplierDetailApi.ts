@@ -37,3 +37,6 @@ export const adminRegenerateSupplierCode = async (session: Session, ref: string,
 export async function adminRemoveSupplier(session: Session, ref: string, guard?: () => void): Promise<void> {
   await request(session, refPath('/v1/mobile/admin/suppliers/remove', ref), { method: 'DELETE' }, 'Admin supplier remove failed', guard, undefined, true);
 }
+/** @v2 adminRestoreSupplier */
+export const adminRestoreSupplier = async (session: Session, ref: string, guard?: () => void) =>
+  (await request(session, refPath('/v1/mobile/admin/suppliers/restore', ref), { method: 'POST' }, 'Admin supplier restore failed', guard))!;

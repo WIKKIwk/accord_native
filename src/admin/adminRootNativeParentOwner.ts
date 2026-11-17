@@ -9,7 +9,12 @@ export type AdminRootNativeParentBinding = Readonly<{
   isCurrent: () => boolean;
   /** Separate original Source/account read authority; expected focus loss does not replace it. */
   sourceCurrent: () => boolean;
+  subscribeResource: (changed: () => void) => (() => void);
 }>;
+const issued = new WeakSet<object>();
+export function isAdminRootNativeParentBinding(value: unknown): value is AdminRootNativeParentBinding {
+  return !!value && typeof value === 'object' && issued.has(value);
+}
 
 /** One actual outlet ancestor and its existing native lease. A sibling marker cannot supply this binding. */
 export class AdminRootNativeParentOwner {
@@ -53,7 +58,8 @@ export class AdminRootNativeParentOwner {
     }
     const marker = Object.freeze({ tag, nativeID: this.original.parent.id }); this.view = view;
     this.binding = Object.freeze({ identity: Object.freeze({}), chain: this.original.chain, parent: this.original.parent, marker,
-      isCurrent: this.current, sourceCurrent: () => this.current() && this.original.chain.isCurrent(this.original.parent) && this.current() });
+      isCurrent: this.current, sourceCurrent: () => this.current() && this.original.chain.isCurrent(this.original.parent) && this.current(), subscribeResource: this.subscribeResource });
+    issued.add(this.binding);
     this.publish(); return this.current();
   }
   read(chain: AdminRootPresentationChain, parent: AdminRootPresentationParent): AdminRootNativeParentBinding | null {

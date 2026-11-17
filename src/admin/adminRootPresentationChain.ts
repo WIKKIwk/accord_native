@@ -2,7 +2,12 @@ import type { ReactElement } from 'react';
 import type { ModalProps } from 'react-native';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { createAdminPresentationWindowTicket } from './adminPresentationWindowTicket';
-import type { AdminRootSheetRequest } from './AdminRootSheetTypes';
+import { captureAdminRootSheetOptions, type AdminRootSheetRequest } from './AdminRootSheetTypes';
+import { isAdminOwnedSheetCapability } from '../../modules/accord-admin-presentation/src/AccordAdminOwnedSheet';
+import { isAdminOwnedSheetRetirementCapability, isAdminOwnedSheetRetirementForShow, isAdminOwnedSheetRetirementReceipt, type AdminOwnedSheetRetirementCapability, type AdminOwnedSheetRetirementReceipt, type AdminOwnedSheetRetirementRequest } from '../../modules/accord-admin-presentation/src/AccordAdminOwnedSheetRetirement';
+import { isAdminRootNativeParentBinding, type AdminRootNativeParentBinding } from './adminRootNativeParentOwner';
+import { AdminRootSheetCoordinator } from './adminRootSheetCoordinator';
+import type { AdminRootSheetCancellationLease } from './adminRootSheetLifecycle';
 
 export type AdminRootPresentationParent = Readonly<{ id: string; kind: 'root' | 'page' | 'dialog' | 'sheet' }>;
 export type AdminRootPresentationEntry = AdminRootPresentationParent & Readonly<{ kind: 'page' | 'dialog' | 'sheet' }>;
@@ -30,7 +35,8 @@ export type AdminRootPresentationSnapshot = Readonly<{
   resources: readonly AdminRootPresentationEntry[]; rootResource: 'pending' | 'cancelledBeforeCarrier' | 'removed';
 }>;
 type Native = { identity: object; members: Set<object>; shown: boolean; armed: boolean; failed: boolean; removal: object | null };
-type Entry = { value: AdminRootPresentationEntry; request: AdminRootModalRequest; native: Native | null;
+type Entry = { value: AdminRootPresentationEntry; request: AdminRootPresentationRequest; native: Native | null; sheet: AdminRootSheetCoordinator | null; sheetParent: AdminRootNativeParentBinding | null;
+  stopSource: (() => void) | null;
   closing: boolean; resourceRetiring: boolean; retired: boolean; settled: boolean; checking: boolean; resolve: (result: 'closed' | 'retired') => void };
 type Dependencies = Readonly<{ platform: 'android' | 'ios'; rootIdentity: object; isCurrent: () => boolean;
   subscribeCurrent?: (listener: () => void) => (() => void) }>;
@@ -59,6 +65,7 @@ export class AdminRootPresentationChain {
   private readonly sourceListeners = new Set<() => void>(); private readonly resourceListeners = new Set<() => void>();
   private sourceRevision: object = {}; private resourceRevision: object = {};
   private removing = false;
+  private receivingSheet: Entry | null = null;
   private unsubscribe: (() => void) | null = null;
   constructor(deps: Dependencies) {
     const { rootIdentity, platform, isCurrent, subscribeCurrent } = deps;
@@ -82,6 +89,7 @@ export class AdminRootPresentationChain {
       resources: Object.freeze([...this.order]), rootResource: this.state.rootResource });
     const callbacks = [...(kind !== 'resource' ? this.sourceListeners : []), ...(kind !== 'source' ? this.resourceListeners : []), ...this.listeners];
     for (const listener of callbacks) { try { listener(); } catch { /* Observers cannot establish native authority. */ } }
+    for (const entry of [...this.records.values()]) entry.sheet?.drain();
   }
   private ready(native: Native | null) { return !!native && native.members.size > 0 && !native.failed && !native.removal && native.shown && (this.platform === 'ios' || native.armed); }
   current = (): boolean => {
@@ -115,16 +123,20 @@ export class AdminRootPresentationChain {
   isRetired = (value: AdminRootPresentationParent): boolean => this.state.retired || (value !== this.root && this.record(value)?.retired !== false);
   private retireEntry(entry: Entry) {
     if (entry.retired || this.records.get(entry.value) !== entry) return;
-    entry.retired = true; entry.resourceRetiring = true; this.settle(entry, 'retired');
+    entry.retired = true; entry.resourceRetiring = true; entry.sheet?.retire(); this.settle(entry, 'retired');
     if (!entry.native) {
       // No actual native carrier existed for this suffix. Cancellation is not a native-close success.
       const index = this.order.indexOf(entry.value), suffix = this.order.splice(index);
-      for (const value of suffix) { const pending = this.records.get(value)!; this.records.delete(value); pending.retired = true; this.settle(pending, 'retired'); }
+      for (const value of suffix) { const pending = this.records.get(value)!; this.records.delete(value); pending.retired = true; this.disposeEntry(pending); this.settle(pending, 'retired'); }
     }
     this.publish('both');
   }
   private settle(entry: Entry, result: 'closed' | 'retired'): boolean {
     if (entry.settled) return false; entry.settled = true; this.outcomes.set(entry.value, result); entry.resolve(result); return true;
+  }
+  private disposeEntry(entry: Entry) {
+    const stop = entry.stopSource; entry.stopSource = null;
+    entry.sheet?.dispose(); try { stop?.(); } catch { /* Cleanup never accepts a Source return value. */ }
   }
   /** Passive Source result only; neither a render lease nor native/resource authority. */
   sourceOutcome = (value: AdminRootPresentationEntry): 'closed' | 'retired' | null => this.outcomes.get(value) ?? null;
@@ -143,33 +155,73 @@ export class AdminRootPresentationChain {
     return native?.identity === identity ? native : null;
   }
   private descendants(entry: Entry) { return this.order.indexOf(entry.value) < this.order.length - 1; }
+  hasDescendants = (value: AdminRootPresentationEntry): boolean => { const entry = this.record(value); return !!entry && this.descendants(entry); };
+  isReservedDescendant = (value: AdminRootPresentationEntry, candidate: object): boolean => {
+    const parent = this.record(value), child = this.record(candidate);
+    return !!parent && !!child && this.order.indexOf(child.value) > this.order.indexOf(parent.value) && this.entryCurrent(child);
+  };
+  private presentationReady(value: AdminRootPresentationParent): boolean {
+    if (!this.ready(this.native(value))) return false;
+    const state = this.record(value)?.sheet?.lifecycle.getSnapshot();
+    return !state || state.shown && !state.pendingTransaction && !state.physicalDismissed && !state.failed && !state.nativeRetired;
+  }
   canInteract = (value: AdminRootPresentationParent): boolean => {
-    if (!this.isCurrent(value) || this.top() !== value || !this.ready(this.rootNative) || !this.ready(this.native(value)) ||
-      this.order.some(item => !this.ready(this.record(item)?.native ?? null))) return false;
+    if (!this.isCurrent(value) || this.top() !== value || !this.ready(this.rootNative) || !this.presentationReady(value) ||
+      this.order.some(item => !this.presentationReady(item))) return false;
     return value === this.root || this.record(value)?.closing === false;
   };
   /** Acceptance is immediate and ordered. Native presentation waits for the exact parent receipt. */
   open(request: AdminRootPresentationRequest): Readonly<{ entry: AdminRootPresentationEntry; closed: Promise<'closed' | 'retired'> }> | null {
     if (this.issuing) return null; this.issuing = true;
     try {
-      // Native show/dismiss capability is not a mounted original-cleanup receipt or a real Root sheet renderer.
-      // No current adapter can admit this kind. Hold before reading callbacks, allocating IDs, or publishing.
-      if (request.kind === 'sheet') return null;
+      // Cleanup must belong to this same original native show binding. Check it before Source callbacks/IDs.
+      let sheetMetadata: Pick<AdminRootSheetRequest, 'nativeCapability' | 'retirementCapability' | 'subscribeCurrent'> | null = null;
+      if (request.kind === 'sheet') {
+        const retirementCapability = request.retirementCapability;
+        if (!isAdminOwnedSheetRetirementCapability(retirementCapability)) return null;
+        const nativeCapability = request.nativeCapability, subscribeCurrent = request.subscribeCurrent;
+        if (!isAdminOwnedSheetRetirementForShow(retirementCapability, nativeCapability) || !isAdminOwnedSheetCapability(nativeCapability) ||
+          nativeCapability.platform !== this.platform || typeof subscribeCurrent !== 'function') return null;
+        sheetMetadata = Object.freeze({ nativeCapability, retirementCapability, subscribeCurrent });
+      }
       const parent = request.parent, identity = request.identity, kind = request.kind, renderContent = request.renderContent,
-        isCurrent = request.isCurrent, onRequestClose = request.onRequestClose, presentation = captureAdminRootPresentationOptions(request.presentation);
-      if (!object(identity) || !['page', 'dialog'].includes(kind) || typeof renderContent !== 'function' || typeof isCurrent !== 'function' || typeof onRequestClose !== 'function' || !presentation ||
+        isCurrent = request.isCurrent, onRequestClose = request.onRequestClose, presentation = kind === 'sheet' ? captureAdminRootSheetOptions(request.presentation) : captureAdminRootPresentationOptions(request.presentation);
+      if (!object(identity) || !['page', 'dialog', 'sheet'].includes(kind) || typeof renderContent !== 'function' || typeof isCurrent !== 'function' || typeof onRequestClose !== 'function' || !presentation ||
+        kind === 'sheet' && (presentation as AdminRootSheetRequest['presentation']).platform !== this.platform ||
         this.identities.has(identity) || !this.current() || !this.ready(this.rootNative) || this.top() !== parent || !this.isCurrent(parent) || this.order.some(value => this.records.get(value)!.closing || this.records.get(value)!.resourceRetiring) ||
         !isSynchronouslyTrue(isCurrent) || !this.current() || !this.isCurrent(parent) || !this.current() || !this.ready(this.rootNative) || this.top() !== parent || this.order.some(value => this.records.get(value)!.closing || this.records.get(value)!.resourceRetiring)) return null;
-      const captured = Object.freeze({ parent, identity, kind, renderContent, isCurrent, onRequestClose, presentation });
+      if (this.order.some(value => { const state = this.records.get(value)!.sheet?.lifecycle.getSnapshot(); return state && (state.pendingTransaction || state.physicalDismissed || state.failed || state.nativeRetired); })) return null;
+      const captured = Object.freeze(kind === 'sheet' ? { parent, identity, kind, renderContent, isCurrent, onRequestClose, presentation,
+        ...sheetMetadata }
+        : { parent, identity, kind, renderContent, isCurrent, onRequestClose, presentation }) as AdminRootPresentationRequest;
       const value = Object.freeze({ id: createAdminPresentationWindowTicket(), kind }); let resolve!: Entry['resolve'];
       const closed = new Promise<'closed' | 'retired'>(complete => { resolve = complete; });
       this.identities.add(identity);
-      this.records.set(value, { value, request: captured, native: null, closing: false, resourceRetiring: false, retired: false, settled: false, checking: false, resolve }); this.order.push(value); this.publish('both');
+      const record: Entry = { value, request: captured, native: null, sheet: null, sheetParent: null, stopSource: null, closing: false, resourceRetiring: false, retired: false, settled: false, checking: false, resolve };
+      this.records.set(value, record); this.order.push(value);
+      if (captured.kind === 'sheet') {
+        try {
+          const stop = captured.subscribeCurrent(() => { this.refreshAuthority(); this.publish('source'); });
+          if (typeof stop !== 'function') {
+            if (stop !== null && (typeof stop === 'object' || typeof stop === 'function')) void Promise.resolve(stop).catch(() => {});
+            throw TypeError('Original Source subscription cleanup is required');
+          }
+          if (this.record(value) !== record || record.retired) { stop(); return null; }
+          record.stopSource = stop;
+          if (!this.entryCurrent(record)) return null;
+        } catch { this.retireEntry(record); return null; }
+      }
+      this.publish('both');
       return Object.freeze({ entry: value, closed });
     } catch { return null; } finally { this.issuing = false; }
   }
   content(value: AdminRootPresentationEntry): AdminRootPresentationContent | null { const entry = this.record(value); return entry && this.nativeCurrent(value) ? entry.request.renderContent : null; }
-  presentation(value: AdminRootPresentationEntry): AdminRootPresentationOptions | null { const entry = this.record(value); return entry && this.nativeCurrent(value) ? entry.request.presentation : null; }
+  parent(value: AdminRootPresentationEntry): AdminRootPresentationParent | null { return this.record(value)?.request.parent ?? null; }
+  presentation(value: AdminRootPresentationEntry): AdminRootPresentationOptions | null { const entry = this.record(value); return entry && entry.request.kind !== 'sheet' && this.nativeCurrent(value) ? entry.request.presentation : null; }
+  sheetPresentation(value: AdminRootPresentationEntry) {
+    const entry = this.record(value), request = entry?.request;
+    return request?.kind === 'sheet' && this.nativeCurrent(value) ? Object.freeze({ options: request.presentation, nativeCapability: request.nativeCapability, retirementCapability: request.retirementCapability }) : null;
+  }
   child(parent: AdminRootPresentationParent): AdminRootPresentationEntry | null {
     if (!this.nativeCurrent(parent)) return null;
     const index = parent === this.root ? -1 : this.order.indexOf(parent as AdminRootPresentationEntry), value = this.order[index + 1];
@@ -178,11 +230,13 @@ export class AdminRootPresentationChain {
   canPresent(value: AdminRootPresentationEntry): boolean {
     const entry = this.record(value); if (!entry || !this.nativeCurrent(value)) return false;
     // A real carrier already exists, including a pending presentation. Source retirement cannot unmount it.
-    return entry.native !== null || this.entryCurrent(entry) && this.ready(this.rootNative) && this.ready(this.native(entry.request.parent));
+    return entry.native !== null || this.entryCurrent(entry) && this.ready(this.rootNative) && this.presentationReady(entry.request.parent);
   }
-  requestClose(value: AdminRootPresentationEntry): boolean {
+  requestClose(value: AdminRootPresentationEntry, lease?: AdminRootSheetCancellationLease): boolean {
     const entry = this.record(value); if (!entry || !this.entryCurrent(entry) || entry.closing) return false;
-    entry.closing = true; this.publish(); return this.records.get(value) === entry && !this.state.retired;
+    if (entry.request.kind === 'sheet' && !entry.sheet?.requestClose(lease)) return false;
+    if (entry.request.kind !== 'sheet' && lease !== undefined) return false;
+    entry.closing = true; if (this.receivingSheet !== entry) this.publish(); return this.records.get(value) === entry && !this.state.retired;
   }
   retained(value: AdminRootPresentationEntry): boolean { const entry = this.record(value); return !!entry && (entry.closing || entry.resourceRetiring) && this.descendants(entry); }
   shouldRemove(value: AdminRootPresentationParent): boolean {
@@ -191,6 +245,10 @@ export class AdminRootPresentationChain {
   }
   /** Called by real mounted carriers only. Lease identity stays original through StrictMode reconnect. */
   attachNative(value: AdminRootPresentationParent, identity: object, rootIdentity?: object): (() => void) | null {
+    if (this.record(value)?.request.kind === 'sheet') return null;
+    return this.attachCarrier(value, identity, rootIdentity);
+  }
+  private attachCarrier(value: AdminRootPresentationParent, identity: object, rootIdentity?: object): (() => void) | null {
     if (!object(identity) || !this.nativeCurrent(value) || value === this.root && rootIdentity !== this.deps.rootIdentity ||
       this.state.retired && this.native(value) === null ||
       value !== this.root && !this.record(value)?.native && !this.canPresent(value as AdminRootPresentationEntry)) return null;
@@ -217,11 +275,71 @@ export class AdminRootPresentationChain {
       queueMicrotask(() => { if (!original.members.size && this.native(value) === original && this.nativeCurrent(value)) this.retire(); });
     };
   }
+  attachSheet(value: AdminRootPresentationEntry, identity: object, parent: AdminRootNativeParentBinding): (() => void) | null {
+    const entry = this.record(value);
+    if (!entry || entry.request.kind !== 'sheet' || !object(identity) || !isAdminRootNativeParentBinding(parent) ||
+      parent.chain !== this || parent.parent !== entry.request.parent || !entry.sheet && !parent.isCurrent() ||
+      entry.sheetParent && entry.sheetParent !== parent || entry.native && entry.native.identity !== identity) return null;
+    if (!entry.sheet) {
+      try {
+        const coordinator = new AdminRootSheetCoordinator(this, value, identity, parent, entry.request);
+        if (this.record(value) !== entry || entry.retired) { coordinator.dispose(); return null; }
+        entry.sheet = coordinator; entry.sheetParent = parent;
+      } catch { this.retireEntry(entry); return null; }
+    }
+    const stopNative = this.attachCarrier(value, identity);
+    if (!stopNative) { entry.sheet.dispose(); this.retireEntry(entry); return null; }
+    const stopLifecycle = entry.sheet.attach(); this.publish('resource');
+    let detached = false;
+    return () => { if (detached) return; detached = true; stopLifecycle(); stopNative(); };
+  }
+  hasSheetResource(value: AdminRootPresentationEntry, identity: object): boolean {
+    return !!this.record(value)?.sheet && this.hasNativeResource(value, identity) && !this.hasNativeRemovalProof(value, identity);
+  }
+  sheetLifecycle(value: AdminRootPresentationEntry, identity: object) {
+    return this.hasSheetResource(value, identity) ? this.record(value)!.sheet!.lifecycle.getSnapshot() : null;
+  }
+  sheetAcceptedClose(value: AdminRootPresentationEntry, identity: object) {
+    return this.hasSheetResource(value, identity) ? this.record(value)!.sheet!.acceptedClose() : null;
+  }
+  receiveSheetEvent(value: AdminRootPresentationEntry, identity: object, raw: unknown): boolean {
+    const entry = this.record(value);
+    if (this.receivingSheet || !entry?.sheet || !this.hasNativeLease(value, identity)) return false;
+    this.receivingSheet = entry;
+    let accepted = false;
+    try { accepted = entry.sheet.receive(raw); }
+    finally { this.receivingSheet = null; }
+    if (!accepted || this.record(value) !== entry) return false;
+    const state = entry.sheet.lifecycle.getSnapshot(), native = entry.native!;
+    // Only the owned sheet's original protocol can establish these facts; RNModal/React callbacks are rejected.
+    if (state.shown) { native.shown = true; native.armed = true; }
+    if (state.failed || state.nativeRetired || state.outcome === 'retired') this.retireEntry(entry);
+    else if (state.outcome === 'closed') {
+      native.removal = Object.freeze({}); this.drainNativeProofs();
+    }
+    this.publish('both'); return true;
+  }
+  isRetiringSheet(value: AdminRootPresentationEntry, identity: object): boolean {
+    const entry = this.record(value);
+    return !!entry?.sheet && entry.resourceRetiring && this.hasSheetResource(value, identity);
+  }
+  /** Resource-only receipt: never completes a Source result, including account/owner retirement. */
+  sheetResourceRemoved(value: AdminRootPresentationEntry, identity: object, receipt: AdminOwnedSheetRetirementReceipt,
+    capability: AdminOwnedSheetRetirementCapability, request: AdminOwnedSheetRetirementRequest): boolean {
+    const entry = this.record(value);
+    if (!entry || entry.request.kind !== 'sheet' || capability !== entry.request.retirementCapability ||
+      request.presentationTicket !== value.id || request.parentTicket !== entry.request.parent.id ||
+      !isAdminOwnedSheetRetirementReceipt(capability, receipt, request) || !this.isRetiringSheet(value, identity) || this.descendants(entry) ||
+      receipt.disposition === 'neverPresented' && entry.sheet!.lifecycle.getSnapshot().shown) return false;
+    return this.removeNative(value, identity, true);
+  }
   nativeShown(value: AdminRootPresentationParent, identity: object): boolean {
+    if (this.record(value)?.request.kind === 'sheet') return false;
     const native = this.originalNative(value, identity); if (!native) return false;
     if (native.failed || native.removal) return false; native.shown = true; this.publish('resource'); return this.originalNative(value, identity) === native;
   }
   nativeArmed(value: AdminRootPresentationParent, identity: object): boolean {
+    if (this.record(value)?.request.kind === 'sheet') return false;
     const native = this.originalNative(value, identity); if (!native || this.platform !== 'android') return false;
     if (native.failed || native.removal) return false; native.armed = true; this.publish('resource'); return this.originalNative(value, identity) === native;
   }
@@ -232,9 +350,9 @@ export class AdminRootPresentationChain {
     const entry = this.record(value); if (!entry || !this.originalNative(value, identity) || !this.canInteract(value)) return;
     try { void Promise.resolve(entry.request.onRequestClose()).catch(() => {}); } catch { /* Source callback failure never becomes native removal. */ }
   }
-  nativeRemoved(value: AdminRootPresentationParent, identity: object): boolean { return this.removeNative(value, identity, false); }
+  nativeRemoved(value: AdminRootPresentationParent, identity: object): boolean { return this.record(value)?.request.kind !== 'sheet' && this.removeNative(value, identity, false); }
   /** Only an actual original carrier/observer callback may call this. Resource loss never accepts a Source close. */
-  nativeResourceRemoved(value: AdminRootPresentationParent, identity: object): boolean { return this.removeNative(value, identity, true); }
+  nativeResourceRemoved(value: AdminRootPresentationParent, identity: object): boolean { return this.record(value)?.request.kind !== 'sheet' && this.removeNative(value, identity, true); }
   private removeNative(value: AdminRootPresentationParent, identity: object, resourceProof: boolean): boolean {
     if (this.removing) return false; this.removing = true;
     try { return this.commitNativeRemoval(value, identity, resourceProof); }
@@ -256,9 +374,11 @@ export class AdminRootPresentationChain {
   }
   private retireSourceSubtree(entry: Entry) {
     const index = this.order.indexOf(entry.value);
-    for (const value of this.order.slice(index)) { const child = this.records.get(value)!; child.retired = true; child.resourceRetiring = true; this.settle(child, 'retired'); }
+    for (const value of this.order.slice(index)) { const child = this.records.get(value)!; child.retired = true; child.resourceRetiring = true; child.sheet?.retire(); this.settle(child, 'retired'); }
     // Atomic cancellation of never-carrier admissions is not a physical removal receipt.
-    while (this.order.length > index && this.records.get(this.order[this.order.length - 1])?.native === null) this.records.delete(this.order.pop()!);
+    while (this.order.length > index && this.records.get(this.order[this.order.length - 1])?.native === null) {
+      const value = this.order.pop()!; const pending = this.records.get(value)!; this.records.delete(value); this.disposeEntry(pending);
+    }
     this.publish('both');
   }
   private drainNativeProofs() {
@@ -266,7 +386,13 @@ export class AdminRootPresentationChain {
     while (this.order.length) {
       const value = this.order[this.order.length - 1], entry = this.records.get(value)!;
       if (!entry.native?.removal) break;
-      this.order.pop(); this.records.delete(value); this.publish('both');
+      this.order.pop(); this.records.delete(value);
+      if (entry.sheet) {
+        // Joined native+Source completion was linearized inside the original transaction before its observers.
+        this.settle(entry, !entry.retired && entry.sheet.lifecycle.getSnapshot().outcome === 'closed' ? 'closed' : 'retired');
+        this.disposeEntry(entry); this.publish('both'); continue;
+      }
+      this.publish('both');
       const valid = !entry.retired && !entry.native.failed && entry.closing && this.current() && isSynchronouslyTrue(entry.request.isCurrent) && this.current();
       // Source outcome is linearized before its notification. Retirement loops publish only after their complete state change.
       if (this.settle(entry, valid ? 'closed' : 'retired')) this.publish('source');
@@ -277,9 +403,11 @@ export class AdminRootPresentationChain {
   }
   retire = (): void => {
     if (this.state.retired) return; const entries = [...this.records.values()];
-    for (const entry of entries) { entry.retired = true; entry.resourceRetiring = true; this.settle(entry, 'retired'); }
+    for (const entry of entries) { entry.retired = true; entry.resourceRetiring = true; entry.sheet?.retire(); this.settle(entry, 'retired'); }
     // Cancel only requests that never acquired a carrier; delayed layout attachment now cannot reclaim them.
-    while (this.order.length && this.records.get(this.order[this.order.length - 1])?.native === null) this.records.delete(this.order.pop()!);
+    while (this.order.length && this.records.get(this.order[this.order.length - 1])?.native === null) {
+      const value = this.order.pop()!; const pending = this.records.get(value)!; this.records.delete(value); this.disposeEntry(pending);
+    }
     this.state = Object.freeze({ ...this.state, retired: true, rootReady: false, entries: Object.freeze([]), rootResource: this.rootNative === null ? 'cancelledBeforeCarrier' : this.state.rootResource });
     const unsubscribe = this.unsubscribe; this.unsubscribe = null; try { unsubscribe?.(); } catch {}
     this.publish('both');

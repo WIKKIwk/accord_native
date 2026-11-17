@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -24,11 +25,12 @@ const model = load('admin/adminHomeModel.ts', { '../shared/appRoutes': routes, '
 const symbols = load('admin/adminHomeSymbols.ts');
 const mods = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) });
 const swift = new Proxy({}, { get: (_target, name) => String(name) });
+const topBar = Object.assign(function TopAppBar() {}, { NavigationIcon: 'TopAppBar.NavigationIcon', Title: 'TopAppBar.Title', Actions: 'TopAppBar.Actions' });
 const react = { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}],
   useSyncExternalStore: (_subscribe, get) => get() };
 const baseState = { loadingSummary: false, loadedSummary: true, summaryError: null };
 const session = (role, capabilities) => ({ token: 'test', profile: { role, ref: 'test' }, capabilities });
-function render(platform, account, state = baseState, navigation = 'menu', isRouteAvailable = () => true) {
+function render(platform, account, state = baseState, navigation = 'menu', isRouteAvailable = () => true, profileAction) {
   const calls = [], opener = async () => {}, controller = { reload: async () => { calls.push('refresh'); },
     openAndReload: async (route, callback) => { assert.equal(callback, opener); calls.push(['open', route]); } };
   const native = { View: 'View', Text: 'NativeText', ScrollView: 'ScrollView', ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl',
@@ -37,15 +39,19 @@ function render(platform, account, state = baseState, navigation = 'menu', isRou
   const mocks = { react, '@expo/ui': { ListItem: 'ListItem' }, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods,
     '@expo/ui/jetpack-compose/modifiers': mods,
     '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Row: 'Row', Surface: 'Surface', Text: 'ComposeText', TextButton: 'TextButton',
-      RNHostView: 'RNHostView', Shape: { RoundedCorner: props => ({ type: 'RoundedCorner', props }) }, useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainerLowest: 'card', onSurface: 'text',
+      RNHostView: 'RNHostView', Shape: { RoundedCorner: props => ({ type: 'RoundedCorner', props }) }, IconButton: 'IconButton', Spacer: 'Spacer', TopAppBar: topBar, useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainerLowest: 'card', onSurface: 'text',
       onSurfaceVariant: 'secondary', primary: 'primary' }) }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
-    '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
+    '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/BaseHost.android': { BaseHost: 'BaseHost' },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: 'chrome', surfaceContainerLow: 'bg', surfaceContainerLowest: 'card',
+      onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary' } }) },
+    './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, './AdminTypography.android': { AdminText: 'ComposeText' },
+    './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/localization': localization, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './adminHomeModel': model, './adminHomeSymbols': symbols, './useAdminHome': { useAdminHome: () => ({ state, controller }) } };
   const Screen = load(`admin/AdminHomeScreen.${platform}.tsx`, mocks).AdminHomeScreen;
-  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, isSessionCurrent: () => true, navigation: leading,
+  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, isSessionCurrent: () => true, navigation: leading, profileAction,
     footer: { type: 'ExistingDock', props: {} } }), calls };
 }
 const admin = session('admin', ['admin.access', 'party.supplier.read', 'production.map.manage']);
@@ -90,7 +96,7 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} home separates initial loading, error retry and pull refresh`, async () => {
     const loading = render(platform, admin, { ...baseState, loadingSummary: true, loadedSummary: false }).tree;
-    assert.equal(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length, 1);
+    assert.equal(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'AdminLoadingIndicator')).length, 1);
     assert.equal(nodes(loading, n => n.type === rowType).length, 0);
     const failure = render(platform, admin, { ...baseState, loadedSummary: false, summaryError: new Error('offline') });
     const retry = nodes(failure.tree, n => platform === 'ios' ? n.type === 'Button' : n.type === 'TextButton')[0];
@@ -107,13 +113,14 @@ for (const platform of ['ios', 'android']) {
     for (const icon of ['menu', 'back']) {
       const { tree, calls } = render(platform, admin, baseState, icon);
       const leading = platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft() :
-        nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation;
-      assert.equal(platform === 'ios' ? leading.props.icon : leading.icon, icon);
-      (platform === 'ios' ? leading.props.onPress : leading.onPress)(); assert.deepEqual(calls, ['navigation']);
+        nodes(tree, n => n.type === 'TopAppBar.NavigationIcon')[0].props.children;
+      if (platform === 'ios') assert.equal(leading.props.icon, icon);
+      else assert.deepEqual(nodes(leading, n => n.type === 'SymbolView')[0].props.name, { android: icon === 'back' ? 'arrow_back' : 'menu' });
+      (platform === 'ios' ? leading.props.onPress : leading.props.onClick)(); assert.deepEqual(calls, ['navigation']);
     }
     const { tree } = render(platform, admin, baseState, null);
     assert.equal(platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft :
-      nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation, undefined);
+      nodes(tree, n => n.type === 'TopAppBar.NavigationIcon')[0].props.children, platform === 'ios' ? undefined : null);
   });
 }
 test('each V2 home action icon has an explicit native symbol and unknown names fail', () => {
@@ -150,7 +157,7 @@ test('home hook connects the supplied session-scoped store and shared refresh hu
 test('Android Home uses native clickable surfaces with V2 card geometry and typography', () => {
   const { tree } = render('android', admin);
   const rows = nodes(tree, n => n.type === 'Surface');
-  const column = nodes(tree, n => n.type === 'Column')[0];
+  const column = nodes(tree, n => n.type === 'Column' && n.props.verticalArrangement?.spacedBy === 2)[0];
   assert.deepEqual(column.props.verticalArrangement, { spacedBy: 2 });
   assert.deepEqual(column.props.modifiers.find(m => m.name === 'padding').args, [4, 0, 4, 0]);
   assert.deepEqual(rows.map(r => r.props.shape.props.cornerRadii), [
@@ -184,4 +191,50 @@ test('Android initial failure exposes a native retry button with V2 shrink-wrap 
   assert.deepEqual(retry.props.contentPadding, { start: 12, top: 8, end: 12, bottom: 8 });
   assert.deepEqual(retry.props.modifiers[0].args, [{ minWidth: 0, minHeight: 0 }]);
   retry.props.onClick(); assert.deepEqual(calls, ['refresh']);
+});
+
+for (const platform of ['ios', 'android']) {
+  test(`${platform} Home keeps every body state inside the source frame and the actual dock outside`, () => {
+    const states = [baseState, { ...baseState, loadingSummary: true, loadedSummary: false },
+      { ...baseState, loadedSummary: false, summaryError: new Error('offline') }];
+    for (const state of states) {
+      const { tree } = render(platform, admin, state);
+      const frame = nodes(tree, n => n.type === 'AdminShellBodyFrame')[0];
+      assert.equal(frame.props.testID, 'admin-home-body-frame'); assert.equal(frame.props.hasFooter, true);
+      assert.equal(nodes(frame, n => n.type === 'ExistingDock').length, 0);
+      assert.equal(nodes(tree, n => n.type === 'ExistingDock').length, 1);
+      assert.equal(nodes(frame, n => n.type === 'Stack.Screen' || n.type === topBar).length, 0);
+    }
+  });
+  test(`${platform} Home exposes the genuine optional profile action without inventing an opener`, () => {
+    const profile = { type: 'RealProfileAction', props: {} };
+    const { tree } = render(platform, admin, baseState, 'menu', () => true, profile);
+    if (platform === 'ios') assert.equal(nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight(), profile);
+    else assert.equal(nodes(nodes(tree, n => n.type === 'TopAppBar.Actions')[0], n => n.type === 'RealProfileAction').length, 1);
+    assert.equal(nodes(nodes(tree, n => n.type === 'AdminShellBodyFrame')[0], n => n.type === 'RealProfileAction').length, 0);
+    const missing = render(platform, admin).tree;
+    assert.equal(nodes(missing, n => n.type === 'RealProfileAction').length, 0);
+  });
+}
+test('Android Home reuses the source native toolbar, scoped text, expressive loading and side safe area', () => {
+  const { tree } = render('android', admin, { ...baseState, loadingSummary: true, loadedSummary: false });
+  const header = nodes(tree, n => n.type === topBar)[0];
+  assert.deepEqual(header.props.modifiers.find(m => m.name === 'height').args, [60]);
+  assert.deepEqual(header.props.windowInsets, {});
+  assert.equal(header.props.colors.containerColor, 'chrome');
+  const title = nodes(nodes(header, n => n.type === 'TopAppBar.Title')[0], n => n.type === 'ComposeText')[0];
+  assert.equal(title.props.style.fontSize, 24); assert.equal(title.props.style.fontWeight, '800');
+  const safe = nodes(tree, n => n.type === 'SafeAreaView')[0]; assert.deepEqual(safe.props.edges, ['left', 'right']);
+  assert.equal(nodes(safe, n => n.type === topBar).length, 1);
+  const frame = nodes(tree, n => n.type === 'AdminShellBodyFrame')[0];
+  assert.equal(nodes(frame, n => n.type === 'AdminLoadingIndicator').length, 1);
+  assert.equal(nodes(frame, n => n.type === 'ActivityIndicator').length, 0);
+});
+test('iOS Home retry uses a visible native large primary button with a comfortable tap target', () => {
+  const { tree, calls } = render('ios', admin, { ...baseState, loadedSummary: false, summaryError: new Error('offline') });
+  const retry = nodes(tree, n => n.type === 'Button')[0];
+  assert.deepEqual(retry.props.modifiers.find(m => m.name === 'buttonStyle').args, ['borderedProminent']);
+  assert.deepEqual(retry.props.modifiers.find(m => m.name === 'controlSize').args, ['large']);
+  assert.deepEqual(retry.props.modifiers.find(m => m.name === 'frame').args, [{ minHeight: 44 }]);
+  retry.props.onPress(); assert.deepEqual(calls, ['refresh']);
 });

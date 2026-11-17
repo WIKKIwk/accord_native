@@ -4,6 +4,23 @@ const inline = tree => s.nodes(tree, node => node.props.testID === 'admin-top-no
 const measured = tree => s.nodes(tree, node => typeof node.props.onLayout === 'function')[0];
 function mounted(platform = 'android', accessible = false) { const f = s.fixture(platform, accessible); f.render(); const host = f.makeHost(null); host.render(); return { ...f, host }; }
 
+test('opt-in unresolved native accessibility retains the real stack and Scaffold without inventing notice readiness', () => {
+  const f = s.fixture('android', null, true);
+  assert.equal(f.render().type, 'GenuineStackContent'); assert.equal(f.target.getSnapshot().accessibleNavigation, null);
+  const host = f.makeHost(null); host.render(); const originalTicket = host.binding.ticket;
+  assert.equal(f.show('unresolved'), null);
+  f.accessible(false); f.render(); host.render(); assert.equal(host.binding.ticket, originalTicket);
+  assert.equal(f.target.getSnapshot().accessibleNavigation, false); assert.ok(f.show('native ready'));
+  const duplicate = f.makeDuplicateProvider(); assert.equal(duplicate.render(), null); duplicate.runtime.unmount(); f.cleanup();
+});
+test('source role notice icons reuse native Material symbols while retaining the existing bundled icon path', () => {
+  const f = mounted(), shown = f.runtime.show(f.target, { message: 'Saved', tone: 'success', icon: { androidSymbol: 'verified_user', iosSystemName: 'checkmark.shield.fill' } });
+  f.render(); const tree = f.host.render(), icon = s.nodes(tree, node => node.type === 'NativeMaterialSymbol')[0];
+  assert.equal(shown.banner.icon.androidSymbol, 'verified_user'); assert.deepEqual(icon.props.name, { android: 'verified_user' }); assert.equal(icon.props.size, 24);
+  assert.equal(s.noticeModel.captureAdminTopNoticeMessage({ message: 'x', tone: 'success', icon: { androidSymbol: 'invented', iosSystemName: 'checkmark' } }), null);
+  f.cleanup();
+});
+
 test('actual Provider and original registered Scaffold are both required; hook has no default provider/ancestor/accessibility state', () => {
   const f = s.fixture(); assert.throws(() => f.provider.useAdminTopNoticeTarget(), /genuine AdminTopNoticeProvider/); assert.equal(f.show('no provider'), null);
   f.render(); assert.equal(f.show('no Scaffold'), null); const host = f.makeHost(undefined); host.render(); assert.equal(host.binding.ticket, null); assert.equal(f.show('missing actual Source ancestor'), null);

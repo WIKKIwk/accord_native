@@ -1,15 +1,16 @@
 import { ItemGroupsInteraction } from './itemGroupsInteraction';
 import { useIsFocused } from 'expo-router';
 import { createItemGroupsSession } from './itemGroupsSession';
-import { useEffect, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { subscribeSessionWitness, type Session, type SessionWitness } from '../auth';
 import { adminText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { itemGroupsMerge, itemGroupsTree } from './itemGroupsModel';
 export type ItemGroupsRouteProps = { session: Session; witness: SessionWitness; isCurrent: () => boolean;
-  navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null; footer?: ReactNode };
+  navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null; footer?: ReactNode; topNotice?: ReactNode;
+  showTopNotice?: (message: string, tone: 'success' | 'error') => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener), currentLocale = () => localeController.locale;
-export function useItemGroupsRoute({ session, witness, isCurrent }: ItemGroupsRouteProps) {
+export function useItemGroupsRoute({ session, witness, isCurrent, showTopNotice }: ItemGroupsRouteProps) {
   const focused = useIsFocused(), interaction = useMemo(() => new ItemGroupsInteraction(), []);
   useLayoutEffect(() => { interaction.setFocused(focused); return () => interaction.setFocused(false); }, [focused, interaction]);
   const owner = useMemo(() => createItemGroupsSession(session, witness, isCurrent, interaction.canInteract), [session, witness, isCurrent, interaction]);
@@ -23,6 +24,13 @@ export function useItemGroupsRoute({ session, witness, isCurrent }: ItemGroupsRo
   }, [owner]);
   useEffect(() => { if (!state.notice) return; const id = state.notice.id, timer = setTimeout(() => owner.controller.dismissNotice(id), state.notice.success ? 5000 : 4000); return () => clearTimeout(timer); }, [owner, state.notice]);
   const t = useMemo(() => (key: string, values: Record<string, unknown> = {}) => adminText(key, locale, values), [locale]);
+  const shownNotice = useRef<{ owner: typeof owner; id: number } | null>(null);
+  useEffect(() => {
+    const notice = state.notice;
+    if (!showTopNotice || !notice?.success || !owner.current() || shownNotice.current?.owner === owner && shownNotice.current.id === notice.id) return;
+    shownNotice.current = { owner, id: notice.id };
+    showTopNotice(t(notice.key, notice.values), 'success');
+  }, [owner, state.notice, showTopNotice, t]);
   return { state, focused, controller: owner.controller, current: owner.current, locale, t,
     roots: itemGroupsTree(state.tree), displayGroups: itemGroupsMerge(state.selectedGroup ? [state.selectedGroup, ...state.parents] : state.parents),
     pickerRows: owner.controller.pickerRows() };

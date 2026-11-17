@@ -15,7 +15,7 @@ const currentLocale = () => localeController.locale;
 
 // The shared shell supplies the existing role drawer and appropriate dock; this screen does not invent navigation.
 // @v2 AdminAdditionalSettingsScreen
-export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer }: AdditionalSettingsScreenProps) {
+export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice }: AdditionalSettingsScreenProps) {
   const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), { width, height } = useWindowDimensions();
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,6 +44,7 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
         modifiers={[labelStyle('iconOnly'), disabled(refreshingDisabled), accessibilityIdentifier('additional-settings-refresh')]}
         onPress={() => { if (current()) void controller.refresh(); }} /></Host> }} />
     <View style={styles.screen}>
+      {topNotice}
       <BaseHost style={styles.content}>
         <List modifiers={[listStyle('insetGrouped')]}>
           {state.screen === 'loading' ? <Section><ProgressView /></Section> : null}

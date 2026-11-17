@@ -6,6 +6,7 @@ import { captureAdminRootPresentationOptions, type AdminRootPresentationChain, t
 import type { AdminRootPresentationRootProps } from './AdminRootPresentationTypes';
 import { useAdminPresentationWindow } from './useAdminPresentationWindow';
 import { AdminRootNativeParentSlot } from './AdminRootNativeParentContext';
+import { AdminRootOwnedSheetCarrier } from './AdminRootOwnedSheetCarrier';
 
 type Observer = Readonly<{ windowObserver: AdminPresentationWindowObserver }>;
 type CarrierProps = Observer & Readonly<{ chain: AdminRootPresentationChain; parent: AdminRootPresentationParent;
@@ -14,6 +15,7 @@ type CarrierProps = Observer & Readonly<{ chain: AdminRootPresentationChain; par
 function Outlet({ chain, parent, windowObserver }: Observer & { chain: AdminRootPresentationChain; parent: AdminRootPresentationParent }) {
   useSyncExternalStore(chain.subscribe, chain.getSnapshot, chain.getSnapshot);
   const child = chain.child(parent); if (!child || !chain.canPresent(child)) return null;
+  if (child.kind === 'sheet') return <AdminRootOwnedSheetCarrier key={child.id} chain={chain} entry={child} outlet={<Outlet chain={chain} parent={child} windowObserver={windowObserver} />} />;
   const renderContent = chain.content(child), presentation = chain.presentation(child);
   return renderContent && presentation ? <Carrier key={child.id} chain={chain} parent={child} renderContent={renderContent} presentation={presentation} windowObserver={windowObserver} /> : null;
 }

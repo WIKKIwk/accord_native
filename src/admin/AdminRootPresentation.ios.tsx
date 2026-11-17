@@ -3,12 +3,14 @@ import { Modal, StyleSheet, View } from 'react-native';
 import { captureAdminRootPresentationOptions, type AdminRootPresentationChain, type AdminRootPresentationContent, type AdminRootPresentationEntry, type AdminRootPresentationOptions, type AdminRootPresentationParent } from './adminRootPresentationChain';
 import type { AdminRootPresentationRootProps } from './AdminRootPresentationTypes';
 import { AdminRootNativeParentSlot } from './AdminRootNativeParentContext';
+import { AdminRootOwnedSheetCarrier } from './AdminRootOwnedSheetCarrier';
 
 type CarrierProps = Readonly<{ chain: AdminRootPresentationChain; parent: AdminRootPresentationParent; rootIdentity?: object;
   presentation: AdminRootPresentationOptions; renderContent: AdminRootPresentationContent; onRequestClose?: () => void }>;
 function Outlet({ chain, parent }: { chain: AdminRootPresentationChain; parent: AdminRootPresentationParent }) {
   useSyncExternalStore(chain.subscribe, chain.getSnapshot, chain.getSnapshot);
   const child = chain.child(parent); if (!child || !chain.canPresent(child)) return null;
+  if (child.kind === 'sheet') return <AdminRootOwnedSheetCarrier key={child.id} chain={chain} entry={child} outlet={<Outlet chain={chain} parent={child} />} />;
   const renderContent = chain.content(child), presentation = chain.presentation(child);
   return renderContent && presentation ? <Carrier key={child.id} chain={chain} parent={child} renderContent={renderContent} presentation={presentation} /> : null;
 }

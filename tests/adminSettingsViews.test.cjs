@@ -47,6 +47,8 @@ function fixture(platform, { phase = 'content', saving = false, additional = tru
   const mocks = { react: { useEffect: fn => effects.push(fn), useRef: current => ({ current }) },
     '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     'react-native': { View: 'View', PlatformColor: value => value, StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native-reanimated': { default: { View: 'Animated.View' }, cancelAnimation() {}, Easing: { bezier: (...values) => values },
+      useSharedValue: value => ({ value }), useAnimatedStyle: make => make(), withTiming: value => value },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 20 }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, '../shared/appRoutes': { appRoutes: { adminAdditionalSettings: '/additional', adminPushConfig: '/push' } },

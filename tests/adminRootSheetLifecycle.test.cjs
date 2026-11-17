@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict'), test = require('node:test');
 const s = require('./adminRootSheetLifecycleSupport.cjs');
 const types = s.load('admin/AdminRootSheetTypes');
-test('typed fixed native sheet options require exact Android barrier and hold current production admission before mutations', () => {
-  assert.equal(types.adminRootSheetAdmission.status, 'unavailable'); assert.equal(types.adminRootSheetAdmission.reason, 'original-cleanup-coordinator-unavailable');
+test('typed fixed native sheet options require exact Android barrier and hold incomplete production admission before mutations', () => {
+  assert.equal(types.adminRootSheetAdmission.status, 'conditional'); assert.equal(types.adminRootSheetAdmission.reason, 'original-owner-and-native-receipts-required');
   assert.deepEqual(types.captureAdminRootSheetOptions({ platform: 'android', heightPoints: 400, cornerRadius: 32, barrierOpacity: .32 }), { platform: 'android', heightPoints: 400, cornerRadius: 32, barrierOpacity: .32 });
   for (const patch of [{ barrierOpacity: undefined }, { heightPoints: 0 }, { cornerRadius: -1 }, { barrierOpacity: 2 }]) assert.equal(types.captureAdminRootSheetOptions({ platform: 'android', heightPoints: 400, cornerRadius: 32, barrierOpacity: .32, ...patch }), null);
   const f = s.rootFixture('ios'); f.rootReady(); const before = f.chain.getSnapshot(); let reads = 0;

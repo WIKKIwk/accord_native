@@ -77,7 +77,8 @@ export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
   </View>;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
     <RoleHeader title={t('item_group.title')} navigation={props.navigation ?? undefined} />
-    {state.notice?.success ? <View pointerEvents="none" accessibilityRole="alert" style={{ backgroundColor: '#E6F4EA', paddingHorizontal: 16, paddingVertical: 12 }}><Text style={{ color: '#173A24', fontSize: 14 }}>{t(state.notice.key, state.notice.values)}</Text></View> : null}
+    {props.topNotice}
+    {state.notice?.success && !props.showTopNotice ? <View pointerEvents="none" accessibilityRole="alert" style={{ backgroundColor: '#E6F4EA', paddingHorizontal: 16, paddingVertical: 12 }}><Text style={{ color: '#173A24', fontSize: 14 }}>{t(state.notice.key, state.notice.values)}</Text></View> : null}
     <View style={{ flexDirection: 'row', backgroundColor: colors.surfaceContainer, borderBottomColor: colors.outlineVariant, borderBottomWidth: StyleSheet.hairlineWidth }}>
       {(['tree', 'items'] as const).map(tab => <View key={tab} style={{ flex: 1, borderBottomWidth: 2, borderBottomColor: state.tab === tab ? colors.primary : 'transparent' }}>
         <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><TextButton onClick={() => controller.setTab(tab)} modifiers={[fillMaxWidth(), height(38)]}>

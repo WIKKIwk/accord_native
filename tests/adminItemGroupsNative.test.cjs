@@ -121,6 +121,59 @@ test('actual route hook keeps owner and menu identity across focus loss and Stri
   assert.equal(interact(), false); assert.equal(second.current(), true); assert.equal(first.current, second.current); assert.equal(first.t, second.t); assert.equal(created, 1);
   focused = true; render(); assert.equal(interact(), true); assert.deepEqual(calls, ['start', 'dispose', 'suspend', 'start']); detach();
 });
+function noticeFixture() {
+  let memoCursor = 0, refCursor = 0, effects = [], layouts = [], focused = true, current = true;
+  const memos = [], refs = [], notices = [];
+  const state = { valid: true, treePhase: 'ready', parentsPhase: 'ready', tab: 'tree', expanded: new Set(), tree: [], parents: [], items: [],
+    notice: { id: 1, key: 'item_group.saved', values: { name: 'Packing' }, success: true }, dialog: null, picker: null };
+  const react = { useRef: value => refs[refCursor++] ??= { current: value },
+    useMemo: (create, deps) => { const index = memoCursor++, old = memos[index];
+      if (!old || deps.some((value, key) => value !== old.deps[key])) memos[index] = { deps, value: create() }; return memos[index].value; },
+    useLayoutEffect: callback => layouts.push(callback), useEffect: callback => effects.push(callback), useSyncExternalStore: (_subscribe, get) => get() };
+  const localization = load('shared/localization/index.ts', { './catalog.json': require('../src/shared/localization/catalog.json') });
+  const hook = load('admin/useItemGroupsRoute.ts', { react, 'expo-router': { useIsFocused: () => focused },
+    './itemGroupsInteraction': load('admin/itemGroupsInteraction.ts'), './itemGroupsSession': { createItemGroupsSession: () => ({ current: () => current,
+      controller: { getSnapshot: () => state, subscribe() {}, pickerRows: () => ({ items: [], hasMore: false }) } }) },
+    '../auth': { subscribeSessionWitness: () => () => {} }, '../shared/localization': localization,
+    '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
+    './itemGroupsModel': { itemGroupsTree: () => [], itemGroupsMerge: value => value } });
+  const showTopNotice = (...args) => notices.push(args), props = { session: {}, witness: {}, isCurrent: () => current, navigation: null, showTopNotice };
+  return { state, notices, props, setCurrent: value => { current = value; }, setFocused: value => { focused = value; },
+    render(overrides = {}) { memoCursor = 0; refCursor = 0; effects = []; layouts = []; const model = hook.useItemGroupsRoute({ ...props, ...overrides });
+      layouts.forEach(callback => callback()); effects.at(-1)(); return model; } };
+}
+test('actual hook dispatches each source success once per captured owner, preserves blur, and guards retired sessions', () => {
+  const f = noticeFixture(); f.render(); f.render();
+  f.render({ showTopNotice: (...args) => f.notices.push(args) });
+  assert.deepEqual(f.notices, [['Item group added: Packing', 'success']]);
+  f.state.notice = { id: 2, key: 'item_group.parent_updated', values: { name: 'Packing' }, success: true };
+  f.setFocused(false); f.render(); assert.deepEqual(f.notices.at(-1), ['Parent updated for Packing', 'success']);
+  f.setCurrent(false); f.state.notice = { ...f.state.notice, id: 3 }; f.render(); assert.equal(f.notices.length, 2);
+  f.setCurrent(true); f.state.notice = { ...f.state.notice, id: 2, key: 'item_group.saved' };
+  f.render({ session: {} }); assert.equal(f.notices.length, 3);
+  f.state.notice = { id: 4, key: 'item_group.parent_update_failed', values: { error: 'Offline' }, success: false };
+  f.render(); assert.equal(f.notices.length, 3);
+});
+for (const platform of ['android', 'ios']) test(`${platform} native route uses the genuine global success host and retains the legacy fallback`, () => {
+  const f = noticeFixture(); let model = f.render(); const topNotice = { type: 'OriginalTopNotice', props: {} }, snackbars = [];
+  const mocks = { react: { useMemo: create => create(), useRef: () => ({ current: { setPage() {}, showSnackbar: message => snackbars.push(message) } }), useEffect: callback => callback() },
+    'react-native': { ...rn, RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', PlatformColor: value => value, useWindowDimensions: () => ({ height: 800, width: 400 }) },
+    '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifier,
+    '@expo/ui/community/pager-view': { __esModule: true, default: 'Pager' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) }, './useItemGroupsRoute': { useItemGroupsRoute: () => model },
+    '../shared/localization': { localizedGetter: key => key }, './itemGroupsModel': { itemGroupsVisibleTree: () => [] } };
+  const Route = load(`admin/ItemGroupsRoute.${platform}.tsx`, mocks).ItemGroupsRoute;
+  const composed = Route({ ...f.props, topNotice });
+  assert.deepEqual(f.notices, [['Item group added: Packing', 'success']]);
+  assert.equal(nodes(composed, node => node === topNotice).length, 1); assert.equal(nodes(composed, node => node.props?.accessibilityRole === 'alert').length, 0);
+  const fallback = Route({ ...f.props, showTopNotice: undefined });
+  const local = nodes(fallback, node => node.props?.accessibilityRole === 'alert'); assert.equal(local.length, 1);
+  assert.equal(nodes(local[0], node => node.type === 'Text')[0].props.children, 'Item group added: Packing');
+  f.state.notice = { id: 2, key: 'item_group.parent_update_failed', values: { error: 'Offline' }, success: false }; model = f.render();
+  const failed = Route(f.props); assert.equal(f.notices.length, 1);
+  if (platform === 'ios') assert.equal(nodes(failed, node => node.props?.accessibilityRole === 'alert').length, 1);
+  else assert.deepEqual(snackbars, [{ message: 'Could not update the parent: Offline', duration: 'short' }]);
+});
 for (const platform of ['android', 'ios']) test(`${platform} picker resolves the captured selection only after native dismissal, and outside cancellation returns null`, async () => {
   const finished = [], closed = [], hide = {}; hide.promise = new Promise(resolve => { hide.resolve = resolve; });
   const model = { state: { picker: { id: 23, title: 'Title', hint: 'Hint', query: '' } }, pickerRows: { items: ['A', 'B'], hasMore: false }, t: key => key,

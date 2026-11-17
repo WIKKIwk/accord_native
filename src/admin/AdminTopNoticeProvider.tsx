@@ -8,15 +8,15 @@ type Context = Readonly<{ messenger: AdminTopNoticeMessenger; progress: SharedVa
 const NoticeContext = createContext<Context | null>(null);
 
 /** One actual coordinator for the genuine shared Messenger, outside its native route carriers. */
-export function AdminTopNoticeProvider({ messenger, accessibleNavigation, children }: {
-  messenger: AdminTopNoticeMessenger; accessibleNavigation: boolean; children: ReactNode;
+export function AdminTopNoticeProvider({ messenger, accessibleNavigation, children, retainChildrenWhileUnresolved = false }: {
+  messenger: AdminTopNoticeMessenger; accessibleNavigation: boolean | null; children: ReactNode; retainChildrenWhileUnresolved?: boolean;
 }) {
-  if (typeof accessibleNavigation !== 'boolean') throw TypeError('Actual platform accessible-navigation state is required');
+  if (typeof accessibleNavigation !== 'boolean' && !(accessibleNavigation === null && retainChildrenWhileUnresolved)) throw TypeError('Actual platform accessible-navigation state is required');
   const driver = useMemo(() => ({ messenger }), [messenger]), progress = useSharedValue(0), run = useRef<object | null>(null);
   const state = useSyncExternalStore(messenger.subscribe, messenger.getSnapshot, messenger.getSnapshot);
   const leased = messenger.hasDriverLease(driver);
-  useLayoutEffect(() => messenger.attachDriver(driver, accessibleNavigation) ?? undefined, [messenger, driver, accessibleNavigation]);
-  useLayoutEffect(() => { messenger.setAccessibleNavigation(driver, accessibleNavigation); }, [messenger, driver, accessibleNavigation]);
+  useLayoutEffect(() => accessibleNavigation === null ? undefined : messenger.attachDriver(driver, accessibleNavigation) ?? undefined, [messenger, driver, accessibleNavigation]);
+  useLayoutEffect(() => { if (accessibleNavigation !== null) messenger.setAccessibleNavigation(driver, accessibleNavigation); }, [messenger, driver, accessibleNavigation]);
   useEffect(() => {
     const transition = state.transition; if (!leased || !messenger.hasDriverLease(driver) || !transition || state.retired) return; const original = {}; run.current = original;
     const from = transition.reset ? 0 : Math.max(0, Math.min(1, progress.get())); if (transition.reset) progress.set(0);
@@ -28,7 +28,8 @@ export function AdminTopNoticeProvider({ messenger, accessibleNavigation, childr
     return () => { if (run.current === original) run.current = null; cancelAnimation(progress); };
   }, [messenger, driver, leased, state.transition, state.retired, progress]);
   const context = useMemo(() => Object.freeze({ messenger, progress }), [messenger, progress]);
-  return leased ? <NoticeContext.Provider value={context}>{children}</NoticeContext.Provider> : null;
+  const unresolved = retainChildrenWhileUnresolved && state.accessibleNavigation === null && !state.retired;
+  return leased || unresolved ? <NoticeContext.Provider value={context}>{children}</NoticeContext.Provider> : null;
 }
 export function useAdminTopNoticeTarget(): Context {
   const value = useContext(NoticeContext); if (!value) throw Error('The genuine AdminTopNoticeProvider is required'); return value;
