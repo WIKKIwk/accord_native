@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~58.0.26",
+    "@xmldom/xmldom": "^0.9.12",
     "expo": "~58.0.22",
     "expo-blur": "~58.0.5",
     "expo-build-properties": "~58.0.12",
