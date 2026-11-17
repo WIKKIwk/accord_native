@@ -3,7 +3,7 @@ const test = require('node:test');
 const { load, deferred, tick } = require('./adminUsersSupport.cjs');
 const policy = load('admin/adminShellLayoutPolicy');
 function fixture(t, platform = 'android') {
-  let cursor = 0, navCalls = 0, hasFooter = true, bottomDockHeight, dimensions = { width: 400, height: 800, scale: 2 }, safe = { top: 24, right: 0, bottom: 24, left: 0 };
+  let cursor = 0, navCalls = 0, hasFooter = true, bottomDockHeight, sourceScope = null, dimensions = { width: 400, height: 800, scale: 2 }, safe = { top: 24, right: 0, bottom: 24, left: 0 };
   let value = { platform, width: 400, height: 800, viewPaddingBottom: 24, systemGestureInsetsBottom: 16, viewInsetsBottom: 0 }, reader = async () => value;
   const slots = [], effects = [], native = new Set(), keyboard = new Map(), foreground = new Set(), reads = [];
   const same = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
@@ -17,13 +17,33 @@ function fixture(t, platform = 'android') {
     Keyboard: { addListener: (name, callback) => { const listeners = keyboard.get(name) ?? new Set(); listeners.add(callback); keyboard.set(name, listeners); return { remove: () => listeners.delete(callback) }; } } };
   const runtime = load('admin/adminShellLayoutRuntime', { 'react-native': rn, '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge });
   const hook = load('admin/useAdminShellLayout', { react, 'react-native': rn, 'react-native-safe-area-context': { useSafeAreaInsets: () => safe },
+    './AdminShellSourceWindowLayoutContext': { useAdminShellSourceWindowLayout: () => sourceScope },
     '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge, './adminShellLayoutPolicy': policy, './adminShellLayoutRuntime': runtime });
   const render = () => { cursor = 0; effects.length = 0; const view = hook.useAdminShellLayout(hasFooter, bottomDockHeight); for (const commit of [...effects]) commit(); return view; };
   const cleanup = () => { for (const slot of slots) if (slot?.kind === 'effect') { slot.cleanup?.(); slot.cleanup = null; slot.deps = null; } };
   t.after(cleanup);
   return { render, reads, native, keyboard, foreground, cleanup, navCalls: () => navCalls, metrics: next => { value = next; }, setReader: next => { reader = next; },
-    dimensions: next => { dimensions = next; }, safe: next => { safe = next; }, footer: next => { hasFooter = next; }, dockHeight: next => { bottomDockHeight = next; } };
+    dimensions: next => { dimensions = next; }, safe: next => { safe = next; }, scope: next => { sourceScope = next; }, footer: next => { hasFooter = next; }, dockHeight: next => { bottomDockHeight = next; } };
 }
+test('original-window scope uses only its own metrics/insets and installs no Activity native, keyboard or navigation readers', async t => {
+  const f = fixture(t), metrics = { platform: 'android', width: 300, height: 600, viewPaddingBottom: 7, systemGestureInsetsBottom: 9, viewInsetsBottom: 0 }, safeInsets = { top: 13, left: 17, right: 19 };
+  f.scope({ metrics, thinGestureBottom: false, safeInsets }); const view = f.render(); await tick();
+  assert.equal(view.sourceWindow, true); assert.equal(view.metrics, metrics); assert.equal(view.safeInsets, safeInsets); assert.equal(view.bottomReserve, 69); assert.equal(view.navigationResolved, true);
+  assert.equal(f.reads.length, 0); assert.equal(f.navCalls(), 0); assert.equal(f.native.size, 0); assert.equal(f.foreground.size, 0); assert.equal(f.keyboard.size, 0);
+  f.safe({ top: 99, left: 98, right: 97, bottom: 96 }); f.dimensions({ width: 999, height: 888, scale: 3 }); const changed = f.render(); await tick(); assert.equal(changed.safeInsets, safeInsets); assert.equal(changed.metrics, metrics); assert.equal(f.reads.length, 0);
+});
+test('explicit unknown original-window scope never falls back to previously measured Activity facts', async t => {
+  const f = fixture(t); f.render(); await tick(); assert.equal(f.render().metricsReady, true); const before = f.reads.length;
+  f.scope({ metrics: null, thinGestureBottom: null, safeInsets: null }); const held = f.render(); await tick(); assert.equal(held.sourceWindow, true); assert.equal(held.metricsReady, false); assert.equal(held.metrics, null); assert.equal(held.bottomReserve, null); assert.equal(held.safeInsets, null); assert.equal(held.navigationResolved, false);
+  assert.equal(f.reads.length, before); assert.equal(f.native.size, 0); assert.equal(f.foreground.size, 0); assert.equal([...f.keyboard.values()].reduce((sum, values) => sum + values.size, 0), 0);
+});
+test('leaving an original-window scope creates a fresh legacy measurement lifetime rather than reviving a disposed controller', async t => {
+  const f = fixture(t), wait = deferred(); f.setReader(() => wait.promise); f.render();
+  f.scope({ metrics: null, thinGestureBottom: null, safeInsets: null }); assert.equal(f.render().metricsReady, false);
+  wait.resolve({ platform: 'android', width: 700, height: 500, viewPaddingBottom: 99, systemGestureInsetsBottom: 99, viewInsetsBottom: 0 }); await tick(); assert.equal(f.render().metrics, null);
+  f.setReader(async () => ({ platform: 'android', width: 800, height: 900, viewPaddingBottom: 12, systemGestureInsetsBottom: 13, viewInsetsBottom: 1 })); f.scope(null);
+  assert.equal(f.render().metricsReady, false); await tick(); const fresh = f.render(); assert.equal(fresh.sourceWindow, false); assert.equal(fresh.metrics.width, 800); assert.equal(fresh.bottomReserve, 0); assert.equal(f.native.size, 1); assert.equal(f.foreground.size, 1); assert.equal(f.navCalls(), 1);
+});
 test('actual Admin frame hook waits for genuine measurements, then uses cached nav result and original source60 rather than nativebar80', async t => {
   const f = fixture(t); const initial = f.render(); assert.equal(initial.metricsReady, false); assert.equal(initial.bottomReserve, null);
   await tick(); const measured = f.render(); assert.equal(measured.metricsReady, true); assert.equal(measured.bottomReserve, 75); assert.equal(measured.thinGestureBottom, true); assert.equal(f.navCalls(), 1);

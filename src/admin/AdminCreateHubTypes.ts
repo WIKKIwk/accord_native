@@ -12,6 +12,8 @@ export type AdminCreateHubProviderProps = {
   onOpenRoute: (route: string) => void | Promise<void>;
   /** Actual named profile-route presence, including an obscured profile lower in the active stack. */
   profileOnStack: boolean;
+  /** One global owner with per-original-window native hosts. This mode never reads/paints the legacy Activity layout. */
+  sourceWindows?: boolean;
 };
 export type AdminPrimaryActionProps = { isCurrent: () => boolean; canInteract: () => boolean;
   showPrimaryFab?: boolean; actions?: readonly AdminMenuAction[]; replacement?: ReactElement };

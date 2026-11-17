@@ -5,6 +5,7 @@ import type { AdminCreateHubDefaultAction } from './adminCreateHubModel';
 export type AdminCreateHubReadiness = Readonly<{ ready: boolean; missingRoutes: readonly string[]; hasPrimary: boolean }>;
 export type AdminCreateHubRequest = Readonly<{ isCurrent: () => boolean; canInteract: () => boolean; isFocused: () => boolean;
   showPrimaryFab?: boolean; actions?: readonly AdminMenuAction[]; hasReplacement?: boolean; replacement?: unknown }>;
+export type AdminCreateHubPrimaryPresentation = Pick<AdminCreateHubRequest, 'showPrimaryFab' | 'actions' | 'hasReplacement' | 'replacement'>;
 export type AdminCreateHubTicket = Readonly<{ id: number; generation: number }>;
 export type AdminCreateHubAction = Readonly<{ id: string; label: string; enabled: boolean; order: number;
   materialIcon?: string; icon?: AdminMenuAction['icon']; routeName?: string; onPress?: AdminMenuAction['onPress'] }>;
@@ -22,6 +23,7 @@ export class AdminCreateHubController {
   private state: AdminCreateHubSnapshot = { valid: false, version: 0, overlay: null, profileOnStack: false };
   private active = false; private retired = false; private checking = false; private generation = 0; private sequence = 0; private overlaySequence = 0;
   private settling = false; private selecting = false; private issuing = false; private planning = false;
+  private primaryUpdate: { valid: boolean } | null = null;
   private readonly triggers = new Map<number, Trigger>(); private readonly jobs = new Set<Job>(); private readonly listeners = new Set<() => void>();
   constructor(private readonly deps: { isCurrent: () => boolean; readiness: () => AdminCreateHubReadiness;
     actions: () => readonly AdminCreateHubDefaultAction[]; routeAvailable: (route: string) => boolean; openRoute: (route: string) => void | Promise<void>;
@@ -75,6 +77,48 @@ export class AdminCreateHubController {
       return { ticket: trigger.ticket, hasPrimary, visible, ready, replacement: !!trigger.request.hasReplacement, replacementValue: trigger.request.replacement };
     }
     return null;
+  }
+  private originalTriggerCurrent(trigger: Trigger): boolean {
+    const ticket = trigger.ticket;
+    if (trigger.retired || this.triggers.get(ticket.id) !== trigger || !this.isCurrent(ticket.generation)) return false;
+    if (trigger.checking) { trigger.retired = true; return false; } trigger.checking = true;
+    const valid = isSynchronouslyTrue(trigger.request.isCurrent); trigger.checking = false;
+    if (!valid) trigger.retired = true;
+    const account = valid && this.isCurrent(ticket.generation);
+    return account && !trigger.retired && this.triggers.get(ticket.id) === trigger;
+  }
+  /** @v2 AdminDock.build
+   * A retained Source dock keeps its original registration through dialog/page blur.
+   * This is presentation data only: it neither selects a fresh trigger nor authorizes an opening/overlay command.
+   */
+  primaryFor(ticket: AdminCreateHubTicket) {
+    const trigger = ticket && this.triggers.get(ticket.id);
+    const current = () => !!trigger && trigger.ticket === ticket && this.originalTriggerCurrent(trigger);
+    if (!trigger || !current()) return null;
+    const plan = this.readiness(), hasPrimary = !!trigger.request.hasReplacement || plan.hasPrimary;
+    const visible = hasPrimary && trigger.request.showPrimaryFab !== false && !this.state.profileOnStack && this.state.overlay === null;
+    const ready = trigger.request.actions !== undefined || trigger.request.hasReplacement ? true : plan.ready;
+    return current() ? Object.freeze({ ticket, hasPrimary, visible, ready, replacement: !!trigger.request.hasReplacement, replacementValue: trigger.request.replacement }) : null;
+  }
+  /** @v2 AdminDock.build
+   * Ordinary Source rebuild data for the SAME registration. Guard/focus callbacks and any accepted overlay stay original.
+   */
+  updatePrimary(ticket: AdminCreateHubTicket, presentation: AdminCreateHubPrimaryPresentation): boolean {
+    if (this.primaryUpdate) { this.primaryUpdate.valid = false; return false; }
+    const frame = { valid: true }; this.primaryUpdate = frame;
+    try {
+      const trigger = ticket && this.triggers.get(ticket.id);
+      if (!trigger || trigger.ticket !== ticket || !this.originalTriggerCurrent(trigger)) return false;
+      const { showPrimaryFab, actions, hasReplacement, replacement } = presentation;
+      if (showPrimaryFab !== undefined && typeof showPrimaryFab !== 'boolean' || hasReplacement !== undefined && typeof hasReplacement !== 'boolean' || actions !== undefined && !Array.isArray(actions)) return false;
+      if (!this.originalTriggerCurrent(trigger) || !frame.valid) return false;
+      const old = trigger.request;
+      const unchanged = old.showPrimaryFab === showPrimaryFab && old.actions === actions && old.hasReplacement === hasReplacement && old.replacement === replacement;
+      const next = unchanged ? old : Object.freeze({ ...old, showPrimaryFab, actions, hasReplacement, replacement });
+      if (!this.originalTriggerCurrent(trigger) || !frame.valid || trigger.request !== old) return false;
+      if (unchanged) return true;
+      trigger.request = next; this.publish({}); return true;
+    } catch { return false; } finally { this.primaryUpdate = null; }
   }
   open(ticket: AdminCreateHubTicket): boolean {
     if (this.settling || this.selecting || this.issuing) return false;

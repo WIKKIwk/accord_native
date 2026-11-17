@@ -18,7 +18,7 @@ interface AdminShellBodyFrameProps {
  */
 export function AdminShellBodyFrame({ children, hasFooter, testID, contentPadding = 'none' }: AdminShellBodyFrameProps) {
   const layout = useAdminShellLayout(hasFooter), { colors } = useBaseTheme();
-  return <SafeAreaView edges={['left', 'right']} style={styles.reserve} testID={`${testID}-safe-area`}>
+  const body =
     <View testID={`${testID}-reserve`} style={[styles.reserve, { marginHorizontal: layout.horizontalInset, marginBottom: layout.bottomReserve ?? undefined }]}>
       <View testID={testID} pointerEvents={layout.metricsReady ? 'auto' : 'none'} accessibilityElementsHidden={!layout.metricsReady}
         importantForAccessibility={layout.metricsReady ? 'auto' : 'no-hide-descendants'} accessibilityState={{ busy: !layout.metricsReady }}
@@ -26,8 +26,9 @@ export function AdminShellBodyFrame({ children, hasFooter, testID, contentPaddin
           borderBottomLeftRadius: layout.bottomRadius, borderBottomRightRadius: layout.bottomRadius, opacity: layout.metricsReady ? 1 : 0 }, contentPadding === 'default' && styles.defaultPadding]}>
         {children}
       </View>
-    </View>
-  </SafeAreaView>;
+    </View>;
+  return layout.sourceWindow ? <View style={[styles.reserve, { paddingLeft: layout.safeInsets?.left, paddingRight: layout.safeInsets?.right }]} testID={`${testID}-safe-area`}>{body}</View>
+    : <SafeAreaView edges={['left', 'right']} style={styles.reserve} testID={`${testID}-safe-area`}>{body}</SafeAreaView>;
 }
 
 const styles = StyleSheet.create({ reserve: { flex: 1 }, frame: { flex: 1, overflow: 'hidden' }, defaultPadding: {

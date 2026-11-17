@@ -23,7 +23,8 @@ function fixture(t) {
     './adminCreateHubModel': model, './adminCreateHubSession': sessionFactory, './useAdminShellLayout': { useAdminShellLayout: () => { layoutCalls++; return metrics; } } });
   const child = { type: 'GenuineNativeStackWithItsOriginalBackHandlers', props: {} }, props = { children: child, session, witness, isCurrent: () => true, profileOnStack: false,
     isRouteAvailable: () => available, onOpenRoute: route => calls.push(route) }, pageProps = { isCurrent: () => current, canInteract: () => focused };
-  const render = () => { activeRuntime = parent; const tree = parent.render(() => provider.AdminCreateHubProvider(props)); context = tree.props.value; contexts.set(0, context); contexts.set(1, tree.props.children.props.children[0].props.value); return tree; };
+  const render = () => { activeRuntime = parent; const tree = parent.render(() => { const placement = provider.AdminCreateHubProvider(props); return placement.type(placement.props); }); context = tree.props.value; contexts.set(0, context);
+    if (tree.props.children.props.value === context.controller) { contexts.set(2, tree.props.children.props.value); contexts.delete(1); } else { contexts.set(1, tree.props.children.props.children[0].props.value); contexts.delete(2); } return tree; };
   const register = () => { activeRuntime = page; return page.render(() => provider.AdminPrimaryAction(pageProps)); };
   const readWith = (callback, commitRoot = true) => { if (commitRoot) render(); activeRuntime = read; return read.render(callback); };
   t.after(() => { page.unmount(); parent.unmount(); read.unmount(); global.requestAnimationFrame = originalRaf; global.cancelAnimationFrame = originalCancel; });
@@ -75,4 +76,22 @@ test('unregistered primary or a source-visible held FAB leaves truthful Scaffold
   const f = fixture(t); f.render(); assert.equal(f.readWith(() => f.provider.useAdminCreateHubScaffoldLayout()).hostHeight, null);
   f.available(false); f.register(); const host = f.render().props.children.props.children[1]; assert.equal(host.props.primary.visible, true); assert.equal(host.props.primary.ready, false); assert.equal(host.props.layout.hostHeight, 199);
   assert.equal(f.readWith(() => f.provider.useAdminCreateHubHostHeight()), null); f.props.profileOnStack = true; f.render(); assert.equal(f.readWith(() => f.provider.useAdminCreateHubHostHeight()), 75);
+});
+test('source-window placement keeps ONE genuine account owner and native stack while never reading or painting the legacy Activity host', t => {
+  const f = fixture(t); f.props.sourceWindows = true; const tree = f.render(), owner = f.owner();
+  assert.equal(tree.props.children.props.children, f.child); assert.equal(f.layoutCalls(), 0); f.register(); f.render();
+  assert.equal(f.owner(), owner); assert.equal(f.readWith(() => f.provider.useAdminCreateHubSourceController()), owner.controller);
+  assert.equal(owner.controller.primary().ready, true); assert.throws(() => f.readWith(() => f.provider.useAdminCreateHubScaffoldLayout()), /required/);
+  assert.equal(f.layoutCalls(), 0); f.retire(); assert.equal(owner.controller.isCurrent(), false);
+});
+test('source-window layout publishes only its supplied original Reader facts and a legacy owner cannot impersonate source-window placement', t => {
+  const f = fixture(t); f.render(); assert.throws(() => f.readWith(() => f.provider.useAdminCreateHubSourceController()), /source-window/);
+  const g = fixture(t); g.props.sourceWindows = true; g.render(); const layout = Object.freeze({ metrics: g.rawMetrics, hostHeight: 198.9090909090909 });
+  const supplied = g.readWith(() => g.provider.AdminCreateHubSourceLayout({ layout, children: g.child })); assert.equal(supplied.props.value, layout); assert.equal(supplied.props.children, g.child);
+  assert.equal(g.layoutCalls(), 0); assert.throws(() => g.readWith(() => g.provider.AdminCreateHubProvider({ ...g.props, sourceWindows: Promise.resolve(true) })), /placement mode/);
+});
+test('placement cannot silently replace the original global owner during rerender; changing mode retires it and cannot revive it', t => {
+  const f = fixture(t); f.props.sourceWindows = true; f.render(); f.register(); const owner = f.owner(); assert.ok(owner.controller.primary());
+  f.props.sourceWindows = false; const tree = f.render(); assert.equal(f.owner(), owner); assert.equal(tree.props.children.props.children, f.child); assert.equal(f.layoutCalls(), 0); assert.equal(owner.controller.isCurrent(), false);
+  f.props.sourceWindows = true; f.render(); assert.equal(f.owner(), owner); assert.equal(owner.controller.isCurrent(), false); assert.equal(f.layoutCalls(), 0);
 });
