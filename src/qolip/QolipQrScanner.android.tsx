@@ -17,6 +17,7 @@ export function QolipRawQrScanScreen(props: Props) { return <QolipQrScannerScree
 /** @v2 QolipUniversalQrScanScreen */
 export function QolipUniversalQrScanScreen(props: Props) { return <QolipQrScannerScreen {...props} mode="universal" />; }
 
+/** @v2 _QolipQrScanScreen */
 export function QolipQrScannerScreen(props: QolipQrScannerProps) {
   const scan = useQolipQrScanner(props), { text } = scan, insets = useSafeAreaInsets();
   const { close } = scan;

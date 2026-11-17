@@ -46,9 +46,9 @@ function EditDialog({ block, text, close, save }: { block: QolipBlock; text: Tex
   </Modal>;
 }
 
-// QolipBlocksScreen remains unwired until role navigation is complete.
-export function QolipBlocksScreen({ session, onMenu, onProfile, dock }: QolipBlocksScreenProps) {
-  const { text, locale } = useQolipText(), state = useQolipBlocks(session), sheet = useNativeSheet();
+/** @v2 QolipBlocksScreen */
+export function QolipBlocksScreen({ session, isCurrent, onMenu, onProfile, dock }: QolipBlocksScreenProps) {
+  const { text, locale } = useQolipText(), state = useQolipBlocks(session, isCurrent), sheet = useNativeSheet();
   const [searchFocused, setSearchFocused] = useState(false);
   const [editing, setEditing] = useState<QolipBlock | null>(null), afterSheet = useRef<(() => void) | null>(null);
   const insets = useSafeAreaInsets(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);

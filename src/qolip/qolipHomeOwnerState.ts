@@ -1,6 +1,6 @@
 import { qolipHomeBlockKey } from './qolipHomeLogic';
 import { qolipHomePresentation, type QolipHomePresentation } from './qolipHomePresentation';
-import type { QolipBlock } from './qolipBlocksApi';
+import type { QolipBlock, QolipBlocksResult } from './qolipBlocksApi';
 import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 import type { QolipHomeState } from './qolipHomeState';
 import type { QolipLocationEntry } from './qolipLocationsApi';
@@ -19,11 +19,14 @@ export type QolipHomeOwnerActions = {
   reorder: (oldIndex: number, newIndex: number) => void;
   retry: () => Promise<void>;
   refreshBlock: (blockName: string) => Promise<void>;
+  locationsFor: (blockName: string) => Promise<readonly QolipLocationEntry[]>;
+  refreshLocations: (blockName: string) => Promise<readonly QolipLocationEntry[]>;
   routeChanged: (current: boolean) => void;
   appResumed: () => void;
   locationsChanged: () => void;
 };
 export type QolipHomeOwnerSnapshot = {
+  data: QolipBlocksResult | null;
   home: QolipHomePresentation;
   search: string;
   blocks: readonly QolipOwnedHomeBlock[];
@@ -31,7 +34,7 @@ export type QolipHomeOwnerSnapshot = {
   actions: QolipHomeOwnerActions | null;
 };
 const invalidSnapshot: QolipHomeOwnerSnapshot = Object.freeze({
-  home: { kind: 'invalid' as const }, search: '', blocks: [], boundary: null, actions: null,
+  data: null, home: { kind: 'invalid' as const }, search: '', blocks: [], boundary: null, actions: null,
 });
 function safelyInvoke(callback: () => unknown) {
   try {
@@ -106,6 +109,8 @@ export class QolipHomeOwnerState {
       reorder: (oldIndex: number, newIndex: number) => { if (current()) run.controller.reorder(oldIndex, newIndex); },
       retry: async () => { if (current()) await run.controller.reload(); },
       refreshBlock: async (blockName: string) => { if (current()) await run.controller.refreshBlock(blockName); },
+      locationsFor: async (blockName: string) => { if (!current()) throw new Error('qolip_read_expired'); return run.controller.locationsFor(blockName); },
+      refreshLocations: async (blockName: string) => { if (!current()) throw new Error('qolip_read_expired'); return run.controller.refreshBlock(blockName); },
       routeChanged: (value: boolean) => { if (current()) run.controller.routeChanged(value); },
       appResumed: () => { if (current()) run.controller.appResumed(); },
       locationsChanged: () => { if (current()) run.controller.locationsChanged(); },
@@ -113,7 +118,7 @@ export class QolipHomeOwnerState {
     return run;
   }
   private initialSnapshot(run: Run): QolipHomeOwnerSnapshot {
-    return { home: qolipHomePresentation(run.controller.getSnapshot()), search: '', blocks: [], boundary: run.boundary, actions: run.actions };
+    return { data: run.controller.getSnapshot().snapshot, home: qolipHomePresentation(run.controller.getSnapshot()), search: '', blocks: [], boundary: run.boundary, actions: run.actions };
   }
   private publishController(run: Run) {
     if (!this.runCurrent(run)) return;
@@ -130,7 +135,7 @@ export class QolipHomeOwnerState {
     }) : [];
     // An early read/consumer may have invalidated the owner while the descriptors were made.
     if (!this.runCurrent(run)) return;
-    this.value = { ...this.value, home, blocks, boundary: run.boundary, actions: run.actions }; this.notify();
+    this.value = { ...this.value, data: run.controller.getSnapshot().snapshot, home, blocks, boundary: run.boundary, actions: run.actions }; this.notify();
   }
   activate(): QolipHomeOwnerActions | null {
     if (!this.originalCurrent()) { this.invalidate(); return null; }

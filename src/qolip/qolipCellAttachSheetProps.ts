@@ -2,9 +2,11 @@ import type { Session } from '../auth';
 import type { QolipBlock } from './qolipBlocksApi';
 import type { QolipPlacementProduct } from './qolipCellPlacement';
 import type { QolipCellPlacementResult } from './qolipCellPlacementState';
+import type { QolipHomeReadBoundary } from './qolipHomeBlockReadState';
 
 export type QolipCellAttachSheetProps = {
   session: Session;
+  boundary?: QolipHomeReadBoundary;
   blocks: readonly QolipBlock[];
   initialBlock?: QolipBlock | null;
   rowLetter?: string | null;

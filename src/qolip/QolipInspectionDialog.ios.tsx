@@ -1,5 +1,5 @@
 import { Button, Host, HStack, Text, VStack } from '@expo/ui/swift-ui';
-import { accessibilityLabel, buttonStyle, disabled, labelStyle, accessibilityIdentifier } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityLabel, buttonStyle, disabled, frame, labelStyle, accessibilityIdentifier } from '@expo/ui/swift-ui/modifiers';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useWorkerColors } from '../components/useWorkerColors';
 import { extensionText } from '../shared/localization';
@@ -12,7 +12,7 @@ export function QolipInspectionDialog(props: QolipInspectionDialogProps) {
   const text = (key: string) => extensionText('qolipStorageText', key, locale);
   if (state.invalid) return null;
   return <Modal visible transparent animationType="fade" onRequestClose={state.dismiss}>
-    <View style={styles.backdrop}><Pressable style={StyleSheet.absoluteFill} onPress={state.dismiss} />
+    <View style={styles.backdrop}><Pressable style={StyleSheet.absoluteFill} disabled={props.barrierDismissible === false} onPress={state.dismiss} />
       <View accessibilityViewIsModal style={[styles.dialog, { backgroundColor: colors.surface }]}>
         <Host matchContents={{ vertical: true }}><Text>{text('inspect')}</Text></Host>
         <ScrollView style={{ maxHeight: height * 0.5 }}><Host matchContents={{ vertical: true }}><VStack alignment="leading" spacing={12}>
@@ -28,8 +28,8 @@ export function QolipInspectionDialog(props: QolipInspectionDialogProps) {
           </HStack>)}
         </VStack></Host></ScrollView>
         <Host matchContents={{ vertical: true }}><HStack spacing={16}>
-          <Button label={text('cancel')} role="cancel" onPress={state.cancel} modifiers={[disabled(state.scanning)]} />
-          <Button label={text('save')} onPress={state.save} modifiers={[buttonStyle('borderedProminent'), disabled(state.scanning), accessibilityIdentifier('qolip-inspect-save')]} />
+          <Button label={text('cancel')} role="cancel" onPress={state.cancel} modifiers={[buttonStyle('bordered'), frame({ maxWidth: Infinity, minHeight: 48 }), disabled(state.scanning)]} />
+          <Button label={text('save')} onPress={state.save} modifiers={[buttonStyle('borderedProminent'), frame({ maxWidth: Infinity, minHeight: 48 }), disabled(state.scanning), accessibilityIdentifier('qolip-inspect-save')]} />
         </HStack></Host>
       </View>
     </View>

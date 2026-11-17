@@ -8,6 +8,7 @@ import { useQolipGridCellPicker, type QolipGridCellPickerProps } from './useQoli
 import { useQolipText } from './useQolipText';
 
 // Unopened content. Its required callback returns only the chosen label.
+/** @v2 _QolipCellPickerSheet */
 export function QolipGridCellPicker(props: QolipGridCellPickerProps) {
   const state = useQolipGridCellPicker(props), input = useNativeState(''), { text, locale } = useQolipText(), colors = useMaterialColors();
   const { height } = useWindowDimensions();

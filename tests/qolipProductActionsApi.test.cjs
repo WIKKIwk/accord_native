@@ -46,6 +46,7 @@ test('Edit size keeps the exact Dart int64 JSON token instead of rounding throug
   await h.api.qolipSaveProductSpec(h.session, { product, qolipCode: 'Q-1', size: 9223372036854775807n });
   assert.match(h.calls[0].init.body, /"size":9223372036854775807[},]/);
   assert.doesNotMatch(h.calls[0].init.body, /"size":"/);
+  assert.equal(h.api.qolipSpecRequestJson({ size: 1n }), '{"size":1}');
   assert.throws(() => h.api.qolipSpecRequestJson({ size: 9223372036854775808n }), RangeError);
 });
 

@@ -6,6 +6,9 @@ const test = require('node:test');
 const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
+const graphemePath = path.resolve(__dirname, '../src/qolip/qolipGraphemes.ts'), graphemeModule = new Module(graphemePath, module);
+graphemeModule.require = require;
+graphemeModule._compile(ts.transpileModule(fs.readFileSync(graphemePath, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ESNext } }).outputText, graphemePath);
 function screen(platform, saving = false) {
   const captures = {}, calls = [], expected = { name: 'Saved', set: { id: 'S' } };
   const state = { saving, error: null, controller: { getSnapshot: () => state, setName: value => calls.push(['name', value]),
@@ -17,7 +20,7 @@ function screen(platform, saving = false) {
   const nodes = Object.fromEntries(names.map(name => [name, component(name)]));
   const Dialog = component('AlertDialog'); for (const key of ['Title', 'Text', 'DismissButton', 'ConfirmButton']) Dialog[key] = component(`AlertDialog.${key}`);
   nodes.OutlinedTextField.Label = component('OutlinedTextField.Label');
-  const ui = { ...nodes, AlertDialog: Dialog, useNativeState: value => ({ get: () => value }) };
+  const ui = { ...nodes, AlertDialog: Dialog, useNativeState: value => ({ get: () => value, set: next => calls.push(['native', next]) }) };
   const mods = { disabled: value => ({ disabled: value }), onSubmit: callback => ({ callback }), submitLabel: () => ({}),
     textInputAutocapitalization: () => ({}), fillMaxWidth: () => ({}), size: () => ({}), testID: () => ({}) };
   const deps = { '@expo/ui/swift-ui': ui, '@expo/ui/jetpack-compose': ui,
@@ -26,6 +29,7 @@ function screen(platform, saving = false) {
       useWindowDimensions: () => ({ width: 400, height: 800 }) },
     '../components/useWorkerColors': { useWorkerColors: () => ({ surface: 'white' }) },
     '../shared/localization': { extensionText: (_method, key) => key }, './qolipErrorMessage': { qolipErrorMessage: () => 'ERROR' },
+    './qolipGraphemes': graphemeModule.exports,
     './useQolipSetName': { useQolipSetName: () => state }, './useQolipText': { useQolipText: () => ({ locale: 'uz', text: key => key }) } };
   const filename = path.resolve(__dirname, `../src/qolip/QolipSetNameDialog.${platform}.tsx`), m = new Module(filename, module);
   m.require = key => key in deps ? deps[key] : require(key);
@@ -41,7 +45,7 @@ for (const platform of ['ios', 'android']) {
     const h = screen(platform); h.render();
     const field = h.captures[platform === 'ios' ? 'TextField' : 'OutlinedTextField'][0];
     assert.equal((field.text ?? field.value).get(), 'Old');
-    if (platform === 'ios') assert.equal(field.maxLength, 160);
+    assert.equal(field.maxLength, undefined); // Native UTF-16 limits must not split extended graphemes.
     const save = platform === 'ios' ? h.captures.Button.find(x => x.label === 'action.save').onPress
       : h.captures.TextButton.find(x => x.children?.props?.children === 'action.save').onClick;
     save(); await new Promise(resolve => setImmediate(resolve));
@@ -53,5 +57,11 @@ for (const platform of ['ios', 'android']) {
     assert.deepEqual(h.calls, []);
     if (platform === 'ios') assert.ok(h.captures.ProgressView);
     else { assert.equal(h.captures.OutlinedTextField[0].enabled, false); assert.ok(h.captures.CircularProgressIndicator); }
+  });
+  test(`${platform} input caps 160 Unicode16 graphemes without splitting a family emoji or combining sequence`, () => {
+    const h = screen(platform); h.render(); const field = h.captures[platform === 'ios' ? 'TextField' : 'OutlinedTextField'][0];
+    const input = '👨‍👩‍👧‍👦'.repeat(159) + 'e\u0301' + '🇺🇿', expected = '👨‍👩‍👧‍👦'.repeat(159) + 'e\u0301';
+    (platform === 'ios' ? field.onTextChange : field.onValueChange)(input);
+    assert.deepEqual(h.calls, [['native', expected], ['name', expected]]);
   });
 }

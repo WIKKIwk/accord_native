@@ -82,7 +82,9 @@
             "extraProguardRules": "-keep class net.posprinter.serial.SerialControl { *; }"
           }
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

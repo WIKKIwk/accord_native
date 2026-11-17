@@ -126,6 +126,10 @@ export class QolipCheckoutSelectionState {
     // V2 cancels selection if an older completion left no selected loaded rows.
     this.selected.clear(); this.publish(); return null;
   }
+  replaceSelected(ids: ReadonlySet<string>) {
+    if (!this.lifetime.canChoose()) return;
+    this.selected = new Set(ids); this.publish();
+  }
   canChoose(): boolean { return this.lifetime.canChoose(); }
   suspend() { const stop = this.stopLifetime; this.stopLifetime = null; stop?.(); this.lifetime.suspend(); }
 }

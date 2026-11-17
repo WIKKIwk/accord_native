@@ -28,7 +28,7 @@ function screen(platform, model, overrides = {}) {
     (captures[name] ??= []).push(props);
     return React.createElement('div', null, props.children ?? props.label ?? null);
   };
-  const names = ['Box', 'Button', 'Column', 'Host', 'HStack', 'ProgressView', 'Row', 'Text', 'TextButton', 'VStack', 'ActivityIndicator', 'View', 'OrdersHeader'];
+  const names = ['Box', 'Button', 'Column', 'Host', 'IconButton', 'RNHostView', 'SymbolView', 'HStack', 'ProgressView', 'Row', 'Text', 'TextButton', 'VStack', 'ActivityIndicator', 'View', 'OrdersHeader'];
   const nodes = Object.fromEntries(names.map(name => [name, node(name)]));
   function Tabs(props) {
     (captures.Tabs ??= []).push(props);
@@ -36,9 +36,10 @@ function screen(platform, model, overrides = {}) {
   }
   const ui = { ...nodes, useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainer: 'strip', surfaceContainerHigh: 'drag',
     primaryContainer: 'selected', primary: 'primary', onSurfaceVariant: 'secondary' }) };
-  const mods = Object.fromEntries(['background', 'clip', 'font', 'foregroundStyle', 'frame', 'lineLimit', 'size', 'testID'].map(name => [name, (...args) => ({ name, args })]));
+  const mods = Object.fromEntries(['background', 'clip', 'font', 'foregroundStyle', 'frame', 'lineLimit', 'semantics', 'size', 'testID'].map(name => [name, (...args) => ({ name, args })]));
   mods.shapes = { circle: () => ({}) }; mods.Shapes = { Circle: {} };
   const dependencies = {
+    'expo-symbols': { SymbolView: nodes.SymbolView },
     react: { ...React, useState: () => [focused, value => { focused = value; }] },
     '@expo/ui/swift-ui': ui, '@expo/ui/jetpack-compose': ui,
     '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose/modifiers': mods,

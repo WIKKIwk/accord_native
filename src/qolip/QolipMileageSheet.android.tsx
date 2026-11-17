@@ -9,8 +9,9 @@ import { useQolipMileage } from './useQolipMileage';
 import { useQolipText } from './useQolipText';
 
 // Opened by the reworks view; that view is not yet routed.
-export function QolipMileageSheet({ session, code }: QolipMileageSheetProps) {
-  const { locale } = useQolipText(), state = useQolipMileage(session, code), { height } = useWindowDimensions(), colors = useMaterialColors();
+/** @v2 _QolipMileageSheet */
+export function QolipMileageSheet({ session, code, isCurrent }: QolipMileageSheetProps) {
+  const { locale } = useQolipText(), state = useQolipMileage(session, code, isCurrent), { height } = useWindowDimensions(), colors = useMaterialColors();
   const t = (key: string, values: Record<string, unknown> = {}) => extensionText('qolipReworkText', key, locale, values);
   const current = state.mileage?.tracking_enabled && state.mileage.current_meter !== null
     ? t('current', { meter: qolipMileageMeter(state.mileage.current_meter) }) : t('not_started');

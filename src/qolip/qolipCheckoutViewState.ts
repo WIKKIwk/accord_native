@@ -110,6 +110,9 @@ export class QolipCheckoutViewState {
     this.syncRead(run);
     return suspend;
   }
+  reload() { return this.readOwner.reload(); }
+  bulkChoice() { return this.selectionOwner.bulkChoice(); }
+  replaceSelected(ids: ReadonlySet<string>) { this.selectionOwner.replaceSelected(ids); }
   /** Only the actual owner of return operations may provide these states; this method performs no action. */
   updateLocks(locks: QolipCheckoutLocks) {
     const run = this.run;

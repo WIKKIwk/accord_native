@@ -54,12 +54,13 @@ function ReturnDialog({ count, text, locale, cancel, confirm }: { count: number;
 const passthrough = () => true;
 
 // Reworks is not routed until the real request-ID source and role navigation are available.
-export function QolipReworksScreen({ session, nextRequestId, onMenu, onProfile, dock }: QolipReworksScreenProps) {
-  const { locale } = useQolipText(), state = useQolipReworks(session, nextRequestId), sheet = useNativeSheet(), notice = useQolipNotice();
+/** @v2 QolipReworksScreen */
+export function QolipReworksScreen({ session, nextRequestId, isCurrent, onMenu, onProfile, dock }: QolipReworksScreenProps) {
+  const { locale } = useQolipText(), state = useQolipReworks(session, nextRequestId, isCurrent), sheet = useNativeSheet(), notice = useQolipNotice();
   const [prepared, setPrepared] = useState<Prepared | null>(null), colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const t: Texts = (key, values = {}) => extensionText('qolipReworkText', key, locale, values);
-  const openMileage = (code: string) => sheet.open(<QolipMileageSheet session={session} code={code} />, { compact: true, fitContent: true, dismissible: true });
+  const openMileage = (code: string) => sheet.open(<QolipMileageSheet session={session} code={code} isCurrent={isCurrent} />, { compact: true, fitContent: true, dismissible: true });
   const returnSelected = () => {
     const pending = state.controller.prepareReturn();
     if (!pending) return;

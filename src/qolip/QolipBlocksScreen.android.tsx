@@ -52,9 +52,9 @@ function DeleteDialog({ block, text, close, confirm }: { block: QolipBlock; text
 }
 const passthrough = () => true;
 
-// QolipBlocksScreen remains unwired until role navigation is complete.
-export function QolipBlocksScreen({ session, onMenu, onProfile, dock }: QolipBlocksScreenProps) {
-  const { text, locale } = useQolipText(), state = useQolipBlocks(session), sheet = useNativeSheet();
+/** @v2 QolipBlocksScreen */
+export function QolipBlocksScreen({ session, isCurrent, onMenu, onProfile, dock }: QolipBlocksScreenProps) {
+  const { text, locale } = useQolipText(), state = useQolipBlocks(session, isCurrent), sheet = useNativeSheet();
   const [searchFocused, setSearchFocused] = useState(false);
   const [editing, setEditing] = useState<QolipBlock | null>(null), [deleting, setDeleting] = useState<QolipBlock | null>(null);
   const afterSheet = useRef<(() => void) | null>(null), colors = useMaterialColors(), insets = useSafeAreaInsets();

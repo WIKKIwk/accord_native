@@ -13,4 +13,5 @@ export type OrdersSearchInputProps = {
   placeholder: string;
   color: ColorValue;
   placeholderColor: ColorValue;
+  enabled?: boolean;
 };

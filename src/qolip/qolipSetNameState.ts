@@ -11,8 +11,8 @@ export class QolipSetNameState {
   constructor(entry: QolipManagedSet, private readonly rename: (name: string) => Promise<QolipManagedSet>) {
     this.value = { name: entry.name, saving: false, error: null };
   }
-  static forSession(session: Session, entry: QolipManagedSet) {
-    return new QolipSetNameState(entry, name => qolipRenameSet(session, entry.set.id, name));
+  static forSession(session: Session, entry: QolipManagedSet, guard?: () => boolean) {
+    return new QolipSetNameState(entry, name => qolipRenameSet(session, entry.set.id, name, guard));
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.value;
