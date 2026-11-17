@@ -2,9 +2,10 @@ import type { ReactElement } from 'react';
 import type { ModalProps } from 'react-native';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { createAdminPresentationWindowTicket } from './adminPresentationWindowTicket';
+import type { AdminRootSheetRequest } from './AdminRootSheetTypes';
 
-export type AdminRootPresentationParent = Readonly<{ id: string; kind: 'root' | 'page' | 'dialog' }>;
-export type AdminRootPresentationEntry = AdminRootPresentationParent & Readonly<{ kind: 'page' | 'dialog' }>;
+export type AdminRootPresentationParent = Readonly<{ id: string; kind: 'root' | 'page' | 'dialog' | 'sheet' }>;
+export type AdminRootPresentationEntry = AdminRootPresentationParent & Readonly<{ kind: 'page' | 'dialog' | 'sheet' }>;
 export type AdminRootPresentationRenderState = Readonly<{
   interactive: boolean; retained: boolean; retired: boolean;
   /** Live original guards for queued native events/reads; snapshot booleans only describe this render. */
@@ -16,17 +17,18 @@ export type AdminRootPresentationOptions = Readonly<{
   transparent: boolean; animationType: NonNullable<ModalProps['animationType']>;
   presentationStyle: 'fullScreen' | 'overFullScreen'; statusBarTranslucent?: boolean; navigationBarTranslucent?: boolean;
 }>;
-export type AdminRootPresentationRequest = Readonly<{
+type AdminRootModalRequest = Readonly<{
   parent: AdminRootPresentationParent; identity: object; kind: 'page' | 'dialog';
   renderContent: AdminRootPresentationContent; presentation: AdminRootPresentationOptions;
   /** Original owner/account authority, independent of the presentation parent's page focus. */
   isCurrent: () => boolean; onRequestClose: () => void;
 }>;
+export type AdminRootPresentationRequest = AdminRootModalRequest | AdminRootSheetRequest;
 export type AdminRootPresentationSnapshot = Readonly<{
   revision: number; retired: boolean; rootReady: boolean; entries: readonly AdminRootPresentationEntry[];
 }>;
 type Native = { identity: object; members: Set<object>; shown: boolean; armed: boolean; failed: boolean };
-type Entry = { value: AdminRootPresentationEntry; request: AdminRootPresentationRequest; native: Native | null;
+type Entry = { value: AdminRootPresentationEntry; request: AdminRootModalRequest; native: Native | null;
   closing: boolean; retired: boolean; checking: boolean; resolve: (result: 'closed' | 'retired') => void };
 type Dependencies = Readonly<{ platform: 'android' | 'ios'; rootIdentity: object; isCurrent: () => boolean;
   subscribeCurrent?: (listener: () => void) => (() => void) }>;
@@ -125,6 +127,9 @@ export class AdminRootPresentationChain {
   open(request: AdminRootPresentationRequest): Readonly<{ entry: AdminRootPresentationEntry; closed: Promise<'closed' | 'retired'> }> | null {
     if (this.issuing) return null; this.issuing = true;
     try {
+      // Native show/dismiss capability is not a mounted original-cleanup receipt or a real Root sheet renderer.
+      // No current adapter can admit this kind. Hold before reading callbacks, allocating IDs, or publishing.
+      if (request.kind === 'sheet') return null;
       const parent = request.parent, identity = request.identity, kind = request.kind, renderContent = request.renderContent,
         isCurrent = request.isCurrent, onRequestClose = request.onRequestClose, presentation = captureAdminRootPresentationOptions(request.presentation);
       if (!object(identity) || !['page', 'dialog'].includes(kind) || typeof renderContent !== 'function' || typeof isCurrent !== 'function' || typeof onRequestClose !== 'function' || !presentation ||
