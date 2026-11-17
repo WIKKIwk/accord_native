@@ -14,14 +14,15 @@ import { rezkaPaddonWipContent } from '../rezka/rezkaPaddonWipModel';
 import { pickWorkerPrinter, printWorkerJobs, workerPrinterFields, WorkerPrintCancelled } from '../workerPrinting';
 import { useNativeSheet } from '../nativeSheet';
 import { WorkerWipBatchDetails } from './WorkerWipBatchDetails';
+import type { WorkerPaddonDetailSeed } from '../workerPaddonDetailSeed';
 import { useWorkerPaddonOwner, useWorkerPaddonState } from './useWorkerPaddonOwner';
 import { useWorkerPaddonPresentation } from './useWorkerPaddonPresentation';
 import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export type WorkerPaddonDetailProps = { session: Session; code: string; apparatus?: string; onBack(): void };
-export function useWorkerPaddonDetail({ session, code, apparatus = '' }: WorkerPaddonDetailProps) {
-  const owner = useWorkerPaddonOwner(session, apparatus), controller = useMemo(() => owner.detail(code), [owner, code]);
+export type WorkerPaddonDetailProps = { session: Session; code: string; apparatus?: string; initialSnapshot?: WorkerPaddonDetailSeed; onBack(): void };
+export function useWorkerPaddonDetail({ session, code, apparatus = '', initialSnapshot }: WorkerPaddonDetailProps) {
+  const owner = useWorkerPaddonOwner(session, apparatus), [initial] = useState(() => initialSnapshot?.takeForCode(code)), controller = useMemo(() => owner.detail(code,initial), [owner, code,initial]);
   const state = useWorkerPaddonState(controller), presentation = useWorkerPaddonPresentation(owner.current), wipSheet = useNativeSheet();
   const printer = useWorkerPrinterSelector(owner.current), { p, t, locale } = useWorkerOrderText();
   const printing = useRef(false);

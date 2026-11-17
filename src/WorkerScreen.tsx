@@ -55,12 +55,12 @@ import { workerDailyWorkVisible, workerInventoryVisible } from './workerNavigati
 import { workerQueueLimitLabels } from './workerQueuePresentation';
 import { WorkerInventoryScreen } from './components/WorkerInventoryScreen';
 
-type Props = { session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
+type Props = { onSelectDestination?: (id:string) => boolean; initialQr?:string; session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; requireFreshDetail?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
 type ActionScope = { window: string; scope: string; readScope: string; witness: SessionWitness | null };
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; prepared: WorkerPreparedActionSheet; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 
-export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer }: Props) {
+export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer,onSelectDestination,initialQr = '' }: Props) {
   const pageFocused = useIsFocused();
   const colors = useWorkerColors();
   const { p, t, locale } = useWorkerOrderText();
@@ -285,6 +285,16 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
     setScannerOpen(false);
     openOrder(target);
   }
+  const initialHandled = useRef(false);
+  const initialScan = useRef({ run:() => {} });
+  useLayoutEffect(() => { initialScan.current = { run:() => {
+    if (initialHandled.current || !initialQr.trim() || !pageFocused || !queueState.synchronized || !selectedMachine) return;
+    initialHandled.current = true;
+    const expectedWindow = windowScope;
+    const reads = workerFabQrReads(session,selectedMachine.id,() => queueRef.current?.snapshot ?? null,() => screenMounted.current && currentWindow.current === expectedWindow && qrLocation.current.machine === selectedMachine.id && qrLocation.current.window === expectedWindow);
+    void prepareWorkerFabQr(session,selectedMachine,initialQr.trim(),reads,p,id => (queueRef.current?.catalog ?? []).find(item => item.id === id)?.name ?? id).then(target => { if (reads.current()) finishQrScan(selectedMachine.id,target.orderId,initialQr.trim(),target.switching); }).catch(error => { if (reads.current()) setAlert({ title:p('worker.qr.guidance.title'),message:workerFabErrorText(error,p),confirmLabel:p('worker.action.close') }); });
+  } }; });
+  useEffect(() => { initialScan.current.run(); },[initialQr,pageFocused,queueState.synchronized,selectedMachine]);
   function finishQrOrderDismissal() {
     const pending = pendingQrSwitch.current;
     pendingQrSwitch.current = null;
@@ -300,6 +310,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       .catch(error => { if (reads.current()) setAlert({ title: p('worker.qr.guidance.title'), message: workerFabErrorText(error, p), confirmLabel: p('worker.action.close') }); });
   }
   function selectDestination(id: string) {
+    if (onSelectDestination?.(id)) return;
     if (id === 'transfer') {
       if (!workerInventoryVisible(session)) return;
       if (nativeNavigation) router.push('/ios-worker/inventory' as Href);

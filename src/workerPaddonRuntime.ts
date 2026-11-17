@@ -1,5 +1,6 @@
 import { captureSessionWitness, isSessionWitnessCurrent, registerSessionResetHook, type Session } from './auth';
 import { adminApparatus, type AdminApparatus } from './apparatusApi';
+import { canOpenRoute, appRoutes } from './shared/appRoutes';
 import { sessionReadScope } from './sessionReadScope';
 import { adminPaddonCreate, adminPaddonDelete, adminPaddonDetail, adminPaddonQrReport, adminPaddons } from './paddonManagementApi';
 import { adminPaddonAddWips, adminPaddonRemoveWip, adminPaddonRemoveWips } from './paddonItemsApi';
@@ -49,7 +50,8 @@ export function workerPaddonOwner(session: Session, apparatus: string, scope = s
   const reads = readsFor(session, scope);
   let mounted = false;
   const scopeCurrent = () => isSessionWitnessCurrent(witness) && scope === sessionReadScope(session) &&
-    session.profile.role === 'aparatchi' && (!apparatus || session.assigned_apparatus.includes(apparatus));
+    (session.profile.role === 'aparatchi' && (!apparatus || session.assigned_apparatus.includes(apparatus)) ||
+      ['admin','brigader'].includes(String(session.profile.role)) && canOpenRoute(session,appRoutes.apparatusPaddons));
   const current = () => mounted && scopeCurrent();
   const guard = (valid: () => boolean) => () => { if (!current() || !valid()) throw new WorkerPaddonRetired(); };
   const catalog = (valid: () => boolean, force = true) => reads.catalog.read(
@@ -63,8 +65,8 @@ export function workerPaddonOwner(session: Session, apparatus: string, scope = s
     remove: (code, valid) => mutate(valid, () => adminPaddonDelete(session, code, guard(valid))) });
   return { current, guard, catalog, cachedCatalog: () => scopeCurrent() ? reads.catalog.peek() : null,
     list, changed, mutate, mount(value: boolean) { mounted = value; },
-    detail(code: string) { const entry = cachedRead(reads.details, code.trim()); return new WorkerPaddonDetail({ code, current,
-      initial: scopeCurrent() ? entry.peek() : null,
+    detail(code: string, initial?: WorkerPaddonSnapshot | null) { const entry = cachedRead(reads.details, code.trim()); return new WorkerPaddonDetail({ code, current,
+      initial: scopeCurrent() ? initial ?? entry.peek() : null,
       read: (valid, force = true) => entry.read(() => adminPaddonDetail(session, code, { beforeSend: guard(valid) }), () => current() && valid(), force),
       add: (ids, valid) => mutate(valid, () => adminPaddonAddWips(session, { paddon_code: code, progress_batch_ids: ids }, () => current() && valid())),
       remove: (ids, single, valid) => mutate(valid, () => single ? adminPaddonRemoveWip(session, { paddon_code: code, progress_batch_id: ids[0] }, () => current() && valid())

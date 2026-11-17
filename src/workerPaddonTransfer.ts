@@ -1,3 +1,4 @@
+import { dartFutureWait } from './shared/dartFutureWait';
 import type { Session } from './auth';
 import type { AdminApparatus } from './apparatusApi';
 import { assignedPaddonApparatus } from './rezka/rezkaPaddonScope';
@@ -23,7 +24,8 @@ export class WorkerPaddonTransfer extends WorkerPaddonState<State> {
     try {
       const catalog = await this.deps.catalog(current, force); this.check(current);
       const assigned = assignedPaddonApparatus(catalog, this.deps.session.assigned_apparatus);
-      const pages = await Promise.all(assigned.map(async row => {
+      const administrative = ['admin','brigader'].includes(String(this.deps.session.profile.role));
+      const pages = administrative ? [await this.deps.list('',current)] : await dartFutureWait(assigned.map(async row => {
         this.check(current); const page = await this.deps.list(row.id, current); this.check(current); return page.filter(item => item.apparatus_id === row.id);
       })); this.check(current);
       const rows = pages.flat().filter(row => row.locked_at_unix == null), codes = new Set(rows.map(row => row.code));
@@ -32,7 +34,7 @@ export class WorkerPaddonTransfer extends WorkerPaddonState<State> {
       const target = this.state.target && codes.has(this.state.target.paddon.code) && this.state.target.paddon.code !== source
         ? this.state.target.paddon.code : rows.find(row => row.code !== source)?.code;
       const read = async (code?: string) => { if (!code) return null; this.check(current); const snapshot = await this.deps.read(code, current); this.check(current); return this.checked(snapshot, code); };
-      const [from, to] = await Promise.all([read(source), read(target)]); this.check(current);
+      const [from, to] = await dartFutureWait([read(source), read(target)] as const); this.check(current);
       this.update({ phase: 'ready', catalog, rows, source: from, target: to });
     } catch (error) { if (current()) this.update({ phase: 'error', error }); }
   }

@@ -277,3 +277,26 @@ The remaining 22 software routes are still in progress; this checkpoint is not c
 Both platform TypeScript checks pass. Expo lint: zero errors and one inherited AdminClosedHistoryOwner warning.
 No unit or device tests were run. Seven of this request's 25 routes are now composed; 18 remain in progress.
 The complete role and its text/surface audit are not yet marked done.
+
+## Remaining-routes checkpoint: apparatus operational pages
+
+Connected the five Source operational routes: apparatus queue (including original initial QR handoff), work instructions,
+daily work, paddons and paddon detail. Existing native worker screens/controllers are reused with the actual Brigader
+profile, original assignments and capability checks. The Source apparatus dock uses Home/Profile and its three original
+actions. The non-operator paddon list keeps Source's all-apparatus read, create/detail return, delete action sheet +
+confirmation and refresh flow; transfers use the non-operator all-pallet read. A validated scan seed is single-use and
+original-session scoped. Paddon detail retains existing scanner, WIP, selection, printing, transfer and back guards.
+
+Supporting shared edits: WorkerScreen's optional route-selection/initial-QR inputs; WorkerPaddon runtime admission of
+the real authorized Brigader; detail seed handoff; transfer's Source administrative branch; long-press support on the
+new shared Brigader row. Existing worker defaults remain the same.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| AppRouter apparatusQueue workerMode branch | BrigaderApparatusPages + WorkerScreen | original session/read flow composed | original session/read flow composed | Existing native worker views reused; device acceptance pending |
+| AparatchiWorkInstructionsScreen / AparatchiDailyWorkScreen | WorkerWorkInstructions / DailyWorkScreen + Brigader apparatus dock | existing native screens composed | existing native screens composed | Native controls; device acceptance pending |
+| AparatchiPaddonsScreen non-operator branch | BrigaderPaddons / brigaderPaddonListModel | list/create/delete/returns compared | list/create/delete/returns compared | Native controls; device acceptance pending |
+| AparatchiPaddonDetailScreen / transfer / scope | WorkerPaddonDetail / WorkerPaddonTransfer / WorkerPaddonDetailSeed | source role/seed/transfer branches composed | source role/seed/transfer branches composed | Existing native worker views reused; device acceptance pending |
+
+Both platform TypeScript checks pass; Expo lint has zero errors and the one inherited warning. No unit or device tests
+were run. Twelve of the requested 25 routes are composed; the other 13 are still in progress.
