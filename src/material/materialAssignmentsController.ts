@@ -5,6 +5,7 @@ import type { AdminRawMaterialAssignment } from '../workerRawMaterials';
 import { rawMaterialBarcodeFromQr } from '../shared/barcode/rawMaterialBarcode';
 import { productionMapAuthorizedOrderApparatus } from '../shared/productionMapAuthorizedApparatus';
 import type { RawMaterialAssignmentCandidate, RawMaterialAssignmentDiagnostic } from '../shared/rawMaterialAssignmentApi';
+import { dartFutureWait } from '../shared/dartFutureWait';
 
 export type AssignmentOrder = ReturnType<typeof productionMapSavedFromJson>;
 export type AssignmentLookup = Awaited<ReturnType<typeof adminRawMaterialLookup>>;
@@ -21,6 +22,7 @@ export type MaterialAssignmentState = {
 };
 export type MaterialAssignmentDependencies = {
   current(): boolean; assignedApparatus: readonly string[]; text(key: string): string;
+  apparatusFilterEnabled?:boolean; sourceLookupCommit?:boolean;
   orders(): Promise<AssignmentOrder[]>; assignments(): Promise<AdminRawMaterialAssignment[]>; apparatus(): Promise<AdminApparatus[]>;
   candidates(order: string, apparatus: string): Promise<RawMaterialAssignmentCandidate[]>;
   lookup(barcode: string): Promise<AssignmentLookup>;
@@ -76,7 +78,7 @@ export class MaterialAssignmentsController {
     const generation = ++this.loadGeneration;
     this.update({ loading: true, error: null });
     try {
-      const [orders, assignments, catalog] = await Promise.all([this.deps.orders(), this.deps.assignments(), this.deps.apparatus()]);
+      const [orders, assignments, catalog] = await dartFutureWait([this.deps.orders(), this.deps.assignments(), this.deps.apparatus()] as const);
       if (!this.current() || generation !== this.loadGeneration) return;
       const selectedOrderId = this.state.selectedOrderId || orders[0]?.map.id.trim() || '';
       this.update({ orders, assignments, catalog, selectedOrderId, loading: false }); this.syncApparatus();
@@ -84,6 +86,7 @@ export class MaterialAssignmentsController {
     } catch (error) { if (generation === this.loadGeneration) this.update({ error, loading: false }); }
   }
   private syncApparatus() {
+    if(this.deps.apparatusFilterEnabled===false){this.update({apparatusOptions:[],selectedApparatus:''});return;}
     const order = this.state.orders.find(row => row.map.id.trim() === this.state.selectedOrderId.trim());
     const apparatusOptions = order ? productionMapAuthorizedOrderApparatus(order.map, this.deps.assignedApparatus) : [];
     this.update({ apparatusOptions, selectedApparatus: apparatusOptions.includes(this.state.selectedApparatus)
@@ -125,6 +128,12 @@ export class MaterialAssignmentsController {
     const current = () => this.current() && generation === this.scanGeneration && barcode === this.state.barcode;
     try {
       const lookup = await this.deps.lookup(barcode); if (!current()) return;
+      if(this.deps.sourceLookupCommit){
+        let diagnostic:RawMaterialAssignmentDiagnostic|null=null,scanError='';const order=this.state.selectedOrderId.trim(),apparatus=this.state.selectedApparatus.trim(),request=++this.diagnosticGeneration;
+        if(!lookup.assignment&&order){try{diagnostic=await this.deps.diagnostic(barcode,order,apparatus);}catch(error){scanError=this.message(error,'production.assignment.diagnostic_failed');}}
+        if(!current())return;const diagnosticCurrent=request===this.diagnosticGeneration&&order===this.state.selectedOrderId.trim()&&apparatus===this.state.selectedApparatus.trim();
+        this.update({lookup,...(diagnosticCurrent?{diagnostic,scanError}:{})});if(!diagnosticCurrent&&!lookup.assignment)void this.refreshDiagnostic();return;
+      }
       this.update({ lookup });
       if (!lookup.assignment) await this.refreshDiagnostic();
     } catch (error) { if (current()) this.update({ scanError: this.message(error, 'raw_material.not_found'), diagnostic: null }); }

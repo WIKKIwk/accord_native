@@ -10,7 +10,7 @@ in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read
 | Module | Status | Logic | API + fixtures | Tests | iOS UI | Android UI | Notes |
 |---|---|---|---|---|---|---|---|
 | Brigader products/apparatus/notifications/operations/WIP | composed | ported/reused | source requests; no invented fixtures | user owns device tests | native | native | See checkpoints; full-role audit pending |
-| Remaining nine Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
+| Remaining six Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
 
 ## File mapping
 
@@ -21,6 +21,9 @@ in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read
 
 | lib/src/features/admin/presentation/admin_worker_settings_screen*.dart | src/brigader/brigaderWorkerSettingsModel.ts, BrigaderWorkerSettings*, BrigaderWorkerSurfaces.tsx, src/admin/workerSettingsApi.ts | composed |
 | lib/src/features/admin/presentation/admin_calculate_materials_screen*.dart | src/brigader/brigaderCalculateMaterialsModel.ts, BrigaderCalculateMaterials*, BrigaderSequenceList.tsx, src/admin/calculateMaterialCommands.ts | composed |
+
+| lib/src/features/admin/presentation/admin_raw_material_{rules,assignment}_screen*.dart | src/brigader/BrigaderRaw*, brigaderRawRulesModel.ts, src/admin/rawMaterialRulesApi.ts, existing Material assignment model | composed |
+| lib/src/features/admin/presentation/raw_material_scan_dialog*.dart | src/brigader/BrigaderRawScanDialog.tsx, BrigaderCameraViewport.tsx, brigaderCameraSession.ts | composed; plugin focus/zoom audit pending |
 
 ## Open parity items
 

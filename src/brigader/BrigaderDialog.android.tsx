@@ -23,7 +23,7 @@ function Window(props: BrigaderDialogProps & { observer: AdminPresentationWindow
   return <Modal transparent visible animationType="fade" statusBarTranslucent navigationBarTranslucent onShow={() => { if (window.owner.checkCurrent()) setShown(true); }} onRequestClose={dismiss}>
     <View style={{ flex: 1, backgroundColor: `rgba(0,0,0,${props.scrim ?? .54})` }}><View ref={marker} collapsable={false} nativeID={original.ticket} onLayout={capture} pointerEvents="none" style={{ position: 'absolute', width: 0, height: 0 }} />
       <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityRole="button" />
-      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: props.inset ?? 40, paddingVertical: 24 }} pointerEvents="box-none"><View style={{ width: '100%', maxWidth: props.maxWidth ?? 560, backgroundColor: colors.surfaceContainerHigh, borderRadius: 28, overflow: 'hidden' }}><BrigaderSurfaceContent draw={props.children} interactive={interactive} shown={shown} /></View></SafeAreaView>
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: props.fullScreen?0:props.inset ?? 40, paddingVertical: props.fullScreen?0:24 }} pointerEvents="box-none"><View style={{ width: '100%', flex:props.fullScreen?1:undefined, maxWidth: props.fullScreen?undefined:props.maxWidth ?? 560, backgroundColor: colors.surfaceContainerHigh, borderRadius: props.fullScreen?0:28, overflow: 'hidden' }}><BrigaderSurfaceContent draw={props.children} interactive={interactive} shown={shown} /></View></SafeAreaView>
     </View>
   </Modal>;
 }

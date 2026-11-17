@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { adminApparatus, readApparatus } from '../apparatusApi';
-import { isSessionWitnessCurrent, subscribeSessionWitness, sessionWitnessVersion } from '../auth';
+import { isSessionWitnessCurrent, subscribeSessionWitness, sessionWitnessVersion,type Session,type SessionWitness } from '../auth';
 import { adminRawMaterialAssignmentOrders } from '../gscale/gscaleAdminApi';
 import { preparationAssignMaterial } from '../preparation/preparationInventoryAssignment';
 import { adminRawMaterialLookup } from '../rawMaterialLookupApi';
@@ -13,26 +13,29 @@ import { adminRawMaterialAssignmentCandidates, adminRawMaterialAssignmentDiagnos
 import { rawMaterialAssignmentCanUnlink } from '../shared/rawMaterialAssignmentCommands';
 import { productionMapResponseError } from '../workerControlsApi';
 import { rawMaterialAssignment, type AdminRawMaterialAssignment } from '../workerRawMaterials';
-import { useMaterialContext } from './MaterialContext';
+import { useOptionalMaterialContext } from './MaterialContext';
 import { MaterialAssignmentsController, materialAssignmentKey, type AssignmentOrder } from './materialAssignmentsController';
 import { materialAssignmentAssignee, materialAssignmentTimestamp, materialDiagnosticMessage, materialScannedOrderTitle,
   materialScannedOrderLabel, materialScannedStatus, materialStockStatusLabel, materialScannedLockMessage } from './materialAssignmentPresentation';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeSnapshot = () => localeController.locale;
-export function useMaterialAssignments(initialBarcode = '') {
-  const { session, witness } = useMaterialContext();
+export type MaterialAssignmentBinding={session:Session;witness:SessionWitness;current:()=>boolean;groupScopeReady:boolean;apparatusFilterEnabled:boolean};
+export function useMaterialAssignments(initialBarcode = '',binding?:MaterialAssignmentBinding) {
+  const context=useOptionalMaterialContext(),owner=binding??context;
+  if(!owner)throw new Error('Material assignment owner unavailable');
+  const { session, witness } = owner;
   const params = useLocalSearchParams<{ barcode?: string; orderId?: string }>();
-  const barcode = initialBarcode || (typeof params.barcode === 'string' ? params.barcode : '');
-  const orderId = typeof params.orderId === 'string' ? params.orderId : '';
+  const barcode = initialBarcode || (!binding&&typeof params.barcode === 'string' ? params.barcode : '');
+  const orderId = !binding&&typeof params.orderId === 'string' ? params.orderId : '';
   const locale = useSyncExternalStore(subscribeLocale, localeSnapshot, localeSnapshot);
   useSyncExternalStore(subscribeSessionWitness, sessionWitnessVersion, sessionWitnessVersion);
-  const groupScopeReady = !!session.assigned_item_groups?.length;
+  const groupScopeReady = binding?.groupScopeReady??!!session.assigned_item_groups?.length;
   const controller = useMemo(() => {
-    const current = () => isSessionWitnessCurrent(witness) && session.profile.role === 'material_taminotchi' &&
+    const current = binding?()=>isSessionWitnessCurrent(witness)&&binding.current()&&session.token!=='test-mode-token'&&canOpenRoute(session,appRoutes.adminRawMaterialAssignments):() => isSessionWitnessCurrent(witness) && session.profile.role === 'material_taminotchi' &&
       session.token !== 'test-mode-token' && !!session.assigned_item_groups?.length && canOpenRoute(session, appRoutes.adminRawMaterialAssignments);
     const guard = () => { if (!current()) throw new Error('Akkaunt o‘zgargan. Sahifani qayta oching'); };
-    return new MaterialAssignmentsController({ current, assignedApparatus: session.assigned_apparatus,
+    return new MaterialAssignmentsController({ current, assignedApparatus: session.assigned_apparatus,apparatusFilterEnabled:binding?.apparatusFilterEnabled,sourceLookupCommit:!!binding,
       text: key => adminText(key, localeController.locale),
       orders: () => adminRawMaterialAssignmentOrders(session, guard),
       assignments: async () => {
@@ -49,7 +52,7 @@ export function useMaterialAssignments(initialBarcode = '') {
       assign: (order, code, apparatus) => preparationAssignMaterial(session, order, code, apparatus, guard),
       unlink: row => adminUnlinkRawMaterialAssignment(session, row.order_id, row.barcode, guard),
     }, barcode, orderId);
-  }, [session, witness, barcode, orderId]);
+  }, [session, witness, barcode, orderId,binding]);
   useEffect(() => { if (!groupScopeReady) return; controller.mount(barcode); return () => controller.unmount(); }, [controller, groupScopeReady, barcode]);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   useEffect(() => {

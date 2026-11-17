@@ -1,4 +1,4 @@
-import { Button, Checkbox, FlowRow, FilterChip, DropdownMenu, DropdownMenuItem, Column, OutlinedButton, Spacer, Switch, Row, RNHostView, useNativeState } from '@expo/ui/jetpack-compose';
+import { Button, CircularProgressIndicator, Checkbox, FlowRow, FilterChip, DropdownMenu, DropdownMenuItem, Column, OutlinedButton, Spacer, Switch, Row, RNHostView, useNativeState } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useEffect } from 'react';
 import { BaseHost } from '../components/BaseHost.android';
@@ -23,6 +23,7 @@ export function Action({ label, onPress, disabled, secondary }: { label: string;
 }
 export function Toggle({ label, value, onChange, disabled }: { label: string; value: boolean; onChange: (value: boolean) => void; disabled?: boolean }) { return <Row verticalAlignment="center" modifiers={[fillMaxWidth(), padding(0, 8, 0, 8)]}><Text modifiers={[weight(1)]}>{label}</Text><Switch value={value} onCheckedChange={onChange} enabled={!disabled} /></Row>; }
 export function Label({ children }: { children: string }) { return <Text style={{ typography: 'bodyMedium' }}>{children}</Text>; }
+export function InlineBusy(){return <CircularProgressIndicator/>;}
 export function Gap({ size = 12 }: { size?: number }) { return <Spacer modifiers={[height(size)]} />; }
 
 export function Select({ label, value, options, onChange, disabled }: { label: string; value: string | null; options: { value: string; label: string }[]; onChange: (value: string) => void; disabled?: boolean }) {

@@ -1,4 +1,4 @@
-import { Button, HStack, Picker, RNHostView, Text, TextField, Toggle as NativeToggle, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { Button, HStack, Picker, ProgressView, RNHostView, Text, TextField, Toggle as NativeToggle, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { buttonStyle, controlSize, disabled as inactive, foregroundStyle, frame, keyboardType, padding, pickerStyle, tag, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
 import { useEffect, type ReactNode,type ReactElement } from 'react';
 import { BaseHost } from '../components/BaseHost.ios';
@@ -11,6 +11,7 @@ export function Field({ label, value, onChange, numeric, multiline, disabled, er
 export function Action({ label, onPress, disabled, secondary }: { label: string; onPress: () => void; disabled?: boolean; secondary?: boolean }) { return <Button label={label} onPress={onPress} modifiers={[buttonStyle(secondary ? 'bordered' : 'borderedProminent'), controlSize('large'), inactive(!!disabled), frame({ maxWidth: Infinity, minHeight: 56 })]} />; }
 export function Toggle({ label, value, onChange, disabled }: { label: string; value: boolean; onChange: (value: boolean) => void; disabled?: boolean }) { return <NativeToggle label={label} isOn={value} onIsOnChange={onChange} modifiers={[inactive(!!disabled)]} />; }
 export function Label({ children }: { children: string }) { return <Text>{children}</Text>; }
+export function InlineBusy(){return <ProgressView/>;}
 export function Gap({ size = 12 }: { size?: number }) { return <VStack modifiers={[frame({ height: size })]}>{null}</VStack>; }
 
 export function Select({ label, value, options, onChange, disabled }: { label: string; value: string | null; options: { value: string; label: string }[]; onChange: (value: string) => void; disabled?: boolean }) {

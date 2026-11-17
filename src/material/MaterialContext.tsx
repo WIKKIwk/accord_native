@@ -16,3 +16,5 @@ export function useMaterialContext() {
   if (!value) throw new Error('Material session unavailable');
   return value;
 }
+/** Read the actual owner when a shared leaf also accepts an explicit role binding. */
+export function useOptionalMaterialContext(){return useContext(MaterialContext);}

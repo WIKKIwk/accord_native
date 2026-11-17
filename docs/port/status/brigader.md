@@ -340,3 +340,30 @@ segmented expandable cards and fields are reused by both platforms. No Material 
 
 Both platform TypeScript checks pass; Expo lint has zero errors and the inherited AdminClosedHistoryOwner warning.
 No unit or device tests were run. Sixteen of the requested 25 routes are composed; nine remain in progress.
+
+## Remaining-routes checkpoint: raw-material settings, rules and assignments
+
+Connected all three named routes to Source's same three-tab settings composition, retaining the assignments default
+and original initial-barcode argument. Rules retain canonical identity/hash/revision validation, tooling preservation,
+idempotent material-policy commit/read-back, alternatives, requirement sets, normalization and mandatory toggle.
+The assignment panel reuses the existing real role-neutral model/parsers and request functions through an explicit
+original Brigader binding. Its apparatus filter stays disabled for Brigader as in Source. List/QR tabs, candidate
+details, ambiguity choice, diagnostic races, assignment details, unlink confirmation and notices are composed natively.
+
+Added a full-screen real CameraView dialog with native window dismissal acknowledgement, QR/DataMatrix capture,
+viewport admission and Source manual entry. Camera readiness comes only from onCameraReady. Camera stop waits for
+the actual pausePreview acknowledgement and committed camera removal. Source plugin lens/auto-zoom/tap-focus behavior
+remains part of the final scanner adapter audit; device acceptance is pending, not inferred from TypeScript.
+
+Supporting Material edits accept an explicit real owner, disable only the Brigader apparatus filter and retain Source's
+lookup-after-diagnostic commit; defaults preserve existing Material screens. Shared reads now await all parallel results
+with Dart Future.wait semantics. No fake Material identity, permissions or hardware callback is used.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| admin_raw_material_rules_screen and parts | BrigaderRawSettingsContent / brigaderRawRulesModel / rawMaterialRulesApi / BrigaderRawGroupDialog | defaults, rules, requirements and surfaces compared | defaults, rules, requirements and surfaces compared | Native controls; device acceptance pending |
+| admin_raw_material_assignment_screen and all parts | BrigaderRawAssignments / useBrigaderRawAssignments / existing Material model and presentation helpers | real Brigader branch and closes composed | real Brigader branch and closes composed | Native controls; device acceptance pending |
+| RawMaterialScanDialog | BrigaderRawScanDialog / BrigaderCameraViewport / brigaderCameraSession | native camera/manual/dismiss composed | native camera/manual/dismiss composed | Scanner-plugin focus/zoom audit pending |
+
+Both platform TypeScript checks pass. Expo lint has zero errors and the inherited AdminClosedHistoryOwner warning.
+No unit or device tests were run. Nineteen of the requested 25 routes are composed; six remain in progress.
