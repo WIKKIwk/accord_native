@@ -18,24 +18,37 @@ internal class AdminSheetPortalRegistry {
   private val used = mutableSetOf<String>()
   private val parents = mutableMapOf<String, AdminSheetParent>()
   private val portals = mutableMapOf<String, AdminSheetPortalView>()
+  val retirement = AdminSheetRetirement()
   var destroyed = false; private set
   fun assertMain() { check(Looper.myLooper() == Looper.getMainLooper()) }
-  fun claim(ticket: String, portal: AdminSheetPortalView): Boolean {
-    assertMain(); if (destroyed || parents.containsKey(ticket) || !used.add(ticket)) return false
+  fun claim(ticket: String, parent: String, portal: AdminSheetPortalView): Boolean {
+    assertMain(); if (destroyed || parents.containsKey(ticket) || !used.add(ticket) || !retirement.claim(ticket, parent, portal.resourceIdentity)) return false
     portals[ticket] = portal; return true
   }
   fun claimParent(ticket: String, parent: AdminSheetParent): Boolean {
     assertMain(); if (destroyed) return false
     val original = parents[ticket]
     if (original != null && !original.same(parent)) return false
-    if (used.contains(ticket) && portals[ticket]?.ownsNativeParent(parent) != true) return false
+    if ((used.contains(ticket) || retirement.contains(ticket)) && portals[ticket]?.ownsNativeParent(parent) != true) return false
     parents[ticket] = original ?: parent; return true
   }
   fun hasChild(ticket: String?): Boolean = ticket != null && portals.values.any { it.configuration?.parentTicket == ticket && it.hasNativeIntent() }
   fun release(ticket: String?, original: AdminSheetPortalView) {
-    assertMain(); if (ticket == null || portals[ticket] !== original) return
+    assertMain(); if (ticket == null || portals[ticket] !== original || retirement.state(ticket, original.resourceIdentity)?.terminal != true) return
+    original.releaseNativeReferences()
     portals.remove(ticket); portals.values.toList().forEach { it.originalChildReleased() }
   }
+  fun retire(ticket: String, parent: String, intent: String, reply: AdminSheetRetirement.Reply) {
+    assertMain()
+    if (parents.containsKey(ticket) && !retirement.contains(ticket)) { reply.failure("presentation_is_parent_identity"); return }
+    retirement.request(ticket, parent, intent, reply)
+    if (retirement.matchesIntent(ticket, parent, intent)) portals[ticket]?.retireResources()
+  }
+  /** Destroyed namespace only. All public waiters have rejected; this never creates a receipt. */
+  fun abandonDestroyed(ticket: String?, original: AdminSheetPortalView) {
+    assertMain(); if (!destroyed || ticket == null || portals[ticket] !== original) return
+    original.releaseNativeReferences(); portals.remove(ticket); portals.values.toList().forEach { it.originalChildReleased() }
+  }
   fun invalidateActivity() { assertMain(); portals.values.toList().forEach { it.retireResources() } }
-  fun destroy() { assertMain(); if (destroyed) return; destroyed = true; invalidateActivity() }
+  fun destroy() { assertMain(); if (destroyed) return; destroyed = true; retirement.destroy(); invalidateActivity() }
 }

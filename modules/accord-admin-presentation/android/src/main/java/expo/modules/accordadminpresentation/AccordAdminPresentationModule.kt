@@ -20,6 +20,19 @@ class AccordAdminPresentationModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("AccordAdminPresentation")
+    AsyncFunction("sheetRetirementCapability") {
+      if (destroyed) null else mapOf("protocol" to 1, "platform" to "android", "guarantee" to "owned-original-sheet-retirement")
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("retireSheet") { presentation: String, parent: String, retirement: String, promise: Promise ->
+      if (destroyed) promise.reject("module_destroyed", "Presentation module destroyed", null)
+      else sheetRegistry().retire(presentation, parent, retirement, object : AdminSheetRetirement.Reply {
+        override fun success(value: AdminSheetRetirement.Receipt) {
+          promise.resolve(mapOf("protocol" to 1, "platform" to "android", "presentationTicket" to value.presentation,
+            "parentTicket" to value.parent, "retirementTicket" to value.retirement, "receiptID" to value.receiptID, "disposition" to value.disposition))
+        }
+        override fun failure(code: String) { promise.reject(code, "Original sheet retirement ended: $code", null) }
+      })
+    }.runOnQueue(Queues.MAIN)
     AsyncFunction("sheetCapability") {
       if (destroyed) null else mapOf("protocol" to 1, "platform" to "android", "guarantee" to "owned-android-presentation-and-dismissal", "viewName" to "AdminSheetPortal")
     }.runOnQueue(Queues.MAIN)

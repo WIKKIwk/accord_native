@@ -31,6 +31,7 @@ struct AdminSheetConfigurationSnapshot: Equatable {
 
 /** The anchor stays in the original parent's tree; Fabric children live in the owned controller. */
 @MainActor final class AdminSheetPortalView: ExpoView {
+  let resourceIdentity = NSObject()
   let onSheetEvent = EventDispatcher()
   var pendingConfiguration: AdminSheetConfiguration?
   var pendingAcceptedClose: AdminSheetAcceptedClose?
@@ -43,6 +44,11 @@ struct AdminSheetConfigurationSnapshot: Equatable {
   private weak var originalParent: UIViewController?
   private weak var originalWindow: UIWindow?
   private var controller: AdminSheetViewController?
+  // The module may deallocate during a pending UIKit transition. Keep its original cleanup
+  // owner alive until actual resource removal, independently of Source/module authority.
+  private var resourceRegistry: AdminSheetPortalRegistry?
+  private var resourcePresenter: UIViewController?
+  private var resourceWindow: UIWindow?
   private var children: [UIView] = []
   private var presentationStarted = false
   private var hadSuperview = false
@@ -63,7 +69,7 @@ struct AdminSheetConfigurationSnapshot: Equatable {
     if let configuration {
       guard configuration == snapshot, self.registry === registry else { invalidate("configuration_retargeted"); return }
     } else {
-      guard registry.claim(snapshot.presentationTicket, self), let transaction = AdminSheetTransaction(presentation: snapshot.presentationTicket, parent: snapshot.parentTicket) else {
+      guard registry.claim(snapshot.presentationTicket, snapshot.parentTicket, self), let transaction = AdminSheetTransaction(presentation: snapshot.presentationTicket, parent: snapshot.parentTicket) else {
         invalidate("presentation_ticket_reused"); return
       }
       configuration = snapshot; self.registry = registry; core = transaction
@@ -119,6 +125,7 @@ struct AdminSheetConfigurationSnapshot: Equatable {
       invalidate("original_parent_unavailable"); return
     }
     parentMarker = marker; originalParent = parent; originalWindow = window
+    resourcePresenter = parent; resourceWindow = window
     let owned = AdminSheetViewController(); controller = owned
     owned.modalPresentationStyle = .pageSheet; owned.isModalInPresentation = true
     guard let sheet = owned.sheetPresentationController else { invalidate("native_sheet_unavailable"); return }
@@ -144,14 +151,21 @@ struct AdminSheetConfigurationSnapshot: Equatable {
     owned.onDidDismiss = { [weak self, weak owned] transaction in
       guard let self, let owned, self.controller === owned else { return }; self.actualDismissed(owned, transaction: transaction)
     }
+    owned.onResourceWake = { [weak self] in self?.finishRetirement() }
     owned.loadViewIfNeeded(); owned.contentContainer.addSubview(children[0]); owned.contentContainer.isUserInteractionEnabled = false
     sheet.delegate = owned
     guard core.beginPresentation() else { invalidate("presentation_state_invalid"); return }
-    presentationStarted = true
     applyAcceptedClose()
     guard !invalidated else { return }
+    guard let originalRegistry = registry,
+          originalRegistry.retirement.issuePresentation(configuration.presentationTicket, resourceIdentity) else { retireResources(); return }
+    resourceRegistry = originalRegistry
+    presentationStarted = true
     parent.present(owned, animated: true) { [weak self, weak owned] in
-      guard let self, let owned, self.controller === owned, !self.invalidated else { return }
+      guard let self, let owned, self.controller === owned else { return }
+      // Resource completion must survive Source retirement while this native presentation was pending.
+      self.registry?.retirement.presentationCompleted(configuration.presentationTicket, self.resourceIdentity)
+      if self.invalidated { self.finishRetirement(); return }
       guard self.originalRelation(allowDetachedParent: false), owned.presentingViewController === parent,
             parent.presentedViewController === owned, owned.viewIfLoaded?.window === window else { self.invalidate("presentation_relation_changed"); return }
       self.emit(core.presentationCompleted()); self.updateInteraction(); self.tryDismiss()
@@ -186,7 +200,7 @@ struct AdminSheetConfigurationSnapshot: Equatable {
   private func tryDismiss() {
     guard !invalidated, core?.needsProgrammaticDismiss == true, !programmaticDismissStarted,
           let controller, let transaction = core?.transaction else { return }
-    guard originalRelation(allowDetachedParent: true), controller.presentedViewController == nil else { return }
+    guard originalRelation(allowDetachedParent: true), !controller.hasPresentedDescendant() else { return }
     // Never issue a second dismissal through an interactive transition still in progress.
     if controller.isBeingDismissed { return }
     guard controller.presentingViewController === originalParent else { invalidate("dismissal_relation_changed"); return }
@@ -197,9 +211,16 @@ struct AdminSheetConfigurationSnapshot: Equatable {
     }
   }
   private func actualDismissed(_ owned: AdminSheetViewController, transaction: String?) {
-    guard !invalidated, originalRelation(allowDetachedParent: true), owned.presentingViewController == nil,
-          originalParent?.presentedViewController !== owned, owned.presentedViewController == nil else { invalidate("dismissal_not_original_or_has_child"); return }
-    emit(core?.didDismiss(transaction: transaction) ?? []); updateInteraction(); owned.releaseTouches()
+    guard controller === owned, owned.presentingViewController == nil, !owned.hasPresentedDescendant() else { return }
+    if let ticket = configuration?.presentationTicket { registry?.retirement.dismissed(ticket, resourceIdentity) }
+    if !invalidated {
+      if originalRelation(allowDetachedParent: true), originalParent?.presentedViewController !== owned { emit(core?.didDismiss(transaction: transaction) ?? []); updateInteraction() }
+      else { invalidate("dismissal_not_original_or_has_child") }
+    }
+    if let ticket = configuration?.presentationTicket {
+      registry?.release(ticket, self)
+    }
+    owned.releaseTouches()
   }
   private func emit(_ values: [AdminSheetTransaction.Event]) {
     for value in values {
@@ -218,20 +239,25 @@ struct AdminSheetConfigurationSnapshot: Equatable {
     retireResources()
   }
   func retireResources() {
-    guard !invalidated else { return }; invalidated = true; emit(core?.retire() ?? [])
-    controller?.viewIfLoaded?.isUserInteractionEnabled = false; controller?.releaseTouches()
+    if !invalidated { invalidated = true; emit(core?.retire() ?? []) }
+    if let ticket = configuration?.presentationTicket { registry?.retirement.retireOwner(ticket, resourceIdentity) }
+    controller?.contentContainer.isUserInteractionEnabled = false
     finishRetirement()
   }
   func finishRetirement() {
-    guard invalidated, !retirementDismissStarted else { return }
+    guard invalidated, let ticket = configuration?.presentationTicket, let registry,
+          let state = registry.retirement.state(ticket, resourceIdentity) else { return }
+    if state.terminal { registry.release(ticket, self); return }
+    guard !retirementDismissStarted, !programmaticDismissStarted, registry.retirement.mayDismiss(ticket, resourceIdentity), let controller else { return }
     // Keep the original inert parent while a physical child is above it. No ancestor dismiss cascade.
-    guard controller?.presentedViewController == nil else { return }
+    guard !controller.hasPresentedDescendant(), !controller.isBeingPresented, !controller.isBeingDismissed,
+          registry.retirement.issueDismissal(ticket, resourceIdentity) else { return }
     retirementDismissStarted = true
-    let originalRegistry = registry, ticket = configuration?.presentationTicket
-    // Cleanup only. Neither this request nor its completion reports a successful Source close.
-    if let controller, controller.presentingViewController != nil {
-      controller.dismiss(animated: false) { [self, originalRegistry] in originalRegistry?.release(ticket, self) }
-    } else { originalRegistry?.release(ticket, self) }
+    // Only this own UIKit dismissal completion is a cleanup receipt. Absence is never one.
+    controller.dismiss(animated: false) { [self, controller] in actualDismissed(controller, transaction: nil) }
+  }
+  func releaseNativeReferences() {
+    controller?.releaseTouches(); controller = nil; resourcePresenter = nil; resourceWindow = nil; resourceRegistry = nil
   }
   func originalChildReleased() {
     if invalidated { finishRetirement() } else { tryDismiss() }

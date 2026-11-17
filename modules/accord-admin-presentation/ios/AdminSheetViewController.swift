@@ -7,6 +7,7 @@ import UIKit
   var onWillDismiss: (() -> String?)?
   var onDidDismiss: ((String?) -> Void)?
   var onCancelled: ((String) -> Void)?
+  var onResourceWake: (() -> Void)?
   private var touchHandler: UIGestureRecognizer?
   private var interactiveTransaction: String?
   let contentContainer = UIView()
@@ -17,6 +18,16 @@ import UIKit
     touchHandler = AccordAdminSheetAttachTouchHandler(view)
   }
   override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); contentContainer.frame = view.bounds; onLayout?(view.bounds.size) }
+  override func viewDidAppear(_ animated: Bool) { super.viewDidAppear(animated); onResourceWake?() }
+  /** Actual UIKit containment/presentation guard only; nil is never a dismissal receipt. */
+  func hasPresentedDescendant() -> Bool {
+    var pending: [UIViewController] = [self], visited = Set<ObjectIdentifier>()
+    while let current = pending.popLast() {
+      guard visited.insert(ObjectIdentifier(current)).inserted else { return true }
+      if current.presentedViewController != nil { return true }; pending.append(contentsOf: current.children)
+    }
+    return false
+  }
   func presentationControllerDidAttemptToDismiss(_ presentationController: UIPresentationController) {
     guard presentationController.presentedViewController === self else { return }; onAttempt?()
   }

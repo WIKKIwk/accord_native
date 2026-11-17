@@ -20,8 +20,15 @@ export type AdminOwnedSheetNativeProps = Readonly<{
 export type AdminOwnedSheetCapability = Readonly<{ status: 'unavailable' }> | Readonly<{
   status: 'available'; platform: AdminOwnedSheetPlatform; NativeView: ComponentType<AdminOwnedSheetNativeProps>;
 }>;
+type NativeRetirementMethods = {
+  sheetRetirementCapability?: () => Promise<unknown>;
+  retireSheet?: (presentation: string, parent: string, retirement: string) => Promise<unknown>;
+};
+type OriginalModule = Readonly<{ platform: AdminOwnedSheetPlatform; native: object;
+  readRetirement: NativeRetirementMethods['sheetRetirementCapability'] | null; retireSheet: NativeRetirementMethods['retireSheet'] | null }>;
 const unavailable: AdminOwnedSheetCapability = Object.freeze({ status: 'unavailable' });
 const issued = new WeakSet<object>();
+const originalModules = new WeakMap<object, OriginalModule>();
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const ticket = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9:._-]{0,159}$/.exec(value)?.[0] === value;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -31,19 +38,31 @@ const guarantee = { ios: 'owned-uikit-presentation-and-dismissal', android: 'own
 export async function readAdminOwnedSheetCapability(platform: string): Promise<AdminOwnedSheetCapability> {
   if (platform !== 'android' && platform !== 'ios') return unavailable;
   try {
-    const native = requireOptionalNativeModule<{ sheetCapability?: () => Promise<unknown> }>('AccordAdminPresentation');
+    const native = requireOptionalNativeModule<{ sheetCapability?: () => Promise<unknown> } & NativeRetirementMethods>('AccordAdminPresentation');
     const read = native?.sheetCapability;
     if (!native || typeof read !== 'function') return unavailable;
+    // Optional cleanup belongs to this SAME original show binding, including its function references.
+    // An old binary can still supply show/dismiss without supporting cleanup; do not adopt methods added later.
+    let readRetirement: NativeRetirementMethods['sheetRetirementCapability'] | null = null, retireSheet: NativeRetirementMethods['retireSheet'] | null = null;
+    try {
+      const retirement = native.sheetRetirementCapability, retire = native.retireSheet;
+      readRetirement = typeof retirement === 'function' ? retirement : null; retireSheet = typeof retire === 'function' ? retire : null;
+    } catch { /* Optional cleanup remains unavailable without changing the original show contract. */ }
     const value = await read.call(native);
     if (!object(value) || value.protocol !== 1 || value.platform !== platform || value.guarantee !== guarantee[platform] || value.viewName !== 'AdminSheetPortal') return unavailable;
     const NativeView = requireNativeView<AdminOwnedSheetNativeProps>('AccordAdminPresentation', 'AdminSheetPortal');
     if (typeof NativeView !== 'function') return unavailable;
-    const result = Object.freeze({ status: 'available' as const, platform, NativeView }); issued.add(result); return result;
+    const result = Object.freeze({ status: 'available' as const, platform, NativeView }); issued.add(result);
+    originalModules.set(result, Object.freeze({ platform, native, readRetirement, retireSheet })); return result;
   } catch { return unavailable; }
 }
 /** Reject copied/foreign capability DTOs. Even a genuine module capability never means a native sheet is shown. */
 export function isAdminOwnedSheetCapability(value: unknown): value is Extract<AdminOwnedSheetCapability, { status: 'available' }> {
   return object(value) && issued.has(value);
+}
+/** Internal protocol composition uses the ORIGINAL captured module, never a fresh/latest global import. */
+export function adminOwnedSheetOriginalModule(value: unknown): OriginalModule | null {
+  return object(value) ? originalModules.get(value) ?? null : null;
 }
 
 /** Capture the exact original native configuration before mounting. Unknown Source geometry stays unavailable. */

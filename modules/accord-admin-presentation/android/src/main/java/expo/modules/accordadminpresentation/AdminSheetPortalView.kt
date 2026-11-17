@@ -3,6 +3,7 @@ package expo.modules.accordadminpresentation
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Looper
+import android.os.Handler
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
@@ -21,6 +22,8 @@ import kotlin.math.roundToInt
 /** A logical Fabric anchor; its ONE original React child is physically inside the owned Dialog. */
 @SuppressLint("ViewConstructor")
 internal class AdminSheetPortalView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  val resourceIdentity = Any()
+  private val cleanupQueue = Handler(Looper.getMainLooper())
   private val onSheetEvent by EventDispatcher<Map<String, Any?>>()
   var pendingConfiguration: AdminSheetConfiguration? = null
   var pendingAcceptedClose: AdminSheetAcceptedClose? = null
@@ -36,6 +39,7 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
   private var ownWindow: Window? = null
   private var ownDecor: View? = null
   private var ownToken: android.os.IBinder? = null
+  private var resourceWindowToken: android.os.IBinder? = null
   private var originalFabricTag: Int? = null
   private var extraWindowNotified = false
   private var actualDetach = false
@@ -52,10 +56,20 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
   private var lastWidth = 0
   private var lastHeight = 0
   private val nativeAttachment = object : OnAttachStateChangeListener {
-    override fun onViewAttachedToWindow(view: View) { if (view === ownDecor) acknowledgeShown() }
+    override fun onViewAttachedToWindow(view: View) {
+      if (view !== ownDecor || ownWindow?.decorView !== view) return
+      val token = view.windowToken ?: return
+      if (resourceWindowToken != null && resourceWindowToken !== token) return
+      resourceWindowToken = token
+      configuration?.presentationTicket?.let { registry?.retirement?.attached(it, resourceIdentity) }
+      if (invalidated) cleanupQueue.post { finishRetirement() } else acknowledgeShown()
+    }
     override fun onViewDetachedFromWindow(view: View) {
-      if (view !== ownDecor || invalidated) return
-      if (shownAcknowledged) actualDetach = true else invalidate("owned_window_detached_before_show_ack")
+      if (view !== ownDecor || resourceWindowToken == null || view.windowToken !== resourceWindowToken) return
+      actualDetach = true
+      configuration?.presentationTicket?.let { registry?.retirement?.detached(it, resourceIdentity) }
+      if (invalidated) finishCleanup()
+      else if (!shownAcknowledged) invalidate("owned_window_detached_before_show_ack")
     }
   }
   private val contentAttachment = object : OnAttachStateChangeListener {
@@ -70,7 +84,7 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
     if (configuration != null) {
       if (configuration != snapshot || registry !== original) { invalidate("configuration_retargeted"); return }
     } else {
-      if (!original.claim(snapshot.presentationTicket, this)) { invalidate("presentation_ticket_reused"); return }
+      if (!original.claim(snapshot.presentationTicket, snapshot.parentTicket, this)) { invalidate("presentation_ticket_reused"); return }
       configuration = snapshot; registry = original; core = AdminSheetTransaction(snapshot.presentationTicket, snapshot.parentTicket)
     }
     tryPresent(); applyAcceptedClose(); updateInteraction()
@@ -116,8 +130,12 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
   }
   private fun originalParentCurrent(): Boolean = originalParent?.let { original -> readParent()?.let(original::same) } == true
   private fun tryPresent() {
-    assertMain(); if (invalidated || dialog != null || child == null || !isAttachedToWindow || stateWrapper == null) return
+    // Resource reference release does not create a new presentation lifetime. A late Source C
+    // still belongs to the original core after physical removal; never allocate/reparent again.
+    assertMain(); if (invalidated || showIssued || dialog != null || child == null || !isAttachedToWindow || stateWrapper == null) return
     val config = configuration ?: return
+    val resource = registry?.retirement?.state(config.presentationTicket, resourceIdentity) ?: return
+    if (resource.issued || resource.terminal || resource.retiring) return
     val original = readParent() ?: run { invalidate("original_parent_unavailable"); return }
     val reactContext = context as? ThemedReactContext ?: run { invalidate("original_fabric_context_required"); return }
     if (UIManagerHelper.getSurfaceId(reactContext) <= 0 || child?.context !== context) { invalidate("foreign_fabric_surface"); return }
@@ -173,16 +191,19 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
     }
     owned.setOnDismissListener { actual ->
       if (actual !== owned || dialog !== owned) return@setOnDismissListener
+      registry?.retirement?.dismissed(config.presentationTicket, resourceIdentity)
       notifyWindowDestroyed()
       if (invalidated) { finishCleanup(); return@setOnDismissListener }
       if (!originalParentCurrent() || owned.window !== ownWindow || !actualDetach || ownDecor?.isAttachedToWindow != false || registry?.hasChild(config.presentationTicket) == true) {
         invalidate("dismissal_not_original_or_has_child"); return@setOnDismissListener
       }
       emit(core?.didDismiss(core?.transaction()) ?: emptyList()); updateInteraction()
+      finishCleanup()
     }
     if (core?.beginPresentation() != true) { invalidate("presentation_state_invalid"); return }
     applyAcceptedClose(); updateInteraction()
     if (!invalidated) {
+      if (registry?.retirement?.issuePresentation(config.presentationTicket, resourceIdentity) != true) { retireResources(); return }
       showIssued = true; showCallActive = true
       try { owned.show() } catch (_: RuntimeException) { invalidate("native_present_failed") }
       finally { showCallActive = false; if (invalidated) finishRetirement() }
@@ -207,6 +228,7 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
     }
     val reactContext = context as? ThemedReactContext ?: run { invalidate("original_fabric_context_required"); return }
     shownAcknowledged = true; ownToken = token; extraWindowNotified = true
+    registry?.retirement?.presentationCompleted(configuration!!.presentationTicket, resourceIdentity)
     reactContext.onExtraWindowCreate(ownWindow!!)
     if (invalidated) return
     emit(core?.presentationCompleted() ?: emptyList()); updateInteraction(); tryDismiss()
@@ -246,7 +268,7 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
     dialog?.behavior?.isDraggable = nativeGesture
   }
   fun ownsNativeParent(value: AdminSheetParent): Boolean = !invalidated && core?.mayInteract() == true && value.root.get() === ownDecor && value.rootToken === ownToken && value.activity.get() === originalParent?.activity?.get()
-  fun hasNativeIntent(): Boolean = dialog != null && core?.physicalDismissed() != true && !cleanupFinished
+  fun hasNativeIntent(): Boolean = configuration?.presentationTicket?.let { registry?.retirement?.state(it, resourceIdentity)?.terminal == false } == true
   fun originalChildReleased() { if (invalidated) finishRetirement() else tryDismiss() }
   private fun emit(events: List<AdminSheetTransaction.Event>) {
     events.forEach { send(it.kind, mapOf("transaction" to it.transaction, "acceptedClose" to it.acceptedClose, "reason" to it.reason)) }
@@ -261,29 +283,42 @@ internal class AdminSheetPortalView(context: Context, appContext: AppContext) : 
     retireResources()
   }
   fun retireResources() {
-    assertMain(); if (invalidated) return; invalidated = true; emit(core?.retire() ?: emptyList()); updateInteraction(); finishRetirement()
+    assertMain()
+    if (!invalidated) { invalidated = true; emit(core?.retire() ?: emptyList()) }
+    configuration?.presentationTicket?.let { registry?.retirement?.retireOwner(it, resourceIdentity) }
+    updateInteraction(); finishRetirement()
   }
   private fun finishRetirement() {
-    if (!invalidated || cleanupStarted || showCallActive || registry?.hasChild(configuration?.presentationTicket) == true) return
-    cleanupStarted = true
-    // Resource cleanup never emits didDismiss/closeJoined. Keep original parents until owned children release.
-    val original = dialog
-    if (original == null || !showIssued) finishCleanup()
-    else {
-      // show() can have registered the window before its first attachment/traversal. Always dismiss
-      // that owned Dialog, even while attachment is unknown. No intent/snapshot becomes a public ACK.
-      original.releaseResources()
-      // Private resource release only: a failed/never-attached show may have no OnDismiss callback.
-      if (!original.isShowing && ownDecor?.isAttachedToWindow != true) finishCleanup()
+    if (!invalidated || showCallActive) return
+    val ticket = configuration?.presentationTicket ?: return
+    val state = registry?.retirement?.state(ticket, resourceIdentity) ?: return
+    if (state.terminal) { finishCleanup(); return }
+    if (registry?.destroyed == true) {
+      if (registry?.hasChild(ticket) == true) return
+      // Namespace destruction has already rejected every public waiter. Private best-effort
+      // cleanup still cancels a registered pending show even if no attachment can ever arrive.
+      if (showIssued) try { dialog?.releaseResources() } catch (_: RuntimeException) {}
+      child?.removeOnAttachStateChangeListener(contentAttachment); ownDecor?.removeOnAttachStateChangeListener(nativeAttachment)
+      notifyWindowDestroyed(); registry?.abandonDestroyed(ticket, this); return
     }
+    if (cleanupStarted || registry?.hasChild(ticket) == true || registry?.retirement?.mayDismiss(ticket, resourceIdentity) != true) return
+    val original = dialog ?: return
+    if (registry?.retirement?.issueDismissal(ticket, resourceIdentity) != true) return
+    cleanupStarted = true
+    // No attachment/absence/isShowing snapshot acknowledges removal. A not-yet-attached issued
+    // show remains pending until actual attach, then this owned dismiss follows the traversal.
+    try { original.releaseResources() } catch (_: RuntimeException) { /* Only real OnDismiss+detach can complete. */ }
   }
   private fun finishCleanup() {
-    if (cleanupFinished) return; cleanupFinished = true
+    val ticket = configuration?.presentationTicket ?: return
+    if (cleanupFinished || registry?.retirement?.state(ticket, resourceIdentity)?.terminal != true) return
+    cleanupFinished = true
     child?.removeOnAttachStateChangeListener(contentAttachment)
     notifyWindowDestroyed()
     ownDecor?.removeOnAttachStateChangeListener(nativeAttachment)
     registry?.release(configuration?.presentationTicket, this)
   }
+  fun releaseNativeReferences() { dialog = null; ownWindow = null; ownDecor = null; root = null }
   private fun notifyWindowDestroyed() {
     if (extraWindowNotified) { extraWindowNotified = false; ownWindow?.let { (context as? ThemedReactContext)?.onExtraWindowDestroy(it) } }
   }
