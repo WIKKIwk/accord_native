@@ -47,6 +47,7 @@ test('formula library uses the shared search and virtual list with working row a
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   for (const screen of ['PreparationFormulaOrdersScreen', 'PreparationFormulaCatalogScreen']) {
     const wrapper = mod.exports[screen](), tree = wrapper.type(wrapper.props);
+    assert.equal(nodes(tree, node => node.type === 'PreparationDock').length, screen === 'PreparationFormulaCatalogScreen' ? 1 : 0);
     const header = nodes(tree, node => node.type === 'OrdersHeader')[0], list = nodes(tree, node => node.type === 'OrdersList')[0];
     assert.ok(header && list); assert.equal(header.props.search, '');
     header.props.onSearchChange('F1'); assert.deepEqual(calls.at(-1), ['query', 'F1']);

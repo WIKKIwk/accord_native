@@ -105,7 +105,7 @@ function Library({ mode }: { mode: 'sets' | 'catalog' }) {
         onPress={() => router.push({ pathname: '/android-preparation/set-detail', params: { data: JSON.stringify({ set, recipes: state.controller.recipesFor(set) }) } } as unknown as Href)}
         onLongPress={() => actions(set.set_id, undefined, () => { void renameSet(set); })} />)}
     </OrdersList>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    {mode === 'catalog' && <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>}
     <PreparationNotice message={notice.message} /></View>{renameTarget ? <VariantNameDialog initial={renameTarget.name} busy={renaming} error={renameError}
     clearError={() => setRenameError(null)} submit={name => void renameRecipe(name)} cancel={() => setRenameTarget(null)} /> : null}</>;
 }

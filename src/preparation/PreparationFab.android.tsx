@@ -46,7 +46,7 @@ export function PreparationFabProvider({ children, sharedDock }: { children: Rea
   const scope = fabScope(pathname), entry = scope ? entries[scope] : undefined;
   const path = pathname.replace(/\/+$/, '');
   const showSharedDock = scope === 'home' || scope === 'warehouse' || path === '/android-preparation/sequence'
-    || path === '/android-preparation/production' || path === '/android-preparation/materials';
+    || path === '/android-preparation/production' || path === '/android-preparation/materials' || path === '/android-preparation/sets';
   const visible = scope !== null && (entry?.visible ?? true);
   const enabled = visible && !!entry?.enabled && entry.actions.length > 0;
   return <Context.Provider value={context}><View style={styles.root}>

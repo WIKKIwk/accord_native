@@ -21,7 +21,7 @@ function load(mocks) {
   return mod.exports;
 }
 
-test('home, orders, production, warehouse and materials keep the same dock outside the screen stack', () => {
+test('home and preparation lists keep the same dock outside the screen stack', () => {
   let pathname = '/android-preparation', cursor = 0;
   const state = [];
   const react = {
@@ -70,6 +70,12 @@ test('home, orders, production, warehouse and materials keep the same dock outsi
   assert.equal(materials[1].type, home[1].type);
   assert.equal(materials[1].key, home[1].key);
   assert.equal(materials[1].props.children.type, home[1].props.children.type);
+
+  pathname = '/android-preparation/sets';
+  const sets = children(render());
+  assert.equal(sets[1].type, home[1].type);
+  assert.equal(sets[1].key, home[1].key);
+  assert.equal(sets[1].props.children.type, home[1].props.children.type);
 
   pathname = '/android-preparation/history';
   assert.equal(children(render())[1], null);
