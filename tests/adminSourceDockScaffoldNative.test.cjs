@@ -9,6 +9,7 @@ function fixture(t, options) {
     './AdminCreateHubProvider': { AdminCreateHubSourceLayout: 'ActualSourceLayout.Provider' },
     './AdminShellSourceWindowLayoutContext': { AdminShellSourceWindowLayout: 'ActualOriginalWindowShellScope' },
     './AdminSourceSceneScaffoldContext': { AdminSourceSceneScaffoldProvider: 'ActualSceneScaffoldScope' },
+    './AdminSourceCreateHubHost': { AdminSourceCreateHubHost: 'ActualHeldLocalPrimary' },
     './useAdminSourceDockScaffold': { useAdminSourceDockScaffold: props => ({ owner: f.scaffoldOwner, state: f.scaffoldOwner.getSnapshot(), matches: f.scaffoldOwner.matches(props) }) } });
   const render = () => r.render(() => exports.AdminSourceDockScaffold(f.props));
   const id = (tree, value) => s.views.nodes(tree, node => node.props.testID === value)[0];

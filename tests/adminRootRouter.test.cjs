@@ -107,3 +107,45 @@ test('original container/Source ancestor are shallow-captured per identity and n
   const page = f.owner.openPage(request), binding = f.bind(page); request.renderSceneContainer = () => { throw Error('replacement page'); }; request.sourceScaffoldAncestor = {};
   assert.equal(f.owner.container(binding).render, original); assert.equal(f.owner.container(binding).sourceScaffoldAncestor, ancestor); f.owner.dispose();
 });
+test('Source/account retirement retains immutable original descriptor/container/native mapping until genuine resource release', async () => {
+  const f = s.fixture('ios'); f.rootReady(); const page = f.open(), binding = f.bind(page), native = f.shown(page), root = f.owner.resourceRootScene();
+  const scene = f.owner.resourceScene(binding), container = f.owner.container(binding), actions = f.actions.length;
+  f.account(false); assert.equal(f.owner.current(), false); assert.equal(await page.closed, 'retired');
+  assert.equal(f.owner.rootScene(), null); assert.equal(f.owner.scene(binding), null); assert.equal(f.owner.readCurrent(binding), false); assert.equal(f.owner.hasScene(binding), false);
+  assert.equal(f.owner.resourceRootScene(), root); assert.equal(f.owner.resourceScene(binding), scene); assert.equal(f.owner.container(binding).render, container.render); assert.equal(f.owner.nativeParent(binding), page.native);
+  assert.equal(f.owner.canInteract(binding), false); f.owner.requestBack(binding); assert.equal(f.actions.length, actions);
+  assert.equal(f.chain.nativeResourceRemoved(page.native, native.identity), true); assert.equal(f.owner.resourceScene(binding), null); assert.equal(f.owner.nativeParent(binding), null);
+  assert.equal(f.chain.nativeResourceRemoved(f.chain.root, f.rootNative), true); assert.equal(f.owner.resourceRootScene(), null); assert.equal(await page.closed, 'retired');
+});
+test('Router split epochs synchronously publish real scene/member facts and forward original chain authority/resource changes', () => {
+  const f = s.fixture('ios', { attachBase: false }), binding = f.owner.rootScene().binding; let source = 0, resource = 0;
+  f.owner.subscribeSource(() => source++); f.owner.subscribeResource(() => resource++);
+  const originalSource = f.owner.sourceStamp(), originalResource = f.owner.resourceStamp(), stop = f.owner.attachScene(binding);
+  assert.equal(f.owner.sourceStamp(), originalSource); assert.notEqual(f.owner.resourceStamp(), originalResource); assert.equal(source, 0); assert.equal(resource, 1);
+  const attached = f.owner.resourceStamp(); stop(); assert.notEqual(f.owner.resourceStamp(), attached); assert.equal(resource, 2);
+  f.rootReady(); assert.equal(source, 0); const detach = f.owner.attachScene(binding), beforeOpen = f.owner.sourceStamp(); const page = f.open(); assert.ok(page); assert.notEqual(f.owner.sourceStamp(), beforeOpen);
+  const sourceBeforeRetire = f.owner.sourceStamp(), resourceBeforeRetire = f.owner.resourceStamp(); f.chain.retire();
+  assert.notEqual(f.owner.sourceStamp(), sourceBeforeRetire); assert.notEqual(f.owner.resourceStamp(), resourceBeforeRetire); detach(); f.owner.dispose();
+});
+test('original Source lifetime survives transient renderer/scene absence while actual admission and commands remain held', async () => {
+  const f = s.fixture('ios'); f.rootReady(); const page = f.open(), binding = f.bind(page), root = f.owner.rootScene().binding;
+  const stop = f.owner.attachScene(binding); f.detachRenderer(); stop(); f.stopBaseScene();
+  assert.equal(f.owner.sourceCurrent(root), true); assert.equal(f.owner.sourceCurrent(binding), true); assert.equal(f.owner.hasScene(binding), false); assert.equal(f.owner.readCurrent(binding), false);
+  assert.equal(f.owner.sourceCurrent({ ...binding }), false); const render = f.owner.attachRenderer(f.render), scene = f.owner.attachScene(binding);
+  assert.equal(f.owner.sourceCurrent(binding), true); assert.equal(f.owner.hasScene(binding), true); scene(); render(); f.account(false);
+  assert.equal(f.owner.sourceCurrent(binding), false); assert.equal(f.owner.sourceCurrent(root), false); await s.flush(); assert.equal(await page.closed, 'retired');
+});
+test('final original Source lifetime checks reject actual retirement inside captured request or navigation callbacks', () => {
+  const f = s.fixture('ios'); f.rootReady(); let retire = false, page;
+  page = f.open({ isCurrent: () => { if (retire) f.chain.cancel(page.native); return true; } }); const binding = f.bind(page); retire = true;
+  assert.equal(f.owner.sourceCurrent(binding), false); assert.equal(f.chain.sourceOutcome(page.native), 'retired'); f.owner.dispose();
+  const g = s.fixture('ios'), root = g.owner.rootScene().binding, state = g.navigation.getState(); g.navigation.getState = () => { g.owner.dispose(); return state; };
+  assert.equal(g.owner.sourceCurrent(root), false);
+});
+test('native-close phase publishes Source epoch/lifetime rejection even when original POP is a no-op and emits no frame', async () => {
+  const f = s.fixture('ios'); f.rootReady(); const page = f.open(), binding = f.bind(page), stop = f.owner.attachScene(binding), native = f.shown(page); let result;
+  page.closed.then(value => { result = value; }); f.navigation.dispatch = action => { f.actions.push(action); }; f.owner.closePage(page); const observed = [];
+  f.owner.subscribeSource(() => observed.push(f.owner.sourceCurrent(binding))); native.removed(); const beforePhase = f.owner.sourceStamp(); await s.flush();
+  assert.notEqual(f.owner.sourceStamp(), beforePhase); assert.equal(observed.includes(false), true); assert.equal(f.owner.sourceCurrent(binding), false);
+  assert.equal(f.state().routes.some(route => route.key === binding.routeKey), true); assert.equal(result, undefined); stop(); f.owner.dispose(); assert.equal(await page.closed, 'retired');
+});

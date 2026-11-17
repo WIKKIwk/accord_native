@@ -50,6 +50,7 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} parent-first full Provider replay waits for real renderer and Source commits, revokes old scope generation and registers fresh genuine membership`, async t => {
     const f = s.nativeFixture(platform); t.after(f.cleanup); f.render(); await s.flush(); f.renderDirty(); const old = f.model(), generation = f.scope().getSnapshot().generation, ticket = f.originalScaffold().ticket;
     f.replay(); f.renderDirty(); await s.flush(); f.renderDirty(); assert.equal(f.scope().getSnapshot().phase, 'active'); assert.notEqual(f.scope().getSnapshot().generation, generation);
+    assert.equal(f.sourceOwner().sourceMembership().retired, false);
     assert.equal(old.current(), false); assert.equal(f.model().current(), true); assert.equal(f.root.owner.hasScene(f.binding), true); assert.equal(f.originalScaffold().ticket, ticket); assert.equal(f.counts.create, 1);
   });
   test(`${platform} copied expected Root binding rejects before any actual domain hook or API read`, t => {

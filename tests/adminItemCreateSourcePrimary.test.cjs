@@ -36,6 +36,7 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} actual parent-first full replay revokes original transport and acquires one fresh committed page ticket`, async t => {
     const f = s.nativeFixture(platform); t.after(f.cleanup); const old = await start(f); await measure(f); const oldModel = f.model();
     f.replay(); f.renderDirty(); await s.flush(); f.renderDirty(); const fresh = f.hub().primary().ticket; assert.notEqual(fresh, old); assert.equal(f.hub().primaryFor(old), null); assert.equal(f.hub().open(old), false); assert.equal(oldModel.current(), false); assert.equal(f.model().current(), true);
+    assert.equal(f.sourceOwner().sourceMembership().retired, false);
     await measure(f); assert.equal(f.sourceOwner().getSnapshot().target.primary.ticket, fresh); assert.equal(f.counts.create, 1);
   });
   test(`${platform} real locale/geometry updates keep SAME ticket while missing host and queued stale Move events reject new intent`, async t => {

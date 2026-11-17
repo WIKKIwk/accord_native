@@ -14,6 +14,11 @@ export type AdminSourceDockHubRequest = Readonly<{
   /** New footer-primary intent requires the genuine page top plus known geometry. */
   canOpenPrimary: () => boolean;
 }>;
+/** Actual read snapshot for a held local renderer; carries no global placement or command permission. */
+export type AdminSourceDockLocalPrimary = Readonly<{
+  controller: AdminCreateHubController; state: AdminCreateHubSnapshot; primary: AdminSourceDockPrimary; sizing: AdminSourceDockSizing;
+  sourceGeneration: number; targetIdentity: object; windowIdentity: object;
+}>;
 /** Required actual SAME global Hub/native-window placement. No default, inferred page focus or per-page overlay owner exists here. */
 export type AdminSourceDockHubNativeHost = Readonly<{
   identity: object;

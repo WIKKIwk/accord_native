@@ -29,22 +29,26 @@ function Carrier(props: CarrierProps) {
   useLayoutEffect(() => chain.attachNative(parent, original.identity, rootIdentity) ?? undefined, [chain, parent, original, rootIdentity]);
   const options = useMemo(() => ({ identity: original.identity, observer: original.observer, ticket: original.ticket,
     isCurrent: () => chain.hasNativeLease(parent, original.identity), isClosing: () => chain.shouldRemove(parent),
-    onDetached: () => { if (!root) chain.nativeRemoved(parent as AdminRootPresentationEntry, original.identity); },
-  }), [chain, parent, original, root]);
-  const closing = !root && chain.shouldRemove(parent), window = useAdminPresentationWindow(options, closing);
+    onDetached: () => { chain.nativeRemoved(parent, original.identity); },
+    resource: { isCurrent: () => chain.hasNativeResource(parent, original.identity), onDetached: () => {
+      if (!chain.nativeResourceRemoved(parent, original.identity)) chain.nativeFailed(parent, original.identity);
+    } },
+  }), [chain, parent, original]);
+  const closing = chain.shouldRemove(parent), window = useAdminPresentationWindow(options, closing);
   useLayoutEffect(() => {
     if (window.state.phase === 'armed') chain.nativeArmed(parent, original.identity);
     else if (window.state.phase === 'failed') chain.nativeFailed(parent, original.identity);
   }, [chain, parent, original, window.state.phase]);
   if (!chain.hasNativeLease(parent, original.identity)) return null;
   const interactive = chain.canInteract(parent), retained = !root && chain.retained(parent as AdminRootPresentationEntry);
+  const retired = chain.isRetired(parent);
   return <Modal {...original.presentation} visible={window.state.present} allowSwipeDismissal={false}
     onShow={() => { chain.nativeShown(parent, original.identity); }}
     onRequestClose={() => {
       if (!root) chain.nativeRequestClose(parent as AdminRootPresentationEntry, original.identity);
       else if (chain.canInteract(parent)) { try { void Promise.resolve(original.onRequestClose?.()).catch(() => {}); } catch {} }
     }}>
-    <View style={styles.fill} pointerEvents={interactive ? 'auto' : 'none'} accessibilityElementsHidden={!interactive} importantForAccessibility={interactive ? 'auto' : 'no-hide-descendants'}>
+    <View style={[styles.fill, retired && styles.retired]} pointerEvents={interactive ? 'auto' : 'none'} accessibilityElementsHidden={!interactive} importantForAccessibility={interactive ? 'auto' : 'no-hide-descendants'}>
       <View ref={marker} collapsable={false} nativeID={original.ticket} pointerEvents="none" style={styles.marker}
         onLayout={() => { const tag = findNodeHandle(marker.current); if (typeof tag === 'number') window.owner.markerTag(tag); }} />
       {original.renderContent(<AdminRootNativeParentSlot chain={chain} parent={parent} nativeIdentity={original.identity}><Outlet chain={chain} parent={parent} windowObserver={original.observer} /></AdminRootNativeParentSlot>, Object.freeze({ interactive, retained, retired: chain.isRetired(parent), canInteract: original.canInteract, isCurrent: original.isCurrent }))}
@@ -61,4 +65,4 @@ export function AdminRootPresentationRootCarrier(props: AdminRootPresentationRoo
   if (!presentation || typeof props.renderContent !== 'function' || typeof props.onRequestClose !== 'function') throw TypeError('Original Root content and native presentation are required');
   return <Carrier key={chain.root.id} chain={chain} parent={chain.root} rootIdentity={props.rootIdentity} presentation={presentation} renderContent={props.renderContent} onRequestClose={props.onRequestClose} windowObserver={windowObserver} />;
 }
-const styles = StyleSheet.create({ fill: { flex: 1 }, marker: { position: 'absolute', width: 1, height: 1, opacity: 0 } });
+const styles = StyleSheet.create({ fill: { flex: 1 }, retired: { opacity: 0 }, marker: { position: 'absolute', width: 1, height: 1, opacity: 0 } });

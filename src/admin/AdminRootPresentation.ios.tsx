@@ -24,16 +24,17 @@ function Carrier(props: CarrierProps) {
   useLayoutEffect(() => chain.attachNative(parent, original.identity, rootIdentity) ?? undefined, [chain, parent, original, rootIdentity]);
   if (!chain.hasNativeLease(parent, original.identity)) return null;
   const interactive = chain.canInteract(parent), retained = !root && chain.retained(parent as AdminRootPresentationEntry);
-  return <Modal {...original.presentation} visible={root || !chain.shouldRemove(parent)} allowSwipeDismissal={false}
+  const retired = chain.isRetired(parent);
+  return <Modal {...original.presentation} visible={!chain.hasNativeRemovalProof(parent, original.identity) && !chain.shouldRemove(parent)} allowSwipeDismissal={false}
     onShow={() => { chain.nativeShown(parent, original.identity); }}
     onDismiss={() => {
-      if (root || !chain.nativeRemoved(parent as AdminRootPresentationEntry, original.identity)) chain.nativeFailed(parent, original.identity);
+      if (!chain.nativeResourceRemoved(parent, original.identity)) chain.nativeFailed(parent, original.identity);
     }}
     onRequestClose={() => {
       if (!root) chain.nativeRequestClose(parent as AdminRootPresentationEntry, original.identity);
       else if (chain.canInteract(parent)) { try { void Promise.resolve(original.onRequestClose?.()).catch(() => {}); } catch {} }
     }}>
-    <View style={styles.fill} pointerEvents={interactive ? 'auto' : 'none'} accessibilityElementsHidden={!interactive}>
+    <View style={[styles.fill, retired && styles.retired]} pointerEvents={interactive ? 'auto' : 'none'} accessibilityElementsHidden={!interactive}>
       {original.renderContent(<AdminRootNativeParentSlot chain={chain} parent={parent} nativeIdentity={original.identity}><Outlet chain={chain} parent={parent} /></AdminRootNativeParentSlot>, Object.freeze({ interactive, retained, retired: chain.isRetired(parent), canInteract: original.canInteract, isCurrent: original.isCurrent }))}
     </View>
   </Modal>;
@@ -45,4 +46,4 @@ export function AdminRootPresentationRootCarrier(props: AdminRootPresentationRoo
   if (!presentation || typeof props.renderContent !== 'function' || typeof props.onRequestClose !== 'function') throw TypeError('Original Root content and native presentation are required');
   return <Carrier key={props.chain.root.id} chain={props.chain} parent={props.chain.root} rootIdentity={props.rootIdentity} presentation={presentation} renderContent={props.renderContent} onRequestClose={props.onRequestClose} />;
 }
-const styles = StyleSheet.create({ fill: { flex: 1 } });
+const styles = StyleSheet.create({ fill: { flex: 1 }, retired: { opacity: 0 } });

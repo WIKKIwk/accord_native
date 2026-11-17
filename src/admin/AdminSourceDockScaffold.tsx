@@ -5,6 +5,7 @@ import { AdminShellSourceWindowLayout } from './AdminShellSourceWindowLayoutCont
 import type { AdminSourceDockScaffoldProps } from './AdminSourceDockScaffoldTypes';
 import { useAdminSourceDockScaffold } from './useAdminSourceDockScaffold';
 import { AdminSourceSceneScaffoldProvider } from './AdminSourceSceneScaffoldContext';
+import { AdminSourceCreateHubHost } from './AdminSourceCreateHubHost';
 type BodyScope = Readonly<{ ready: boolean; canInteract: () => boolean }>;
 const BodyContext = createContext<BodyScope | null>(null);
 
@@ -45,8 +46,9 @@ export function AdminSourceDockScaffold(props: AdminSourceDockScaffoldProps) {
       style={[styles.dock, { height: target.sizing.hostHeight, opacity: ready ? 1 : 0 }]}
       onLayout={() => { if (!current()) return; const tag = findNodeHandle(dock.current); if (typeof tag === 'number' && Number.isInteger(tag) && tag > 0 && current()) owner.bindDock({ tag, nativeID: target.nativeID }, target, generation); }}>
       <View pointerEvents="box-none" style={[styles.dock, { height: target.sizing.dockHeight }]}>{props.renderDock(facts)}</View>
-      {ready && request && target.primary.visible && nativeHost ? nativeHost.renderPrimary(request) : null}
     </View> : null}
+    {props.rootBinding && !nativeHost ? <AdminSourceCreateHubHost source={owner} /> : null}
+    {ready && request && target?.primary.visible && nativeHost ? nativeHost.renderPrimary(request) : null}
     {overlayTop && request && nativeHost ? <View pointerEvents="box-none" style={StyleSheet.absoluteFill} testID="admin-source-scaffold-global-overlay">{nativeHost.renderOverlay(request)}</View> : null}
     {props.outlet}
   </View></AdminShellSourceWindowLayout></AdminCreateHubSourceLayout>;

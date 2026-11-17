@@ -1,5 +1,6 @@
 const source = require('./adminSourceDockScaffoldSupport.cjs'), routes = require('./adminRootRouterSupport.cjs');
 const guards = source.load('shared/profileSessionGuard');
+const localPlacement = source.load('admin/AdminSourceCreateHubPlacementOwner', { './adminPresentationWindowTicket': routes.tickets });
 const scene = source.load('admin/AdminSourceSceneScaffoldOwner', { '../shared/profileSessionGuard': guards });
 const readerDomain = source.load('admin/adminFixedSnackBarReader', { '../../modules/accord-admin-layout/src/AccordAdminScaffoldLayout': source.protocol,
   '../shared/camera/synchronousGuard': source.strict, './adminPresentationWindowTicket': routes.tickets });
@@ -84,7 +85,7 @@ function nativeFixture(platform = 'android', options = {}) {
   const animations = [], reanimated = { __esModule: true, default: { View: 'Animated.View' }, Easing: { linear: value => value, bezierFn: () => value => value },
     useAnimatedStyle: callback => callback(), useSharedValue: initial => react.useRef({ value: initial, get() { return this.value; }, set(value) { if (value?.animation) animations.push(value); else this.value = value; } }).current,
     withTiming: (target, configuration, callback) => ({ animation: true, target, configuration, callback }), cancelAnimation() {} };
-  const rn = { View: 'View', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 } },
+  const rn = { View: 'View', Pressable: 'Pressable', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }, absoluteFillObject: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 } },
     findNodeHandle: view => view?.tag ?? null, Platform: { OS: platform }, Keyboard: { dismiss() {}, addListener() { throw Error('No Activity keyboard subscription'); } }, BackHandler: { addEventListener: () => ({ remove() {} }) },
     AppState: { addEventListener() { throw Error('No Activity subscription'); } }, useWindowDimensions: () => ({ width: 9999, height: 7777, scale: 1 }) };
   const safe = react.createContext({ top: 999, left: 888, right: 777, bottom: 666 }), safeModule = { SafeAreaView: 'SafeAreaView', SafeAreaInsetsContext: safe, useSafeAreaInsets: () => react.useContext(safe) };
@@ -110,16 +111,25 @@ function nativeFixture(platform = 'android', options = {}) {
   const bodyLayout = source.load('admin/adminItemCreateNativeLayout', { './adminSupplierScaffoldLayout': source.load('admin/adminSupplierScaffoldLayout') });
   const itemScaffold = compile('AdminItemCreateScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellBodyFrame': frame, './adminItemCreateNativeLayout': bodyLayout });
   const sourceHook = compile('useAdminSourceDockScaffold.ts', { './AdminCreateHubProvider': hub, './AdminSourceDockScaffoldOwner': source.domain });
-  const sourceView = compile('AdminSourceDockScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellSourceWindowLayoutContext': shellContext, './useAdminSourceDockScaffold': sourceHook, './AdminSourceSceneScaffoldContext': sourceContext });
+  const localHostExports = {};
+  const sourceView = compile('AdminSourceDockScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellSourceWindowLayoutContext': shellContext, './useAdminSourceDockScaffold': sourceHook, './AdminSourceSceneScaffoldContext': sourceContext, './AdminSourceCreateHubHost': localHostExports });
   const primary = compile('useAdminCreateHubSourcePrimary.ts', { 'expo-router': { useIsFocused: () => focused() }, './AdminCreateHubProvider': hub,
     './AdminSourcePrimaryRegistrationOwner': source.primaryDomain });
   const scopedPrimary = compile('useAdminSourceScenePrimary.ts', { '../shared/profileSessionGuard': guards, './useAdminCreateHubSourcePrimary': primary, './AdminSourceSceneScaffoldContext': sourceContext, './AdminSourceSceneScaffoldOwner': scene });
   const itemPrimaryHook = compile('useAdminItemCreatePrimaryAction.ts', { './AdminSourceSceneScaffoldContext': sourceContext });
-  const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) }), compose = new Proxy({}, { get: (_target, name) => String(name) });
+  const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) }), compose = new Proxy({ Shape: { Pill: value => value, RoundedCorner: value => value } }, { get: (target, name) => target[name] ?? String(name) });
   const nativePrimary = compile(`AdminItemCreatePrimaryAction.${platform}.tsx`, { '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
     '@expo/ui/swift-ui': compose, '@expo/ui/swift-ui/modifiers': modifiers, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     './AdminTypography.android': { AdminText: 'Text' }, './AdminItemCreateNative.android': { ItemCreateIcon: 'Icon', itemCreateRounded: radius => ({ radius }) },
     './useAdminItemCreatePrimaryAction': itemPrimaryHook, './AdminSourceSceneScaffoldContext': sourceContext, './useAdminSourceScenePrimary': scopedPrimary });
+  const localHook = compile('useAdminSourceCreateHubPlacement.ts', { './AdminSourceCreateHubPlacementOwner': localPlacement, '../shared/localization': l10n, '../shared/localization/runtime': { localeController: locale } });
+  const floating = compile('AdminCreateHubFloating.tsx', { 'react-native-reanimated': reanimated, 'react-native-worklets': { scheduleOnRN() {} }, './adminCreateHubModel': hubModel,
+    './useAdminCreateHubMotion': { useAdminCreateHubMotion() { throw Error('A held local primary cannot render a global overlay'); } } });
+  const platformHub = compile(`AdminCreateHubHost.${platform}.tsx`, { '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
+    '@expo/ui/swift-ui': compose, '@expo/ui/swift-ui/modifiers': modifiers, 'expo-symbols': { SymbolView: 'SymbolView' }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
+    './AdminTypography.android': { AdminText: 'Text' }, './AdminCreateHubFloating': floating });
+  Object.assign(localHostExports, compile(`AdminSourceCreateHubHost.${platform}.tsx`, { [`./AdminCreateHubHost.${platform}`]: platformHub, './useAdminSourceCreateHubPlacement': {
+    useAdminSourceCreateHubPlacement: sourceOwner => { const value = localHook.useAdminSourceCreateHubPlacement(sourceOwner); leaf.localPlacement = value.owner; return value; } } }));
   const scaffoldHook = compile('useAdminTopNoticeScaffold.ts', { './AdminTopNoticeProvider': noticeProvider });
   const boundary = compile('adminItemCreateScreenBoundary.ts', { '../shared/camera/synchronousGuard': source.strict, './AdminSourceSceneScaffoldOwner': scene });
   const gate = compile('AdminItemCreateSourceScene.tsx', { '../shared/profileSessionGuard': guards, './AdminRootRouterContext': rootContext, './AdminSourceSceneScaffoldContext': sourceContext,
@@ -166,7 +176,7 @@ function nativeFixture(platform = 'android', options = {}) {
   const actualSourceProvider = sourceContext.AdminSourceSceneScaffoldProvider;
   sourceContext.AdminSourceSceneScaffoldProvider = props => { scopedOwner = props.source; return jsx.jsx(actualSourceProvider, { ...props, children: jsx.jsxs('Fragment', { children: [props.children, jsx.jsx(SceneProbe, {})] }) }); };
   // Recompile the view once to bind the instrumented real Provider export, not a substitute context.
-  const viewWithProbe = compile('AdminSourceDockScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellSourceWindowLayoutContext': shellContext, './useAdminSourceDockScaffold': sourceHook, './AdminSourceSceneScaffoldContext': sourceContext });
+  const viewWithProbe = compile('AdminSourceDockScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellSourceWindowLayoutContext': shellContext, './useAdminSourceDockScaffold': sourceHook, './AdminSourceSceneScaffoldContext': sourceContext, './AdminSourceCreateHubHost': localHostExports });
   sourceView.AdminSourceDockScaffold = viewWithProbe.AdminSourceDockScaffold;
   function RendererHost() { react.useLayoutEffect(() => root.owner.attachRenderer(root.render), []); return descriptorScene ? jsx.jsx(rootScene.AdminRootRouterScene, { controller: root.owner, binding, outlet, state: { interactive: true, retained: false, retired: false } }) : null; }
   let globalHub; const seenHubs = new WeakSet();
@@ -185,4 +195,4 @@ function nativeFixture(platform = 'android', options = {}) {
     show: message => service.show(messenger, { message, tone: 'success' }), notify: () => authListeners.forEach(callback => callback()),
     cleanup: () => { r.cleanup(); observer.dispose(); root.owner.dispose(); root.rootStop(); native.cleanup(); messenger.retire(); global.requestAnimationFrame = oldRaf; global.cancelAnimationFrame = oldCancel; } };
 }
-module.exports = { ...source, routes, guards, scene, fixture, runtime, nativeFixture };
+module.exports = { ...source, routes, guards, scene, localPlacement, fixture, runtime, nativeFixture };

@@ -9,6 +9,8 @@ export type AdminPresentationWindowOwnerOptions = Readonly<{
   /** Live original accepted-close authority. May include actual native sheet-hide acknowledgment. */
   isClosing: () => boolean;
   onDetached: () => void;
+  /** Optional original resource lane. Never authorizes Source completion or supplies a removal fact. */
+  resource?: Readonly<{ isCurrent: () => boolean; onDetached: () => void }>;
 }>;
 export type AdminPresentationWindowOwnerState = Readonly<{ present: boolean; phase: 'presented' | 'arming' | 'armed' | 'removing' | 'detached' | 'failed' | 'retired' }>;
 
@@ -19,11 +21,15 @@ export class AdminPresentationWindowOwner {
   private readonly listeners = new Set<() => void>(); private readonly members = new Set<object>();
   private retired = false; private checking = false; private acceptedClose = false; private armPending = false; private started = false;
   private receipt: AdminPresentationWindowReceipt | null = null; private observed = false;
+  private resourceChecking: { valid: boolean } | null = null;
   constructor(options: AdminPresentationWindowOwnerOptions) {
     if (!options.identity || typeof options.identity !== 'object' || typeof options.ticket !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9:._-]{0,159}$/.test(options.ticket) ||
       !options.observer || ['arm', 'waitForDetach', 'cancelPending', 'cancel'].some(key => typeof options.observer[key as keyof AdminPresentationWindowObserver] !== 'function') ||
       [options.isCurrent, options.isClosing, options.onDetached].some(value => typeof value !== 'function')) throw TypeError('A native window requires its original observer, identity and authority');
-    this.options = Object.freeze({ ...options });
+    const resource = options.resource;
+    const resourceCurrent = resource?.isCurrent, resourceDetached = resource?.onDetached;
+    if (resource && (typeof resourceCurrent !== 'function' || typeof resourceDetached !== 'function')) throw TypeError('Original resource receipt callbacks are required');
+    this.options = Object.freeze({ ...options, resource: resource ? Object.freeze({ isCurrent: resourceCurrent!, onDetached: resourceDetached! }) : undefined });
   }
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -35,14 +41,21 @@ export class AdminPresentationWindowOwner {
     return () => {
       if (detached) return; detached = true; this.members.delete(member);
       // Resource cancellation only. StrictMode replay reattaches before this job; it never completes a dialog.
-      queueMicrotask(() => { if (!this.members.size) this.retire(); });
+      queueMicrotask(() => { if (!this.members.size && !this.resourceCurrent()) this.retire(); });
     };
   };
+  private resourceCurrent(): boolean {
+    if (this.retired || !this.options.resource) return false;
+    if (this.resourceChecking) { this.resourceChecking.valid = false; return false; }
+    const frame = { valid: true }; this.resourceChecking = frame;
+    try { return isSynchronouslyTrue(this.options.resource.isCurrent) && frame.valid && !this.retired; }
+    finally { this.resourceChecking = null; }
+  }
   checkCurrent = () => {
     if (this.retired || !this.members.size) return false;
     if (this.checking) { this.retire(); return false; } this.checking = true;
     const valid = isSynchronouslyTrue(this.options.isCurrent); this.checking = false;
-    if (!valid || this.retired) { this.retire(); return false; } return this.members.size > 0;
+    if (!valid || this.retired) { if (!this.resourceCurrent()) this.retire(); return false; } return this.members.size > 0;
   };
   private closing() {
     if (!this.checkCurrent()) return false;
@@ -68,10 +81,10 @@ export class AdminPresentationWindowOwner {
     catch { this.armPending = false; this.failed(); return; }
     void pending.then(receipt => {
       this.armPending = false;
-      if (!this.checkCurrent()) { this.cancelReceipt(receipt); return; }
+      if (!this.checkCurrent() && !this.resourceCurrent()) { this.cancelReceipt(receipt); return; }
       if (receipt.ticket !== this.options.ticket || receipt.viewTag !== viewTag || receipt.state !== 'armed') { this.failed(); return; }
       this.receipt = receipt; this.publish({ present: true, phase: 'armed' });
-      if (!this.checkCurrent() || this.receipt !== receipt) return;
+      if ((!this.checkCurrent() && !this.resourceCurrent()) || this.receipt !== receipt) return;
       this.watch(receipt);
       if (this.acceptedClose) this.remove();
     }, () => { this.armPending = false; this.failed(); }).catch(() => { this.failed(); });
@@ -93,7 +106,14 @@ export class AdminPresentationWindowOwner {
     catch { this.failed(); return; }
     void pending.then(proof => {
       if (this.receipt !== receipt) return; this.receipt = null;
-      if (!this.checkCurrent()) return;
+      const resource = this.resourceCurrent();
+      if (!resource && !this.checkCurrent()) return;
+      if (resource) {
+        if (proof.handle !== receipt.handle || proof.ticket !== receipt.ticket || proof.viewTag !== receipt.viewTag || proof.state !== 'detached' || proof.guarantee !== receipt.guarantee) { this.cancelReceipt(receipt); this.failed(); return; }
+        this.publish({ present: false, phase: 'detached' });
+        if (this.resourceCurrent()) { try { void Promise.resolve(this.options.resource!.onDetached()).catch(() => {}); } catch {} }
+        return;
+      }
       if (proof.handle !== receipt.handle || proof.ticket !== receipt.ticket || proof.viewTag !== receipt.viewTag || proof.state !== 'detached' || proof.guarantee !== receipt.guarantee ||
         !this.acceptedClose || this.state.phase !== 'removing' || !this.closing()) {
         // An unexpected native root loss cannot acknowledge a later close or retarget a new window.

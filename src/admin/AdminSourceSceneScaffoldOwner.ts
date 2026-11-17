@@ -15,7 +15,7 @@ const issued = new WeakSet<object>();
 export class AdminSourceSceneScaffoldOwner {
   private readonly original: AdminSourceSceneOriginal;
   private readonly members = new Set<object>(); private readonly listeners = new Set<() => void>(); private stops: (() => void)[] = [];
-  private passive = false; private checking: { valid: boolean } | null = null;
+  private passive = false; private checking: { valid: boolean; resourceChanged: boolean } | null = null; private resourceRetry = false;
   private disconnectPrimary: (() => void) | null = null;
   private readonly interaction: () => boolean;
   private readonly primaryInteraction: () => boolean;
@@ -37,7 +37,7 @@ export class AdminSourceSceneScaffoldOwner {
       const { root, binding, source, target } = this.original, witness = source.sourceWitness(), container = root.controller.container(binding);
       return root.binding === binding && witness.rootBinding === binding && witness.identity === binding.identity && !!container && container.sourceScaffoldAncestor === witness.sourceScaffoldAncestor &&
         witness.scaffold.ticket !== null && witness.scaffold.messenger === target.messenger && witness.scaffold.progress === target.progress && typeof target.progress?.get === 'function' &&
-        typeof root.controller.hasScene === 'function';
+        typeof root.controller.hasScene === 'function' && typeof root.controller.sourceCurrent === 'function' && typeof root.controller.subscribeSource === 'function' && typeof root.controller.subscribeResource === 'function';
     } catch { return false; }
   }
   matches(original: AdminSourceSceneOriginal) {
@@ -55,7 +55,7 @@ export class AdminSourceSceneScaffoldOwner {
     if (this.members.size === 1) {
       this.publish('pending', true);
       const { root, source, target } = this.original;
-      this.stops = [root.controller.subscribe(this.refresh), source.subscribe(this.refresh), target.messenger.subscribe(this.refresh)];
+      this.stops = [root.controller.subscribeSource(this.refresh), root.controller.subscribeResource(this.refreshResource), source.subscribe(this.refresh), target.messenger.subscribe(this.refresh)];
     }
     let detached = false;
     return () => { if (detached) return; detached = true; this.members.delete(member); if (!this.members.size) { this.passive = false; this.stop(); if (this.state.phase !== 'retired') this.publish('pending', true); } };
@@ -63,36 +63,42 @@ export class AdminSourceSceneScaffoldOwner {
   start = () => { if (this.state.phase === 'retired' || !this.members.size) return; this.passive = true; this.refresh(); };
   private releasePrimary() { const stop = this.disconnectPrimary; this.disconnectPrimary = null; stop?.(); }
   private stop() { this.releasePrimary(); const stops = this.stops; this.stops = []; stops.forEach(stop => { try { stop(); } catch {} }); }
-  private suspend() { if (this.state.phase === 'active') { this.releasePrimary(); this.publish('pending', true); } }
+  private suspend() { if (this.state.phase === 'active') { this.publish('pending', true); this.releasePrimary(); } }
+  private retryResource() {
+    if (this.resourceRetry) return; this.resourceRetry = true;
+    // A genuine resource publication happened inside an original guard. Retry its actual memberships after that frame, never invent readiness.
+    queueMicrotask(() => { this.resourceRetry = false; if (this.members.size && this.passive && this.state.phase !== 'retired') this.refresh(); });
+  }
+  private refreshResource = () => {
+    if (this.checking) { this.checking.resourceChanged = true; this.retryResource(); return; } this.refresh();
+  };
   private refresh = () => {
     if (this.checking) { this.checking.valid = false; return; }
     if (!this.members.size || !this.passive || this.state.phase === 'retired') return;
-    const membership = this.original.source.sourceMembership();
-    if (!this.structure() || membership.retired) { this.invalidate(); return; }
-    if (!membership.active) { this.suspend(); return; }
-    if (this.state.phase === 'pending') {
-      // Initial false is a real parent/scene commit that has not happened yet, not an account failure.
-      if (!this.original.root.controller.hasScene(this.original.binding)) return;
-      this.publish('active');
-    }
-    if (this.readCurrent()) this.publish('active');
+    if (this.check(this.state.generation, true)) this.publish('active');
   };
-  readCurrent = (generation = this.state.generation): boolean => {
-    if (this.state.phase !== 'active' || !this.passive || !this.members.size || generation !== this.state.generation) return false;
+  private check(generation: number, activate: boolean): boolean {
+    if (this.state.phase === 'retired' || !this.passive || !this.members.size || generation !== this.state.generation) return false;
     if (this.checking) { this.checking.valid = false; return false; }
-    const frame = { valid: true }; this.checking = frame;
-    let valid = false;
+    const frame = { valid: true, resourceChanged: false }; this.checking = frame;
+    let lifetime = false, scene = false, valid = false;
     try {
       const { root, source, target, binding } = this.original, witness = source.sourceWitness(), membership = source.sourceMembership();
-      if (!membership.active && !membership.retired) { this.suspend(); return false; }
-      valid = this.structure() && !membership.retired && root.controller.hasScene(binding) && source.current(membership.generation) && target.messenger.current() &&
-        target.messenger.isRootScaffold(witness.scaffold.ticket!) && root.controller.hasScene(binding);
-    } catch { valid = false; } finally { this.checking = null; }
+      lifetime = this.structure() && !membership.retired && root.controller.sourceCurrent(binding) && target.messenger.current();
+      if (lifetime && membership.active) {
+        // The actual container now supplies Source-only read authority; it does not conflate a renderer gap with account retirement.
+        lifetime = source.current(membership.generation) && root.controller.sourceCurrent(binding);
+        scene = root.controller.hasScene(binding) && target.messenger.isRootScaffold(witness.scaffold.ticket!); valid = lifetime && scene;
+      }
+    } catch { lifetime = false; } finally { this.checking = null; }
     const membership = this.original.source.sourceMembership();
-    if (!membership.active && !membership.retired) { this.suspend(); return false; }
-    if (!valid || !frame.valid) { this.invalidate(); return false; }
+    if (!lifetime || membership.retired || !frame.valid) { this.invalidate(); return false; }
+    if (!membership.active || !scene || frame.resourceChanged) { this.suspend(); if (frame.resourceChanged) this.retryResource(); return false; }
+    if (!valid) { this.invalidate(); return false; }
+    if (this.state.phase === 'pending') { if (!activate) return false; this.publish('active'); }
     return this.state.phase === 'active' && this.passive && this.members.size > 0 && generation === this.state.generation && !membership.retired;
-  };
+  }
+  readCurrent = (generation = this.state.generation): boolean => this.check(generation, false);
   canInteract = (generation = this.state.generation) => this.readCurrent(generation) && this.interaction() && this.readCurrent(generation);
   /** New dock intent only. Original read/registration and an already accepted Add do not use this geometry/host fence. */
   canOpenPrimary = (generation = this.state.generation) => this.canInteract(generation) && this.primaryInteraction() && this.readCurrent(generation);

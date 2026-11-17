@@ -7,6 +7,7 @@ import type { AdminCreateHubNativeProps } from './AdminCreateHubTypes';
 import type { AdminCreateHubAction, AdminCreateHubOverlay } from './adminCreateHubController';
 import { adminHubSpatial, adminHubSpringScale, adminHubStaggerOpacity, adminHubStaggerSpatial } from './adminCreateHubModel';
 import { useAdminCreateHubMotion } from './useAdminCreateHubMotion';
+import type { AdminCreateHubRenderSlotProps } from './adminSourceHubPlacementTypes';
 
 export type AdminCreateHubRenderers = {
   action: (action: AdminCreateHubAction, onPress: () => void) => ReactNode;
@@ -69,11 +70,12 @@ function Overlay({ props, render }: { props: AdminCreateHubNativeProps; render: 
 }
 
 /** Root absolute overlay deliberately leaves page/system back handlers untouched. */
-export function AdminCreateHubFloating({ render, ...props }: AdminCreateHubNativeProps & { render: AdminCreateHubRenderers }) {
+export function AdminCreateHubFloating({ render, slot = 'combined', primaryMarker, ...props }: AdminCreateHubNativeProps & AdminCreateHubRenderSlotProps & { render: AdminCreateHubRenderers }) {
   const { colors, direction } = useBaseTheme();
+  if (slot !== 'combined' && slot !== 'primary' && slot !== 'overlay') throw TypeError('An explicit primary/overlay rendering slot is required');
   if (!props.state.valid || props.layout.toggleBottom === null) return null;
   return <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { zIndex: 10000, direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }]}>
-    {props.state.overlay ? <Overlay key={props.state.overlay.id} props={props} render={render} /> : props.primary?.visible && props.primary.ready ? <View pointerEvents="box-none"
+    {slot !== 'primary' && props.state.overlay ? <Overlay key={props.state.overlay.id} props={props} render={render} /> : slot !== 'overlay' && props.state.overlay === null && props.primary?.visible && props.primary.ready ? <View {...primaryMarker} collapsable={false} pointerEvents="box-none" testID="admin-create-hub-primary-marker"
       style={[styles.toggle, props.primary.replacement ? undefined : [styles.closed, styles.shadow, { backgroundColor: colors.primaryContainer, borderColor: `${colors.outlineVariant.slice(0, 7)}40` }], { bottom: props.layout.toggleBottom }]}>
       {props.primary.replacement ? props.primary.replacementValue as ReactNode : render.toggle(props.labels.trigger, () => props.controller.open(props.primary!.ticket), render.icon('add', colors.onPrimaryContainer), 'app-primary-navigation-button')}
     </View> : null}

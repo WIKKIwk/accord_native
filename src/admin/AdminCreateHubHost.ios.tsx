@@ -6,10 +6,11 @@ import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { AdminCreateHubFloating } from './AdminCreateHubFloating';
 import type { AdminCreateHubNativeProps } from './AdminCreateHubTypes';
+import type { AdminCreateHubRenderSlotProps } from './adminSourceHubPlacementTypes';
 
 const icons: Record<string, SFSymbol> = { group_add_outlined: 'person.badge.plus', inventory_2_outlined: 'shippingbox', qr_code_scanner_rounded: 'qrcode.viewfinder', list_alt_outlined: 'list.bullet.rectangle', add_task_outlined: 'checklist' };
 /** @v2 _AdminCreateHubOverlay and _AppPrimaryNavigationButton */
-export function AdminCreateHubHost(props: AdminCreateHubNativeProps) {
+export function AdminCreateHubHost(props: AdminCreateHubNativeProps & AdminCreateHubRenderSlotProps) {
   const { colors } = useBaseTheme();
   return <AdminCreateHubFloating {...props} render={{
     icon: (name, color) => <BaseHost matchContents><Image systemName={name === 'add' ? 'plus' : 'xmark'} size={24} color={color} /></BaseHost>,

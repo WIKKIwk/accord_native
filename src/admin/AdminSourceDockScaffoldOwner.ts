@@ -4,7 +4,7 @@ import { createAdminPresentationWindowTicket } from './adminPresentationWindowTi
 import type { AdminCreateHubController, AdminCreateHubTicket } from './adminCreateHubController';
 import type { AdminScaffoldLayoutBinding, AdminScaffoldLayoutBindingSnapshot } from './adminFixedSnackBarReader';
 import { adminSourceDockBodyBottom, adminSourceDockSizing, type AdminSourceDockPrimary, type AdminSourceDockSizing } from './adminSourceDockScaffoldPolicy';
-import type { AdminSourceDockHubRequest, AdminSourceDockScaffoldProps } from './AdminSourceDockScaffoldTypes';
+import type { AdminSourceDockHubRequest, AdminSourceDockLocalPrimary, AdminSourceDockScaffoldProps } from './AdminSourceDockScaffoldTypes';
 import { adminSourcePrimaryRegistrationTransport, type AdminSourcePrimaryRegistrationOwner } from './AdminSourcePrimaryRegistrationOwner';
 import type { AdminRootRouterBinding } from './AdminRootRouterTypes';
 
@@ -77,6 +77,12 @@ export class AdminSourceDockScaffoldOwner {
       canOpenPrimary: () => target.primary.visible && target.primary.ready && state.overlay === null && this.hostAvailable(request) && this.canInteract(generation) && request.isCurrent(),
     });
     return request.isCurrent() ? request : null;
+  }
+  localPrimary(): AdminSourceDockLocalPrimary | null {
+    const snapshot = this.state, target = snapshot.target, windowIdentity = snapshot.native?.windowIdentity, state = this.hub.getSnapshot();
+    if (!target || !windowIdentity || !target.primary.visible || !target.primary.ready || state.overlay !== null || !this.current(snapshot.generation)) return null;
+    return this.state === snapshot && this.hub.getSnapshot() === state ? Object.freeze({ controller: this.hub, state, primary: target.primary, sizing: target.sizing,
+      sourceGeneration: snapshot.generation, targetIdentity: target.identity, windowIdentity }) : null;
   }
   hostAvailable(request: AdminSourceDockHubRequest | null): boolean {
     if (!request || !this.original.hubNativeHost || !request.isCurrent() || request.primary.visible && !request.primary.ready) return false;

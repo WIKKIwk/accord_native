@@ -19,7 +19,7 @@ export function useAdminRootRouterHost(controller: AdminRootRouterController, fr
   useLayoutEffect(() => { const detach = controller.attachRenderer(renderScene), original = detach ? { controller, renderer: renderScene } : null; membership.current = original;
     return () => { if (membership.current === original) membership.current = null; detach?.(); }; }, [controller, renderScene]);
   useLayoutEffect(() => { if (membership.current?.controller === controller && membership.current.renderer === renderScene) controller.commitFrame(frame); }, [controller, renderScene, frame]);
-  useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot); const binding = controller.rootScene()?.binding;
+  useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot); const binding = controller.resourceRootScene()?.binding;
   const renderContent = useMemo(() => binding ? (outlet: ReactElement, state: AdminRootPresentationRenderState) => renderScene(binding, outlet, state) : null, [binding, renderScene]);
   const onRequestClose = useCallback(() => { if (binding) controller.requestBack(binding); }, [controller, binding]);
   return { binding, renderContent, onRequestClose };

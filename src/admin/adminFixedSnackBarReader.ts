@@ -6,6 +6,7 @@ import type { AdminFixedSnackBarNativePair } from './adminFixedSnackBarGeometry'
 import { createAdminPresentationWindowTicket } from './adminPresentationWindowTicket';
 import type { AdminTopNoticeMessenger } from './adminTopNoticeMessenger';
 import type { AdminTopNoticeScaffold } from './adminTopNoticeModel';
+import type { AdminSourceHubPlacementReceipt, AdminSourceHubPlacementRequest } from './adminSourceHubPlacementTypes';
 
 export type AdminScaffoldLayoutBindingSnapshot = Readonly<{
   revision: number; phase: 'binding' | 'bound' | 'unavailable' | 'retired'; viewport: AdminScaffoldViewport | null;
@@ -16,7 +17,8 @@ export type AdminScaffoldLayoutBinding = Readonly<{
   setDockMarker: (marker: AdminScaffoldMarker | null) => void; dispose: () => void;
 }>;
 type Watch = { kind: 'viewport' | 'dock' | 'pair'; ticket: string; record: RecordOwner; receipt: AdminScaffoldLayoutReceipt | null; pending: AdminScaffoldLayoutEvent | null;
-  revision: number; closed: boolean; current?: () => boolean; receive?: (pair: AdminFixedSnackBarNativePair | null) => void };
+  revision: number; closed: boolean; current?: () => boolean; receive?: (pair: AdminFixedSnackBarNativePair | null) => void;
+  local?: { marker: AdminScaffoldMarker; windowIdentity: object; receive: (receipt: AdminSourceHubPlacementReceipt | null) => void; receipt: AdminSourceHubPlacementReceipt | null } };
 type RecordOwner = { scaffold: AdminTopNoticeScaffold; marker: AdminScaffoldMarker; current: () => boolean; checking: boolean; retired: boolean; failed: boolean;
   viewportWatch: Watch | null; dockWatch: Watch | null; dockMarker: AdminScaffoldMarker | null; pairWatches: Set<Watch>; frame: number;
   dockChanging: boolean; dockIntent: object | null;
@@ -24,6 +26,9 @@ type RecordOwner = { scaffold: AdminTopNoticeScaffold; marker: AdminScaffoldMark
 type Options = Readonly<{ observer: AdminScaffoldLayoutObserver; messenger: AdminTopNoticeMessenger; isCurrent: () => boolean }>;
 const validMarker = (value: AdminScaffoldMarker) => value && Number.isSafeInteger(value.tag) && value.tag > 0 && value.tag <= 0x7fffffff && typeof value.nativeID === 'string' && /^[A-Za-z0-9][A-Za-z0-9:._-]{0,159}$/.exec(value.nativeID)?.[0] === value.nativeID;
 const copyMarker = (value: AdminScaffoldMarker) => Object.freeze({ tag: value.tag, nativeID: value.nativeID });
+const localReceipts = new WeakMap<object, { owner: AdminFixedSnackBarReaderOwner; watch: Watch }>();
+const sameViewport = (a: AdminScaffoldViewport, b: AdminScaffoldViewport) => Object.keys(a.rect).every(key => a.rect[key as keyof typeof a.rect] === b.rect[key as keyof typeof b.rect]) &&
+  (['rawImeBottom', 'viewPaddingBottom', 'systemGestureBottom', 'safeTop', 'safeLeft', 'safeRight'] as const).every(key => a[key] === b[key]);
 
 /** Owns actual per-Scaffold native registrations. No Source ancestor, marker, metric, or available module is fabricated. */
 export class AdminFixedSnackBarReaderOwner {
@@ -110,18 +115,25 @@ export class AdminFixedSnackBarReaderOwner {
     const receipt = watch.receipt, record = watch.record;
     if (!receipt || !this.watchCurrent(watch) || event.handle !== receipt.handle || event.ticket !== receipt.ticket || event.windowID !== receipt.windowID || event.viewportHandle !== receipt.initial.viewportHandle || event.revision <= watch.revision) return;
     watch.revision = event.revision;
-    if (event.retired) { if (watch.kind === 'viewport') this.retireRecord(record); else if (watch.kind === 'dock') this.setDock(record, null); else { this.receive(watch, null); this.closeWatch(watch); } return; }
+    if (event.retired) { if (watch.kind === 'viewport') this.retireRecord(record); else if (watch.kind === 'dock') this.setDock(record, null); else { this.receiveLocal(watch, null); this.receive(watch, null); this.closeWatch(watch); } return; }
     if (watch.kind === 'viewport' && event.frame >= record.frame) {
       record.frame = event.frame; this.publish(record, { ...this.viewportPatch(record, event.viewport), phase: 'bound', dockHeight: null });
     } else if (watch.kind === 'dock' && event.frame >= record.frame) {
       record.frame = event.frame; this.publish(record, { ...(event.dock ? this.viewportPatch(record, event.dock.viewport) : {}), phase: 'bound', dockHeight: event.dock?.dockHeight ?? null });
     } else if (watch.kind === 'pair') {
       const pair = event.pair, identity = record.snapshot.windowIdentity;
-      if (event.frame < record.frame) { this.receive(watch, null); return; }
-      if (pair) { record.frame = event.frame; this.publish(record, { ...this.viewportPatch(record, pair.viewport), phase: 'bound', dockHeight: pair.dockHeight }); }
+      if (event.frame < record.frame) return;
+      record.frame = event.frame;
+      if (pair) this.publish(record, { ...this.viewportPatch(record, pair.viewport), phase: 'bound', dockHeight: pair.dockHeight });
+      // A record listener/guard may synchronously deliver a newer sample from this SAME native watch.
+      if (!this.watchCurrent(watch) || watch.revision !== event.revision || record.frame !== event.frame) return;
+      if (watch.local) {
+        const value = pair && identity ? Object.freeze({ windowIdentity: identity, marker: watch.local.marker, viewport: pair.viewport, frame: pair.fixed, dockHeight: pair.dockHeight, nativeFrame: event.frame, nativeRevision: event.revision }) : null;
+        if (value) localReceipts.set(value, { owner: this, watch }); this.receiveLocal(watch, value, event); return;
+      }
       this.receive(watch, pair && identity ? Object.freeze({ window: Object.freeze({ identity, viewport: pair.viewport.rect, rawImeBottom: pair.viewport.rawImeBottom }),
         host: Object.freeze({ windowIdentity: identity, frame: pair.fixed }), dock: Object.freeze({ windowIdentity: identity, height: pair.dockHeight }),
-        remainingSafeArea: Object.freeze({ left: pair.viewport.safeLeft, right: pair.viewport.safeRight, bottom: 0 as const }) }) : null);
+        remainingSafeArea: Object.freeze({ left: pair.viewport.safeLeft, right: pair.viewport.safeRight, bottom: 0 as const }) }) : null, event);
     }
   }
   private setDock(record: RecordOwner, marker: AdminScaffoldMarker | null) {
@@ -136,7 +148,7 @@ export class AdminFixedSnackBarReaderOwner {
     try {
       for (const watch of oldPairs) {
         if (record.dockIntent !== intent || !this.recordCurrent(record)) return;
-        if (watch.current && isSynchronouslyTrue(watch.current) && this.recordCurrent(record) && record.dockIntent === intent) { try { watch.receive?.(null); } catch {} }
+        if (watch.current && isSynchronouslyTrue(watch.current) && this.recordCurrent(record) && record.dockIntent === intent) { try { watch.receive?.(null); watch.local?.receive(null); } catch {} }
       }
       if (record.dockIntent !== intent || !this.recordCurrent(record)) return;
       this.publish(record, { dockHeight: null }); if (record.dockIntent === intent && this.recordCurrent(record)) this.startDock(record);
@@ -156,15 +168,40 @@ export class AdminFixedSnackBarReaderOwner {
     this.send(watch, () => this.options.observer.bindParts(viewport, dock, { tag: request.nativeTag, nativeID: request.nativeID }, watch.ticket));
     return () => this.closeWatch(watch);
   }
-  private receive(watch: Watch, pair: AdminFixedSnackBarNativePair | null) { if (!this.watchCurrent(watch)) return; try { watch.receive?.(pair); } catch {} }
+  /** Same native pair protocol, purpose-specific receipt. The marker MUST be a viewport sibling of the dock. */
+  observeHubPlacement(request: AdminSourceHubPlacementRequest, receive: (receipt: AdminSourceHubPlacementReceipt | null) => void): (() => void) | null {
+    let original: AdminSourceHubPlacementRequest;
+    try { original = Object.freeze({ scaffold: request.scaffold, windowIdentity: request.windowIdentity, marker: copyMarker(request.marker), isCurrent: request.isCurrent }); } catch { return null; }
+    const record = this.records.get(original.scaffold), viewport = record?.viewportWatch?.receipt, dock = record?.dockMarker, dockReceipt = record?.dockWatch?.receipt;
+    if (!record || !viewport || !dock || !dockReceipt || !validMarker(original.marker) || typeof original.isCurrent !== 'function' || typeof receive !== 'function' ||
+      !this.recordCurrent(record) || original.windowIdentity !== record.snapshot.windowIdentity || !isSynchronouslyTrue(original.isCurrent) || !this.recordCurrent(record) || original.windowIdentity !== record.snapshot.windowIdentity ||
+      record.viewportWatch?.receipt !== viewport || record.dockMarker !== dock || record.dockWatch?.receipt !== dockReceipt) return null;
+    const watch = this.watch(record, 'pair'); watch.current = original.isCurrent;
+    watch.local = { marker: original.marker, windowIdentity: original.windowIdentity, receive, receipt: null }; record.pairWatches.add(watch);
+    this.send(watch, () => this.options.observer.bindParts(viewport, dock, watch.local!.marker, watch.ticket));
+    return () => this.closeWatch(watch);
+  }
+  hubPlacementCurrent(receipt: AdminSourceHubPlacementReceipt, scaffold: AdminTopNoticeScaffold, windowIdentity: object): boolean {
+    const original = localReceipts.get(receipt), watch = original?.watch, record = watch?.record;
+    if (!original || original.owner !== this || !watch || !record || !watch.local || watch.local.receipt !== receipt || record.scaffold !== scaffold ||
+      windowIdentity !== receipt.windowIdentity || watch.local.windowIdentity !== windowIdentity || !this.watchCurrent(watch)) return false;
+    const snapshot = record.snapshot;
+    return !watch.closed && watch.local.receipt === receipt && watch.revision === receipt.nativeRevision && record.frame === receipt.nativeFrame && snapshot.windowIdentity === windowIdentity && snapshot.phase === 'bound' && !!snapshot.viewport && snapshot.dockHeight === receipt.dockHeight && sameViewport(snapshot.viewport, receipt.viewport);
+  }
+  private receive(watch: Watch, pair: AdminFixedSnackBarNativePair | null, event?: AdminScaffoldLayoutEvent) {
+    if (!this.watchCurrent(watch) || event && (watch.revision !== event.revision || watch.record.frame !== event.frame)) return; try { watch.receive?.(pair); } catch {}
+  }
+  private receiveLocal(watch: Watch, receipt: AdminSourceHubPlacementReceipt | null, event?: AdminScaffoldLayoutEvent) {
+    if (!watch.local || !this.watchCurrent(watch) || event && (watch.revision !== event.revision || watch.record.frame !== event.frame)) return; watch.local.receipt = receipt; try { watch.local.receive(receipt); } catch {}
+  }
   private failed(watch: Watch) {
     if (watch.closed || !this.recordCurrent(watch.record)) return; const record = watch.record;
     if (watch.kind === 'viewport') { record.failed = true; this.publish(record, { phase: 'unavailable', viewport: null, metrics: null, dockHeight: null, windowIdentity: null }); }
-    else if (watch.kind === 'dock') this.publish(record, { dockHeight: null }); else this.receive(watch, null); this.closeWatch(watch);
+    else if (watch.kind === 'dock') this.publish(record, { dockHeight: null }); else { this.receiveLocal(watch, null); this.receive(watch, null); } this.closeWatch(watch);
   }
   private release(receipt: AdminScaffoldLayoutReceipt) { try { void this.options.observer.release(receipt).catch(() => {}); } catch {} }
   private closeWatch(watch: Watch) {
-    if (watch.closed) return; watch.closed = true; this.watches.delete(watch.ticket); watch.record.pairWatches.delete(watch);
+    if (watch.closed) return; watch.closed = true; if (watch.local) watch.local.receipt = null; this.watches.delete(watch.ticket); watch.record.pairWatches.delete(watch);
     if (watch.receipt) this.release(watch.receipt); else { try { void this.options.observer.cancelTicket(watch.ticket).catch(() => {}); } catch {} }
   }
   private retireRecord(record: RecordOwner) {

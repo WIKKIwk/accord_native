@@ -30,16 +30,35 @@ export class AdminRootRouterController {
   private readonly rootSceneMembers = new Set<object>();
   private readonly nativePages = new Map<AdminRootRouterPage['native'], Page>();
   private readonly identities = new WeakSet<object>(); private readonly listeners = new Set<() => void>(); private version = 0;
+  private readonly sourceListeners = new Set<() => void>(); private readonly resourceListeners = new Set<() => void>();
+  private sourceRevision: object = {}; private resourceRevision: object = {};
   private retired = false; private checking = false; private issuing = false;
   private readonly unsubscribeChain: () => void;
+  private readonly unsubscribeSource: () => void; private readonly unsubscribeResource: () => void;
   constructor(options: AdminRootRouterRootOptions) {
     if (!options?.chain || !key(options.rootRouteName) || typeof options.isCurrent !== 'function' || typeof options.onRequestClose !== 'function' || typeof options.renderSceneContainer !== 'function' || options.sourceScaffoldAncestor !== null && !object(options.sourceScaffoldAncestor)) throw TypeError('Original Root chain, actual Source container/ancestor, real root route and account authority are required');
     this.options = Object.freeze({ ...options }); this.chain = options.chain;
-    this.unsubscribeChain = this.chain.subscribe(() => { for (const [entry, page] of this.nativePages) if (page.settled && !this.chain.getSnapshot().entries.includes(entry)) this.nativePages.delete(entry); this.publish(); });
+    this.unsubscribeSource = this.chain.subscribeSource(() => this.publish('source'));
+    this.unsubscribeResource = this.chain.subscribeResource(() => this.publish('resource'));
+    this.unsubscribeChain = this.chain.subscribe(() => {
+      let resourceChanged = false;
+      for (const [entry, page] of this.nativePages) if (page.settled && !this.chain.getSnapshot().resources.includes(entry)) { this.nativePages.delete(entry); resourceChanged = true; }
+      if (this.retired && this.chain.getSnapshot().rootResource !== 'pending') { this.root = null; this.frame = null; this.renderer = null; this.stopResourceObservation(); resourceChanged = true; }
+      this.publish(resourceChanged ? 'resource' : 'redraw');
+    });
   }
   getSnapshot = () => this.version;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
-  private publish() { this.version++; for (const listener of [...this.listeners]) { try { listener(); } catch { /* An observer cannot complete a native/route fence. */ } } }
+  subscribeSource = (listener: () => void) => { this.sourceListeners.add(listener); return () => { this.sourceListeners.delete(listener); }; };
+  subscribeResource = (listener: () => void) => { this.resourceListeners.add(listener); return () => { this.resourceListeners.delete(listener); }; };
+  sourceStamp = () => this.sourceRevision;
+  resourceStamp = () => this.resourceRevision;
+  private publish(kind: 'source' | 'resource' | 'both' | 'redraw' = 'source') {
+    if (kind === 'source' || kind === 'both') this.sourceRevision = {};
+    if (kind === 'resource' || kind === 'both') this.resourceRevision = {};
+    this.version++; const listeners = [...(kind === 'source' || kind === 'both' ? this.sourceListeners : []), ...(kind === 'resource' || kind === 'both' ? this.resourceListeners : []), ...this.listeners];
+    for (const listener of listeners) { try { listener(); } catch { /* An observer cannot complete a native/route fence. */ } }
+  }
   current = () => {
     if (this.retired) return false; if (this.checking) { this.dispose(); return false; } this.checking = true;
     const valid = isSynchronouslyTrue(this.options.isCurrent) && this.chain.current(); this.checking = false;
@@ -47,16 +66,20 @@ export class AdminRootRouterController {
   };
   attachRenderer(renderer: AdminRootRouterSceneRenderer): (() => void) | null {
     if (!this.current() || typeof renderer !== 'function' || this.renderer !== null && this.renderer !== renderer) return null;
-    this.renderer = renderer; const member = {}; this.rendererMembers.add(member); this.publish();
-    return () => { if (!this.rendererMembers.delete(member)) return; queueMicrotask(() => { if (!this.rendererMembers.size && this.renderer === renderer) this.dispose(); }); };
+    this.renderer = renderer; const member = {}; this.rendererMembers.add(member); this.publish('resource');
+    return () => { if (!this.rendererMembers.delete(member)) return; this.publish('resource'); queueMicrotask(() => { if (!this.rendererMembers.size && this.renderer === renderer) this.dispose(); }); };
   }
   private page(value: unknown): Page | null { return this.pages.get(value as AdminRootRouterPage) ?? null; }
   private bound(binding: unknown): Page | null { return [...this.nativePages.values()].find(page => page.binding === binding) ?? null; }
   private original(page: Page): boolean {
-    if (!this.rendererMembers.size || page.retired || page.settled || this.pages.get(page.value) !== page || !this.current()) return false;
+    const valid = this.sourceOriginal(page); return valid && this.rendererMembers.size > 0;
+  }
+  private sourceOriginal(page: Page): boolean {
+    if (page.retired || page.settled || this.pages.get(page.value) !== page || this.chain.sourceOutcome(page.value.native) === 'retired' || !this.current()) return false;
     if (page.checking) { this.retire(page); return false; } page.checking = true;
     const valid = isSynchronouslyTrue(page.request.isCurrent); page.checking = false;
-    if (!valid || page.retired || !this.current()) { this.retire(page); return false; } return true;
+    if (!valid || page.retired || !this.current()) { this.retire(page); return false; }
+    return !page.retired && !page.settled && this.pages.get(page.value) === page && this.chain.sourceOutcome(page.value.native) !== 'retired';
   }
   private select(frame: AdminRootRouterFrame, routeKey: string): AdminRootRouterDescriptor | null {
     const index = frame.state.routes.findIndex(route => route.key === routeKey), actual = frame.state.routes[index], value = frame.descriptors[routeKey];
@@ -90,6 +113,12 @@ export class AdminRootRouterController {
     } catch { this.dispose(); return false; }
   }
   rootScene = () => this.current() ? this.root : null;
+  /** Captured original render data only. Calling it grants no Source/native interaction or descriptor membership. */
+  resourceRootScene = () => this.chain.nativeCurrent(this.chain.root) ? this.root : null;
+  resourceScene = (binding: AdminRootRouterBinding): AdminRootRouterScene | null => {
+    if (this.root?.binding === binding) return this.resourceRootScene();
+    const page = this.bound(binding); return page && this.chain.nativeCurrent(page.value.native) ? page.scene : null;
+  };
   scene = (binding: AdminRootRouterBinding): AdminRootRouterScene | null => {
     if (!this.current()) return null; if (this.root?.binding === binding) return this.root;
     return this.bound(binding)?.scene ?? null;
@@ -144,6 +173,18 @@ export class AdminRootRouterController {
     if (this.root?.binding === binding) return this.rendererMembers.size > 0 && this.current() && this.routePresent(binding); const page = this.bound(binding);
     return !!page && page.binding === binding && !page.nativeClosed && !page.logicalGone && this.original(page) && this.routePresent(binding);
   };
+  /** Actual original Source lifetime only. Renderer/scene absence holds admission separately; retained resource DTOs supply no authority. */
+  sourceCurrent = (binding: AdminRootRouterBinding): boolean => {
+    const source = this.sourceRevision, chain = this.chain.sourceStamp();
+    if (this.root?.binding === binding) {
+      const original = this.root, valid = this.current() && this.routePresent(binding);
+      return valid && !this.retired && this.root === original && this.root?.binding === binding && source === this.sourceRevision && chain === this.chain.sourceStamp();
+    }
+    const page = this.bound(binding);
+    const valid = !!page && page.binding === binding && !page.nativeClosed && !page.logicalGone && this.sourceOriginal(page) && this.routePresent(binding);
+    return valid && !!page && !this.retired && !page.retired && !page.settled && !page.nativeClosed && !page.logicalGone &&
+      this.pages.get(page.value) === page && this.bound(binding) === page && this.chain.sourceOutcome(page.value.native) !== 'retired' && source === this.sourceRevision && chain === this.chain.sourceStamp();
+  };
   /** Actual committed descriptor membership, independently of native onShow/top/focus/geometry. */
   hasScene = (binding: AdminRootRouterBinding): boolean => {
     if (this.root?.binding === binding) return this.rootSceneMembers.size > 0 && this.readCurrent(binding) && this.root?.binding === binding && this.rootSceneMembers.size > 0 && !this.retired && this.rendererMembers.size > 0;
@@ -161,10 +202,10 @@ export class AdminRootRouterController {
     if (callback) { try { void Promise.resolve(callback()).catch(() => {}); } catch { /* Source Back failure never completes either close fence. */ } }
   };
   attachScene(binding: AdminRootRouterBinding): (() => void) | null {
-    if (this.root?.binding === binding && this.readCurrent(binding)) { const member = {}; this.rootSceneMembers.add(member); return () => { this.rootSceneMembers.delete(member); }; }
+    if (this.root?.binding === binding && this.readCurrent(binding)) { const member = {}; this.rootSceneMembers.add(member); this.publish('resource'); return () => { if (this.rootSceneMembers.delete(member)) this.publish('resource'); }; }
     const page = this.bound(binding); if (!page || page.binding !== binding || !this.readCurrent(binding)) return null;
-    const member = {}; page.hadScene = true; page.members.add(member);
-    return () => { if (!page.members.delete(member)) return; queueMicrotask(() => { if (!page.members.size) this.finish(page); }); };
+    const member = {}; page.hadScene = true; page.members.add(member); this.publish('resource');
+    return () => { if (!page.members.delete(member)) return; this.publish('resource'); queueMicrotask(() => { if (!page.members.size) this.finish(page); }); };
   }
   /** Accepted Source close may finish while the logical page is blurred; it does not manufacture native completion. */
   closePage(value: AdminRootRouterPage): Promise<'closed' | 'retired'> | null {
@@ -175,7 +216,9 @@ export class AdminRootRouterController {
   private nativeClosed(page: Page, result: 'closed' | 'retired') {
     if (page.settled) return;
     if (result !== 'closed' || !page.closing || !page.binding || !this.original(page)) { this.retire(page); return; }
-    page.nativeClosed = true; const frame = this.frame, binding = page.binding;
+    page.nativeClosed = true; this.publish('source');
+    if (page.settled || page.retired || !this.original(page)) { this.retire(page); return; }
+    const frame = this.frame, binding = page.binding;
     try {
       const state = frame?.navigation.getState(), index = state?.routes.findIndex(route => route.key === binding.routeKey) ?? -1, route = state?.routes[index];
       if (!frame || !stack(state) || state.key !== binding.navigatorKey || index <= 0 || index > state.index || route?.name !== binding.routeName || !object(route.params) || route.params.id !== page.value.id || !this.original(page)) { this.retire(page); return; }
@@ -185,6 +228,13 @@ export class AdminRootRouterController {
   private finish(page: Page) { if (page.settled || !page.nativeClosed || !page.logicalGone || !page.hadScene || page.members.size) return; this.settle(page, this.original(page) ? 'closed' : 'retired'); }
   cancel(value: AdminRootRouterPage) { const page = this.page(value); if (page) this.retire(page); }
   private retire(page: Page) { if (page.settled) return; page.retired = true; this.chain.cancel(page.value.native); this.settle(page, 'retired'); }
-  private settle(page: Page, result: 'closed' | 'retired') { if (page.settled) return; page.settled = true; page.resolve(result); this.pages.delete(page.value); if (!this.chain.getSnapshot().entries.includes(page.value.native)) this.nativePages.delete(page.value.native); this.publish(); }
-  dispose() { if (this.retired) return; this.retired = true; this.unsubscribeChain(); for (const page of [...this.pages.values()]) this.retire(page); this.nativePages.clear(); this.rootSceneMembers.clear(); this.root = null; this.frame = null; this.publish(); }
+  private settle(page: Page, result: 'closed' | 'retired') { if (page.settled) return; page.settled = true; page.resolve(result); this.pages.delete(page.value); const removed = !this.chain.getSnapshot().resources.includes(page.value.native) && this.nativePages.delete(page.value.native); this.publish(removed ? 'both' : 'source'); }
+  private stopResourceObservation() { this.unsubscribeChain(); this.unsubscribeSource(); this.unsubscribeResource(); }
+  dispose() {
+    if (this.retired) return; this.retired = true;
+    for (const page of [...this.pages.values()]) this.retire(page);
+    this.chain.retire(); this.publish('source');
+    // Keep immutable original render/container/native mappings until their genuine resource proofs.
+    if (this.chain.getSnapshot().rootResource !== 'pending') { this.root = null; this.frame = null; this.renderer = null; this.stopResourceObservation(); }
+  }
 }

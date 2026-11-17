@@ -61,6 +61,32 @@ test('constructor captures original callbacks and refuses missing authority or m
   const f = fixture(), owner = await f.create(), stop = owner.attach(); f.options.onDetached = () => { throw Error('new callback must not replace original'); }; owner.markerTag(17); f.ack(); await flush(); f.closing(true); owner.requestClose(); f.removed(); await flush(); assert.equal(f.calls.includes('completed'), true); stop();
   for (const patch of [{ identity: null }, { ticket: undefined }, { ticket: 'has space' }, { isCurrent: null }, { isClosing: null }, { observer: null }, { onDetached: null }]) assert.throws(() => new AdminPresentationWindowOwner({ ...f.options, ...patch }), TypeError); await flush();
 });
+test('optional original resource lane retains armed proof after final member loss without accepting a Source close', async () => {
+  const f = fixture(); let resources = 0; f.options.resource = { isCurrent: () => true, onDetached: () => resources++ };
+  const owner = await f.create(), stop = owner.attach(); owner.markerTag(17); f.ack(); await flush(); stop(); f.current(false); await flush();
+  assert.equal(resources, 0); assert.equal(f.calls.includes('completed'), false); assert.equal(f.calls.some(c => c[0] === 'cancel'), false);
+  f.removed(); await flush(); assert.equal(resources, 1); assert.equal(f.calls.includes('completed'), false); assert.equal(owner.getSnapshot().phase, 'detached');
+});
+test('original resource receipt survives Source guard loss before pending arm while its own React member remains mounted', async () => {
+  const f = fixture(); let resources = 0; f.options.resource = { isCurrent: () => true, onDetached: () => resources++ };
+  const owner = await f.create(), stop = owner.attach(); owner.markerTag(17); f.current(false); assert.equal(owner.checkCurrent(), false);
+  f.ack(); await flush(); assert.equal(owner.getSnapshot().phase, 'armed'); assert.equal(resources, 0); assert.equal(f.calls.some(call => call[0] === 'cancel'), false);
+  f.removed(); await flush(); assert.equal(resources, 1); assert.equal(f.calls.includes('completed'), false); stop(); await flush();
+});
+test('retained pending arm still needs actual original arm then detach; copied/foreign proof never acknowledges resource', async () => {
+  const f = fixture(); let resources = 0; f.options.resource = { isCurrent: () => true, onDetached: () => resources++ };
+  const owner = await f.create(), stop = owner.attach(); owner.markerTag(17); stop(); await flush(); f.ack(); await flush(); assert.equal(resources, 0);
+  f.detached.resolve({ ...f.scope(), handle: 'foreign-window', state: 'detached' }); await flush(); assert.equal(resources, 0); assert.equal(f.calls.includes('completed'), false);
+  const g = fixture(); let valid = true; g.options.resource = { isCurrent: () => valid, onDetached: () => resources++ };
+  const original = await g.create(), off = original.attach(); original.markerTag(18); off(); valid = false; await flush(); g.ack(); await flush(); g.removed(); await flush();
+  assert.equal(resources, 0); assert.equal(original.getSnapshot().phase, 'retired');
+});
+test('resource callbacks are captured once; async lifetime guard never supplies removal or escapes rejection observation', async () => {
+  const f = fixture(); let reads = 0, count = 0; f.options.resource = { get isCurrent() { reads++; return () => true; }, onDetached: () => count++ };
+  const owner = await f.create(), stop = owner.attach(); assert.equal(reads, 1); f.options.resource.onDetached = () => { count += 100; }; owner.markerTag(17); f.ack(); await flush(); stop(); await flush(); assert.equal(count, 0); f.removed(); await flush(); assert.equal(count, 1);
+  const g = fixture(); g.options.resource = { isCurrent: () => Promise.reject(Error('not a resource fact')), onDetached: () => count++ };
+  const invalid = await g.create(), off = invalid.attach(); invalid.markerTag(18); off(); await flush(); assert.equal(invalid.getSnapshot().phase, 'retired'); assert.equal(count, 1);
+});
 test('unique native tickets use genuine UUIDs and never a JS/HMR counter or fallback', () => {
   const values = ['a3de7746-3d66-47de-af96-aa84dd44e765', 'c83f730a-2204-46ce-9d69-e393db71a077'];
   const { createAdminPresentationWindowTicket } = load('admin/adminPresentationWindowTicket', { 'expo-crypto': { randomUUID: () => values.shift() } });

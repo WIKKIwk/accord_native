@@ -7,10 +7,11 @@ import { useBaseTheme } from '../components/useBaseTheme';
 import { AdminCreateHubFloating } from './AdminCreateHubFloating';
 import type { AdminCreateHubNativeProps } from './AdminCreateHubTypes';
 import { AdminText } from './AdminTypography.android';
+import type { AdminCreateHubRenderSlotProps } from './adminSourceHubPlacementTypes';
 
 const icons: Record<string, AndroidSymbol> = { group_add_outlined: 'group_add', inventory_2_outlined: 'inventory_2', qr_code_scanner_rounded: 'qr_code_scanner', list_alt_outlined: 'list_alt', add_task_outlined: 'add_task' };
 /** @v2 _AdminCreateHubOverlay and _AppPrimaryNavigationButton */
-export function AdminCreateHubHost(props: AdminCreateHubNativeProps) {
+export function AdminCreateHubHost(props: AdminCreateHubNativeProps & AdminCreateHubRenderSlotProps) {
   const { colors } = useBaseTheme();
   return <AdminCreateHubFloating {...props} render={{
     icon: (name, color) => <SymbolView name={{ android: name }} size={24} tintColor={color} importantForAccessibility="no" />,

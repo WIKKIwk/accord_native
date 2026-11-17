@@ -17,8 +17,8 @@ function NativeScene({ controller, binding, scene }: { controller: AdminRootRout
       isPreloaded={scene.frame.isPreloaded} isRemovalPrevented={scene.frame.isRemovalPrevented} pop={(count, source) => controller.requestBack(binding, source, count)} /> : null;
 }
 export function AdminRootRouterScene({ controller, binding, outlet, state }: { controller: AdminRootRouterController; binding: AdminRootRouterBinding; outlet: ReactElement; state: AdminRootPresentationRenderState }) {
-  useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot); const scene = controller.scene(binding);
-  const authority = useMemo(() => ({ isCurrent: () => controller.readCurrent(binding), canInteract: () => controller.canInteract(binding) }), [controller, binding]);
+  useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot); const scene = controller.resourceScene(binding);
+  const authority = useMemo(() => ({ isCurrent: () => controller.sourceCurrent(binding), canInteract: () => controller.canInteract(binding) }), [controller, binding]);
   const container = controller.container(binding), nativeParent = controller.nativeParent(binding); if (!container || !nativeParent) return null;
   const wrapped = container.render({ binding, nativeParent, sourceScaffoldAncestor: container.sourceScaffoldAncestor, nativeScene: <NativeScene controller={controller} binding={binding} scene={scene} />, outlet, ...authority, retained: state.retained, retired: state.retired });
   if (!isValidElement(wrapped)) throw TypeError('A genuine Source scene container retaining its native scene/outlet is required');

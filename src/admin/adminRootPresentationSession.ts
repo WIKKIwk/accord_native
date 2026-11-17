@@ -4,7 +4,8 @@ import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 import { adminShellMayEnter } from './adminShellAccess';
 import { AdminRootPresentationChain } from './adminRootPresentationChain';
 
-/** No native readiness is inferred here; the real Root carrier must supply its original native events. */
+/** Captured Auth invalidation retires Source work. The chain retains original native resources separately;
+ * neither this subscription nor an account loss supplies native removal/readiness proof. */
 export function createAdminRootPresentationSession(options: Readonly<{
   session: Session; witness: SessionWitness; isCurrent: () => boolean; rootIdentity: object; platform: 'android' | 'ios';
 }>) {

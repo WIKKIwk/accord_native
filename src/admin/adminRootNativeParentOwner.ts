@@ -16,6 +16,7 @@ export class AdminRootNativeParentOwner {
   private readonly original: AdminRootNativeParentOriginal;
   private readonly members = new Set<object>(); private readonly listeners = new Set<() => void>();
   private retired = false; private checking = false; private revision = 0;
+  private resourceRevision: object = {};
   private view: object | null = null; private binding: AdminRootNativeParentBinding | null = null;
   constructor(original: AdminRootNativeParentOriginal) {
     if (!original.chain || !original.parent || typeof original.parent.id !== 'string' || !original.nativeIdentity || typeof original.nativeIdentity !== 'object' ||
@@ -26,7 +27,9 @@ export class AdminRootNativeParentOwner {
   commit(value: AdminRootNativeParentOriginal) { if (!this.matches(value)) this.retire(); }
   getSnapshot = () => this.revision;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
-  private publish() { this.revision++; for (const listener of [...this.listeners]) { try { listener(); } catch {} } }
+  subscribeResource = this.subscribe;
+  resourceStamp = () => this.resourceRevision;
+  private publish() { this.resourceRevision = {}; this.revision++; for (const listener of [...this.listeners]) { try { listener(); } catch {} } }
   attach = () => {
     if (this.retired) return () => {}; const member = {}; this.members.add(member); this.publish(); let detached = false;
     return () => {
@@ -38,7 +41,8 @@ export class AdminRootNativeParentOwner {
   private current = (): boolean => {
     if (this.retired || !this.members.size) return false;
     if (this.checking) { this.retire(); return false; } this.checking = true;
-    const valid = isSynchronouslyTrue(() => this.original.chain.hasNativeLease(this.original.parent, this.original.nativeIdentity)); this.checking = false;
+    const valid = isSynchronouslyTrue(() => this.original.chain.hasNativeLease(this.original.parent, this.original.nativeIdentity) &&
+      !this.original.chain.hasNativeRemovalProof(this.original.parent, this.original.nativeIdentity)); this.checking = false;
     return valid && !this.retired && this.members.size > 0;
   };
   capture(view: object | null, tag: number | null): boolean {

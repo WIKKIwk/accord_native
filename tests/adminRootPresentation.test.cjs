@@ -67,7 +67,8 @@ test('StrictMode cleanup/reconnect preserves already shown original Root and chi
 test('actual Root or carrier unmount retires pending results and delayed old cleanup cannot target a new chain', async () => {
   const f = fixture(); f.rootReady(); const a = f.open(), native = f.native(a.entry); native.ready(); const other = fixture(); other.rootReady(); const b = other.open(), bn = other.native(b.entry); bn.ready();
   native.stop(); await flush(); assert.equal(await a.closed, 'retired'); assert.equal(other.chain.canInteract(b.entry), true); f.rootStop(); await flush();
-  assert.equal(f.chain.nativeShown(a.entry, native.identity), false); assert.equal(f.chain.nativeRemoved(a.entry, native.identity), false); other.chain.retire();
+  assert.equal(f.chain.nativeShown(a.entry, native.identity), true); assert.equal(f.chain.canInteract(a.entry), false);
+  assert.equal(f.chain.nativeResourceRemoved(a.entry, native.identity), true); assert.equal(await a.closed, 'retired'); assert.equal(other.chain.canInteract(b.entry), true); other.chain.retire();
 });
 test('duplicate native presenter identities cannot bind another window to an original ticket', () => {
   const f = fixture(); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); assert.equal(f.chain.attachNative(a.entry, {}), null);
@@ -124,4 +125,72 @@ test('actual originating-owner cancellation is exact, idempotent, independent of
 test('real authority notification rechecks original entry guard while preserving still-current Root', async () => {
   let notify; const f = fixture('ios', { subscribeCurrent: listener => { notify = listener; return () => {}; } }); f.rootReady(); let entryCurrent = true; const a = f.open({ isCurrent: () => entryCurrent }), native = f.native(a.entry); native.ready();
   entryCurrent = false; notify(); assert.equal(await a.closed, 'retired'); assert.equal(f.chain.getSnapshot().retired, false); assert.equal(f.chain.shouldRemove(a.entry), true); native.removed(); f.chain.retire();
+});
+
+test('whole-account retirement preserves pending original resources and drains postorder without accepting Source close', async () => {
+  const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry), b = f.open(), bn = f.native(b.entry);
+  // B cannot attach before A's real show. Keep a real pending A, and cancel B's never-carrier admission.
+  assert.equal(f.chain.getSnapshot().resources.length, 2); assert.equal(f.chain.hasNativeResource(b.entry, bn.identity), false);
+  f.current(false); f.chain.current(); assert.equal(await a.closed, 'retired'); assert.equal(await b.closed, 'retired');
+  assert.deepEqual(f.chain.getSnapshot().entries, []); assert.deepEqual(f.chain.getSnapshot().resources, [a.entry]);
+  assert.equal(f.chain.attachNative(b.entry, bn.identity), null); assert.equal(f.chain.canPresent(a.entry), true); assert.equal(f.chain.shouldRemove(a.entry), false);
+  an.shown(); assert.equal(f.chain.shouldRemove(a.entry), true); assert.equal(f.chain.canInteract(a.entry), false); assert.equal(f.chain.requestClose(a.entry), false);
+  assert.equal(f.chain.shouldRemove(f.chain.root), false); assert.equal(f.chain.nativeResourceRemoved(a.entry, {}), false);
+  assert.equal(f.chain.nativeResourceRemoved(a.entry, an.identity), true); assert.equal(await a.closed, 'retired');
+  assert.equal(f.chain.shouldRemove(f.chain.root), true); assert.equal(f.chain.nativeResourceRemoved(f.chain.root, f.rootNative), true);
+  assert.equal(f.chain.getSnapshot().rootResource, 'removed'); assert.equal(f.chain.nativeCurrent(f.chain.root), false);
+});
+test('never-carrier Root cancellation is distinct from physical removal and denies delayed admission', () => {
+  const identity = {}, chain = new core.AdminRootPresentationChain({ platform: 'ios', rootIdentity: identity, isCurrent: () => true });
+  for (const invalid of [undefined, null, {}, []]) { assert.equal(chain.hasNativeLease(chain.root, invalid), false); assert.equal(chain.hasNativeResource(chain.root, invalid), false); assert.equal(chain.hasNativeRemovalProof(chain.root, invalid), false); }
+  chain.retire();
+  assert.equal(chain.getSnapshot().rootResource, 'cancelledBeforeCarrier'); assert.equal(chain.attachNative(chain.root, {}, identity), null); assert.equal(chain.nativeResourceRemoved(chain.root, {}), false);
+});
+test('actual resource proof after member loss releases only its original window and never revives Source or copied handles', async () => {
+  const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); an.stop(); await flush();
+  assert.equal(await a.closed, 'retired'); assert.equal(f.chain.hasNativeLease(a.entry, an.identity), false); assert.equal(f.chain.hasNativeResource(a.entry, an.identity), true);
+  assert.equal(f.chain.nativeResourceRemoved({ ...a.entry }, an.identity), false); assert.equal(f.chain.nativeResourceRemoved(a.entry, an.identity), true);
+  assert.equal(f.chain.nativeResourceRemoved(a.entry, an.identity), false); assert.equal(f.chain.attachNative(a.entry, an.identity), null); assert.equal(await a.closed, 'retired');
+});
+test('Source and resource epochs publish synchronous actual changes without invoking account guards', () => {
+  let reads = 0; const f = fixture('ios', { isCurrent: () => { reads++; return true; } }); const source = f.chain.sourceStamp(), resource = f.chain.resourceStamp();
+  let sourceCalls = 0, resourceCalls = 0; f.chain.subscribeSource(() => sourceCalls++); f.chain.subscribeResource(() => resourceCalls++);
+  f.chain.nativeShown(f.chain.root, f.rootNative); assert.equal(f.chain.sourceStamp(), source); assert.notEqual(f.chain.resourceStamp(), resource); assert.equal(sourceCalls, 0); assert.equal(resourceCalls, 1);
+  const before = reads; f.chain.nativeCurrent(f.chain.root); f.chain.hasNativeResource(f.chain.root, f.rootNative); f.rootStop(); assert.equal(reads, before); assert.equal(resourceCalls, 2);
+  f.chain.retire(); assert.equal(sourceCalls, 1); assert.equal(f.chain.hasNativeResource(f.chain.root, f.rootNative), true);
+});
+test('reentrant physical-removal observer cannot consume a child twice or pop its retained parent', async () => {
+  const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); const b = f.open(), bn = f.native(b.entry); bn.ready(); let nested;
+  f.chain.subscribe(() => { if (f.chain.isRetired(b.entry) && nested === undefined) nested = f.chain.nativeResourceRemoved(b.entry, bn.identity); });
+  assert.equal(f.chain.nativeResourceRemoved(b.entry, bn.identity), true); assert.equal(nested, false); assert.deepEqual(f.chain.getSnapshot().resources, [a.entry]);
+  assert.equal(f.chain.child(f.chain.root), a.entry); assert.equal(f.chain.hasNativeResource(a.entry, an.identity), true); assert.equal(await b.closed, 'retired'); f.chain.retire();
+});
+test('actual resource removal after native failure releases the original resource but cannot promote accepted Source close to success', async () => {
+  const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); f.chain.requestClose(a.entry); f.chain.nativeFailed(a.entry, an.identity);
+  assert.equal(f.chain.nativeRemoved(a.entry, an.identity), false); assert.equal(f.chain.nativeResourceRemoved(a.entry, an.identity), true);
+  assert.equal(await a.closed, 'retired'); assert.equal(f.chain.getSnapshot().resources.length, 0); f.chain.retire();
+});
+for (const gone of ['root', 'parent']) test(`actual early ${gone} proof is retained and consumed only after genuine descendant proofs`, async () => {
+  const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); const b = f.open(), bn = f.native(b.entry); bn.ready();
+  const parent = gone === 'root' ? f.chain.root : a.entry, identity = gone === 'root' ? f.rootNative : an.identity;
+  assert.equal(f.chain.nativeResourceRemoved(parent, {}), false); assert.equal(f.chain.nativeResourceRemoved(parent, identity), true);
+  assert.deepEqual(f.chain.getSnapshot().resources, [a.entry, b.entry]); assert.equal(f.chain.hasNativeRemovalProof(parent, identity), true);
+  assert.equal(f.chain.nativeResourceRemoved(parent, identity), false); assert.equal(f.chain.nativeShown(parent, identity), false); assert.equal(f.chain.nativeArmed(parent, identity), false);
+  assert.equal(await a.closed, 'retired'); assert.equal(await b.closed, 'retired'); assert.equal(f.chain.requestClose(b.entry), false); assert.equal(f.chain.canInteract(b.entry), false);
+  assert.equal(f.chain.nativeResourceRemoved(b.entry, bn.identity), true);
+  if (gone === 'root') { assert.deepEqual(f.chain.getSnapshot().resources, [a.entry]); assert.equal(f.chain.getSnapshot().rootResource, 'pending'); assert.equal(f.chain.nativeResourceRemoved(a.entry, an.identity), true); assert.equal(f.chain.getSnapshot().rootResource, 'removed'); }
+  else { assert.deepEqual(f.chain.getSnapshot().resources, []); assert.equal(f.chain.hasNativeResource(a.entry, an.identity), false); assert.equal(f.chain.getSnapshot().rootResource, 'pending'); f.chain.retire(); }
+});
+test('actual gone parent atomically cancels never-carrier queued descendants before joining only its genuine retained proof', async () => {
+  const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); const b = f.open();
+  assert.equal(f.chain.nativeResourceRemoved(a.entry, an.identity), true); assert.deepEqual(f.chain.getSnapshot().resources, []);
+  assert.equal(await a.closed, 'retired'); assert.equal(await b.closed, 'retired'); assert.equal(f.chain.attachNative(b.entry, {}), null); assert.equal(f.chain.nativeResourceRemoved(b.entry, {}), false); f.chain.retire();
+});
+test('final Source outcome publishes only after linearization, including retirement caused by an earlier removal observer', async () => {
+  for (const retire of [false, true]) {
+    const f = fixture('ios'); f.rootReady(); const a = f.open(), an = f.native(a.entry); an.ready(); f.chain.requestClose(a.entry); const observed = [];
+    f.chain.subscribeSource(() => { const outcome = f.chain.sourceOutcome(a.entry); observed.push(outcome); if (retire && outcome === null && !f.chain.getSnapshot().resources.includes(a.entry)) f.current(false); });
+    assert.equal(an.removed(), true); const expected = retire ? 'retired' : 'closed'; assert.equal(await a.closed, expected); assert.equal(observed.at(-1), expected);
+    assert.equal(f.chain.sourceOutcome(a.entry), expected); if (retire) assert.equal(observed.includes('closed'), false); f.chain.retire();
+  }
 });

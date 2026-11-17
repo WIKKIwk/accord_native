@@ -52,10 +52,13 @@ test('Android old/partial observer, invalid original Root identity and malformed
     assert.throws(() => f.component.AdminRootPresentationRootCarrier({ chain: f.chain, rootIdentity: f.rootIdentity, presentation: { transparent: false, animationType: 'none', presentationStyle: 'fullScreen' }, renderContent: () => ({}), onRequestClose() {}, windowObserver: f.observer, ...changes }), TypeError);
   } f.cleanup(); await flush();
 });
-test('late Android arm acknowledgment after original Root unmount is cancelled without touching a new native Root', async () => {
+test('late Android arm after original Root unmount retains only its own resource receipt, never a new native Root', async () => {
   const old = await nativeFixture('android'); old.render(); old.modals()[0].props.onShow(); const ticket = old.layout(0), pending = old.native.get(ticket); old.cleanup(); await flush();
   const fresh = await nativeFixture('android'); await fresh.readyRoot(); pending.arm.resolve(pending.value); await flush();
-  assert.equal(old.chain.getSnapshot().retired, true); assert.equal(old.calls.some(value => value[0] === 'cancel' && value[2] === ticket), true); assert.equal(fresh.chain.getSnapshot().rootReady, true); assert.equal(fresh.calls.some(value => value[0] === 'cancel'), false); fresh.cleanup(); await flush();
+  assert.equal(old.chain.getSnapshot().retired, true); assert.equal(old.calls.some(value => value[0] === 'cancel' && value[2] === ticket), false);
+  assert.equal(old.chain.getSnapshot().rootResource, 'pending'); assert.equal(old.chain.getSnapshot().rootReady, false);
+  pending.detach.resolve({ ...pending.value, state: 'detached' }); await flush(); assert.equal(old.chain.getSnapshot().rootResource, 'removed');
+  assert.equal(fresh.chain.getSnapshot().rootReady, true); assert.equal(fresh.calls.some(value => value[0] === 'cancel'), false); fresh.cleanup(); await flush();
 });
 test('actual iOS StrictMode replay keeps the original shown carrier and stale native Back cannot invoke a newer callback', async () => {
   const f = await nativeFixture('ios'); await f.readyRoot(); const a = f.open('original'); f.render(); const original = f.modals()[1]; original.props.onShow(); f.render(); f.replay(); await flush(); f.render(); assert.equal(f.chain.canInteract(a.entry), true);
@@ -96,7 +99,7 @@ for (const platform of ['android', 'ios']) test(`${platform} actual outlet ances
   assert.equal(nodes(slot, node => node.type === 'Modal').length, 1); assert.equal(nodes(slot, node => node.type === OriginProbe).length, 0);
   assert.deepEqual(slot.props.style, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }); assert.equal(f.modals().length, 2);
   const saved = physical; f.replay(); await flush(); f.render(); assert.equal(physical, saved); assert.equal(saved.isCurrent(), true);
-  f.current(false); assert.equal(saved.isCurrent(), false); f.current(true); assert.equal(saved.isCurrent(), false); f.cleanup(); await flush();
+  f.current(false); assert.equal(saved.sourceCurrent(), false); assert.equal(saved.isCurrent(), true); f.current(true); assert.equal(saved.sourceCurrent(), false); f.cleanup(); await flush();
 });
 
 test('actual retained retired parent slot and outlet survive beneath its child with Source authority kept separate', async () => {
@@ -107,6 +110,44 @@ test('actual retained retired parent slot and outlet survive beneath its child w
   f.chain.cancel(a.entry); f.render(); assert.equal(binding, original); assert.equal(original.isCurrent(), true); assert.equal(original.sourceCurrent(), false);
   assert.equal(f.modals().length, 3); assert.equal(nodes(f.tree(), node => node.props.testID === 'admin-root-native-parent-slot' && node.props.nativeID === a.entry.id)[0].props.ref.current, slot.props.ref.current);
   f.chain.requestClose(b.entry); const native = f.modals()[2]; f.render(); native.props.onDismiss(); f.render(); assert.equal(await b.closed, 'closed'); assert.equal(await a.closed, 'retired'); f.cleanup(); await flush();
+});
+for (const platform of ['android', 'ios']) test(`${platform}: account-retired attached pending carrier and root drain only real original postorder receipts`, async () => {
+  const f = await nativeFixture(platform); await f.readyRoot(); const a = f.open('original-pending'); f.render();
+  const rootModal = f.modals()[0], childModal = f.modals()[1]; let childTicket, rootTicket;
+  if (platform === 'android') { childTicket = f.layout(1); rootTicket = [...f.native.keys()][0]; }
+  f.current(false); assert.equal(f.chain.current(), false); f.render(); assert.equal(await a.closed, 'retired'); assert.equal(f.modals().length, 2);
+  assert.equal(childModal.props.visible, true); assert.equal(f.chain.getSnapshot().resources[0], a.entry); assert.equal(f.chain.shouldRemove(f.chain.root), false);
+  childModal.props.onShow(); if (platform === 'android') await f.ack(1); f.render(); assert.equal(f.modals()[1].props.visible, false); assert.equal(f.chain.canInteract(a.entry), false);
+  if (platform === 'android') await f.detach(childTicket); else { childModal.props.onDismiss(); f.render(); }
+  assert.equal(f.chain.getSnapshot().resources.length, 0); assert.equal(f.modals()[0].props.visible, false); assert.equal(f.chain.getSnapshot().rootResource, 'pending');
+  if (platform === 'android') await f.detach(rootTicket); else { rootModal.props.onDismiss(); f.render(); }
+  assert.equal(f.chain.getSnapshot().rootResource, 'removed'); assert.equal(await a.closed, 'retired'); f.cleanup(); await flush();
+});
+test('Android actual ancestor detach immediately fences descendants without treating rejected postorder proof as cleanup', async () => {
+  const f = await nativeFixture('android'); await f.readyRoot(); const a = f.open('child'); f.render(); f.modals()[1].props.onShow(); f.layout(1); await f.ack(1);
+  const root = [...f.native.values()][0]; root.detach.resolve({ ...root.value, state: 'detached' }); await flush();
+  assert.equal(f.chain.getSnapshot().rootReady, false); assert.equal(f.chain.canInteract(a.entry), false); assert.equal(f.chain.getSnapshot().rootResource, 'pending'); assert.deepEqual(f.chain.getSnapshot().resources, [a.entry]);
+  f.cleanup(); await flush(); assert.equal(await a.closed, 'retired');
+});
+for (const platform of ['android', 'ios']) test(`${platform}: retired Source paint is hidden while exact parent/outlet and independent native child remain retained`, async () => {
+  const f = await nativeFixture(platform); await f.readyRoot(); const a = f.open('retired-paint'); f.render(); f.modals()[1].props.onShow();
+  if (platform === 'android') { f.layout(1); await f.ack(1); } f.render(); const b = f.open('independent-native-child', { isCurrent: () => true }); f.render();
+  f.modals()[2].props.onShow(); if (platform === 'android') { f.layout(2); await f.ack(2); } f.render();
+  f.chain.cancel(a.entry); f.render(); const parent = f.modals()[1], child = f.modals()[2];
+  assert.equal(parent.props.visible, true); assert.equal(parent.props.children.props.style[1].opacity, 0);
+  assert.equal(child.props.visible, true); assert.equal(child.props.children.props.style[1], false); assert.equal(f.chain.canInteract(b.entry), true);
+  assert.equal(nodes(parent, node => node.props.testID === 'admin-root-native-parent-slot' && node.props.nativeID === a.entry.id).length, 1);
+  assert.equal(f.chain.getSnapshot().resources.length, 2); f.cleanup(); await flush();
+});
+for (const platform of ['android', 'ios']) test(`${platform}: one-shot actual Root proof survives member loss and joins later child proof without a second Root callback`, async () => {
+  const f = await nativeFixture(platform); await f.readyRoot(); const a = f.open('native-child'); f.render(); const rootModal = f.modals()[0], childModal = f.modals()[1];
+  childModal.props.onShow(); if (platform === 'android') { f.layout(1); await f.ack(1); } f.render();
+  const windows = [...f.native.values()];
+  if (platform === 'android') windows[0].detach.resolve({ ...windows[0].value, state: 'detached' }); else rootModal.props.onDismiss();
+  await flush(); assert.equal(f.chain.getSnapshot().rootResource, 'pending'); assert.deepEqual(f.chain.getSnapshot().resources, [a.entry]); assert.equal(await a.closed, 'retired');
+  f.render(); assert.equal(f.modals()[0].props.visible, false); assert.equal(f.chain.canInteract(a.entry), false);
+  if (platform === 'android') windows[1].detach.resolve({ ...windows[1].value, state: 'detached' }); else childModal.props.onDismiss();
+  await flush(); assert.equal(f.chain.getSnapshot().rootResource, 'removed'); assert.deepEqual(f.chain.getSnapshot().resources, []); assert.equal(await a.closed, 'retired'); f.cleanup(); await flush();
 });
 
 test('actual marker View replacement never retargets an already returned native parent DTO or acknowledges its window', async () => {

@@ -27,11 +27,18 @@ function fixture(platform, { available = true, empty = false, actions } = {}) {
     './AdminTypography.android': { AdminText: 'Text' }, './adminCreateHubModel': policy };
   mocks['./useAdminCreateHubMotion'] = s.compile(path.resolve(__dirname, '../src/admin/useAdminCreateHubMotion.ts'), mocks);
   mocks['./AdminCreateHubFloating'] = s.compile(path.resolve(__dirname, '../src/admin/AdminCreateHubFloating.tsx'), mocks);
-  const view = s.compile(path.resolve(__dirname, `../src/admin/AdminCreateHubHost.${platform}.tsx`), mocks);
-  const props = () => ({ controller, state: controller.getSnapshot(), primary: controller.primary(), layout: policy.adminCreateHubLayout(15, true, controller.primary()?.visible ?? false), labels: { trigger: 'Yangi', closed: 'Yaratish markazi', close: 'Yopish' } });
-  return { r, controller, calls, completions, values, ticket, render: () => r.render(() => s.expand(view.AdminCreateHubHost(props()))), retire: () => { valid = false; controller.recheck(); } };
+  const floating = mocks['./AdminCreateHubFloating'], inputs = []; mocks['./AdminCreateHubFloating'] = { AdminCreateHubFloating: props => { inputs.push(props); return floating.AdminCreateHubFloating(props); } };
+  const view = s.compile(path.resolve(__dirname, `../src/admin/AdminCreateHubHost.${platform}.tsx`), mocks); let slot;
+  const props = () => ({ controller, state: controller.getSnapshot(), primary: controller.primary(), slot, layout: policy.adminCreateHubLayout(15, true, controller.primary()?.visible ?? false), labels: { trigger: 'Yangi', closed: 'Yaratish markazi', close: 'Yopish' } });
+  return { r, controller, calls, completions, values, ticket, inputs, slot: value => { slot = value; }, render: () => r.render(() => s.expand(view.AdminCreateHubHost(props()))), retire: () => { valid = false; controller.recheck(); } };
 }
 for (const platform of ['android', 'ios']) {
+  test(`${platform} explicit primary/overlay slots use SAME actual snapshot and never duplicate or fabricate the other surface`, () => {
+    const f = fixture(platform); f.slot('overlay'); let tree = f.render(); assert.equal(s.byId(tree, 'app-primary-navigation-button'), undefined); assert.equal(f.inputs.at(-1).state, f.controller.getSnapshot());
+    f.slot('primary'); assert.ok(s.byId(f.render(), 'app-primary-navigation-button')); f.controller.open(f.ticket); tree = f.render(); assert.equal(s.byId(tree, 'app-primary-navigation-button'), undefined); assert.equal(s.nodes(tree, node => node.props.testID === 'admin-create-hub-overlay').length, 0); assert.ok(f.inputs.at(-1).state.overlay);
+    f.slot('overlay'); tree = f.render(); assert.equal(s.nodes(tree, node => node.props.testID === 'admin-create-hub-overlay').length, 1); assert.equal(f.inputs.at(-1).state, f.controller.getSnapshot());
+    f.slot('unknown'); assert.throws(f.render, /explicit primary\/overlay/);
+  });
   test(`${platform} genuine native primary is80/r22/right16/bottom89 and opens root floating actions, never a modal/menu/sheet`, () => {
     const f = fixture(platform), first = f.render(), button = s.byId(first, 'app-primary-navigation-button'); assert.ok(button);
     assert.ok(s.nodes(first, node => flattenStyle(node.props.style).width === 80 && flattenStyle(node.props.style).height === 80 && flattenStyle(node.props.style).borderRadius === 22 && flattenStyle(node.props.style).bottom === 89 && flattenStyle(node.props.style).end === 16).length);

@@ -41,15 +41,17 @@ test('provider tuple replacement retires old binding; consumer copied parents on
     } finally { f.cleanup(); await s.flush(); }
   }
 });
-test('Strict replay preserves only SAME mounted original marker, final cleanup and account retirement revoke queued bindings', async () => {
+test('Strict replay preserves SAME mounted original marker; account retirement revokes Source but retains actual resource', async () => {
   const f = fixture(); f.owner.capture(f.view, 41); const value = f.owner.read(f.chain, f.chain.root);
   f.stop(); assert.equal(value.isCurrent(), false); const replay = f.owner.attach(); await s.flush(); assert.equal(f.owner.read(f.chain, f.chain.root), value);
-  f.current(false); assert.equal(value.isCurrent(), false); f.current(true); assert.equal(value.isCurrent(), false); replay(); f.rootStop(); await s.flush(); assert.equal(f.owner.capture(f.view, 41), false);
+  f.current(false); assert.equal(value.sourceCurrent(), false); assert.equal(value.isCurrent(), true); f.current(true); assert.equal(value.sourceCurrent(), false);
+  replay(); f.rootStop(); await s.flush(); assert.equal(f.owner.capture(f.view, 41), false);
 });
-test('actual original account callback unmounting slot or reentering resource read cannot authorize retained marker', async () => {
-  for (const mode of ['unmount', 'reenter']) {
+test('resource reads are passive; original Source callback cannot authorize after actual marker unmount', async () => {
+  for (const mode of ['unmount', 'resource-read']) {
     let action = () => true; const f = s.fixture('ios', { isCurrent: () => action() }), owner = new AdminRootNativeParentOwner({ chain: f.chain, parent: f.chain.root, nativeIdentity: f.rootNative }), stop = owner.attach(), view = {};
     owner.capture(view, 41); const value = owner.read(f.chain, f.chain.root); action = () => { if (mode === 'unmount') stop(); else value.isCurrent(); return true; };
-    assert.equal(value.isCurrent(), false); action = () => true; stop(); f.rootStop(); await s.flush(); assert.equal(value.isCurrent(), false);
+    assert.equal(value.isCurrent(), true); // This passive read invokes no account callback.
+    assert.equal(value.sourceCurrent(), mode === 'resource-read'); action = () => true; stop(); f.rootStop(); await s.flush(); assert.equal(value.isCurrent(), false);
   }
 });
