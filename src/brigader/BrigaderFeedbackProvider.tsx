@@ -40,13 +40,15 @@ function Bound({ children, owner }: { children: ReactNode; owner: AdminFixedSnac
   useEffect(() => { const stop = AppState.addEventListener('change', runtime.publish); return () => stop.remove(); }, [runtime]);
   const visibility = useMemo<AdminFixedSnackBarSourceVisibility>(() => ({ subscribe: runtime.subscribe, canInteract: scaffold => isCurrent() && AppState.currentState === 'active' && !!runtime.pages.get(scaffold)?.interactive(), tickerEnabled: scaffold => isCurrent() && !!runtime.pages.get(scaffold)?.interactive() }), [runtime, isCurrent]);
   const reader = useMemo<AdminFixedSnackBarNativeReader>(() => ({ isAvailable: owner.reader.isAvailable, observe: (request, receive) => {
-    let stopNative: (() => void) | undefined, stopBinding: (() => void) | undefined, bound: AdminScaffoldLayoutBinding | undefined, revision = -1, closed = false;
+    let stopNative: (() => void) | undefined, stopBinding: (() => void) | undefined, bound: AdminScaffoldLayoutBinding | undefined, closed = false;
     const refresh = () => {
       if (closed) return; const page = runtime.pages.get(request.scaffold);
-      if (bound !== page?.binding) { stopBinding?.(); bound = page?.binding; stopBinding = bound?.subscribe(refresh); }
+      if (bound !== page?.binding) { stopBinding?.(); stopNative?.(); stopNative = undefined; bound = page?.binding; stopBinding = bound?.subscribe(refresh); }
       const state = bound?.getSnapshot();
-      if (revision === state?.revision) return; revision = state?.revision ?? -1; stopNative?.(); stopNative = undefined;
-      if (!state?.viewport || state.dockHeight === null || !request.isCurrent()) { receive(null); return; }
+      if (!state?.viewport || ['unavailable','retired'].includes(state.phase) || !request.isCurrent()) { stopNative?.(); stopNative = undefined; receive(null); return; }
+      // The live pair watch already follows native geometry. Recreating it on
+      // its own layout publication would perpetually cancel that same watch.
+      if (stopNative || state.dockHeight === null) return;
       stopNative = owner.reader.observe({ ...request, sourceLayout: { ...request.sourceLayout, hostHeight: state.dockHeight } }, receive);
     };
     const stop = runtime.subscribe(refresh); refresh();

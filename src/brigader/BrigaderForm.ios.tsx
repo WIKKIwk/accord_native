@@ -1,5 +1,5 @@
-import { Button, Text, TextField, Toggle as NativeToggle, VStack, useNativeState } from '@expo/ui/swift-ui';
-import { buttonStyle, controlSize, disabled as inactive, foregroundStyle, frame, keyboardType, padding, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
+import { Button, HStack, Picker, Text, TextField, Toggle as NativeToggle, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { buttonStyle, controlSize, disabled as inactive, foregroundStyle, frame, keyboardType, padding, pickerStyle, tag, textFieldStyle } from '@expo/ui/swift-ui/modifiers';
 import { useEffect, type ReactNode } from 'react';
 import { BaseHost } from '../components/BaseHost.ios';
 
@@ -12,3 +12,14 @@ export function Action({ label, onPress, disabled, secondary }: { label: string;
 export function Toggle({ label, value, onChange, disabled }: { label: string; value: boolean; onChange: (value: boolean) => void; disabled?: boolean }) { return <NativeToggle label={label} isOn={value} onIsOnChange={onChange} modifiers={[inactive(!!disabled)]} />; }
 export function Label({ children }: { children: string }) { return <Text>{children}</Text>; }
 export function Gap({ size = 12 }: { size?: number }) { return <VStack modifiers={[frame({ height: size })]}>{null}</VStack>; }
+
+export function Select({ label, value, options, onChange, disabled }: { label: string; value: string | null; options: { value: string; label: string }[]; onChange: (value: string) => void; disabled?: boolean }) {
+  return <Picker label={label} selection={value} onSelectionChange={value => { if (value !== null) onChange(value); }} modifiers={[pickerStyle('menu'), inactive(!!disabled), frame({ maxWidth: Infinity, minHeight: 48 })]}>{options.map(option => <Text key={option.value} modifiers={[tag(option.value)]}>{option.label}</Text>)}</Picker>;
+}
+export function ActionRow({ actions }: { actions: { label: string; onPress: () => void; disabled?: boolean; secondary?: boolean }[] }) {
+  return <HStack spacing={10} modifiers={[frame({ maxWidth: Infinity })]}>{actions.map((action, index) => <Button key={index} label={action.label} onPress={action.onPress} modifiers={[buttonStyle(action.secondary ? 'bordered' : 'borderedProminent'), controlSize('large'), inactive(!!action.disabled), frame({ maxWidth: Infinity, minHeight: 48 })]} />)}</HStack>;
+}
+
+export function ChoiceChips({ options,disabled }: { options:{ label:string;selected:boolean;onChange:(value:boolean)=>void }[];disabled?:boolean }) { return <VStack alignment="leading" spacing={8}>{options.map((option,index) => <NativeToggle key={index} label={option.label} isOn={option.selected} onIsOnChange={option.onChange} modifiers={[inactive(!!disabled)]} />)}</VStack>; }
+export const Check = Toggle;
+export function Columns({ children }: { children:ReactNode[] }) { return <HStack spacing={8} modifiers={[frame({ maxWidth:Infinity })]}>{children.map((child,index) => <VStack key={index} modifiers={[frame({ maxWidth:Infinity })]}>{child}</VStack>)}</HStack>; }

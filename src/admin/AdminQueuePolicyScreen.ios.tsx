@@ -39,3 +39,12 @@ export function AdminQueuePolicyScreen(props: AdminQueuePolicyScreenProps) {
   </>;
 }
 const styles = StyleSheet.create({ root: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+
+/** The same Source panel embedded in the apparatus hub or an apparatus detail. */
+export function AdminQueuePolicyPanel(props: AdminQueuePolicyScreenProps) {
+  const model = useAdminQueuePolicy(props);
+  if (!model.current || model.state.invalidated) return null;
+  return <BaseHost matchContents={{ vertical:true }} style={{ width:'100%' }}><VStack alignment="leading" spacing={12} modifiers={[frame({ maxWidth:Infinity }),padding({ horizontal:12,vertical:12 })]}>
+    {model.state.loading && !model.state.data ? <ProgressView /> : model.state.loadError && !model.state.data ? <><Text>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} /></> : model.state.data ? <><Text>{model.a('queue.intro')}</Text>{!model.rows.length ? <Text>{model.a('queue.empty')}</Text> : null}{model.rows.map(row => <VStack key={row.apparatus.id} alignment="leading" spacing={12} modifiers={[frame({ maxWidth:Infinity }),padding({ vertical:12 })]}><Text modifiers={[font({ textStyle:'headline' })]}>{row.title}</Text>{row.policy.locked ? <Text>{model.a('queue.locked_hint')}</Text> : null}<Picker label="" selection={row.policy.policy} onSelectionChange={value => { if (value === 'strict_sequence' || value === 'free_pick') row.change(value); }} modifiers={[pickerStyle('segmented'),disabled(!row.enabled),frame({ minHeight:44 })]}><Text modifiers={[tag('strict_sequence')]}>{model.a('queue.strict')}</Text><Text modifiers={[tag('free_pick')]}>{model.a('queue.free')}</Text></Picker></VStack>)}</> : null}
+  </VStack></BaseHost>;
+}

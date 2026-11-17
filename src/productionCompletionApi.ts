@@ -50,3 +50,16 @@ export async function adminProductionMapCompletionRequests(session: Session) {
   if (!payload) throw new TypeError('Invalid completion requests response');
   return Array.isArray(payload.completion_requests) ? payload.completion_requests.map(completionRequestNotification) : [];
 }
+
+/** @v2 adminProductionMapCompletionRequestDecision */
+export async function adminProductionMapCompletionRequestDecision(session: Session, eventId: string, decision: string, beforeSend?: () => void) {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/completion-requests/decision', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_id: eventId, decision }),
+  }, beforeSend);
+  if (response.status !== 200) {
+    let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
+    throw productionMapResponseError(response.status, payload, 'completion_request_decision');
+  }
+  const payload = object(await response.json());
+  return completionRequestDecisionFromJson(payload?.decision);
+}

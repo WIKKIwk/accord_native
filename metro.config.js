@@ -3,6 +3,7 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 const upstream = config.resolver.resolveRequest;
+config.resolver.assetExts.push('glb');
 
 // D7 gives each platform its own route tree and D8 gives its screens no fallback, so one
 // platform's routes cannot be bundled for the other. Each platform gets a route context without them.

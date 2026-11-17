@@ -86,3 +86,10 @@ export function AdminQueuePolicyScreen(props: AdminQueuePolicyScreenProps) {
 const styles = StyleSheet.create({ root: { flex: 1 }, full: { width: '100%' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   retry: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 }, tile: { paddingHorizontal: 4 },
   intro: { paddingHorizontal: 8 }, empty: { alignItems: 'center', paddingHorizontal: 4 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+
+/** The same Source panel embedded in the apparatus hub or an apparatus detail. */
+export function AdminQueuePolicyPanel(props: AdminQueuePolicyScreenProps) {
+  const model = useAdminQueuePolicy(props);
+  if (!model.current || model.state.invalidated) return null;
+  return <View>{model.state.loading && !model.state.data ? <BaseHost matchContents><AdminLoadingIndicator /></BaseHost> : model.state.loadError && !model.state.data ? <BaseHost matchContents><Column><Text>{model.t('serverDisconnectedRetry')}</Text><TextButton onClick={model.reload}><Text>{model.t('retry')}</Text></TextButton></Column></BaseHost> : model.state.data ? <><BaseHost matchContents={{ vertical:true }} style={{ width:'100%' }}><Text>{model.a('queue.intro')}</Text>{!model.rows.length ? <Text>{model.a('queue.empty')}</Text> : null}</BaseHost>{model.rows.map((row,index) => <QueuePolicyTile key={row.apparatus.id} row={row} index={index} count={model.rows.length} a={model.a} />)}</> : null}</View>;
+}

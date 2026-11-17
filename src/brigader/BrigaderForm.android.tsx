@@ -1,4 +1,4 @@
-import { Button, Column, OutlinedButton, Spacer, Switch, Row, useNativeState } from '@expo/ui/jetpack-compose';
+import { Button, Checkbox, FlowRow, FilterChip, DropdownMenu, DropdownMenuItem, Column, OutlinedButton, Spacer, Switch, Row, useNativeState } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useEffect } from 'react';
 import { BaseHost } from '../components/BaseHost.android';
@@ -24,3 +24,16 @@ export function Action({ label, onPress, disabled, secondary }: { label: string;
 export function Toggle({ label, value, onChange, disabled }: { label: string; value: boolean; onChange: (value: boolean) => void; disabled?: boolean }) { return <Row verticalAlignment="center" modifiers={[fillMaxWidth(), padding(0, 8, 0, 8)]}><Text modifiers={[weight(1)]}>{label}</Text><Switch value={value} onCheckedChange={onChange} enabled={!disabled} /></Row>; }
 export function Label({ children }: { children: string }) { return <Text style={{ typography: 'bodyMedium' }}>{children}</Text>; }
 export function Gap({ size = 12 }: { size?: number }) { return <Spacer modifiers={[height(size)]} />; }
+
+export function Select({ label, value, options, onChange, disabled }: { label: string; value: string | null; options: { value: string; label: string }[]; onChange: (value: string) => void; disabled?: boolean }) {
+  return <Column modifiers={[fillMaxWidth(), padding(0, 4, 0, 12)]}><Text>{label}</Text><DropdownMenu><DropdownMenu.Trigger><OutlinedButton enabled={!disabled} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 56 })]}><Text>{options.find(option => option.value === value)?.label ?? ''}</Text></OutlinedButton></DropdownMenu.Trigger><DropdownMenu.Items>{options.map(option => <DropdownMenuItem key={option.value} enabled={!disabled} onClick={() => onChange(option.value)}><DropdownMenuItem.Text><Text>{option.label}</Text></DropdownMenuItem.Text></DropdownMenuItem>)}</DropdownMenu.Items></DropdownMenu></Column>;
+}
+export function ActionRow({ actions }: { actions: { label: string; onPress: () => void; disabled?: boolean; secondary?: boolean }[] }) {
+  return <Row horizontalArrangement={{ spacedBy: 10 }} modifiers={[fillMaxWidth(), padding(0, 6, 0, 6)]}>{actions.map((action, index) => { const Component = action.secondary ? OutlinedButton : Button; return <Component key={index} enabled={!action.disabled} onClick={action.onPress} shape={userCreateRounded(20)} modifiers={[weight(1), defaultMinSize({ minHeight: 48 })]}><Text>{action.label}</Text></Component>; })}</Row>;
+}
+
+export function ChoiceChips({ options,disabled }: { options:{ label:string;selected:boolean;onChange:(value:boolean)=>void }[];disabled?:boolean }) {
+  return <FlowRow horizontalArrangement={{ spacedBy:8 }} verticalArrangement={{ spacedBy:8 }} modifiers={[fillMaxWidth()]}>{options.map((option,index) => <FilterChip key={index} selected={option.selected} enabled={!disabled} onClick={() => option.onChange(!option.selected)}><FilterChip.Label><Text>{option.label}</Text></FilterChip.Label></FilterChip>)}</FlowRow>;
+}
+export function Check({ label,value,onChange,disabled }: { label:string;value:boolean;onChange:(value:boolean)=>void;disabled?:boolean }) { return <Row verticalAlignment="center" modifiers={[fillMaxWidth(),defaultMinSize({ minHeight:56 })]}><Checkbox value={value} onCheckedChange={onChange} enabled={!disabled} /><Text modifiers={[weight(1)]}>{label}</Text></Row>; }
+export function Columns({ children }: { children:ReactNode[] }) { return <Row horizontalArrangement={{ spacedBy:8 }} modifiers={[fillMaxWidth()]}>{children.map((child,index) => <Column key={index} modifiers={[weight(1)]}>{child}</Column>)}</Row>; }

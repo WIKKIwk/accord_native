@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { findNodeHandle, Modal, Pressable, StyleSheet, View, type ViewInstance } from 'react-native';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { readAdminPresentationWindowCapability, type AdminPresentationWindowObserver } from '../admin/adminPresentationWindow';
 import { createAdminPresentationWindowTicket } from '../admin/adminPresentationWindowTicket';
@@ -8,6 +9,7 @@ import { BrigaderSurfaceContent } from './BrigaderSurfaceContent';
 import type { BrigaderDialogProps } from './BrigaderDialogTypes';
 
 function Window(props: BrigaderDialogProps & { observer: AdminPresentationWindowObserver }) {
+  const { colors } = useBaseTheme();
   const [shown, setShown] = useState(false), marker = useRef<ViewInstance>(null);
   // Preserve the native window's original close reader across redraws.
   const close = useRef(props.closing); useLayoutEffect(() => { close.current = props.closing; }, [props.closing]);
@@ -21,7 +23,7 @@ function Window(props: BrigaderDialogProps & { observer: AdminPresentationWindow
   return <Modal transparent visible animationType="fade" statusBarTranslucent navigationBarTranslucent onShow={() => { if (window.owner.checkCurrent()) setShown(true); }} onRequestClose={dismiss}>
     <View style={{ flex: 1, backgroundColor: `rgba(0,0,0,${props.scrim ?? .54})` }}><View ref={marker} collapsable={false} nativeID={original.ticket} onLayout={capture} pointerEvents="none" style={{ position: 'absolute', width: 0, height: 0 }} />
       <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityRole="button" />
-      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, paddingVertical: 24 }} pointerEvents="box-none"><View style={{ width: '100%', maxWidth: props.maxWidth ?? 560 }}><BrigaderSurfaceContent draw={props.children} interactive={interactive} shown={shown} /></View></SafeAreaView>
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: props.inset ?? 40, paddingVertical: 24 }} pointerEvents="box-none"><View style={{ width: '100%', maxWidth: props.maxWidth ?? 560, backgroundColor: colors.surfaceContainerHigh, borderRadius: 28, overflow: 'hidden' }}><BrigaderSurfaceContent draw={props.children} interactive={interactive} shown={shown} /></View></SafeAreaView>
     </View>
   </Modal>;
 }

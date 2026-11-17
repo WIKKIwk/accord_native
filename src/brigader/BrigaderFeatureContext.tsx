@@ -8,4 +8,4 @@ export function useBrigaderFeature(route: string) {
   const page = useBrigaderPage(route), owned = useContext(Context);
   return owned ? { ...page, current: owned.current, interactive: owned.interactive, back: owned.back, args: owned.args } : { ...page, args: undefined as unknown };
 }
-export type BrigaderFeatureFrameProps = { route: string; title: string; children: ReactNode; actions?: ReactNode; footer?: ReactNode; drawer?: boolean; hideProfile?: boolean };
+export type BrigaderFeatureFrameProps = { route: string; title: string; children: ReactNode; actions?: ReactNode; footer?: ReactNode; drawer?: boolean; hideProfile?: boolean; onBack?: () => void };

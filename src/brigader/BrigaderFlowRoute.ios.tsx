@@ -2,6 +2,7 @@ import { Redirect, type Href } from 'expo-router';
 import { appRoutes } from '../shared/appRoutes';
 import { BrigaderFeatureAuthority } from './BrigaderFeatureContext';
 import { useBrigaderFlowPage } from './BrigaderFlowProvider';
+import { BrigaderApparatusScreen } from './BrigaderApparatusScreen';
 import { BrigaderItemCreate } from './BrigaderItemCreate.ios';
 import { BrigaderItemDetail } from './BrigaderItemDetail.ios';
 import { BrigaderCustomerCreateFlow } from './BrigaderCustomerCreateFlow.ios';
@@ -11,6 +12,6 @@ export function BrigaderFlowRoute() {
   if (!page.entry) return <Redirect href={'/ios-brigader' as Href} />;
   if (!page.current()) return null;
   const route = page.entry.target.route;
-  const content = route === appRoutes.adminItemCreate ? <BrigaderItemCreate /> : route === appRoutes.adminItemBulkMove ? <BrigaderItemCreate bulk /> : route === appRoutes.adminItemDetail ? <BrigaderItemDetail /> : route === appRoutes.adminUserCreate ? <BrigaderCustomerCreateFlow /> : null;
+  const content = route === appRoutes.adminItemCreate ? <BrigaderItemCreate /> : route === appRoutes.adminItemBulkMove ? <BrigaderItemCreate bulk /> : route === appRoutes.adminItemDetail ? <BrigaderItemDetail /> : route === appRoutes.adminUserCreate ? <BrigaderCustomerCreateFlow /> : route === appRoutes.adminApparatusSettings ? <BrigaderApparatusScreen /> : null;
   return <BrigaderFeatureAuthority value={{ current: page.current, interactive: page.interactive, back: page.back, args: page.entry.target.args }}>{content}</BrigaderFeatureAuthority>;
 }

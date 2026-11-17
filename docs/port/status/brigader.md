@@ -251,3 +251,29 @@ These adapters are shared supporting changes to `AdminFixedSnackBar*` and `useAd
 Verification: both platform TypeScript checks pass; Expo lint has zero errors and the one inherited
 AdminClosedHistoryOwner warning. No unit or device tests were run in this request, as requested by the user.
 The remaining 22 software routes are still in progress; this checkpoint is not completion of Brigader parity.
+
+## Remaining-routes checkpoint: notifications and apparatus
+
+- Connected Notifications with the original completion decisions, single-flight reads, live/read version fence,
+  foreground lifecycle, first-event timeout, authorization-stop rule and jittered reconnect/HTTP fallback.
+- Connected Apparatus Settings, Groups and Create. Preserved the hub/back behavior, warm cache, active/sort filtering,
+  focused-create dialog, master editor, custom group dialogs, deletion confirmation, canonical groups and original
+  apparatus-detail navigation. Detail includes material-assignment permission, training, capacity, queue and placement.
+- Added the missing canonical apparatus creation/patch/training requests using the existing validated drafts and actual
+  native microsecond clock. Placement keeps Source's read-back/revision-conflict algorithm.
+- Capacity retains all profile, downtime and scheduling fields, requirement parsing, alternatives, dates, validation,
+  source idempotency keys, reloads and notices. The existing Queue Policy native implementation is reused as a panel.
+- The map object picker uses the unchanged V2 offline renderer and identical runtime GLB, bundled for a real WebView.
+  This is also the foundation for the still-pending full Factory Map page. WebView requires a rebuilt development binary.
+- Corrected the shared fixed-notice reader adapter so a native pair publication does not recreate its own watch.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| admin_notifications_screen and its two parts | BrigaderNotifications, brigaderNotificationController | states/decisions compared | states/decisions compared | Native controls; device acceptance pending |
+| admin_apparatus_settings_screen and its four parts | BrigaderApparatusScreen, brigaderApparatusController | module/editor/group paths compared | module/editor/group paths compared | Native controls; device acceptance pending |
+| admin_apparatus_detail_screen; capacity panel and parts | BrigaderApparatusDetail, BrigaderCapacityPanel | fields, command bodies, native close compared | fields, command bodies, native close compared | Native controls; device acceptance pending |
+| admin_factory_map_viewer object picker; factory_map_bindings | BrigaderFactoryMapObjectPicker, AdminFactoryMapViewer, factoryMapBindings | actual asset/picking path ported | actual asset/picking path ported | WebView carrier replaces Flutter plugin; device acceptance pending |
+
+Both platform TypeScript checks pass. Expo lint: zero errors and one inherited AdminClosedHistoryOwner warning.
+No unit or device tests were run. Seven of this request's 25 routes are now composed; 18 remain in progress.
+The complete role and its text/surface audit are not yet marked done.
