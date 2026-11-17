@@ -56,11 +56,15 @@ export async function authorizedImageFetch(session: Session, path: string, init:
 }
 
 const readTimeoutFacts = new WeakSet<object>(), readClientFailureFacts = new WeakSet<object>();
+const legacyTimeoutFacts = new WeakSet<object>(), legacyClientFailureFacts = new WeakSet<object>();
 const hasFailureFact = (facts: WeakSet<object>, error: unknown): boolean => error !== null &&
   (typeof error === 'object' || typeof error === 'function') && facts.has(error);
 /** Facts originate only at actual timeout/fetch/body boundaries, never from an error's name or message. */
 export const isAuthorizedReadTimeout = (error: unknown): boolean => hasFailureFact(readTimeoutFacts, error);
 export const isAuthorizedReadClientFailure = (error: unknown): boolean => hasFailureFact(readClientFailureFacts, error);
+/** Actual legacy fetch/timer facts, used only by Source Opening WIP delete retry. */
+export const isAuthorizedLegacyTimeout = (error: unknown): boolean => hasFailureFact(legacyTimeoutFacts,error);
+export const isAuthorizedLegacyClientFailure = (error: unknown): boolean => hasFailureFact(legacyClientFailureFacts,error);
 function rawTimeout(message: string): Error {
   const error = new Error(message); error.name = 'TimeoutError'; readTimeoutFacts.add(error); return error;
 }
@@ -237,7 +241,8 @@ async function authenticatedRequest(session: Session, path: string, init: Reques
               catch (error) { rememberClientFailure(error); throw error; }
             } else {
               // Preserve the legacy fetch/argument evaluation order exactly.
-              response = await fetch(currentUrl.toString(), { ...init, headers, redirect: 'manual', credentials: 'omit' });
+              try { response = await fetch(currentUrl.toString(), { ...init, headers, redirect: 'manual', credentials: 'omit' }); }
+              catch (error) { if (error !== null && (typeof error === 'object' || typeof error === 'function')) legacyClientFailureFacts.add(error); throw error; }
             }
             const complete = async () => {
               // V2's non-streamed client buffers the response before its request timeout ends.
@@ -270,7 +275,7 @@ async function authenticatedRequest(session: Session, path: string, init: Reques
         let timer: ReturnType<typeof setTimeout> | undefined;
         try {
           return await Promise.race([request, new Promise<never>((_, reject) => {
-            timer = setTimeout(() => { const error = new Error('API request timed out'); error.name = 'TimeoutError'; if (gate) readTimeoutFacts.add(error); reject(error); }, timeoutMs);
+            timer = setTimeout(() => { const error = new Error('API request timed out'); error.name = 'TimeoutError'; if (gate) readTimeoutFacts.add(error); else legacyTimeoutFacts.add(error); reject(error); }, timeoutMs);
           })]);
         } finally { if (timer !== undefined) clearTimeout(timer); }
       } finally { if (reportSnapshot) invalidateQueueSnapshotReads(); }

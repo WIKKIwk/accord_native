@@ -300,3 +300,24 @@ new shared Brigader row. Existing worker defaults remain the same.
 
 Both platform TypeScript checks pass; Expo lint has zero errors and the one inherited warning. No unit or device tests
 were run. Twelve of the requested 25 routes are composed; the other 13 are still in progress.
+
+## Remaining-routes checkpoint: WIP and Opening WIP
+
+Connected WIP Batches and both Opening WIP tabs. WIP keeps the source waiting-only verification, canonical-location
+filter, second filtered request, grouping, labels and quantity formatting. Opening WIP retains eligible-order and
+physical-successor rules, roll validation, exact fingerprint/idempotency key, duplicate confirmation, original printer
+selection, create/read-back validation and partial-print retry without recreating batches. List/detail/reprint/delete
+flows retain the source sheet/dialog kinds, fields, lock checks, FIFO notices and two-attempt transport-only deletion.
+
+The legacy HTTP helper now records actual caught transport/timeout facts without replacing thrown values; the new
+delete request uses those facts rather than guessing from exception names. The existing project printer selector's
+Bluetooth preference remains in effect; no GoDEX implementation or hardware testing was added.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| admin_wip_batches_screen and parts | BrigaderWipBatches / brigaderWipModel | source read/filter/card flow compared | source read/filter/card flow compared | Native controls; device acceptance pending |
+| admin_production_map_orders_opening_wip: wizard/duplicate/order picker | BrigaderOpeningWip / brigaderOpeningWipModel / BrigaderOpeningWipPicker | fields, validation, print retry and dismissal compared | fields, validation, print retry and dismissal compared | Existing printer preference; device acceptance pending |
+| same source: WIP list/details/reprint/delete | BrigaderOpeningWipSurfaces / openingWipDeleteApi | source state/requests/close order compared | source state/requests/close order compared | Native controls; device acceptance pending |
+
+Both platform TypeScript checks pass. Expo lint: zero errors and the inherited AdminClosedHistoryOwner warning.
+No unit or device tests were run. Fourteen of the requested 25 routes are composed; eleven remain in progress.

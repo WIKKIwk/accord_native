@@ -1,0 +1,5 @@
+import { Button,VStack } from '@expo/ui/swift-ui';
+import { buttonStyle,controlSize,frame,padding } from '@expo/ui/swift-ui/modifiers';
+import { BaseHost } from '../components/BaseHost.ios';
+export type BrigaderFilterProps = { label:string;value:string;expanded:boolean;options:{ value:string;label:string }[];toggle:()=>void;select:(value:string)=>void };
+export function BrigaderExpandableFilter(props:BrigaderFilterProps) { return <BaseHost matchContents={{ vertical:true }} style={{ width:'100%' }}><VStack alignment="leading" spacing={8} modifiers={[frame({ maxWidth:Infinity }),padding({ horizontal:8,top:8,bottom:4 })]}><Button label={`${props.label}: ${props.options.find(item => item.value === props.value)?.label ?? props.value}`} onPress={props.toggle} modifiers={[buttonStyle('bordered'),controlSize('large')]} />{props.expanded ? props.options.map(item => <Button key={item.value} label={item.label} onPress={() => props.select(item.value)} modifiers={[buttonStyle(item.value === props.value ? 'borderedProminent' : 'bordered'),controlSize('large'),frame({ minHeight:44 })]} />) : null}</VStack></BaseHost>; }

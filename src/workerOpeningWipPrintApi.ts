@@ -10,7 +10,7 @@ type PrintInput = { batch_id: string; qr_payload?: string; driver_url?: string; 
   print_count?: number; print_transport?: 'wifi' | 'offline' | 'bluetooth' };
 
 /** @v2 adminPrintOpeningWip */
-export async function adminPrintOpeningWip(session: Session, input: PrintInput) {
+export async function adminPrintOpeningWip(session: Session, input: PrintInput,beforeSend?:()=>void) {
   const body: Obj = { batch_id: input.batch_id.trim() };
   const driver = input.driver_url?.trim().replace(/\/+$/, '') ?? '';
   if (input.qr_payload?.trim()) body.qr_payload = input.qr_payload.trim();
@@ -21,7 +21,7 @@ export async function adminPrintOpeningWip(session: Session, input: PrintInput) 
   if (input.print_transport === 'offline' || input.print_transport === 'bluetooth') body.print_transport = 'offline';
   const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps/opening-wip/print', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
+  },beforeSend);
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }

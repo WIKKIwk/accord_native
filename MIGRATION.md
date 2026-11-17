@@ -1,0 +1,30 @@
+# Flutter → Expo migration tracker
+
+Expo SDK: 58 · State: scoped observable controllers and existing hooks · HTTP: authorizedFetch · UI: @expo/ui
+
+This tracker covers the remaining Brigader routes requested on 2026-11-17. Prior role mappings and checkpoints are
+in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read-only.
+
+## Modules
+
+| Module | Status | Logic | API + fixtures | Tests | iOS UI | Android UI | Notes |
+|---|---|---|---|---|---|---|---|
+| Brigader products/apparatus/notifications/operations/WIP | composed | ported/reused | source requests; no invented fixtures | user owns device tests | native | native | See checkpoints; full-role audit pending |
+| Remaining eleven Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
+
+## File mapping
+
+| Flutter file | Expo file(s) | Status |
+|---|---|---|
+| lib/src/features/admin/presentation/admin_wip_batches_screen*.dart | src/brigader/brigaderWipModel.ts, BrigaderWipBatches.* | composed |
+| lib/src/features/admin/presentation/admin_production_map_orders_opening_wip.dart | src/brigader/brigaderOpeningWipModel.ts, BrigaderOpeningWip*, src/admin/openingWipDeleteApi.ts | composed |
+
+## Open parity items
+
+Remaining source route inventory and platform surface audit are tracked in docs/port/status/brigader.md.
+No synthetic API response fixtures were invented. Physical printing and device acceptance belong to the user.
+
+## Decisions
+
+- 2026-11-17 — User explicitly owns testing. TypeScript, lint and static source comparison are run here; no device, emulator or unit test run.
+- Keep actual Brigader identity/capabilities; reuse native views without role impersonation.

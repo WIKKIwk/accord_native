@@ -1,0 +1,6 @@
+import { Column, FilterChip, FlowRow } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth,padding } from '@expo/ui/jetpack-compose/modifiers';
+import { BaseHost } from '../components/BaseHost.android';
+import { AdminText as Text } from '../admin/AdminTypography.android';
+export type BrigaderFilterProps = { label:string;value:string;expanded:boolean;options:{ value:string;label:string }[];toggle:()=>void;select:(value:string)=>void };
+export function BrigaderExpandableFilter(props:BrigaderFilterProps) { return <BaseHost matchContents={{ vertical:true }} style={{ width:'100%' }}><Column modifiers={[fillMaxWidth(),padding(8,8,8,4)]}><FilterChip selected={!!props.value} onClick={props.toggle}><FilterChip.Label><Text>{`${props.label}: ${props.options.find(item => item.value === props.value)?.label ?? props.value}`}</Text></FilterChip.Label></FilterChip>{props.expanded ? <FlowRow horizontalArrangement={{ spacedBy:8 }} verticalArrangement={{ spacedBy:6 }} modifiers={[fillMaxWidth()]}>{props.options.map(item => <FilterChip key={item.value} selected={item.value === props.value} onClick={() => props.select(item.value)}><FilterChip.Label><Text>{item.label}</Text></FilterChip.Label></FilterChip>)}</FlowRow> : null}</Column></BaseHost>; }

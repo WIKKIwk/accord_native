@@ -9,12 +9,12 @@ import { useBaseTheme } from '../components/useBaseTheme';
 import type { ReactNode } from 'react';
 
 export function Form({ children }: { children: ReactNode }) { return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column modifiers={[fillMaxWidth(), padding(12, 12, 12, 24)]}>{children}</Column></BaseHost>; }
-export function Field({ label, value, onChange, numeric, multiline, disabled, error }: { label: string; value: string; onChange: (value: string) => void; numeric?: boolean; multiline?: boolean; disabled?: boolean; error?: string }) {
+export function Field({ label, value, onChange, numeric, multiline, disabled, error,unit }: { label: string; value: string; onChange: (value: string) => void; numeric?: boolean; multiline?: boolean; disabled?: boolean; error?: string;unit?:string }) {
   const state = useNativeState(value), { colors, mode } = useBaseTheme();
   useEffect(() => { state.set(value); }, [state, value]);
   return <Column modifiers={[fillMaxWidth(), padding(0, 0, 0, 12)]}><AdminOutlinedTextField value={state} onValueChange={onChange} singleLine={!multiline} enabled={!disabled} isError={!!error} shape={userCreateRounded(18)}
     keyboardOptions={{ keyboardType: numeric ? 'decimal' : 'text' }} colors={{ focusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest, unfocusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest }} modifiers={[fillMaxWidth()]}>
-    <AdminOutlinedTextField.Label><Text>{label}</Text></AdminOutlinedTextField.Label>{error ? <AdminOutlinedTextField.SupportingText><Text color={colors.error}>{error}</Text></AdminOutlinedTextField.SupportingText> : null}
+    <AdminOutlinedTextField.Label><Text>{label}</Text></AdminOutlinedTextField.Label>{unit ? <AdminOutlinedTextField.Suffix><Text>{unit}</Text></AdminOutlinedTextField.Suffix> : null}{error ? <AdminOutlinedTextField.SupportingText><Text color={colors.error}>{error}</Text></AdminOutlinedTextField.SupportingText> : null}
   </AdminOutlinedTextField></Column>;
 }
 export function Action({ label, onPress, disabled, secondary }: { label: string; onPress: () => void; disabled?: boolean; secondary?: boolean }) {
