@@ -90,6 +90,13 @@ The 33 static report entries include duplicate call/declaration references and o
 - Captured 32 V2 request/response exchanges from 23 source tests (order-scan bootstrap, Preparation, Qolip). Pinned order-scan fixture was already identical. New captures under `tests/contracts/f11910bb/` preserve historical fixture baselines.
 - Independent pinned V2 oracle: 153 passed, 10 failed. Nine Qolip/Material widget cases fail on old task keys, missing legacy read-error text or old refresh counts; the Home GScale case expects a widget type absent from its native control-only tab tree (`No element`, source test266). Task/model/API and receipt defaults/batch-order rules pass. No V2 test or source file was modified.
 - Current-tree ledger check passes. Pinned f119 check reports seven existing Metalayzer symbols added after f119; baseline and other-role tags remain unchanged.
+- Final current-tree check resolves 1,685 source tags and 118 source-test tags. The pinned Material role report runs successfully. All 16 literal-endpoint warnings are inherited/dynamically constructed shared endpoints; this role adds no unreferenced endpoint.
+
+## Checkpoints
+
+- `d8b7066f` — task transport/runtime, Dart wire validation, shared assignment rules and pinned contract captures.
+- `af6a9c04` — both native role flows, full detail/sequence/assignment, shared receipt/devices and source logout cleanup.
+- Final audit checkpoint — the per-text source verdicts and this verification/acceptance record. No files remain intentionally uncommitted.
 
 ## Open items
 
