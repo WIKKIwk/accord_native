@@ -22,14 +22,16 @@ export async function adminProductionMap(session: Session, id: string, beforeSen
 }
 
 /** @v2 adminProductionMaps */
-export async function adminProductionMaps(session: Session) {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps');
+export async function adminProductionMaps(session: Session, beforeSend?:()=>void) {
+  const response = await authorizedFetch(session, '/v1/mobile/admin/production-maps',undefined,beforeSend);
+  beforeSend?.();
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
     throw productionMapResponseError(response.status, payload, 'production_maps_list');
   }
   const payload: unknown = await response.json();
+  beforeSend?.();
   if (!Array.isArray(payload)) throw new TypeError('Invalid production map list');
   return payload.map(productionMapSavedFromJson);
 }

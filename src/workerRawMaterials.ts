@@ -118,18 +118,19 @@ export function rawMaterialStartRequirements(value: unknown): AdminRawMaterialSt
 
 /** @v2 adminRawMaterialStartRequirements */
 export async function adminRawMaterialStartRequirements(session: Session, orderId: string, apparatus: string,
-  materialBarcodes: string[] = []): Promise<AdminRawMaterialStartRequirements> {
+  materialBarcodes: string[] = [],beforeSend?:()=>void): Promise<AdminRawMaterialStartRequirements> {
   const query = new URLSearchParams({ order_id: orderId.trim(), apparatus: apparatusId(apparatus) });
   if (materialBarcodes.length) query.set('material_barcodes', materialBarcodes.join(','));
   await Promise.resolve();
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await authorizedFetch(session, `/v1/mobile/admin/raw-material-start-requirements?${query}`, { signal: controller.signal });
+    const response = await authorizedFetch(session, `/v1/mobile/admin/raw-material-start-requirements?${query}`, { signal: controller.signal },beforeSend);
+    beforeSend?.();
     if (response.status !== 200) {
       let payload: unknown; try { payload = await response.json(); } catch { payload = null; }
       throw productionMapResponseError(response.status, payload, 'raw_material_start_requirements', response.headers);
     }
-    return rawMaterialStartRequirements(await response.json());
+    const payload=await response.json();beforeSend?.();return rawMaterialStartRequirements(payload);
   } finally { clearTimeout(timer); }
 }
 

@@ -147,7 +147,7 @@ export function materialMapQueueState(map: Map, node: Node, snapshot?: MaterialT
 }
 
 /** Canonical snapshot controls have already passed V2's contract parser. This is display consistency only. */
-function consistent(control: Control, orderControl: string, state: string | null) {
+export function materialQueueControlConsistent(control: Control, orderControl: string, state: string | null) {
   if (state && state !== dartTrim(String(control.state ?? '')).toLowerCase()) return false;
   const mode = control.interaction?.mode, actions = control.allowed_actions;
   if (!Array.isArray(actions) || !control.interaction) return false;
@@ -174,7 +174,7 @@ function displayStatus(map: Map, node: Node, state: string | null, facts: Materi
   if (occurrence ? !sameOperation(map, node, occurrence) : map.nodes.filter(candidate => candidate.kind === 'apparatus' &&
     dartTrim(candidate.apparatus_id) === dartTrim(node.apparatus_id)).length > 1) control = null;
   let status = !state && !control ? 'unknown' : state ?? control?.state ?? 'pending';
-  if (control && !consistent(control, orderControl, state)) status = 'unknown';
+  if (control && !materialQueueControlConsistent(control, orderControl, state)) status = 'unknown';
   else if (control) {
     const interaction = control.interaction;
     if (['requeued_ready', 'requeued_waiting'].includes(interaction?.mode)) status = interaction.mode;

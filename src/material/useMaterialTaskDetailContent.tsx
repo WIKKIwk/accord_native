@@ -27,14 +27,14 @@ import { materialDetailAssignments, materialDetailAttachedMolds, materialDetailC
 import { materialMapOpeningBatches, materialTaskMapRows, type MaterialTaskMapSnapshot } from './materialTaskMapModel';
 import { materialSequenceCode } from './materialSequenceModel';
 
-export type MaterialTaskDetailProps = { session: Session; witness: SessionWitness; row: SupplyTaskRow; isCurrent(): boolean;
-  onClose(): void; route?: string; apparatusCatalog?: readonly AdminApparatus[]; sourceSnapshot?: MaterialTaskMapSnapshot | null };
+export type MaterialTaskDetailProps = { session: Session; witness: SessionWitness; row: Pick<SupplyTaskRow,'id'|'code'|'order_number'|'title'|'customer_name'|'image_id'>; isCurrent(): boolean;
+  onClose(): void; route?: string; apparatusCatalog?: readonly AdminApparatus[]; sourceSnapshot?: MaterialTaskMapSnapshot | null; readOnlySeed?:MaterialDetailOrder; readAssignments?:(order:MaterialDetailOrder,guard:()=>void)=>Promise<AdminRawMaterialAssignment[]>; readMolds?:(order:MaterialDetailOrder,guard:()=>void)=>Promise<MaterialDetailMold[]> };
 type Result = { attempt: number; order: MaterialDetailOrder | null; error: string | null };
 type Section<T> = { value: T; loading: boolean; error: string };
 const empty = <T,>(value: T): Section<T> => ({ value, loading: true, error: '' });
 
 /** Non-worker branches of _ReadOnlyOrderDetailSheet; both native views share this owner. */
-export function useMaterialTaskDetailContent({ session, witness, row, isCurrent, route, apparatusCatalog = [], sourceSnapshot }: MaterialTaskDetailProps) {
+export function useMaterialTaskDetailContent({ session, witness, row, isCurrent, route, apparatusCatalog = [], sourceSnapshot,readOnlySeed,readAssignments,readMolds }: MaterialTaskDetailProps) {
   const { locale, p } = useWorkerOrderText(), sheet = useNativeSheet();
   const [attempt, setAttempt] = useState(0), [result, setResult] = useState<Result | null>(null);
   const [materials, setMaterials] = useState<Section<AdminRawMaterialAssignment[]>>(empty([]));
@@ -52,37 +52,37 @@ export function useMaterialTaskDetailContent({ session, witness, row, isCurrent,
   useEffect(() => {
     let active = true;
     const valid = () => active && current();
-    void readMaterialTaskDetail(session, witness, row, valid, route).then(value => {
+    void (readOnlySeed?Promise.resolve(readOnlySeed):readMaterialTaskDetail(session, witness, row, valid, route)).then(value => {
       if (valid()) setResult({ attempt, order: value, error: null });
     }, error => { if (valid()) setResult({ attempt, order: null, error: error instanceof MobileApiException || error instanceof WorkerControlException
       ? error.message : adminText('production.open_failed', locale) }); });
     return () => { active = false; };
-  }, [session, witness, row, current, attempt, route, locale]);
+  }, [session, witness, row, current, attempt, route, locale,readOnlySeed]);
 
   const reloadMaterials = useCallback(async (full: MaterialDetailOrder, loading = true) => {
     const generation = ++materialGeneration.current;
     if (!current()) return;
     setMaterials(previous => ({ ...previous, loading: loading || previous.loading, error: '' }));
     try {
-      const value = await materialDetailAssignments(session, full, guard);
+      const value = await (readAssignments?readAssignments(full,guard):materialDetailAssignments(session, full, guard));
       if (current() && generation === materialGeneration.current) setMaterials({ value, loading: false, error: '' });
     } catch (error) {
       if (current() && generation === materialGeneration.current) setMaterials({ value: [], loading: false,
         error: error instanceof Error && error.message && error.message !== 'TimeoutException' ? error.message : productionText('worker.materials.load_failed', locale) });
     }
-  }, [session, guard, current, locale]);
+  }, [session, guard, current, locale,readAssignments]);
 
   useEffect(() => {
     if (!order || !current()) return;
     let active = true;
     void Promise.resolve().then(() => { if (active && current()) { void reloadMaterials(order); setMolds(empty([])); } });
-    void materialDetailAttachedMolds(session, order, guard).then(value => {
+    void (readMolds?readMolds(order,guard):materialDetailAttachedMolds(session, order, guard)).then(value => {
       if (active && current()) setMolds({ value, loading: false, error: '' });
     }, error => { if (active && current()) setMolds({ value: [], loading: false,
       error: error instanceof Error && error.message ? error.message : adminText('production.qolip_load_failed', locale) }); });
     const generation = materialGeneration;
     return () => { active = false; generation.current++; };
-  }, [order, session, guard, current, reloadMaterials, locale]);
+  }, [order, session, guard, current, reloadMaterials, locale,readMolds]);
 
   useFocusEffect(useCallback(() => {
     if (openingReceipt.current && order && current()) {
@@ -114,14 +114,14 @@ export function useMaterialTaskDetailContent({ session, witness, row, isCurrent,
   }, [order, mapExpanded, mapRevision, session, current, locale]);
 
   const receive = () => {
-    if (!order || !current() || openingReceipt.current) return;
+    if (readOnlySeed || !order || !current() || openingReceipt.current) return;
     openingReceipt.current = true;
     setReceiptOpening(true);
     router.push({ pathname: `/${Platform.OS === 'ios' ? 'ios' : 'android'}-material/receipt`,
       params: serializeGScaleModeArgs(materialReceiptArgs(order)) } as unknown as Href);
   };
   const unlink = (assignment: AdminRawMaterialAssignment) => {
-    if (!current() || unlinkingRef.current || !materialDetailCanUnlink(assignment)) return;
+    if (readOnlySeed || !current() || unlinkingRef.current || !materialDetailCanUnlink(assignment)) return;
     Alert.alert(p('worker.material.unlink.title'), p('worker.material.unlink.message'), [
       { text: p('worker.action.cancel'), style: 'cancel' },
       { text: p('worker.material.unlink.confirm'), style: 'destructive', onPress: () => {
@@ -168,8 +168,8 @@ export function useMaterialTaskDetailContent({ session, witness, row, isCurrent,
     toggleMaterials: () => { if (current()) { setMaterialsExpanded(value => !value); if (!materialsExpanded && order) void reloadMaterials(order, false); } },
     toggleMolds: () => { if (current()) setMoldsExpanded(value => !value); }, toggleMap: () => { if (current()) setMapExpanded(value => !value); },
     retryMap: () => { if (current()) setMapRevision(value => value + 1); }, retry: () => { if (current()) setAttempt(value => value + 1); },
-    receive, canReceive: !!order && !receiptOpening, unlink, unlinking, notice, noticeId,
-    dismissNotice: () => setNotice(''), canUnlink: materialDetailCanUnlink, openMaterialQr, openMoldQr, openStage,
+    receive, canReceive: !readOnlySeed && !!order && !receiptOpening, unlink, unlinking, notice, noticeId,
+    dismissNotice: () => setNotice(''), canUnlink: readOnlySeed?()=>false:materialDetailCanUnlink, openMaterialQr, openMoldQr, openStage,
     mapRows, mapProgress: p('worker.map.progress', { completed: mapRows.filter(value => value.completed).length, total: mapRows.length }),
     p, a: (key: string, values?: Record<string, unknown>) => adminText(key, locale, values) };
 }

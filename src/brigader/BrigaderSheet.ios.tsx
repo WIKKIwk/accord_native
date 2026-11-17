@@ -10,6 +10,6 @@ export function BrigaderSheet(props: BrigaderDialogProps) {
   useLayoutEffect(() => { authority.update(props.closing); }, [authority, props.closing]);
   const appeared = () => { authority.appeared(); if (authority.current()) setShown(true); };
   return <BaseHost style={{ position: 'absolute', width: '100%' }}><BottomSheet isPresented={!props.closing} fitToContents onIsPresentedChange={value => { if (!value && props.dismissible !== false && authority.dismissible()) props.dismiss(); }} onDismiss={authority.detached}>
-    <Group modifiers={[presentationDragIndicator('visible'), interactiveDismissDisabled(props.dismissible === false), onAppear(appeared)]}><RNHostView matchContents={{ vertical: true }}><View style={{ width: '100%' }}><BrigaderSurfaceContent draw={props.children} interactive={authority.interactive} shown={shown} /></View></RNHostView></Group>
+    <Group modifiers={[presentationDragIndicator(props.hideDragHandle?'hidden':'visible'), interactiveDismissDisabled(props.dismissible === false), onAppear(appeared)]}><RNHostView matchContents={{ vertical: true }}><View style={{ width: '100%' }}><BrigaderSurfaceContent draw={props.children} interactive={authority.interactive} shown={shown} /></View></RNHostView></Group>
   </BottomSheet></BaseHost>;
 }

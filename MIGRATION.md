@@ -36,3 +36,6 @@ No synthetic API response fixtures were invented. Physical printing and device a
 - Keep actual Brigader identity/capabilities; reuse native views without role impersonation.
 
 | lib/src/features/admin/presentation/admin_progress_qr_* | src/brigader/BrigaderProgressQr*, brigaderProgressQrModel.ts, src/admin/adminProgressQrPassport.ts, adminProgressQrPdf.ts | composed |
+
+| lib/src/features/admin/presentation/admin_progress_qr* | src/brigader/BrigaderProgressQr*, src/admin/adminProgressQrPassport.ts, adminProgressQrPdf.ts | composed |
+| lib/src/features/admin/logic/factory_map* and presentation/admin_factory_map* | src/admin/factoryMap{Live,Stock,Status,Bindings,Mapping}, BrigaderFactoryMap*, BrigaderFactoryOrderDetail | composed |

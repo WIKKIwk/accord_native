@@ -377,3 +377,15 @@ opening-WIP, material/order/ordered-queue sections, corrections, resources, tech
 are wired. Camera readiness/stop use actual native events. Background resumption preserves actual camera intent.
 Both platform TypeScript checks and focused lint pass; no device or unit tests were run.
 Twenty of the requested 25 routes are composed. Full platform/text/scanner audit remains before final integration.
+
+
+## Factory-map checkpoint — 2026-11-17
+
+Composed the offline original GLB/Three.js factory-map route. Live queue status retains canonical interaction
+consistency, visible queue ordering, retired epochs/revision fencing, 15-second polling and 30-second freshness.
+Physical stock uses complete paginated inventory, real warehouse events, catalog/group ancestry and one physical
+row per roll. In-flight pagination is invalidated by warehouse updates; partial counts are never published.
+Revision-checked attach/unlink, native close completion, actual camera focus callback plus Source fallback,
+resizable sheets, filters, current-order expansion, material/WIP rows and nested read-only order sections are wired.
+Both platform TypeScript and focused lint pass; user owns device tests. Twenty-one of 25 routes are composed.
+Final role-wide text/platform audit remains open along with the four remaining calculation/create routes.
