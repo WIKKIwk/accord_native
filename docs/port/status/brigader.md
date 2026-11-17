@@ -221,3 +221,13 @@ the other 39 had already passed. Both platform TypeScript checks pass. The final
 No device, simulator or emulator was used; manual device acceptance is left to the user as requested.
 
 Final follow-up lint: zero errors, one pre-existing warning at `AdminClosedHistoryOwner.tsx:36`; no new warning.
+
+## Connection checkpoint merged into main
+
+- Implementation checkpoint: `b9e21c87` (`port/brigader/wiring: connect Users, creation, warehouses and chat`).
+- Main merge: `4990334f`, no conflicts.
+- The three existing tracked user edits remained unstaged. All 128 existing dirty/untracked files retained their exact SHA-256
+  contents across the merge. Snapshot/patch backup: `.codex-merge-backups/brigader-connections.dihvm35o` in the parent workspace.
+- Post-merge iOS and Android TypeScript pass. Post-merge lint has zero errors and the same pre-existing dependency warning.
+- 145 relevant regression cases passed across original-role navigation, native composition, creation transport/state and shared Chat.
+- This merge completes the connections listed above; it does not complete the 25 absent source feature routes or full 1:1 Brigader parity.
