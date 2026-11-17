@@ -717,6 +717,7 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
 // Add a single row when both platform screens for a V2 home become available.
 const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
+  [appRoutes.adminHome]: { ios: '/ios-admin' as Href, android: '/android-admin' as Href },
   [appRoutes.qolipHome]: { ios: '/ios-qolip' as Href, android: '/android-qolip' as Href },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
   [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
@@ -732,7 +733,7 @@ export function homeTarget(session: Session, platform: string): Href | 'worker' 
     if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, route)) return null;
     return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
   }
-  if ((route === appRoutes.boyoqchiHome || route === appRoutes.rezkaSplit) && !canOpenRoute(session, route)) return null;
+  if ((route === appRoutes.adminHome || route === appRoutes.boyoqchiHome || route === appRoutes.rezkaSplit) && !canOpenRoute(session, route)) return null;
   // Keep both protected roles' pre-integration fallback unchanged even with extra split capability.
   if (route === appRoutes.rezkaSplit && (session.profile.role === 'aparatchi' || session.profile.role === 'tayyorlov_masteri')) return null;
   if (route === appRoutes.qolipHome && session.profile.role !== 'qolipchi') return null;

@@ -1,7 +1,15 @@
 # admin
 
-Status: Admin port in progress, isolated continuation on `port/admin` (2026-11-17)
-Stopped at: original Root sheet producer/coordinator/renderer/resource drain are connected in the native foundation. Continue with genuine Root/Source application containers, per-window/global CreateHub placement, actual feature sheet callers/typed results and remaining Admin surfaces. Global Admin admission and Firebase device configuration remain Open.
+Status: Admin port in progress; `port/admin` merged into `main`, common login entry connected on `main` (2026-11-17).
+Stopped at: welcome/login and restored-session routing now enter the existing guarded Admin layouts on both platforms. Full Root/Source containers, global CreateHub placement, actual feature sheet callers/results, Firebase configuration and remaining Admin parity are still Open.
+
+## 2026-11-17: common welcome/login entry
+
+- The user explicitly requested enabling Admin through the existing shared welcome/login screens and committing the work. Both native Admin route layouts now export the existing `AdminLayout`; the shared home-target table maps `adminHome` to `/android-admin` and `/ios-admin`. `Index`, `AppEntry`, both native Login screens and the authentication APIs are reused without a second login path.
+- The new target also checks the existing `canOpenRoute` rule. A role whose V2 home selection falls back to Admin but whose role-specific route permissions deny it stays on the existing account-access screen instead of cycling between the root and Admin layouts. The existing native layout guards still validate platform, active session witness, role/capabilities and the legacy test-token restriction.
+- Tests exercise the actual shared Index/AppEntry/login-form callback flow, fresh login, saved-session bootstrap, login unlock handoff and unauthorized-account logout back to entry on Android/iOS. Existing admission, session retirement, native layout and separate-role routing tests remain in the integration group.
+- Verification:201focused integration tests passed,0failed (including43entry/routing/welcome tests). Both platform TypeScript checks, Android/iOS offline JavaScript exports and whitespace checks pass. Full Expo lint has0errors/1pre-existing ClosedHistory warning. The user's3dirty tracked files and125untracked/build files match their original128-file backup; only this entry group's explicit paths are committed. No real backend login, phone, simulator or native app build was used.
+- Entry access is enabled; this does not declare the whole Admin role complete. The shell continues to expose its existing capability-filtered prepared destinations. Missing Source/CreateHub providers, users/creation flows, Push/Firebase and the remaining text/native parity work stay Open; no dummy primary provider or synthetic native readiness was added. The historical checkpoints below describe their state before this explicit entry-wiring request.
 
 ## 2026-11-17 continuation: original Root sheet integration
 

@@ -9,7 +9,7 @@ import { useAdminShell } from './AdminShellContext';
 
 type Value = { owner: AdminOwnedNavigationSession; current: () => boolean; ready: () => boolean; providers: AdminOwnedRouteProviders | null; generation: number };
 const Context = createContext<Value | null>(null);
-/** The actual Admin roots stay held. Source-ready providers must be supplied before these child pages are admitted. */
+/** Source-ready providers must be supplied before owned child pages are admitted. */
 export function AdminOwnedNavigationProvider({ providers = null, children }: { providers?: AdminOwnedRouteProviders | null; children: ReactNode }) {
   const shell = useAdminShell(), platform = Platform.OS;
   const owner = useMemo(() => new AdminOwnedNavigationSession({ session: shell.session, witness: shell.witness, isCurrent: shell.isCurrent,

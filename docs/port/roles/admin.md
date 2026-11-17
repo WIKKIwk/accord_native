@@ -1,5 +1,11 @@
 # Admin UI contract (partial)
 
+## 2026-11-17: shared welcome/login admission
+
+`Index` reuses the common `AppEntry` welcome/account picker and native Login screens. A freshly authenticated or restored session whose existing V2-compatible `homeRoute` resolves to `adminHome` and passes `canOpenRoute` enters `/android-admin` or `/ios-admin`. Both file-route layouts mount the prepared native `AdminLayout`, preserving its original session witness, platform/capability guard, app lock and test-token restriction. A denied target uses the existing account-access flow and can log out to the shared entry.
+
+This enables entering the currently composed Admin shell. Full-role Root/CreateHub/owned creation flows and Firebase still require their own real providers and parity work; login routing does not manufacture those dependencies or mark the role finished.
+
 ## 2026-11-17: Root owned sheets (connected native foundation)
 
 Source ordering: f119 `admin_user_create_screen_widgets_part_01.dart:77–113` waits for roles before opening its picker and applies a nonnull result only while mounted; `admin_item_create_screen__AdminItemCreateScreenState_methods_01.dart:287–347` retains the root customer sheet while pushing CustomerCreate, then applies the original returned customer after the picker closes. Their fixed/adaptive UI sizing and actual application producers remain separate Open work.

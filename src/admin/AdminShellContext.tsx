@@ -12,7 +12,7 @@ type AdminShell = { session: Session; witness: SessionWitness; store: AdminStore
   destination: (route: string, platform: string) => string | null; isRouteAvailable: (route: string) => boolean;
   activityBinding: AdminActivityBinding | null };
 const Context = createContext<AdminShell | null>(null);
-// These reviewed child compositions remain behind the actual Admin root hold.
+// Admission and each destination retain their existing account/capability guards.
 const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.adminHome, appRoutes.profile,
   appRoutes.adminProductionMapOrders, appRoutes.adminActivity, appRoutes.adminFactoryLocations,
   appRoutes.adminSettings, appRoutes.adminAdditionalSettings, appRoutes.adminItemGroupCreate, appRoutes.adminInactiveSuppliers,

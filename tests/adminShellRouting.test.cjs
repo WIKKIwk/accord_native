@@ -52,11 +52,11 @@ test('new Roles drawer destination retains its source icon and selection on eith
   }
 });
 
-test('Admin home is held while separately ported roles retain their targets', () => {
+test('common login resolves the guarded Admin home while separately ported roles retain their targets', () => {
   for (const value of [admin, session('customer', ['catalog.item.read'])]) {
     assert.equal(access.adminShellMayEnter(value), true);
-    assert.equal(routes.homeTarget(value, 'ios'), null);
-    assert.equal(routes.homeTarget(value, 'android'), null);
+    assert.equal(routes.homeTarget(value, 'ios'), '/ios-admin');
+    assert.equal(routes.homeTarget(value, 'android'), '/android-admin');
     assert.equal(routes.homeTarget(value, 'web'), null);
   }
   for (const value of [sales, brigader]) { assert.equal(access.adminShellMayEnter(value), false);
@@ -273,7 +273,7 @@ test('test token notice is explicit in all supported languages and has no action
   }
 });
 
-test('held shell binds the original witness and enables only reviewed permitted destinations', () => {
+test('shell binds the original witness and enables only reviewed permitted destinations', () => {
   let valid = true; const witness = {}, cleanups = [];
   const react = { createContext: () => ({ Provider: 'Provider' }), useCallback: fn => fn, useMemo: fn => fn(), useEffect: fn => cleanups.push(fn()) };
   class Store { constructor(summary, activity) { this.summary = summary; this.activity = activity; } clear() {} }
@@ -301,11 +301,12 @@ test('held shell binds the original witness and enables only reviewed permitted 
   assert.equal(demo.destination(r.profile, 'ios'), null); assert.equal(demo.destination(r.adminProductionMapOrders, 'ios'), null); cleanups.filter(fn => typeof fn === 'function').forEach(fn => fn());
 });
 
-test('held shell integration keeps both actual Admin roots closed', () => {
+test('both actual Admin entry routes mount the existing guarded native layout', () => {
   for (const platform of ['ios', 'android']) {
-    const content = fs.readFileSync(path.resolve(__dirname, `../src/app/${platform}-admin/_layout.tsx`), 'utf8');
-    assert.match(content, /Redirect href="\/"/);
-    assert.doesNotMatch(content, /AdminLayout/);
+    const actualLayout = () => layout(platform, admin);
+    const route = load(`app/${platform}-admin/_layout.tsx`, { '../../admin/AdminLayout': { AdminLayout: actualLayout } });
+    assert.equal(route.default, actualLayout);
+    assert.equal(route.default().type, 'WorkerSecurityProvider');
   }
 });
 
