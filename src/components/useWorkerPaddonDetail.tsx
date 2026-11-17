@@ -20,18 +20,18 @@ import { useWorkerPaddonPresentation } from './useWorkerPaddonPresentation';
 import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export type WorkerPaddonDetailProps = { session: Session; code: string; apparatus?: string; initialSnapshot?: WorkerPaddonDetailSeed; onBack(): void };
-export function useWorkerPaddonDetail({ session, code, apparatus = '', initialSnapshot }: WorkerPaddonDetailProps) {
-  const owner = useWorkerPaddonOwner(session, apparatus), [initial] = useState(() => initialSnapshot?.takeForCode(code)), controller = useMemo(() => owner.detail(code,initial), [owner, code,initial]);
+export type WorkerPaddonDetailProps = { session: Session; code: string; apparatus?: string; initialSnapshot?: WorkerPaddonDetailSeed; onBack(): void; manageItems?:boolean; loader?:(guard:()=>void)=>Promise<import('../workerPaddonModel').WorkerPaddonSnapshot>;catalog?:readonly AdminApparatus[];footer?:import('react').ReactNode };
+export function useWorkerPaddonDetail({ session, code, apparatus = '', initialSnapshot,manageItems=true,loader,catalog:providedCatalog }: WorkerPaddonDetailProps) {
+  const owner = useWorkerPaddonOwner(session, apparatus), [initial] = useState(() => initialSnapshot?.takeForCode(code)), controller = useMemo(() => owner.detail(code,initial,loader,manageItems), [owner, code,initial,loader,manageItems]);
   const state = useWorkerPaddonState(controller), presentation = useWorkerPaddonPresentation(owner.current), wipSheet = useNativeSheet();
   const printer = useWorkerPrinterSelector(owner.current), { p, t, locale } = useWorkerOrderText();
   const printing = useRef(false);
   const [catalogState, setCatalog] = useState<{ owner: typeof owner; rows: AdminApparatus[] } | null>(() => ({ owner, rows: owner.cachedCatalog() ?? [] }));
-  const catalog = useMemo(() => catalogState?.owner === owner ? catalogState.rows : [], [catalogState, owner]);
-  useEffect(() => { void controller.load(false); let alive = true;
-    void owner.catalog(() => alive, false).then(rows => { if (alive && owner.current()) setCatalog({ owner, rows }); }).catch(() => {});
+  const catalog = useMemo(() => providedCatalog?[...providedCatalog]:catalogState?.owner === owner ? catalogState.rows : [], [catalogState, owner,providedCatalog]);
+  useEffect(() => { if(!initial)void controller.load(false); let alive = true;
+    if(providedCatalog===undefined)void owner.catalog(() => alive, false).then(rows => { if (alive && owner.current()) setCatalog({ owner, rows }); }).catch(() => {});
     return () => { alive = false; };
-  }, [controller, owner]);
+  }, [controller, owner,initial,providedCatalog]);
   const strings = useRef({ p, locale }), presenter = useRef(presentation), printerSelector = useRef(printer.selectDevice);
   useLayoutEffect(() => { strings.current = { p, locale }; presenter.current = presentation; printerSelector.current = printer.selectDevice; }, [p, locale, presentation, printer.selectDevice]);
   // The workflow constructor stores callbacks; it never invokes these event closures during render.
@@ -57,7 +57,7 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '', initialSn
   }), [controller, owner, session, code, apparatus]);
   /* eslint-enable react-hooks/refs */
   const blocked = !owner.current() || state.busy || state.printing;
-  const canManage = !!state.snapshot?.can_manage_items && !blocked;
+  const canManage = manageItems && !!state.snapshot?.can_manage_items && !blocked;
   const header = useMemo(() => state.snapshot ? rezkaPaddonDetailHeader(state.snapshot, catalog, p, adminText('wip.unspecified', locale),
     count => localizedMethod('productionCount', locale, { count })) : null, [state.snapshot, catalog, p, locale]);
   const batches = useMemo(() => state.snapshot ? workerPaddonItems(state.snapshot, state.mode, state.bobina) : [], [state.snapshot, state.mode, state.bobina]);
@@ -97,12 +97,12 @@ export function useWorkerPaddonDetail({ session, code, apparatus = '', initialSn
   } }, [state.error, state.scanning]); // eslint-disable-line react-hooks/exhaustive-deps
   return { state, controller, presentation, printerDialogs: printer.dialogs, header, p, t, current: controller.current, feedback,
     rows, scanned, blocked, canManage, title: code,
-    canPrint: !!state.snapshot && !blocked && !state.scanning, canUnlock: !!state.snapshot?.can_unlock && !blocked && !state.scanning,
+    canPrint: !!state.snapshot && !blocked && !state.scanning, canUnlock: manageItems && !!state.snapshot?.can_unlock && !blocked && !state.scanning,
     canReview: !blocked && !state.review && state.pending === 0 && state.scanned.length > 0,
     canConfirmScan: canManage && state.pending === 0 && state.scanned.length > 0,
     itemsTitle: p(state.mode === 'add' ? 'worker.paddon.available.title' : 'worker.paddon.assigned.title'),
     itemsEmpty: p(state.mode === 'add' ? 'worker.paddon.available.empty' : 'worker.paddon.assigned.empty'),
-    freeMovementHint: state.snapshot?.free_movement_enabled && state.snapshot.can_manage_items ? p('paddon.management.free_movement.hint') : '',
+    freeMovementHint: manageItems && state.snapshot?.free_movement_enabled && state.snapshot.can_manage_items ? p('paddon.management.free_movement.hint') : '',
     count: localizedMethod('productionCount', locale, { count: batches.length }),
     blockBack: state.scanning && (state.busy || state.review || state.scanned.length > 0 || state.pending > 0),
     async requestBack(back: () => void) { if (!state.scanning) { back(); return; } if (blocked || presentation.isOpen()) return; if (await cancelScan()) back(); }, cancelScan,

@@ -1,0 +1,9 @@
+import { Button,Column,CircularProgressIndicator,IconButton,RNHostView,Row,Surface,TextButton } from '@expo/ui/jetpack-compose';
+import { defaultMinSize,fillMaxWidth,padding,semantics } from '@expo/ui/jetpack-compose/modifiers';
+import { SymbolView } from 'expo-symbols';
+import { View } from 'react-native';
+import { BaseHost } from '../components/BaseHost.android';
+import { AdminText as Text } from '../admin/AdminTypography.android';
+import { workerDetailShape } from '../admin/AdminWorkerDetailNative.android';
+import type { BrigaderQrScannerControlsProps } from './BrigaderQrScannerControlsTypes';
+export function BrigaderQrScannerControls(p:BrigaderQrScannerControlsProps){return <View pointerEvents="box-none" style={{flex:1,justifyContent:'space-between',padding:18,paddingTop:8,paddingBottom:24}}><BaseHost matchContents={{vertical:true}} style={{alignSelf:'flex-end'}}><IconButton onClick={p.toggleTorch} modifiers={[semantics({contentDescription:p.torchLabel})]}><RNHostView matchContents><SymbolView name={{android:p.torch?'flash_on':'flash_off'}} size={24} tintColor="white"/></RNHostView></IconButton></BaseHost><BaseHost matchContents={{vertical:true}} style={{width:'100%'}}><Column modifiers={[fillMaxWidth()]}><Surface color={p.error?'#822020DD':'#161616DD'} shape={workerDetailShape(20)}><Row verticalAlignment="center" horizontalArrangement={{spacedBy:10}} modifiers={[fillMaxWidth(),padding(16,14,16,14)]}>{p.busy?<CircularProgressIndicator color="white"/>:null}<Text color="white" style={{typography:'bodyMedium',fontWeight:'700'}}>{p.status}</Text></Row></Surface>{p.cameraError?<Button onClick={p.retry} modifiers={[fillMaxWidth(),defaultMinSize({minHeight:48})]}><Text>{p.retryLabel}</Text></Button>:null}<TextButton enabled={!p.busy} onClick={p.manual} modifiers={[fillMaxWidth(),defaultMinSize({minHeight:48})]}><Text color="white">{p.manualLabel}</Text></TextButton></Column></BaseHost></View>;}

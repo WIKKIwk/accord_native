@@ -12,12 +12,12 @@ import { useBrigaderFeature, type BrigaderFeatureFrameProps } from './BrigaderFe
 export function BrigaderFeatureFrame(props: BrigaderFeatureFrameProps) {
   const page = useBrigaderFeature(props.route), { colors } = useBaseTheme(), drawer = useRoleDrawer(), notice = useAdminShellNotice();
   if (!page.current()) return null;
-  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerHigh }}><Stack.Screen options={{ headerShown: true, title: props.title, headerBackVisible: false,
-    headerStyle: { backgroundColor: colors.surfaceContainerHigh }, headerLargeTitle: false,
-    headerLeft: () => <RoleHeaderButton icon={props.drawer ? 'menu' : 'back'} label={page.backLabel} tintColor={colors.onSurface} onPress={() => { if (page.interactive()) { if (props.drawer) drawer.open(); else (props.onBack ?? page.back)(); } }} />,
+  return <View style={{ flex: 1, backgroundColor: props.backgroundColor??colors.surfaceContainerHigh }}><Stack.Screen options={{ headerShown: true, title: props.title, headerBackVisible: false,
+    headerStyle: { backgroundColor: props.backgroundColor??colors.surfaceContainerHigh }, headerLargeTitle: false,headerTintColor:props.foregroundColor??colors.onSurface,
+    headerLeft: () => <RoleHeaderButton icon={props.drawer ? 'menu' : 'back'} label={page.backLabel} tintColor={props.foregroundColor??colors.onSurface} onPress={() => { if (page.interactive()) { if (props.drawer) drawer.open(); else (props.onBack ?? page.back)(); } }} />,
     headerRight: () => <View style={{ flexDirection: 'row', alignItems: 'center' }}>{props.actions}{!props.hideProfile ? <AdminShellProfileAction /> : null}</View> }} />
     {notice.topNotice}
-    <AdminShellBodyFrame hasFooter testID="brigader-feature-body">{props.children}</AdminShellBodyFrame>
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>{props.footer ?? <BrigaderBottomBar active="home" />}</View>
+    <View style={{flex:1}}>{props.plainBody?props.children:<AdminShellBodyFrame hasFooter={!props.hideFooter} testID="brigader-feature-body">{props.children}</AdminShellBodyFrame>}</View>
+    {!props.hideFooter?<View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>{props.footer ?? <BrigaderBottomBar active="home" />}</View>:null}
   </View>;
 }

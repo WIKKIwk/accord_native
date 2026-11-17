@@ -6,18 +6,18 @@ export function useBrigaderCamera(current:()=>boolean,enabled:boolean,autoStart=
  const permission=useCameraSurfacePermission(),{requestPermission,refreshPermission,canUseCamera}=permission;
  const owner=useMemo(()=>new BrigaderCameraSession(current),[current]);
  const state=useSyncExternalStore(owner.subscribe,owner.getSnapshot,owner.getSnapshot);
- const [foreground,setForeground]=useState(AppState.currentState==='active'),prompted=useRef(false);
+ const [foreground,setForeground]=useState(AppState.currentState==='active'),prompted=useRef(false),resumeOnActive=useRef(false);
  useEffect(()=>owner.mount(),[owner]);
  useLayoutEffect(()=>{owner.permissionChanged(permission.permission,permission.error);},[owner,permission.permission,permission.error]);
  useEffect(()=>{
   if(autoStart&&enabled&&foreground&&permission.permission&&!permission.permission.granted&&!prompted.current&&permission.permission.canAskAgain){prompted.current=true;void requestPermission().catch(()=>{});}
  },[autoStart,enabled,foreground,permission.permission,requestPermission]);
  useEffect(()=>{
-  const listener=AppState.addEventListener('change',value=>{setForeground(value==='active');if(value!=='active')void owner.stop().catch(()=>{});else void refreshPermission().catch(()=>{});});
+  const listener=AppState.addEventListener('change',value=>{setForeground(value==='active');if(value!=='active'){resumeOnActive.current=resumeOnActive.current||owner.getSnapshot().wanted;void owner.stop().catch(()=>{});}else void refreshPermission().catch(()=>{});});
   return()=>listener.remove();
  },[owner,refreshPermission]);
  useEffect(()=>{
-  if(autoStart&&enabled&&foreground&&permission.permission?.granted)void owner.start().catch(()=>{});
+  if((autoStart||resumeOnActive.current)&&enabled&&foreground&&permission.permission?.granted){resumeOnActive.current=false;void owner.start().catch(()=>{});}
   else if(!enabled)void owner.stop().catch(()=>{});
  },[owner,autoStart,enabled,foreground,permission.permission?.granted]);
  const active=enabled&&foreground&&state.wanted&&permission.permission?.granted===true&&!permission.checking&&!permission.error;

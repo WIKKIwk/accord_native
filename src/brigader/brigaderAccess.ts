@@ -15,6 +15,7 @@ const destinations: Readonly<Record<string, string>> = Object.freeze({
   [appRoutes.adminHome]: '',
   [appRoutes.profile]: '/profile',
   [appRoutes.adminNotifications]: '/notifications',
+  [appRoutes.adminProgressQrScan]: '/progress-qr-scan',
   [appRoutes.adminApparatusSettings]: '/apparatus-settings',
   [appRoutes.adminApparatusGroups]: '/apparatus-groups',
   [appRoutes.adminApparatusCreate]: '/apparatus-create',

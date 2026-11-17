@@ -20,7 +20,7 @@ export type AdminProgressQrLookupDependencies = Readonly<{
   primary: Read<AdminProgressQrReport>; paddon: Read<AdminProgressQrPaddonReport>; opening: Read<AdminProgressQrOpeningWipReport>; material: Read<AdminProgressQrMaterialReport>;
   apparatus: (guard: Guard, witness: () => boolean) => Promise<readonly AdminApparatus[]>;
   returnScan: (normalizedPayload: string, guard: Guard) => void;
-  replaceWorkerQueue: (normalizedPayload: string, guard: Guard) => void;
+  replaceWorkerQueue?: (normalizedPayload: string, guard: Guard) => void;
 }>;
 export type AdminProgressQrManualTicket = Readonly<{ generation: number }>;
 /** Original input/lookup owner. Native camera/coordinator and actual modal/navigation completion remain genuine required adapters. */
@@ -142,6 +142,7 @@ export class AdminProgressQrLookupController {
     const original = () => { guard(); if (settled) throw new Error('QR lookup read settled'); }, witness = () => { original(); return true; };
     const replaceQueue = (kind: 'progress' | 'opening-wip'): boolean => {
       original(); if (!adminProgressQrNeedsWorkerQueue(this.principalRole, kind)) return false;
+      if(!this.deps.replaceWorkerQueue)throw new TypeError('Original worker queue replacement is required');
       this.deps.replaceWorkerQueue(normalized, guard); return true;
     };
     try {

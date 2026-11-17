@@ -1,0 +1,1 @@
+export type BrigaderQrScannerControlsProps={status:string;busy:boolean;error:boolean;manualLabel:string;manual:()=>void;retryLabel:string;retry:()=>void;cameraError:boolean;torch:boolean;toggleTorch:()=>void;torchLabel:string};

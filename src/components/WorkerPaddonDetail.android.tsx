@@ -68,7 +68,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps & { onSelect?:
     <RoleHeader title={props.code} subtitle={p('worker.paddon.detail.subtitle')} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: () => { void h.requestBack(props.onBack); } }} />
     {state.phase === 'loading' ? <ActivityIndicator style={{ flex: 1 }} /> : state.phase === 'error' ? <View style={{ flex: 1, padding: 20, gap: 16 }}>
       <Host matchContents><Text>{p('worker.paddon.load_failed')}</Text></Host><WorkerOrderButton label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} />
-    </View> : <FlatList ref={list} data={h.rows} keyExtractor={row => row.batch.batch_id} ListHeaderComponent={content} contentContainerStyle={{ padding: 12, gap: 3, paddingBottom: 112 }}
+    </View> : <FlatList ref={list} data={h.rows} keyExtractor={row => row.batch.batch_id} ListHeaderComponent={content} ListFooterComponent={props.footer?<View>{props.footer}</View>:undefined} contentContainerStyle={{ padding: 12, gap: 3, paddingBottom: 112 }}
       refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void h.controller.load(); }} tintColor={colors.primary} colors={[colors.primary]} />}
       ListEmptyComponent={<Host matchContents><Text>{h.itemsEmpty}</Text></Host>}
       renderItem={({ item: row, index }) => {
@@ -79,7 +79,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps & { onSelect?:
         return row.removable ? <ReanimatedSwipeable overshootRight={false} renderRightActions={() => <View style={{ width: 125, justifyContent: 'center', padding: 8 }}>
           <WorkerOrderButton label={p('worker.paddon.remove')} onPress={() => { void h.remove(row.batch); }} /></View>}>{card}</ReanimatedSwipeable> : card;
       }} />}
-    {header ? <RoleFab actions={actions} bottomOffset={16} testIDPrefix="worker-paddon-detail-fab"
+    {header && props.manageItems!==false ? <RoleFab actions={actions} bottomOffset={16} testIDPrefix="worker-paddon-detail-fab"
       openLabel={h.t('Amallarni ochish')} closeLabel={h.t('Amallarni yopish')} resetKey={`${state.scanning}:${state.mode ?? ''}`}
       onSelect={id => {
         const action = actions.find(item => item.id === id);

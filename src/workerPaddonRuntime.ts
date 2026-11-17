@@ -65,9 +65,9 @@ export function workerPaddonOwner(session: Session, apparatus: string, scope = s
     remove: (code, valid) => mutate(valid, () => adminPaddonDelete(session, code, guard(valid))) });
   return { current, guard, catalog, cachedCatalog: () => scopeCurrent() ? reads.catalog.peek() : null,
     list, changed, mutate, mount(value: boolean) { mounted = value; },
-    detail(code: string, initial?: WorkerPaddonSnapshot | null) { const entry = cachedRead(reads.details, code.trim()); return new WorkerPaddonDetail({ code, current,
+    detail(code: string, initial?: WorkerPaddonSnapshot | null,loader?:(guard:()=>void)=>Promise<WorkerPaddonSnapshot>,manageItems=true) { const entry = cachedRead(reads.details, code.trim()); return new WorkerPaddonDetail({ code, current,manageItems,
       initial: scopeCurrent() ? initial ?? entry.peek() : null,
-      read: (valid, force = true) => entry.read(() => adminPaddonDetail(session, code, { beforeSend: guard(valid) }), () => current() && valid(), force),
+      read: (valid, force = true) => loader?loader(guard(valid)):entry.read(() => adminPaddonDetail(session, code, { beforeSend: guard(valid) }), () => current() && valid(), force),
       add: (ids, valid) => mutate(valid, () => adminPaddonAddWips(session, { paddon_code: code, progress_batch_ids: ids }, () => current() && valid())),
       remove: (ids, single, valid) => mutate(valid, () => single ? adminPaddonRemoveWip(session, { paddon_code: code, progress_batch_id: ids[0] }, () => current() && valid())
         : adminPaddonRemoveWips(session, { paddon_code: code, progress_batch_ids: ids }, () => current() && valid())),

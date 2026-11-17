@@ -56,10 +56,10 @@ export async function adminProductionRequest(session: Session, url: string, init
   return adminProductionResponsePayload(response, fallback, check);
 }
 /** Canonical Source production response decoding, also used by the fixed POST-only report snapshot transport. */
-export async function adminProductionResponsePayload(response: Response, fallback: string, guard?: AdminRequestGuard): Promise<unknown> {
+export async function adminProductionResponsePayload(response: Response, fallback: string, guard?: AdminRequestGuard,decode?: (text:string)=>unknown): Promise<unknown> {
   const check = checkedAdminGuard(guard); check?.();
   let value: unknown;
-  try { value = await response.json(); }
+  try { value = decode?decode(await response.text()):await response.json(); }
   catch (error) { check?.(); if (response.status === 200) throw error; value = null; }
   check?.();
   if (response.status !== 200) {

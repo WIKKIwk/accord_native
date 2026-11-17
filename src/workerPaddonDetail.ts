@@ -4,7 +4,7 @@ import { WorkerPaddonError, WorkerPaddonState, workerPaddonItems, workerPaddonMo
 type State = { phase: 'loading' | 'ready' | 'error'; snapshot: WorkerPaddonSnapshot | null; busy: boolean; printing: boolean; error: unknown;
   mode: 'add' | 'remove' | null; bobina: number | null; selected: string[]; scanning: boolean; scanned: WorkerPaddonBatch[];
   pending: number; review: boolean; feedback: string; feedbackKind: 'accepted' | 'rejected' | 'none' | null };
-type Dependencies = { code: string; initial?: WorkerPaddonSnapshot | null; current(): boolean; read(current: () => boolean, force?: boolean): Promise<WorkerPaddonSnapshot>;
+type Dependencies = { code: string;manageItems?:boolean; initial?: WorkerPaddonSnapshot | null; current(): boolean; read(current: () => boolean, force?: boolean): Promise<WorkerPaddonSnapshot>;
   add(ids: string[], current: () => boolean): Promise<WorkerPaddonSnapshot>;
   remove(ids: string[], single: boolean, current: () => boolean): Promise<WorkerPaddonSnapshot>;
   lookup(qr: string, current: () => boolean): Promise<WorkerPaddonBatch>;
@@ -40,12 +40,12 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
   clearError() { this.update({ error: null }); }
   filter(bobina: number) { if (this.current() && !this.state.busy && !this.state.printing) this.update({ bobina: this.state.bobina === bobina ? null : bobina, selected: [] }); }
   edit(mode: 'add' | 'remove') {
-    if (!this.current() || this.state.busy || this.state.printing || this.state.scanning || !this.state.snapshot?.can_manage_items) return;
+    if (!this.current() || this.state.busy || this.state.printing || this.state.scanning || (!this.state.snapshot?.can_manage_items||this.deps.manageItems===false)) return;
     if (this.state.mode !== mode) this.update({ mode, bobina: null, selected: [] });
   }
   exitSelection() { if (this.current() && !this.state.busy) this.update({ mode: null, bobina: null, selected: [] }); }
   toggle(id: string) {
-    if (!this.current() || this.state.busy || this.state.printing || !this.state.mode || !this.state.snapshot?.can_manage_items) return;
+    if (!this.current() || this.state.busy || this.state.printing || !this.state.mode || (!this.state.snapshot?.can_manage_items||this.deps.manageItems===false)) return;
     const row = this.items().find(item => item.batch_id === id); if (!row) return;
     const selected = this.state.selected;
     if (this.state.mode === 'add' && !selected.includes(id) && this.state.snapshot.available_items.some(item => selected.includes(item.batch_id) &&
@@ -54,7 +54,7 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
   }
   private async mutate(command: (current: () => boolean) => Promise<WorkerPaddonSnapshot>, applied: (snapshot: WorkerPaddonSnapshot) => boolean,
     permit: () => boolean, allowLocked = false): Promise<boolean> {
-    if (!permit() || this.state.busy || this.state.printing || !this.state.snapshot || (!allowLocked && !this.state.snapshot.can_manage_items)) return false;
+    if (!permit() || this.state.busy || this.state.printing || !this.state.snapshot || (!allowLocked && (!this.state.snapshot.can_manage_items||this.deps.manageItems===false))) return false;
     this.update({ busy: true, error: null });
     try {
       const snapshot = this.snapshot(await command(permit)); this.check(permit);
@@ -80,11 +80,11 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
     if (ok) this.exitSelection(); return ok;
   }
   async unlock(permit = this.capture()) {
-    if (!this.state.snapshot?.can_unlock) return false;
+    if (this.deps.manageItems===false||!this.state.snapshot?.can_unlock) return false;
     return this.mutate(this.deps.unlock, snapshot => snapshot.paddon.locked_at_unix == null, permit, true);
   }
   startScan() {
-    if (!this.current() || this.state.busy || this.state.printing || !this.state.snapshot?.can_manage_items) return;
+    if (!this.current() || this.state.busy || this.state.printing || (!this.state.snapshot?.can_manage_items||this.deps.manageItems===false)) return;
     this.scanGeneration++; this.update({ scanning: true, mode: null, bobina: null, selected: [], feedback: '', feedbackKind: null });
   }
   setReview(review: boolean) { if (this.current() && !this.state.busy) this.update({ review }); }
@@ -104,7 +104,7 @@ export class WorkerPaddonDetail extends WorkerPaddonState<State> {
     const operation = this.queue.then(async () => {
       try {
         this.check(current); const batch = await this.deps.lookup(qr, current); this.check(current);
-        if (!this.state.snapshot?.can_manage_items) throw new WorkerPaddonError('paddon_locked');
+        if ((!this.state.snapshot?.can_manage_items||this.deps.manageItems===false)) throw new WorkerPaddonError('paddon_locked');
         if (!batch.batch_id.trim() || !batch.qr_payload.trim()) throw new WorkerPaddonError('progress_qr_invalid_response');
         if (this.state.snapshot.items.some(row => row.batch_id === batch.batch_id)) { this.feedback('worker.paddon.scan.already_assigned', 'none'); return; }
         if (this.state.scanned.some(row => row.batch_id === batch.batch_id)) { this.feedback('worker.paddon.scan.duplicate', 'none'); return; }

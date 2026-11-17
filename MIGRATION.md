@@ -10,7 +10,7 @@ in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read
 | Module | Status | Logic | API + fixtures | Tests | iOS UI | Android UI | Notes |
 |---|---|---|---|---|---|---|---|
 | Brigader products/apparatus/notifications/operations/WIP | composed | ported/reused | source requests; no invented fixtures | user owns device tests | native | native | See checkpoints; full-role audit pending |
-| Remaining six Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
+| Remaining five Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
 
 ## File mapping
 
@@ -34,3 +34,5 @@ No synthetic API response fixtures were invented. Physical printing and device a
 
 - 2026-11-17 — User explicitly owns testing. TypeScript, lint and static source comparison are run here; no device, emulator or unit test run.
 - Keep actual Brigader identity/capabilities; reuse native views without role impersonation.
+
+| lib/src/features/admin/presentation/admin_progress_qr_* | src/brigader/BrigaderProgressQr*, brigaderProgressQrModel.ts, src/admin/adminProgressQrPassport.ts, adminProgressQrPdf.ts | composed |

@@ -1,0 +1,12 @@
+import { Column,Row,RNHostView,Surface } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth,padding,size,weight } from '@expo/ui/jetpack-compose/modifiers';
+import { View } from 'react-native';
+import { BaseHost } from '../components/BaseHost.android';
+import { useBaseTheme } from '../components/useBaseTheme';
+import { AdminText as Text } from '../admin/AdminTypography.android';
+import { workerDetailShape } from '../admin/AdminWorkerDetailNative.android';
+import type { BrigaderQrSectionProps } from './BrigaderQrSectionTypes';
+export function BrigaderQrSection(props:BrigaderQrSectionProps){const{colors}=useBaseTheme();return <View style={{marginBottom:12}}><BaseHost matchContents={{vertical:true}} style={{width:'100%'}}><Surface color={colors.surfaceContainerLowest} shape={workerDetailShape(12)} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(),padding(props.compact?8:18,props.compact?8:18,props.compact?8:18,props.compact?8:18)]}>
+{props.title?<Surface onClick={props.onToggle} color={colors.surfaceContainerLowest} modifiers={[fillMaxWidth()]}><Row verticalAlignment="top" horizontalArrangement={{spacedBy:12}} modifiers={[fillMaxWidth(),padding(0,0,0,8)]}>{props.index?<Surface color={colors.primaryContainer} shape={workerDetailShape(16)} modifiers={[size(32,32)]}><Text color={colors.onPrimaryContainer} modifiers={[padding(10,6,0,0)]}>{String(props.index)}</Text></Surface>:null}<Column modifiers={[weight(1)]}><Text style={{typography:props.compact?'titleMedium':'titleLarge',fontWeight:'700'}}>{props.title}</Text>{props.subtitle?<Text color={colors.onSurfaceVariant} style={{typography:'bodyMedium'}}>{props.subtitle}</Text>:null}</Column>{props.onToggle?<Text>{props.folded?'⌄':'⌃'}</Text>:null}</Row></Surface>:null}
+{!props.folded?<><Row horizontalArrangement={{spacedBy:8}}>{props.badges?.map((label,index)=><Surface key={index} color={colors.secondaryContainer} shape={workerDetailShape(6)}><Text color={colors.onSecondaryContainer} style={{typography:'labelMedium'}} modifiers={[padding(8,4,8,4)]}>{label}</Text></Surface>)}</Row>{props.paragraphs?.map((line,index)=><Text key={index} style={{typography:'bodyMedium'}} modifiers={[padding(0,4,0,4)]}>{line}</Text>)}{props.lines?.map((line,index)=><Text key={index} style={{typography:'bodyMedium',fontWeight:'600'}} modifiers={[padding(0,4,0,4)]}>{`${line.label}: ${line.value}`}</Text>)}{props.children?<RNHostView matchContents><View style={{width:'100%'}}>{props.children}</View></RNHostView>:null}</>:null}
+</Column></Surface></BaseHost></View>;}

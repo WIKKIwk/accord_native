@@ -2,6 +2,7 @@ import type { paddonSnapshotFromJson } from '../paddonModels';
 import { rawMaterialLookupFromJson } from '../rawMaterialLookupApi';
 import type { openingWipRecordFromJson } from '../workerOpeningWipRecordsApi';
 import type { AdminProgressQrReport } from './adminProgressQrReportModel';
+import { bindProgressQrQueueOrder } from './progressQrQueueOrder';
 
 export type AdminProgressQrPaddonReport = ReturnType<typeof paddonSnapshotFromJson>;
 export type AdminProgressQrOpeningWipReport = ReturnType<typeof openingWipRecordFromJson>;
@@ -9,7 +10,7 @@ export type AdminProgressQrOpeningWipReport = ReturnType<typeof openingWipRecord
 export type AdminProgressQrMaterialReport = Readonly<ReturnType<typeof rawMaterialLookupFromJson> & { is_metalayzer: boolean }>;
 export function adminProgressQrMaterialReportFromJson(value: unknown): AdminProgressQrMaterialReport {
   const report = rawMaterialLookupFromJson(value), row = value as Record<string, unknown>;
-  return Object.freeze({ ...report, is_metalayzer: row.is_metalayzer === true });
+  return Object.freeze(bindProgressQrQueueOrder({ ...report, is_metalayzer: row.is_metalayzer === true },row.queue_states));
 }
 export type AdminProgressQrLookupResult = Readonly<{ kind: 'progress'; report: AdminProgressQrReport }> | Readonly<{ kind: 'paddon'; report: AdminProgressQrPaddonReport }> |
   Readonly<{ kind: 'opening-wip'; report: AdminProgressQrOpeningWipReport }> | Readonly<{ kind: 'material'; report: AdminProgressQrMaterialReport }>;

@@ -367,3 +367,13 @@ with Dart Future.wait semantics. No fake Material identity, permissions or hardw
 
 Both platform TypeScript checks pass. Expo lint has zero errors and the inherited AdminClosedHistoryOwner warning.
 No unit or device tests were run. Nineteen of the requested 25 routes are composed; six remain in progress.
+
+
+## QR report checkpoint — 2026-11-17
+
+Composed adminProgressQrScan for the actual Brigader session on both platforms. Original source lookup fallback,
+manual native dialog close acknowledgement, scan-only return, inline read-only paddon, roll lineage/passport,
+opening-WIP, material/order/ordered-queue sections, corrections, resources, technical fold and Source PDF writer
+are wired. Camera readiness/stop use actual native events. Background resumption preserves actual camera intent.
+Both platform TypeScript checks and focused lint pass; no device or unit tests were run.
+Twenty of the requested 25 routes are composed. Full platform/text/scanner audit remains before final integration.

@@ -92,8 +92,8 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
           {row.removable ? <SwipeActions.Actions edge="trailing" allowsFullSwipe={false}><Button label={p('worker.paddon.remove')} systemImage="trash" role="destructive" onPress={() => { void h.remove(row.batch); }} /></SwipeActions.Actions> : null}
         </SwipeActions>) : <Text>{h.itemsEmpty}</Text>}</Section>
       </>}
-    </List></AccordListScrollReader></BaseHost>
-    {header ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: 88, width: 56, height: 56 }} onPressAction={event => {
+    {props.footer?<Section><RNHostView matchContents><View>{props.footer}</View></RNHostView></Section>:null}</List></AccordListScrollReader></BaseHost>
+    {header && props.manageItems!==false ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: 88, width: 56, height: 56 }} onPressAction={event => {
       const action = actions.find(item => item.id === event.nativeEvent.event);
       if (!action || action.attributes?.disabled) return;
       if (action.id === 'scan') h.controller.startScan();
