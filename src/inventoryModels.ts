@@ -1,4 +1,6 @@
 import { isCanonicalApparatusId } from './workerControlsApi';
+import { productionOrderNoteFromJson } from './shared/productionOrderNote';
+
 type Obj = Record<string, any>;
 const object = (v: unknown): Obj | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : null;
 const str = (v: unknown) => v == null ? '' : String(v);
@@ -34,7 +36,8 @@ export function inventoryAssetFromJson(value: unknown) {
     item_name: str(row.item_name), identifier: str(row.identifier), qty: num(row.qty, 0), uom: str(row.uom), status: str(row.status),
     physical_location: inventoryLocationReferenceFromJson(row.physical_location), transfer_id: str(row.transfer_id),
     placement_version: Math.trunc(num(row.placement_version, 1)), order_assignment_known: Object.hasOwn(row, 'order_assignment'),
-    order_assignment: assignment ? { order_id: assignment.order_id, order_label: assignment.order_label, order_control: assignment.order_control ?? 'active' } : null };
+    order_assignment: assignment ? { order_id: assignment.order_id, order_label: assignment.order_label, order_control: assignment.order_control ?? 'active' } : null,
+    ...(row.preparation_note == null ? {} : { preparation_note: productionOrderNoteFromJson(row.preparation_note) }) };
 }
 /** @v2 InventoryTransfer */
 export function inventoryTransferFromJson(value: unknown) {
