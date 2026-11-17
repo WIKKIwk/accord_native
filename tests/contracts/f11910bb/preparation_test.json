@@ -1,0 +1,243 @@
+{
+ "source": "test/preparation_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "receipt retry survives lost response and keeps request id",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\",\"request_id\":\"prep-1794899808368641-884e24a13e0d0978b38aa4d9b58d87ac\"}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "receipt retry survives lost response and keeps request id",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\",\"request_id\":\"prep-1794899808368641-884e24a13e0d0978b38aa4d9b58d87ac\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"receipt-1\",\"kind\":\"receipt\"}"
+   }
+  },
+  {
+   "test": "GScale simple receipt uses its isolated endpoint",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/gscale/material-receipt/simple",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\",\"request_id\":\"prep-1794899808412924-ccf7c71587a0edecdf6ff0028055661e\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"receipt-1\",\"qr_printed\":false}"
+   }
+  },
+  {
+   "test": "receipt reversal uses its dedicated preparation endpoint",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipt-reversals",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"receipt_id\":\"receipt-1\",\"reason\":\"Xato miqdor\",\"request_id\":\"prep-1794899808420901-668a2ffd4315bf6c914be4304d741fa2\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"reversal-1\",\"kind\":\"receipt_reversal\"}"
+   }
+  },
+  {
+   "test": "insufficient stock response is displayed and is not left pending",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\",\"request_id\":\"prep-1794899810217491-890c17ba4fd25e692856d418853efd2b\"}"
+   },
+   "status": 409,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"code\":\"preparation_insufficient_stock\",\"error\":\"Qoldiq yetarli emas\"}"
+   }
+  },
+  {
+   "test": "pending commands are isolated by account",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\",\"request_id\":\"prep-1794899810273838-9bcbad675313d458a9ebee88aa4317e5\"}"
+   },
+   "error": "ClientException"
+  },
+  {
+   "test": "master can receive by material tap and opens ketma-ketlik",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Tayyorlov ombori\"],\"assigned_warehouses\":[\"Tayyorlov ombori\"],\"material_warehouses\":[\"Tayyorlov ombori\"],\"materials\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"balances\":[{\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\"}]}],\"orders\":[{\"id\":\"O1\",\"code\":\"001\",\"title\":\"Etiketka\",\"order_kg\":\"1000.000000\",\"saved\":false}],\"history\":[]}"
+   }
+  },
+  {
+   "test": "master can receive by material tap and opens ketma-ketlik",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"12.500000\",\"request_id\":\"prep-1794899812111714-554efe8880a91ba3c74e8bf2517533f5\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"r1\",\"kind\":\"receipt\"}"
+   }
+  },
+  {
+   "test": "master can receive by material tap and opens ketma-ketlik",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Tayyorlov ombori\"],\"assigned_warehouses\":[\"Tayyorlov ombori\"],\"material_warehouses\":[\"Tayyorlov ombori\"],\"materials\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"balances\":[{\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\"}]}],\"orders\":[{\"id\":\"O1\",\"code\":\"001\",\"title\":\"Etiketka\",\"order_kg\":\"1000.000000\",\"saved\":false}],\"history\":[]}"
+   }
+  },
+  {
+   "test": "warehouse list and detail refresh automatically after kirim",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Tayyorlov ombori\"],\"assigned_warehouses\":[\"Tayyorlov ombori\"],\"material_warehouses\":[\"Tayyorlov ombori\"],\"materials\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"balances\":[{\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\"}]}],\"orders\":[],\"history\":[{\"kind\":\"receipt\",\"id\":\"receipt-cancelled\",\"warehouse\":\"Tayyorlov ombori\",\"item_code\":\"P1\",\"name\":\"Kley\",\"kg\":\"10.000000\",\"created_at\":\"2026-09-08T10:54:36\",\"reversed\":true},{\"kind\":\"receipt_reversal\",\"id\":\"reversal-1\",\"receipt_id\":\"receipt-cancelled\",\"warehouse\":\"Tayyorlov ombori\",\"item_code\":\"P1\",\"name\":\"Kley\",\"kg\":\"10.000000\",\"reason\":\"Xato kirim\",\"created_at\":\"2026-09-08T10:55:36\"},{\"kind\":\"consumption\",\"warehouse\":\"Tayyorlov ombori\",\"order_code\":\"001\",\"order_title\":\"Etiketka\",\"order_kg\":\"1000.000000\",\"created_at\":\"2026-09-08T11:00:00\",\"lines\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"percent\":\"3.000000\",\"kg\":\"30.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "warehouse list and detail refresh automatically after kirim",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"10.000000\",\"request_id\":\"prep-1794899813025343-fc334b934c4883b03fca789020f4118c\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"id\":\"r1\",\"kind\":\"receipt\"}"
+   }
+  },
+  {
+   "test": "warehouse list and detail refresh automatically after kirim",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Tayyorlov ombori\"],\"assigned_warehouses\":[\"Tayyorlov ombori\"],\"material_warehouses\":[\"Tayyorlov ombori\"],\"materials\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"balances\":[{\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"70.000000\"}]}],\"orders\":[],\"history\":[{\"kind\":\"receipt\",\"id\":\"receipt-cancelled\",\"warehouse\":\"Tayyorlov ombori\",\"item_code\":\"P1\",\"name\":\"Kley\",\"kg\":\"10.000000\",\"created_at\":\"2026-09-08T10:54:36\",\"reversed\":true},{\"kind\":\"receipt_reversal\",\"id\":\"reversal-1\",\"receipt_id\":\"receipt-cancelled\",\"warehouse\":\"Tayyorlov ombori\",\"item_code\":\"P1\",\"name\":\"Kley\",\"kg\":\"10.000000\",\"reason\":\"Xato kirim\",\"created_at\":\"2026-09-08T10:55:36\"},{\"kind\":\"consumption\",\"warehouse\":\"Tayyorlov ombori\",\"order_code\":\"001\",\"order_title\":\"Etiketka\",\"order_kg\":\"1000.000000\",\"created_at\":\"2026-09-08T11:00:00\",\"lines\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"percent\":\"3.000000\",\"kg\":\"30.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "warehouse list and detail refresh automatically after kirim",
+   "method": "GET",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/snapshot",
+   "requestHeaders": {
+    "Authorization": "Bearer token"
+   },
+   "requestBody": {
+    "text": ""
+   },
+   "status": 200,
+   "responseHeaders": {
+    "content-type": "application/json; charset=utf-8"
+   },
+   "responseBody": {
+    "text": "{\"warehouses\":[\"Tayyorlov ombori\"],\"assigned_warehouses\":[\"Tayyorlov ombori\"],\"material_warehouses\":[\"Tayyorlov ombori\"],\"materials\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"balances\":[{\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"70.000000\"}]}],\"orders\":[],\"history\":[{\"kind\":\"receipt\",\"id\":\"receipt-cancelled\",\"warehouse\":\"Tayyorlov ombori\",\"item_code\":\"P1\",\"name\":\"Kley\",\"kg\":\"10.000000\",\"created_at\":\"2026-09-08T10:54:36\",\"reversed\":true},{\"kind\":\"receipt_reversal\",\"id\":\"reversal-1\",\"receipt_id\":\"receipt-cancelled\",\"warehouse\":\"Tayyorlov ombori\",\"item_code\":\"P1\",\"name\":\"Kley\",\"kg\":\"10.000000\",\"reason\":\"Xato kirim\",\"created_at\":\"2026-09-08T10:55:36\"},{\"kind\":\"consumption\",\"warehouse\":\"Tayyorlov ombori\",\"order_code\":\"001\",\"order_title\":\"Etiketka\",\"order_kg\":\"1000.000000\",\"created_at\":\"2026-09-08T11:00:00\",\"lines\":[{\"item_code\":\"P1\",\"name\":\"Kley\",\"percent\":\"3.000000\",\"kg\":\"30.000000\"}]}]}"
+   }
+  },
+  {
+   "test": "parallel client saves are blocked and auth errors preserve retry state",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/preparation/receipts",
+   "requestHeaders": {
+    "Authorization": "Bearer token",
+    "Content-Type": "application/json"
+   },
+   "requestBody": {
+    "text": "{\"item_code\":\"P1\",\"warehouse\":\"Tayyorlov ombori\",\"kg\":\"60.000000\",\"request_id\":\"prep-1794899813392529-a371b9e17832aa45c978b5940ed759b0\"}"
+   },
+   "status": 403,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"error\":\"forbidden\"}"
+   }
+  }
+ ]
+}

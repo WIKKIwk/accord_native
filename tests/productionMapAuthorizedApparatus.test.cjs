@@ -15,14 +15,14 @@ function compile(relative, mocks = {}) {
 }
 const controls = compile('workerControlsApi', { './authorizedFetch': {}, './sessionReadScope': {} });
 const dartApparatus = compile('shared/dartApparatus', { '../workerControlsApi': controls });
-const { productionMapAuthorizedOrderApparatus: authorized } = compile('shared/productionMapAuthorizedApparatus', { './dartApparatus': dartApparatus });
+const { productionMapAuthorizedOrderApparatus: authorized } = compile('shared/productionMapAuthorizedApparatus', { './dartApparatus': dartApparatus,
+  './dartCanonicalApparatus': require('./support/workerQueueTransport.cjs').loader()('shared/dartCanonicalApparatus') });
 const golden = require('./contracts/f11910bb/material_assignment_apparatus.json');
 const unicode = require('./contracts/f11910bb/material_unicode_trim.json');
 
 // @v2-test test/production_map_chain_test.dart
 // Goldens were emitted by the adjacent Dart oracle, on an isolated f119 export.
 for (const [name, value] of Object.entries(golden.cases)) {
-  if (name === 'non_ascii_dart_canonical_id') continue; // Explicit fail-closed gap is tested below.
   test(`f119 assignment apparatus: ${name}`, () => {
     const map = { nodes: value.nodes, edges: value.edges }, before = JSON.stringify(map), assigned = [...value.assigned];
     const result = authorized(map, assigned);
@@ -55,10 +55,9 @@ test('all Dart-trimmed Unicode scalars behave correctly in group, branch, and as
   }
 });
 
-test('non-ASCII canonical IDs fail closed until Dart and Hermes Unicode case mappings are verified', () => {
+test('non-ASCII canonical IDs use the recorded Dart table instead of host Unicode case mapping', () => {
   const value = golden.cases.non_ascii_dart_canonical_id;
-  assert.deepEqual(value.expected, ['apparatus:default:\u037f']); // Actual f119 Dart result, not parity in this limited port.
-  assert.deepEqual(authorized({ nodes: value.nodes, edges: value.edges }, value.assigned), []);
+  assert.deepEqual(authorized({ nodes: value.nodes, edges: value.edges }, value.assigned), value.expected);
 });
 
 test('characters outside Dart whitespace are not silently stripped from groups or branches', () => {

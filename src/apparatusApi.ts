@@ -38,6 +38,11 @@ export type AdminApparatus = { id: string; name: string; source: 'canonical'; so
   lifecycle_state: string; worker_material_assignment_allowed: boolean };
 
 export function apparatusFromJson(raw: unknown): AdminApparatus {
+  return apparatusFromJsonWithCanonicalId(raw, isCanonicalApparatusId);
+}
+
+/** Supply-task fixtures use the baseline Dart Unicode table for canonical identities. */
+export function apparatusFromJsonWithCanonicalId(raw: unknown, canonicalId: (id: string) => boolean): AdminApparatus {
   const wrapper = object(raw);
   if (!wrapper) throw new TypeError('Invalid apparatus projection');
   const projection = object(wrapper.runtime_projection) ?? wrapper;
@@ -46,7 +51,7 @@ export function apparatusFromJson(raw: unknown): AdminApparatus {
   const training = object(projection.training) ?? {}, lifecycle = object(projection.lifecycle) ?? {};
   const id = text(projection.apparatus_id).trim(), name = text(display.display_name).trim();
   const revision = integer(projection.source_revision, 0)!, sha256 = text(projection.source_aasx_sha256).trim();
-  if (!isCanonicalApparatusId(id) || !name || revision < 1 || !/^[0-9a-f]{64}$/.test(sha256)) {
+  if (!canonicalId(id) || !name || revision < 1 || !/^[0-9a-f]{64}$/.test(sha256)) {
     throw new TypeError('Canonical apparatus identity, display and source metadata are required');
   }
   const profiles: ApparatusCapabilityProfile[] = [];
