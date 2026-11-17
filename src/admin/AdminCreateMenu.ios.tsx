@@ -8,7 +8,7 @@ export function AdminCreateMenu(props: AdminCreateMenuProps) {
   const { state, controller } = useAdminCreateMenu(props);
   if (props.visible === false || !state.actions.length) return null;
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-    <Host matchContents style={[styles.trigger, { bottom: props.bottomOffset ?? 94 }]}>
+    <Host matchContents style={[styles.trigger, { bottom: props.bottomOffset ?? 94 },props.alignEnd===false?{right:undefined,left:10}:null]}>
       <Menu label={props.openLabel} systemImage="plus" modifiers={[labelStyle('iconOnly'), controlSize('large'), buttonStyle('borderedProminent')]}>
         {state.actions.map(action => <Button key={action.id} label={action.label} systemImage={action.icon.ios}
           modifiers={[disabled(action.enabled === false)]} onPress={() => { void controller.select(action.id); }} />)}

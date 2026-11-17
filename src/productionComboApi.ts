@@ -9,9 +9,10 @@ type Obj = Record<string, unknown>;
 const object = (value: unknown): Obj | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Obj : null;
 
 /** @v2 adminProductionCombo */
-export async function adminProductionCombo(session: Session, itemCode: string) {
+export async function adminProductionCombo(session: Session, itemCode: string, beforeSend?:()=>void) {
   const scope = sessionReadScope(session);
   const checkScope = () => {
+    beforeSend?.();
     if (!activeSessionToken(session) || sessionReadScope(session) !== scope) throw new Error('Combo account changed');
   };
   checkScope();
@@ -24,6 +25,7 @@ export async function adminProductionCombo(session: Session, itemCode: string) {
     throw productionMapResponseError(response.status, payload, 'combo_load_failed');
   }
   const payload = object(await response.json());
+  checkScope();
   if (!payload) throw new TypeError('Incomplete combo catalog response');
   const combo = comboFromJson(payload.combo);
   if (!combo || combo.item_code !== itemCode || !object(payload.template)) throw new TypeError('Incomplete combo catalog response');

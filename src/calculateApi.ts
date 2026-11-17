@@ -1,3 +1,4 @@
+import { dartJsonString,dartTrim } from './admin/dartJsonString';
 import type { Session } from './auth';
 import { authorizedFetch } from './authorizedFetch';
 import { WorkerControlException } from './workerControlsApi';
@@ -5,13 +6,20 @@ import { orderProductFromJson } from './workerProductionMapSaved';
 
 type Obj = Record<string, any>;
 const object = (v: unknown): Obj | null => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : null;
-const text = (value: unknown, fallback = '') => { const v = value == null ? '' : String(value).trim(); return v || fallback; };
-const number = (value: unknown, fallback = 0) => {
+const text = (value: unknown, fallback = '') => { const v = value == null ? '' : dartTrim(dartJsonString(value)); return v || fallback; };
+const number = (value: unknown, fallback = 0):number => {
   if (typeof value === 'number') return value;
-  if (value == null || !String(value).trim()) return fallback;
-  const n = Number(value); return Number.isNaN(n) ? fallback : n;
+  const raw = text(value);
+  if (!/^[+-]?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|Infinity|NaN)$/.test(raw)) return fallback;
+  return /^[+-]?NaN$/.test(raw) ? NaN : Number(raw);
 };
-const integer = (value: unknown) => typeof value === 'number' ? Math.trunc(value) : /^[-+]?\d+$/.test(text(value)) ? Number(value) : 0;
+const integer = (value: unknown) => {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new RangeError('Non-finite Dart double cannot be converted to int');
+    return Math.trunc(value);
+  }
+  return /^[-+]?\d+$/.test(text(value)) ? Number(text(value)) : 0;
+};
 export interface CalculateInput {
   kg: number; frame_product_size_mm: number; frame_count: number; edge_allowance_mm?: number; waste_percent?: number; roll_count?: number | null;
   products?: Obj[]; order_number?: string; customer?: string; product?: string; status?: string; material_display?: string; color?: string;
@@ -35,7 +43,9 @@ export function calculateRequestToJson(input: CalculateInput) {
   return body;
 }
 export function calculateResponseFromJson(value: unknown) {
-  const row = object(value) ?? {}, width = number(row.width_mm), frame = number(row.frame_product_size_mm, width > 15 ? width - 15 : 0);
+  const row = object(value) ?? {};
+  if(row.layers!=null&&!Array.isArray(row.layers)||row.results!=null&&!Array.isArray(row.results))throw new TypeError('Invalid calculation lists');
+  const width = number(row.width_mm), frame = number(row.frame_product_size_mm, width > 15 ? width - 15 : 0);
   const count = number(row.frame_count, width > 0 ? 1 : 0);
   const layers = (Array.isArray(row.layers) ? row.layers : []).filter(object).map((layer: Obj) => ({
     material_id: text(layer.material_id), material: text(layer.material), micron: text(layer.micron) }));
@@ -47,10 +57,12 @@ export function calculateResponseFromJson(value: unknown) {
     waste_percent: number(row.waste_percent, 5), layers, results };
 }
 /** @v2 calculate */
-export async function calculate(session: Session, request: CalculateInput) {
+export async function calculate(session: Session, request: CalculateInput, beforeSend?:()=>void) {
   const response = await authorizedFetch(session, '/v1/mobile/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(calculateRequestToJson(request)) });
+    body: JSON.stringify(calculateRequestToJson(request),(_key,value:unknown)=>{if(typeof value==='number'&&!Number.isFinite(value))throw new TypeError('Non-finite calculate request number');return value;}) },beforeSend);
+  beforeSend?.();
   let data: unknown; try { data = await response.json(); } catch { data = {}; }
+  beforeSend?.();
   const payload = object(data) ?? {};
   if (response.status !== 200) throw new WorkerControlException(text(payload.error, 'calculate_failed'),
     text(payload.detail, text(payload.message, 'Calculate failed')), response.status);

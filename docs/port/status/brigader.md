@@ -1,7 +1,7 @@
 # Brigader
 
-Status: partial — native workspace and the available shared flows are implemented; full Brigader parity is not complete.
-Stopped at: the native Users/detail/creation/warehouse/chat connections are now composed. The 25 remaining shared Admin source routes listed below still need their actual feature implementations; full Brigader parity is not complete.
+Status: in progress — all 25 requested route compositions are implemented; final source/surface/text audit and careful integration remain.
+Current work: final source comparison and integration of the 25 remaining Brigader routes; continue until finished.
 Branch: `port/brigader`, isolated worktree `accord_mobile_v4-brigader`, based on main `b6aee7b9`.
 Source: baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`; Brigader core is unchanged at current V2 `052655a4`.
 Scope: Brigader only; the ledger combines Sales Manager with this id, but Sales Manager is outside this request.
@@ -401,3 +401,34 @@ is fabricated. Original template DTOs are handed to the private editor route.
 Both platform TypeScript and focused lint pass. The calculator and graph editor are the remaining two page
 compositions; their actual navigation support must be registered only after those pages exist. Archive opening
 and hub calculation entry therefore remain dependent work, not finished user flows. No unit/device tests ran.
+
+## Calculation and graph checkpoint — 2026-11-17
+
+All 25 requested route compositions now exist on Android and iOS. This checkpoint is implementation progress;
+role-wide text, surface and integration auditing continues before completion. No unit/device/emulator tests were run.
+
+Calculator: full and compact forms, customer/product/material pickers, actual item-create return, primary-customer
+selection, existing-template recreation, catalog combos/revisions, per-account cache invalidation, multi-product
+ordering and dimensions, layers with real native micron focus, numeric input formatters, JPEG upload, fresh-result
+proof, remembered print side, original saved-map recovery, retry-stable order IDs, manual/automatic order opening,
+opened-order concurrency snapshots/restrictions and source error dialog. All writes use original Brigader authority.
+
+Graph: source initial/order flow, canonical apparatus catalog, technology/width/color compatibility, laminator
+constraints after Rezka grouping, alternative-group insertion and assignment handling, native node controls,
+pan/zoom/node drag/overlap resolution, directed and condition connections, locked nodes/incoming edges,
+station/apparatus pickers, node/formula editors with cursor-aware variable insertion, Rezka merge/split sheets,
+canonical/frame validation, atomic map+template/order save and genuine saved-template navigation result on system back.
+The source default test canvas is retained only on its actual direct map route, not used as API fixture data.
+
+Actual direct and private-flow compositions are wired for Calculate, saved calculations, material catalog and map editor.
+The five default Create actions now use the genuine existing shared owner. Supporting shared edits are optional
+picker autofocus/header action and menu placement/column props, a public existing opened-order error parser and optional
+combo-read guard; existing callers keep their defaults. Neither role spoofing nor fabricated native acknowledgments are used.
+
+Static checks at this checkpoint: both platform TypeScript checks passed before the final visual refinements; focused
+lint passed after correcting the actual imports. Final checks will be recorded with the completed surface audit.
+The role text script currently reports its inherited broad-scope diagnostics (33 missing, 323/328 additional), so it is
+not being reported as a passing text gate. Its generated scope contains only 48 V2 strings and two Create surfaces;
+the newly composed route surfaces require the explicit source comparison as well.
+
+Audit refinements in this checkpoint: source worker deactivation tooltip and opening-WIP report heading, 48px inner raw-material tabs, captured original worker-group identity across save, barrier-versus-system-back dismissal, and Android factory machine reads after the genuine native sheet entrance animation. No device tests were run.

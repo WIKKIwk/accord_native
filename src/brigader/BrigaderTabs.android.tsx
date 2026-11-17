@@ -9,7 +9,7 @@ import type { BrigaderTabsProps } from './brigaderTabsTypes';
 export function BrigaderTabs(props:BrigaderTabsProps) {
   const pager = useRef<HorizontalPagerHandle>(null),{ colors } = useBaseTheme();
   useEffect(() => { void pager.current?.animateScrollToPage(props.selected); },[props.selected]);
-  return <BaseHost style={{ flex:1 }}><Column modifiers={[fillMaxSize()]}><Row modifiers={[fillMaxWidth(),height(38),background(colors.surfaceContainer)]}>{props.labels.map((label,index) => <TextButton key={index} onClick={() => props.onSelect(index)} modifiers={[weight(1),height(38)]}><Text color={props.selected === index ? colors.primary : colors.onSurfaceVariant}>{label}</Text></TextButton>)}</Row>
+  return <BaseHost style={{ flex:1 }}><Column modifiers={[fillMaxSize()]}><Row modifiers={[fillMaxWidth(),height(props.height??38),background(colors.surfaceContainer)]}>{props.labels.map((label,index) => <TextButton key={index} onClick={() => props.onSelect(index)} modifiers={[weight(1),height(props.height??38)]}><Text color={props.selected === index ? colors.primary : colors.onSurfaceVariant}>{label}</Text></TextButton>)}</Row>
     <HorizontalPager ref={pager} initialPage={props.selected} onCurrentPageChange={props.onSelect} modifiers={[fillMaxWidth(),weight(1)]}>{props.children.map((child,index) => <RNHostView key={index} modifiers={[fillMaxSize()]}><View style={{ flex:1 }}>{child}</View></RNHostView>)}</HorizontalPager>
   </Column></BaseHost>;
 }

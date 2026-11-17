@@ -18,6 +18,8 @@ const destinations: Readonly<Record<string, string>> = Object.freeze({
   [appRoutes.adminCreateHub]: '/create-hub',
   [appRoutes.adminFactoryMap]: '/factory-map',
   [appRoutes.adminCalculateOrders]: '/calculate-orders',
+  [appRoutes.adminCalculate]: '/calculate',
+  [appRoutes.adminProductionMapTest]: '/production-map',
   [appRoutes.adminProgressQrScan]: '/progress-qr-scan',
   [appRoutes.adminApparatusSettings]: '/apparatus-settings',
   [appRoutes.adminApparatusGroups]: '/apparatus-groups',

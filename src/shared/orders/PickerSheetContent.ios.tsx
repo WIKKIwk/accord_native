@@ -1,7 +1,7 @@
-import { Button, Host, HStack, Image, ProgressView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, RNHostView, Image, ProgressView, Text, TextField, VStack, useNativeState } from '@expo/ui/swift-ui';
 import { accessibilityLabel, background, buttonStyle, cornerRadius, disabled, font, frame, labelStyle, listRowBackground,
   listRowSeparator, onAppear, padding } from '@expo/ui/swift-ui/modifiers';
-import { useEffect } from 'react';
+import { useEffect,type ReactElement } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { useBaseTheme } from '../../components/useBaseTheme';
 import { OrdersList } from './OrdersList';
@@ -12,12 +12,12 @@ type Props = {
   items: readonly PickerItem[]; onClose: () => void; onSearch: (query: string) => void;
   query?: string; loading?: boolean; error?: string; retryLabel?: string; onRetry?: () => void;
   hasMore?: boolean; onLoadMore?: () => void; photoLabel?: string; onPhoto?: () => void;
-  photoLoading?: boolean; photoError?: string;
+  photoLoading?: boolean; photoError?: string;autoFocus?:boolean;headerAction?:ReactElement;
 };
 
 export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items, onClose, onSearch,
   query, loading = false, error, retryLabel, onRetry, hasMore = false, onLoadMore,
-  photoLabel, onPhoto, photoLoading = false, photoError }: Props) {
+  photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction }: Props) {
   const { colors } = useBaseTheme(), input = useNativeState(query ?? '');
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => { if (query !== undefined && input.get() !== query) input.set(query); }, [input, query]);
@@ -26,12 +26,12 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items,
   };
   return <Host style={{ flex: 1 }}><VStack alignment="leading" spacing={12} modifiers={[padding({ horizontal: 12, top: 6 })]}>
     <HStack><Text modifiers={[font({ textStyle: 'title2' }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>{title}</Text>
-      <Button label={closeLabel} systemImage="xmark" onPress={onClose}
+      {headerAction?<RNHostView matchContents>{headerAction}</RNHostView>:null}<Button label={closeLabel} systemImage="xmark" onPress={onClose}
         modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), accessibilityLabel(closeLabel)]} />
     </HStack>
     <HStack spacing={10} modifiers={[padding({ horizontal: 16, vertical: 12 }), background(colors.surfaceContainerHighest), cornerRadius(30)]}>
       <Image systemName="magnifyingglass" size={20} />
-      <TextField text={input} placeholder={hint} onTextChange={onSearch} modifiers={[frame({ maxWidth: Infinity })]} />
+      <TextField autoFocus={autoFocus} text={input} placeholder={hint} onTextChange={onSearch} modifiers={[frame({ maxWidth: Infinity })]} />
       {onPhoto && <Button label={photoLabel} systemImage="qrcode.viewfinder" onPress={onPhoto}
         modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), disabled(photoLoading), accessibilityLabel(photoLabel ?? '')]} />}
     </HStack>

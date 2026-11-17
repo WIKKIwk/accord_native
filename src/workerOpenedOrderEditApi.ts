@@ -115,7 +115,7 @@ export function openedOrderEditSourceFromJson(value: unknown) {
   } };
 }
 
-function editError(status: number, payload: unknown): WorkerControlException {
+export function openedOrderEditResponseError(status: number, payload: unknown): WorkerControlException {
   const data = object(payload);
   if (typeof data?.error === 'string' && typeof data.message === 'string' && data.error.startsWith('order_edit_') &&
       status !== 401 && status !== 403 && data.message.trim() && !/[<>]/.test(data.message)) {
@@ -140,7 +140,7 @@ export async function adminOpenedOrderEditSource(session: Session, orderId: stri
   if (response.status !== 200) {
     let payload: unknown;
     try { payload = await response.json(); } catch { payload = null; }
-    throw editError(response.status, payload);
+    throw openedOrderEditResponseError(response.status, payload);
   }
   return openedOrderEditSourceFromJson(await response.json());
 }

@@ -5,7 +5,7 @@ import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
 
 export type BrigaderFlowTarget = Readonly<{ route: string; args?: unknown }>;
 export type BrigaderFlowEntry = Readonly<{ id: string; target: BrigaderFlowTarget; isCurrent: () => boolean }>;
-type Entry = { value: BrigaderFlowEntry; parent: () => boolean; resolve: (value: unknown) => void; result: unknown; nativeKey: string | null; mounts: Set<object>; closing: boolean };
+type Entry = { value: BrigaderFlowEntry; parent: () => boolean; resolve: (value: unknown) => void; result: unknown; nativeKey: string | null; mounts: Set<object>; closing: boolean; backResult?:()=>unknown };
 let sequence = 0;
 /** Original in-memory route arguments and results; URLs contain only an opaque identifier. */
 export class BrigaderFlowRoutes {
@@ -47,7 +47,8 @@ export class BrigaderFlowRoutes {
     const entry = this.entries.get(id); if (!entry || entry.closing || entry.nativeKey !== key || !entry.mounts.size || !this.entryCurrent(entry)) return false;
     entry.closing = true; entry.result = result; return true;
   }
-  private finish(entry: Entry) { if (this.entries.get(entry.value.id) !== entry) return; this.entries.delete(entry.value.id); const result = entry.result; entry.result = undefined; entry.resolve(result); this.publish(); }
+  registerBackResult(id:string,key:string,read:()=>unknown){const entry=this.entries.get(id);if(entry&&entry.nativeKey===key&&entry.mounts.size&&this.entryCurrent(entry))entry.backResult=read;}
+  private finish(entry: Entry) { if (this.entries.get(entry.value.id) !== entry) return; let result=entry.result;if(!entry.closing&&entry.backResult&&this.active&&!this.retired&&isSynchronouslyTrue(this.original)&&isSynchronouslyTrue(entry.parent)&&canOpenRoute(this.session,entry.value.target.route)){try{result=entry.backResult();}catch{result=undefined;}}this.entries.delete(entry.value.id); entry.result = undefined; entry.backResult=undefined;entry.resolve(result); this.publish(); }
   detach() { this.active = false; for (const entry of [...this.entries.values()]) this.finish(entry); this.publish(); }
   invalidate() { this.retired = true; this.detach(); }
 }

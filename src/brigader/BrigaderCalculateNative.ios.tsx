@@ -1,0 +1,19 @@
+import { useEffect, useRef } from 'react';
+import { Button, Text, TextField, VStack, HStack, useNativeState, type TextFieldRef } from '@expo/ui/swift-ui';
+import { buttonStyle, controlSize, disabled, frame, keyboardType, padding, textFieldStyle, foregroundStyle, onSubmit } from '@expo/ui/swift-ui/modifiers';
+import { BaseHost } from '../components/BaseHost.ios';
+import type { CalculateFieldProps, CalculatePickerProps, CalculateActionProps, CalculateFactsProps } from './brigaderCalculateNativeTypes';
+import type { ReactNode } from 'react';
+export function CalculateFacts({ title, rows }: CalculateFactsProps) { return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><VStack alignment="leading" spacing={8} modifiers={[padding({ all: 16 }), frame({ maxWidth: Infinity })]}>{title ? <Text>{title}</Text> : null}{rows.map((row, index) => <HStack key={index} modifiers={[frame({ maxWidth: Infinity })]}><Text modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' })]}>{row.label}</Text><Text>{row.value}</Text></HStack>)}</VStack></BaseHost>; }
+export function CalculateForm({ children }: {
+    children: ReactNode;
+}) { return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><VStack alignment="leading" spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>{children}</VStack></BaseHost>; }
+export function CalculateField(props: CalculateFieldProps) { const state = useNativeState(props.value), ref = useRef<TextFieldRef>(null); useEffect(() => { state.set(props.value); }, [state, props.value]); useEffect(() => { if (props.focusVersion || props.autofocus)
+    void ref.current?.focus(); }, [props.focusVersion, props.autofocus]); useEffect(() => { if (props.selection !== undefined)
+    void ref.current?.setSelection(props.selection, props.selection); }, [props.selectionVersion, props.selection]); return <VStack alignment="leading" spacing={6} modifiers={[frame({ maxWidth: Infinity })]}><Text>{props.label}</Text><HStack><TextField ref={ref} text={state} onSelectionChange={props.onSelectionChange} maxLength={props.maxLength} axis={props.multiline ? 'vertical' : 'horizontal'} onTextChange={raw => { const value = props.integer ? raw.replace(/[^0-9]/g, '') : props.numeric ? raw.replace(/[^0-9.,]/g, '') : raw; if (value !== raw)
+    state.set(value); props.onChange(value); }} modifiers={[...(props.onSubmit ? [onSubmit(props.onSubmit)] : []), textFieldStyle('roundedBorder'), keyboardType(props.integer ? 'numeric' : props.numeric ? 'decimal-pad' : 'default'), disabled(!!props.disabled), frame({ maxWidth: Infinity, minHeight: props.minHeight ?? 52 })]}/>{props.unit ? <Text modifiers={[foregroundStyle('secondary')]}>{props.unit}</Text> : null}</HStack>{props.error ? <Text modifiers={[foregroundStyle('red')]}>{props.error}</Text> : null}</VStack>; }
+export function CalculatePicker(props: CalculatePickerProps) { return <VStack alignment="leading" spacing={4} modifiers={[frame({ maxWidth: Infinity })]}><Text modifiers={[foregroundStyle(props.required && !props.value.trim() ? 'red' : 'secondary')]}>{props.label}</Text><Button label={props.value.trim() || props.label} systemImage={props.disabled ? 'lock' : 'chevron.down'} onPress={props.onPress} modifiers={[buttonStyle('bordered'), controlSize('large'), disabled(!!props.disabled), frame({ maxWidth: Infinity, minHeight: 56 })]}/></VStack>; }
+export function CalculateAction({ label, onPress, disabled: inactive, secondary, height = 60 }: CalculateActionProps) { return <Button label={label} onPress={onPress} modifiers={[buttonStyle(secondary ? 'bordered' : 'borderedProminent'), controlSize('large'), disabled(!!inactive), frame({ maxWidth: Infinity, minHeight: height })]}/>; }
+export function CalculateCaption({ value }: {
+    value: string;
+}) { return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Text modifiers={[padding({ horizontal: 16, vertical: 4 })]}>{value}</Text></BaseHost>; }

@@ -3,7 +3,7 @@ import { subscribeSessionWitness } from '../auth';
 import { AdminCreateMenuController, type AdminMenuAction } from './adminCreateMenuController';
 
 export type AdminCreateMenuProps = { actions: readonly AdminMenuAction[]; isCurrent: () => boolean;
-  openLabel: string; closeLabel: string; bottomOffset?: number; visible?: boolean };
+  openLabel: string; closeLabel: string; bottomOffset?: number; visible?: boolean;alignEnd?:boolean;columns?:number };
 
 export function useAdminCreateMenu({ actions, isCurrent, visible = true }: AdminCreateMenuProps) {
   const controller = useMemo(() => new AdminCreateMenuController(actions, isCurrent,

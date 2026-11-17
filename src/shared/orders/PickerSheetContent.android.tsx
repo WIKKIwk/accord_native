@@ -1,7 +1,7 @@
 import { Host, TextInput, useNativeState } from '@expo/ui';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { SymbolView } from 'expo-symbols';
-import { useEffect } from 'react';
+import { useEffect,type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
@@ -15,14 +15,14 @@ type Props = {
   items: readonly PickerItem[]; onClose: () => void; onSearch: (query: string) => void;
   query?: string; loading?: boolean; error?: string; retryLabel?: string; onRetry?: () => void;
   hasMore?: boolean; onLoadMore?: () => void; photoLabel?: string; onPhoto?: () => void;
-  photoLoading?: boolean; photoError?: string;
+  photoLoading?: boolean; photoError?: string;autoFocus?:boolean;headerAction?:ReactElement;
 };
 const passthrough = () => true;
 
 /** Picker rows use the same segmented cards as the order and material lists. */
 export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items, onClose, onSearch,
   query, loading = false, error, retryLabel, onRetry, hasMore = false, onLoadMore,
-  photoLabel, onPhoto, photoLoading = false, photoError }: Props) {
+  photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction }: Props) {
   const colors = useMaterialColors(), input = useNativeState(query ?? '');
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => { if (query !== undefined && input.get() !== query) input.set(query); }, [input, query]);
@@ -32,12 +32,12 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items,
   return <GestureHandlerRootView style={styles.content}>
     <View style={styles.header}>
       <Text style={[styles.title, { color: colors.onSurface }]}>{title}</Text>
-      <WorkerIconButton icon="close" label={closeLabel} onPress={onClose} />
+      {headerAction}<WorkerIconButton icon="close" label={closeLabel} onPress={onClose} />
     </View>
     <View style={[styles.search, { backgroundColor: colors.surfaceContainerHighest, borderColor: colors.outlineVariant }]}>
       <SymbolView name={{ android: 'search' }} size={24} tintColor={colors.onSurfaceVariant} />
       <Host matchContents={{ vertical: true }} style={styles.searchInput}>
-        <TextInput value={input} onChangeText={onSearch} placeholder={hint} accessibilityLabel={hint}
+        <TextInput autoFocus={autoFocus} value={input} onChangeText={onSearch} placeholder={hint} accessibilityLabel={hint}
           placeholderTextColor={colors.onSurfaceVariant} textStyle={{ color: colors.onSurface, fontSize: 16 }}
           style={{ width: '100%' }} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
       </Host>

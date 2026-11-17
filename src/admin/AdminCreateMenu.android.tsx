@@ -55,12 +55,12 @@ export function AdminCreateMenu(props: AdminCreateMenuProps) {
       style={[StyleSheet.absoluteFill, { backgroundColor: theme.mode === 'dark' ? 'rgba(0,0,0,0.78)' : 'rgba(255,255,255,0.68)' }]} /> : null}
     <View pointerEvents={state.open ? 'auto' : 'none'} accessibilityElementsHidden={!state.open} importantForAccessibility={state.open ? 'auto' : 'no-hide-descendants'}
       style={[styles.actions, { bottom: bottom + 90 }]}>
-      <ScrollView contentContainerStyle={styles.actionList} keyboardShouldPersistTaps="handled">
-        {state.actions.map((action, index) => <Action key={action.id} action={action} open={state.open} order={state.actions.length - 1 - index}
-          onSelect={id => { void controller.select(id); }} />)}
+      <ScrollView contentContainerStyle={[styles.actionList,props.alignEnd===false?{alignItems:'flex-start'}:null,props.columns===2?{flexDirection:'row',flexWrap:'wrap',gap:4}:null]} keyboardShouldPersistTaps="handled">
+        {state.actions.map((action, index) => <View key={action.id} style={props.columns===2?{width:'49%'}:undefined}><Action action={action} open={state.open} order={state.actions.length - 1 - index}
+          onSelect={id => { void controller.select(id); }} /></View>)}
       </ScrollView>
     </View>
-    <View pointerEvents="box-none" style={[styles.slot, { bottom }]}><Animated.View style={[styles.toggle, toggleStyle]}>
+    <View pointerEvents="box-none" style={[styles.slot, { bottom },props.alignEnd===false?{right:undefined,left:10}:null]}><Animated.View style={[styles.toggle, toggleStyle]}>
       <Host style={StyleSheet.absoluteFill}><Button onClick={() => controller.toggle()} shape={state.open ? Shape.Circle({}) : Shape.RoundedCorner({ cornerRadii: { topStart: 22, topEnd: 22, bottomStart: 22, bottomEnd: 22 } })}
         contentPadding={{ start: 0, top: 0, end: 0, bottom: 0 }} colors={{ containerColor: colors.primaryContainer, contentColor: colors.onPrimaryContainer }}
         modifiers={[fillMaxWidth(), height(state.open ? 56 : 80), semantics({ contentDescription: state.open ? props.closeLabel : props.openLabel }), testID('admin-create-toggle')]}>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-export type BrigaderDialogProps = { identity: object; closing: boolean; current: () => boolean; dismiss: () => void; detached: () => void; children: (interactive: () => boolean, shown: boolean) => ReactNode; dismissible?: boolean; backDismissible?:boolean; hideDragHandle?:boolean; scrim?: number; maxWidth?: number; inset?: number;fullScreen?:boolean };
+export type BrigaderDialogProps = { identity: object; closing: boolean; current: () => boolean; dismiss: () => void; detached: () => void; children: (interactive: () => boolean, shown: boolean) => ReactNode; dismissible?: boolean; backDismissible?:boolean; hideDragHandle?:boolean;waitForEntrance?:boolean; scrim?: number; maxWidth?: number; inset?: number;fullScreen?:boolean };
 
 export class BrigaderSurfaceAuthority {
   private shown = false;

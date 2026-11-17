@@ -10,7 +10,7 @@ in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read
 | Module | Status | Logic | API + fixtures | Tests | iOS UI | Android UI | Notes |
 |---|---|---|---|---|---|---|---|
 | Brigader products/apparatus/notifications/operations/WIP | composed | ported/reused | source requests; no invented fixtures | user owns device tests | native | native | See checkpoints; full-role audit pending |
-| Remaining five Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
+| Brigader calculations, archive, create hub, factory map, progress QR | composed; audit in progress | source flows implemented | original guarded APIs; no invented fixtures | user owns tests | native | native | Role-wide surface/text audit and integration continue |
 
 ## File mapping
 
@@ -42,3 +42,6 @@ No synthetic API response fixtures were invented. Physical printing and device a
 
 | lib/src/features/admin/presentation/admin_calculate_orders_screen.dart | BrigaderCalculateOrders*, brigaderCalculateOrdersModel.ts, BrigaderCalculateStore.tsx | composed; editor dependency pending |
 | lib/src/features/admin/presentation/admin_create_hub_screen.dart | BrigaderCreateHub*, reused role destinations | composed; calculation dependency pending |
+
+| lib/src/features/admin/presentation/admin_calculate_screen*.dart | src/brigader/BrigaderCalculate*, brigaderCalculateModel.ts, brigaderCalculateDraft.ts, useBrigaderCalculate.ts | composed; final audit continues |
+| lib/src/features/admin/presentation/admin_production_map_test*.dart | src/brigader/BrigaderProductionMap*, BrigaderProductionCanvas.tsx, productionMap* helpers, src/admin/productionMapDraft* | composed; final audit continues |

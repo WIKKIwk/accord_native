@@ -34,5 +34,6 @@ export function useBrigaderFlowPage() {
     if (!current() || !binding.id || !registry.accept(binding.id, binding.key, result)) return;
     navigation.dispatch({ type: 'POP', payload: { count: 1 }, source: binding.key, target: binding.navigator });
   }, [current, binding, registry, navigation]);
-  return { entry, current, interactive, back };
+  const registerBackResult=useCallback((read:()=>unknown)=>{if(binding.id&&current())registry.registerBackResult(binding.id,binding.key,read);},[binding,current,registry]);
+  return { entry, current, interactive, back,registerBackResult };
 }
