@@ -20,8 +20,8 @@ export function useAdminUsersPage() {
   const back = useCallback(() => {
     if (!interactive()) return; const state = navigation.getState(); if (!state || state.type !== 'stack' || state.key !== binding.navigatorKey || state.routes[state.index]?.key !== binding.key) return;
     leaving.current = true;
-    try { if (state.index > 0) navigation.dispatch({ type: 'POP', payload: { count: 1 }, source: binding.key, target: binding.navigatorKey }); else router.replace(`/${Platform.OS}-admin` as Href); }
+    try { if (state.index > 0) navigation.dispatch({ type: 'POP', payload: { count: 1 }, source: binding.key, target: binding.navigatorKey }); else router.replace((context.rootPath ?? `/${Platform.OS}-admin`) as Href); }
     catch (error) { leaving.current = false; throw error; }
-  }, [interactive, navigation, binding]);
+  }, [interactive, navigation, binding, context.rootPath]);
   return { context, current, interactive, openUser, openProfile, back, admitted: current() };
 }

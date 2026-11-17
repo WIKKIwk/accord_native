@@ -1,5 +1,5 @@
 import { useIsFocused } from 'expo-router';
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { subscribeSessionWitness } from '../auth';
 import { localizedGetter } from '../shared/localization';
@@ -57,6 +57,11 @@ export function AdminCreateHubProvider(props: AdminCreateHubProviderProps) {
 }
 
 function useOwner() { const owner = useContext(HubContext); if (!owner) throw new Error('AdminCreateHubProvider is required'); return owner; }
+/** Structural owner availability; individual default destinations retain their separate readiness gate. */
+export function useAdminCreateHubOwnerCurrent() {
+  const owner = useOwner();
+  return useCallback(() => owner.controller.isCurrent(), [owner]);
+}
 /** The SAME global controller; constructing a page-local Hub session is not supported. */
 export function useAdminCreateHubSourceController() {
   const owner = useOwner(), controller = useContext(SourceWindowContext);

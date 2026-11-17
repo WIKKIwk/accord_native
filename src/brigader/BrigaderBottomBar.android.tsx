@@ -1,3 +1,4 @@
+import { BrigaderPrimaryAction } from './BrigaderPrimaryAction';
 import { router, useIsFocused, useNavigation, type Href } from 'expo-router';
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { Keyboard } from 'react-native';
@@ -42,5 +43,5 @@ export function BrigaderBottomBar({ active }: { active: AdminDockTab | null }) {
       adminDockSelection(destination, active, context.currentPath() === homePath ? home : null, home) !== 'replaceRoot') return;
     adminRootNavigation.schedule(destination.routeName, context);
   };
-  return <RoleBottomBar active={destinations.find(item => item.tab === active)?.id ?? ''} items={items} onSelect={select} bottomInset={insets.bottom} />;
+  return <><BrigaderPrimaryAction isCurrent={context.isCurrent} canInteract={context.isCurrent} /><RoleBottomBar active={destinations.find(item => item.tab === active)?.id ?? ''} items={items} onSelect={select} bottomInset={insets.bottom} /></>;
 }

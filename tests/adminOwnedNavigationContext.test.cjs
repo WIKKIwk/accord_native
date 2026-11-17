@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const test = require('node:test');
 const s = require('./adminOwnedNavigationSupport.cjs');
-function fixture(platform = 'ios') {
-  const runtime = s.runtime(), session = { token: 'real', baseUrl: 'https://original.example', profile: { role: 'admin', ref: 'ADMIN' }, capabilities: ['admin.access'] }, witness = { session }, pushes = [], listeners = new Set();
+function fixture(platform = 'ios', options = {}) {
+  const runtime = s.runtime(), session = { token: 'real', baseUrl: 'https://original.example', profile: { role: options.role ?? 'admin', ref: 'ADMIN' }, capabilities: options.capabilities ?? ['admin.access'] }, witness = { session }, pushes = [], listeners = new Set();
   let valid = true, providers, consumer = null;
   const auth = { activeSessionEpoch: () => 2, activeSessionToken: () => session.token, isSessionWitnessCurrent: value => value === witness && valid,
     subscribeSessionWitness: callback => { listeners.add(callback); return () => listeners.delete(callback); } };
@@ -15,7 +15,7 @@ function fixture(platform = 'ios') {
   const component = s.compile(path.resolve(__dirname, '../src/admin/AdminOwnedNavigationContext.tsx'), { react, 'react-native': { Platform: { OS: platform } },
     'expo-router': { router: { push: url => pushes.push(url) } }, '../auth': auth, '../shared/camera/synchronousGuard': s.strict,
     './adminOwnedNavigationSession': classes, './AdminShellContext': { useAdminShell: () => shell } });
-  const render = () => runtime.render(() => component.AdminOwnedNavigationProvider({ providers, children: 'real-shell' }));
+  const render = () => runtime.render(() => component.AdminOwnedNavigationProvider({ providers, rootPath: options.rootPath, mayEnter: options.mayEnter, children: 'real-shell' }));
   return { runtime, session, witness, pushes, component, render, providers: value => { providers = value; }, consumer: value => { consumer = value; },
     retire() { valid = false; for (const listener of [...listeners]) listener(); }, get listeners() { return listeners.size; } };
 }
@@ -38,4 +38,16 @@ test('real provider replay retires captured context callbacks and account witnes
   const pending = old.owner.registry.open({ kind: 'profile' }, { isCurrent: old.current, canInteract: () => true }); f.runtime.replay(); assert.equal(await pending, false);
   const fresh = f.render().props.value; assert.equal(old.current(), false); assert.equal(fresh.current(), true); assert.equal(f.listeners, 1);
   const latest = fresh.owner.registry.open({ kind: 'profile' }, { isCurrent: fresh.current, canInteract: () => true }); f.retire(); assert.equal(await latest, false); assert.equal(f.render().props.children, null); f.runtime.unmount(); assert.equal(f.listeners, 0);
+});
+
+for (const platform of ['android', 'ios']) test(`${platform} Brigader private arguments stay in the Brigader native stack`, async () => {
+  const f = fixture(platform, { role: 'brigader', capabilities: ['brigader.access'], rootPath: `/${platform}-brigader`,
+    mayEnter: value => value.profile.role === 'brigader' && value.capabilities.includes('brigader.access') });
+  f.providers({ primaryAvailable: () => true, renderPrimaryAction: () => ({ type: 'RealPrimary' }) }); f.render();
+  const context = f.render().props.value;
+  const pending = context.owner.registry.open({ kind: 'profile' }, { isCurrent: context.current, canInteract: () => true });
+  assert.equal(context.rootPath, `/${platform}-brigader`);
+  assert.match(f.pushes[0], new RegExp(`^/${platform}-brigader/owned/[0-9]+$`));
+  assert.equal(f.session.profile.role, 'brigader'); assert.deepEqual(f.session.capabilities, ['brigader.access']);
+  f.runtime.unmount(); assert.equal(await pending, false);
 });

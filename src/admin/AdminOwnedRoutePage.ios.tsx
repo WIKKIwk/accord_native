@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Redirect, type Href } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { appRoutes } from '../shared/appRoutes';
@@ -18,8 +18,8 @@ export function AdminOwnedRoutePage() {
   const shell = useAdminShell(), page = useAdminOwnedPage(), locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale), notice = useAdminOwnedNotice(page.current);
   const providers = page.context.providers;
   if (!page.context.current()) return null;
-  if (!page.context.ready() || !providers) return <Redirect href="/ios-admin" />;
-  if (!page.entry) return <Redirect href="/ios-admin/users" />;
+  if (!page.context.ready() || !providers) return <Redirect href={(page.context.rootPath ?? "/ios-admin") as Href} />;
+  if (!page.entry) return <Redirect href={`${page.context.rootPath ?? "/ios-admin"}/users` as Href} />;
   if (!page.admitted || !page.registerBack) return null;
   const profileAction = <AdminProfileAction session={shell.session} witness={shell.witness} isCurrent={page.current} canInteract={page.interactive} onProfile={() => { void page.open({ kind: 'profile' }); }} />;
   const footer = <AdminOwnedDock active={page.entry.routeName === appRoutes.adminWerka ? 'settings' : 'user'} isCurrent={page.current} canInteract={page.interactive} />;

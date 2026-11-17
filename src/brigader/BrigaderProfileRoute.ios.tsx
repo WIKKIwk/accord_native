@@ -10,6 +10,7 @@ import { appRoutes } from '../shared/appRoutes';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
+import { BrigaderBottomBar } from './BrigaderBottomBar.ios';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -32,9 +33,9 @@ export function BrigaderProfileRoute() {
         <ProfileScreen session={shell.session} isCurrent={shell.isCurrent} onLogout={() => {
           if (shell.isCurrent()) shell.onLogout();
         }} showDirectLogout={false} />
-      </AdminShellBodyFrame>
+      </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}><BrigaderBottomBar active="user" /></View>
     </View>
   </>;
 }
 
-const styles = StyleSheet.create({ screen: { flex: 1 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

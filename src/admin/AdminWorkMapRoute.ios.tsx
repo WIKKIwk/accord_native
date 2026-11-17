@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button } from '@expo/ui/swift-ui';
 import { ListItem } from '@expo/ui';
 import { Redirect, Stack } from 'expo-router';
@@ -21,7 +22,7 @@ import { adminWorkMapText } from './adminWorkMapText';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminWorkMapView } from './useAdminWorkMapView';
 
-function BoundWorkMap() {
+function BoundWorkMap({ footer }: { footer?: ReactNode }) {
   const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), label = adminWorkMapText(locale);
   return <><Stack.Screen options={{ headerShown: false }} />
@@ -47,12 +48,13 @@ function BoundWorkMap() {
         {state.hasMore && !view.error && <Button label={label.more} onPress={() => { void controller.next(); }} />}
       </OrdersList></BaseHost>}
       {view.controls.module !== 'audit' && view.controls.module !== 'move' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: insets.top + 80 }} />}
+      {footer}
     </View>
   </>;
 }
-export function AdminWorkMapRoute() {
+export function AdminWorkMapRoute({ footer }: { footer?: ReactNode } = {}) {
   const shell = useAdminShell();
   if (!shell.isCurrent()) return <View style={{ flex: 1 }} />;
   if (!shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return <Redirect href="/" />;
-  return <BoundWorkMap />;
+  return <BoundWorkMap footer={footer} />;
 }

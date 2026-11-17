@@ -6,7 +6,8 @@ import { AdminOwnedRoutes } from './adminOwnedRoutes';
 import { AdminOwnedRootRemoval } from './adminOwnedRemoval';
 import { adminShellMayEnter } from './adminShellAccess';
 
-type Dependencies = { session: Session; witness: SessionWitness; isCurrent: () => boolean; sourceReady: () => boolean; push: (id: string) => void };
+type Dependencies = { session: Session; witness: SessionWitness; isCurrent: () => boolean; sourceReady: () => boolean; push: (id: string) => void;
+  mayEnter?: (session: Session | null) => boolean };
 type Snapshot = Readonly<{ active: boolean; generation: number }>;
 /** A single original shell admission owns private route arguments, native completion and root removal permits. */
 export class AdminOwnedNavigationSession {
@@ -29,7 +30,7 @@ export class AdminOwnedNavigationSession {
     try {
       const { session, witness } = this.deps;
       const valid = () => this.epoch !== null && activeSessionEpoch(session) === this.epoch && !!activeSessionToken(session) && session.token !== 'test-mode-token' &&
-        witness.session === session && isSessionWitnessCurrent(witness) && sessionReadScope(session) === this.scope && adminShellMayEnter(session);
+        witness.session === session && isSessionWitnessCurrent(witness) && sessionReadScope(session) === this.scope && (this.deps.mayEnter ?? adminShellMayEnter)(session);
       if (!valid() || !isSynchronouslyTrue(this.deps.isCurrent) || !valid() || this.retired) this.retired = true;
       return !this.retired;
     } catch { this.retired = true; return false; } finally { this.checking = false; }

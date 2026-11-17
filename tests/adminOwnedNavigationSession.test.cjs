@@ -1,10 +1,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const s = require('./adminOwnedNavigationSupport.cjs');
-function fixture() {
-  const session = { token: 'original-token', baseUrl: 'https://original.example', profile: { role: 'admin', ref: 'ADMIN' }, capabilities: ['admin.access'] }, witness = { session };
+function fixture(options = {}) {
+  const session = { token: 'original-token', baseUrl: 'https://original.example', profile: { role: options.role ?? 'admin', ref: 'ADMIN' }, capabilities: options.capabilities ?? ['admin.access'] }, witness = { session };
   let epoch = 4, witnessed = true, parent = true, source = true, allowed = true;
-  const pushes = [], reads = { parent: () => parent, source: () => source }, deps = { session, witness, isCurrent: () => reads.parent(), sourceReady: () => reads.source(), push: id => pushes.push(id) };
+  const pushes = [], reads = { parent: () => parent, source: () => source }, deps = { session, witness, mayEnter: options.mayEnter, isCurrent: () => reads.parent(), sourceReady: () => reads.source(), push: id => pushes.push(id) };
   const { AdminOwnedNavigationSession } = s.load('admin/adminOwnedNavigationSession', {
     '../auth': { activeSessionEpoch: () => epoch, activeSessionToken: () => session.token || null, isSessionWitnessCurrent: candidate => candidate === witness && witnessed },
     '../sessionReadScope': s.load('sessionReadScope'), '../shared/appRoutes': { canOpenRoute: () => allowed },
@@ -61,4 +61,16 @@ test('source readiness cannot revive detached authority during its callback and 
 test('replacing caller dependency callbacks cannot renew original shell authority or substitute private pushes', async () => {
   const f = fixture(); f.owner.activate(); f.deps.isCurrent = () => true; f.deps.sourceReady = () => true; f.deps.push = () => assert.fail('substituted push');
   const pending = f.open(); assert.equal(f.pushes.length, 1); f.parent(false); assert.equal(f.owner.current(), false); assert.equal(f.owner.registry.get(f.pushes[0]), null); assert.equal(await pending, false);
+});
+
+test('Brigader owned pages preserve their real identity and retire on Brigader grant withdrawal', async () => {
+  const mayEnter = value => value.profile.role === 'brigader' && value.capabilities.includes('brigader.access');
+  const held = fixture({ role: 'brigader', capabilities: ['brigader.access'] }); held.owner.activate();
+  assert.equal(held.owner.current(), false);
+  const f = fixture({ role: 'brigader', capabilities: ['brigader.access'], mayEnter }); f.owner.activate();
+  assert.equal(f.owner.current(), true); assert.equal(f.owner.ready(), true);
+  assert.equal(f.session.profile.role, 'brigader'); assert.deepEqual(f.session.capabilities, ['brigader.access']);
+  const pending = f.open(); assert.equal(f.pushes.length, 1);
+  f.session.capabilities = []; assert.equal(f.owner.current(), false); assert.equal(f.owner.registry.get(f.pushes[0]), null); assert.equal(await pending, false);
+  f.session.capabilities = ['brigader.access']; f.owner.activate(); assert.equal(f.owner.current(), false);
 });
