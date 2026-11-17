@@ -1,6 +1,5 @@
 import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { useAdminCreateHubScaffoldLayout } from './AdminCreateHubProvider';
 import type { AdminItemCreateDialogPortal } from './AdminItemCreateDialogTypes';
@@ -11,6 +10,7 @@ import { AdminItemCreatePrimaryAction } from './AdminItemCreatePrimaryAction.and
 import { AdminItemCreateScaffold } from './AdminItemCreateScaffold';
 import type { AdminItemCreateScreenAssemblyProps } from './AdminItemCreateScreenAssemblyTypes';
 import { AdminTopNoticeHost } from './AdminTopNoticeHost';
+import { AdminShellInlineSafeArea, useAdminShellInlineSafeArea } from './AdminShellInlineSafeArea';
 import { adminItemCreateScreenBoundary, requireAdminItemCreateAndroidPresentation } from './adminItemCreateScreenBoundary';
 import type { AdminPresentationWindowObserver } from './adminPresentationWindow';
 import { useAdminItemCreate } from './useAdminItemCreate';
@@ -21,13 +21,13 @@ export type AdminItemCreateAndroidScreenProps = AdminItemCreateScreenAssemblyPro
 function OwnedScreen(props: AdminItemCreateAndroidScreenProps) {
   // Both genuine providers must exist before the domain hook can admit reads.
   const sourceLayout = useAdminCreateHubScaffoldLayout(), scaffold = useAdminTopNoticeScaffold(props.sourceScaffoldAncestor);
-  const { colors } = useBaseTheme(), insets = useSafeAreaInsets(), model = useAdminItemCreate(props);
+  const { colors } = useBaseTheme(), insets = useAdminShellInlineSafeArea(), model = useAdminItemCreate(props);
   useAdminItemCreateNoticePresentation(model, scaffold.messenger, props.fixedSnackBars);
   if (!model.current() || !model.state.form.valid || !model.state.list.valid) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]} testID="admin-item-create-screen">
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top ?? undefined }]} testID="admin-item-create-screen">
     <Stack.Screen options={{ headerShown: false }} />
-    <SafeAreaView edges={['left', 'right']} testID="admin-item-create-header-safe-area"><AdminItemCreateHeader model={model} props={props} /><View style={styles.headerBottom} /></SafeAreaView>
-    <AdminTopNoticeHost scaffold={scaffold} inlineInsets={{ left: insets.left, right: insets.right }} dismissLabel={props.topNoticeDismissLabel} />
+    <AdminShellInlineSafeArea testID="admin-item-create-header-safe-area"><AdminItemCreateHeader model={model} props={props} /><View style={styles.headerBottom} /></AdminShellInlineSafeArea>
+    <AdminTopNoticeHost scaffold={scaffold} inlineInsets={insets.inlineInsets} dismissLabel={props.topNoticeDismissLabel} />
     <AdminItemCreateScaffold>{bottomPadding => <AdminItemCreateList model={model} bottomPadding={bottomPadding} />}</AdminItemCreateScaffold>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View><AdminItemCreatePrimaryAction model={model} render={props.renderPrimaryAction} />
     {props.fixedSnackBars.render({ scaffold, sourceLayout, isCurrent: model.current })}

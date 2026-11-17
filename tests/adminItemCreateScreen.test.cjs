@@ -39,6 +39,17 @@ for (const platform of ['android', 'ios']) {
       f.model().openDialog(); assert.equal(f.model().state.form.dialog, null); f.focus(true); f.top(true); f.render(); f.model().openDialog(); f.render(); assert.ok(f.model().state.form.dialog);
     } finally { f.cleanup(); }
   });
+  test(`${platform} original-window header/banner use actual viewport facts while unknown geometry preserves original owner and header Back`, async () => {
+    const f = s.fixture(platform); try {
+      f.safeAvailable(false); f.sourceWindowScope({ safeInsets: null, viewportWidth: null, metrics: null, thinGestureBottom: null }); f.sourceLayout.metrics = null; f.sourceLayout.hostHeight = null;
+      f.render(); await s.flush(); let tree = f.render(); const original = f.model().owner; assert.ok(s.nodes(tree, node => node.type === 'GenuineNativeHeader').length); assert.equal(f.leaf.notice.inlineInsets, null);
+      assert.equal(s.flattenStyle(root(tree).props.style).paddingTop, undefined); assert.equal(s.nodes(tree, node => node.type === 'SafeAreaView').length, 0); assert.equal(f.leaf.list.bottomPadding, null); f.leaf.header.model.back();
+      f.sourceWindowScope({ safeInsets: { top: 61, left: 19, right: 27 }, viewportWidth: 480, metrics: null, thinGestureBottom: true }); tree = f.render(); assert.equal(f.model().owner, original); assert.deepEqual(f.leaf.notice.inlineInsets, { left: 19, right: 27, width: 480 });
+      if (platform === 'android') { assert.equal(s.flattenStyle(root(tree).props.style).paddingTop, 61); const headerSafe = s.nodes(tree, node => node.props.testID === 'admin-item-create-header-safe-area')[0]; assert.equal(s.flattenStyle(headerSafe.props.style).paddingLeft, 19); assert.equal(s.flattenStyle(headerSafe.props.style).paddingRight, 27); }
+      else assert.equal(s.flattenStyle(root(tree).props.style).paddingTop, undefined);
+      assert.equal(f.model().current(), true); assert.equal(f.leaf.header.model, f.model());
+    } finally { f.cleanup(); }
+  });
 }
 test('Android missing real original observer or portal readiness is rejected before reads, with no synthesized carrier fallback', async () => {
   for (const change of [f => { f.props.windowObserver = undefined; }, f => { f.props.dialogPortal = undefined; }, f => { f.props.dialogPortal.isAvailable = () => false; }]) {

@@ -4,7 +4,7 @@ import type { AdminSourceDockScaffoldOwner, AdminSourceDockSnapshot } from './Ad
 
 type Insets = Readonly<{ top: number; left: number; right: number }>;
 export type AdminShellSourceWindowLayoutFacts = Readonly<{
-  metrics: AdminSystemInsets | null; thinGestureBottom: boolean | null; safeInsets: Insets | null;
+  metrics: AdminSystemInsets | null; thinGestureBottom: boolean | null; safeInsets: Insets | null; viewportWidth: number | null;
 }>;
 const Context = createContext<AdminShellSourceWindowLayoutFacts | null>(null);
 /** An explicit unknown original-window scope must never fall back to Activity geometry. */
@@ -12,7 +12,7 @@ export function adminShellSourceWindowLayout(snapshot: AdminSourceDockSnapshot, 
   const native = current && !snapshot.retired ? snapshot.native : null;
   const viewport = native?.windowIdentity && native.phase !== 'retired' && native.phase !== 'unavailable' ? native.viewport : null;
   const safeInsets = viewport ? Object.freeze({ top: viewport.safeTop, left: viewport.safeLeft, right: viewport.safeRight }) : null;
-  return Object.freeze({ safeInsets, thinGestureBottom,
+  return Object.freeze({ safeInsets, thinGestureBottom, viewportWidth: viewport?.rect.width ?? null,
     metrics: available && snapshot.geometryReady && native?.phase === 'bound' && typeof thinGestureBottom === 'boolean' ? native.metrics : null });
 }
 /** Only the caller's actual Reader-backed original page owner supplies these facts. No synthetic SafeAreaProvider. */

@@ -11,9 +11,9 @@ function facts(f, thin = true, available = true) {
 test('original viewport safe-area arrives independently of dock geometry, without inventing body metrics', async () => {
   const f = s.fixture();
   try {
-    let value = facts(f); assert.equal(value.metrics, null); assert.equal(value.safeInsets, null);
+    let value = facts(f); assert.equal(value.metrics, null); assert.equal(value.safeInsets, null); assert.equal(value.viewportWidth, null);
     f.viewport(); await s.flush(); value = facts(f); const viewport = f.scaffoldOwner.getSnapshot().native.viewport;
-    assert.deepEqual(value.safeInsets, { top: viewport.safeTop, left: viewport.safeLeft, right: viewport.safeRight }); assert.equal(value.metrics, null);
+    assert.deepEqual(value.safeInsets, { top: viewport.safeTop, left: viewport.safeLeft, right: viewport.safeRight }); assert.equal(value.metrics, null); assert.equal(value.viewportWidth, viewport.rect.width);
     f.bindDock(); await s.flush(); value = facts(f); assert.equal(value.metrics, f.scaffoldOwner.getSnapshot().native.metrics); assert.equal(value.thinGestureBottom, true);
     assert.equal(facts(f, null).metrics, null); assert.equal(facts(f, true, false).metrics, null); assert.deepEqual(facts(f, null).safeInsets, value.safeInsets);
   } finally { f.cleanup(); }
@@ -23,8 +23,8 @@ test('retired or unavailable original window clears its safe-area and never adop
   try {
     await f.ready(); const snapshot = f.scaffoldOwner.getSnapshot(); assert.ok(facts(f).metrics);
     const unavailable = projection.adminShellSourceWindowLayout({ ...snapshot, native: { ...snapshot.native, phase: 'unavailable' } }, true, true, true);
-    assert.equal(unavailable.safeInsets, null); assert.equal(unavailable.metrics, null);
-    f.current(false); const retired = facts(f); assert.equal(retired.metrics, null); assert.equal(retired.safeInsets, null); f.current(true); assert.equal(facts(f).metrics, null);
+    assert.equal(unavailable.safeInsets, null); assert.equal(unavailable.metrics, null); assert.equal(unavailable.viewportWidth, null);
+    f.current(false); const retired = facts(f); assert.equal(retired.metrics, null); assert.equal(retired.safeInsets, null); assert.equal(retired.viewportWidth, null); f.current(true); assert.equal(facts(f).metrics, null);
   } finally { f.cleanup(); }
 });
 test('same-window body frame uses actual left/right insets and retains held children without inherited native SafeAreaView', async () => {

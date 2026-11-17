@@ -51,6 +51,16 @@ for (const platform of ['android', 'ios']) {
     }
     const spaces = s.nodes(tree, node => node.type === 'Spacer'); assert.equal(spaces.length, 2); assert.deepEqual(s.noticeModel.adminTopNoticeColors('success'), { background: '#E6F4EA', foreground: '#173A24' }); f.cleanup();
   });
+  test(`${platform} unknown original-window geometry retains SAME banner/native text lifetime, hides semantics, and fences queued layout/dismiss until fresh known geometry`, async () => {
+    const f = mounted(platform, true), shown = f.show('original native text'); f.host.insets = { left: 11, right: 23, width: 400 }; f.render(); let tree = f.host.render();
+    const oldLayout = measured(tree).props.onLayout, oldDismiss = inline(tree).props.onAccessibilityAction; oldLayout({ nativeEvent: { layout: { height: 64, width: 366 } } }); assert.equal(s.flattenStyle(inline(f.host.render()).props.style).height, 64);
+    f.host.insets = null; tree = f.host.render(); const writes = f.host.runtime.counters.writes; assert.equal(s.flattenStyle(inline(tree).props.style).height, 0); assert.equal(inline(tree).props.pointerEvents, 'none'); assert.equal(inline(tree).props.accessibilityLiveRegion, 'none'); assert.equal(inline(tree).props.importantForAccessibility, 'no-hide-descendants');
+    assert.equal(s.nodes(tree, node => node.type === (platform === 'android' ? 'RNText' : 'Text'))[0].props.children, shown.banner.message);
+    oldLayout({ nativeEvent: { layout: { height: 80, width: 366 } } }); oldDismiss({ nativeEvent: { actionName: 'dismiss' } }); measured(tree).props.onLayout({ nativeEvent: { layout: { height: 80, width: 366 } } });
+    await s.flush(); assert.equal(f.host.runtime.counters.writes, writes); assert.equal(f.target.getSnapshot().head, shown.banner); assert.equal(shown.isClosed(), false); assert.equal(f.clock.size(), 1);
+    f.host.insets = { left: 11, right: 23, width: 400 }; tree = f.host.render(); assert.equal(s.flattenStyle(inline(tree).props.style).height, 0); oldLayout({ nativeEvent: { layout: { height: 99, width: 366 } } }); assert.equal(f.host.runtime.counters.writes, writes);
+    measured(tree).props.onLayout({ nativeEvent: { layout: { height: 56, width: 366 } } }); assert.equal(s.flattenStyle(inline(f.host.render()).props.style).height, 56); assert.equal(f.target.getSnapshot().head, shown.banner); f.cleanup();
+  });
 }
 test('accessible-navigation host immediately consumes full measured height; semantic remove affects only exact original Messenger head', () => {
   const f = mounted('android', true); f.show('accessible'); f.render(); let tree = f.host.render(); measured(tree).props.onLayout({ nativeEvent: { layout: { height: 44 } } }); tree = f.host.render(); assert.equal(s.flattenStyle(inline(tree).props.style).height, 44);
@@ -67,10 +77,12 @@ test('a new banner cannot reuse the prior measured height or an old layout callb
   old({ nativeEvent: { layout: { height: 90 } } }); tree = f.host.render(); assert.equal(s.flattenStyle(inline(tree).props.style).height, 90);
   const next = f.show('second'); f.render(); tree = f.host.render(); assert.equal(s.flattenStyle(inline(tree).props.style).height, 0); const writes = f.host.runtime.counters.writes;
   old({ nativeEvent: { layout: { height: 150 } } }); assert.equal(f.host.runtime.counters.writes, writes); measured(tree).props.onLayout({ nativeEvent: { layout: { height: 44 } } }); f.host.insets = { left: 20, right: 10 }; tree = f.host.render();
-  assert.equal(s.flattenStyle(inline(tree).props.style).height, 44); assert.equal(f.target.getSnapshot().head, next.banner); assert.equal(s.flattenStyle(measured(tree).props.style).left, 20); f.cleanup();
+  assert.equal(s.flattenStyle(inline(tree).props.style).height, 0); assert.equal(f.target.getSnapshot().head, next.banner); assert.equal(s.flattenStyle(measured(tree).props.style).left, 20);
+  measured(tree).props.onLayout({ nativeEvent: { layout: { height: 56 } } }); assert.equal(s.flattenStyle(inline(f.host.render()).props.style).height, 56); f.cleanup();
 });
-test('missing real inline SafeArea values are rejected rather than fabricating zero; no Modal/overlay carrier is created', () => {
-  const f = mounted(); f.show('no fake geometry'); f.render(); f.host.insets = null; assert.throws(() => f.host.render(), /Actual inline banner SafeArea/); f.host.insets = { left: 0, right: 0 }; const tree = f.host.render();
+test('unknown real inline SafeArea retains hidden original native content while malformed values remain rejected; no Modal/overlay carrier is created', () => {
+  const f = mounted(); const shown = f.show('no fake geometry'); f.render(); f.host.insets = null; const held = f.host.render(); assert.equal(inline(held).props.pointerEvents, 'none'); assert.equal(inline(held).props.accessibilityElementsHidden, true); assert.equal(f.target.getSnapshot().head, shown.banner);
+  f.host.insets = { left: NaN, right: 0 }; assert.throws(() => f.host.render(), /Actual inline banner SafeArea/); f.host.insets = { left: 0, right: 0 }; const tree = f.host.render();
   assert.equal(s.nodes(tree, node => ['Modal', 'BottomSheet', 'ModalBottomSheet', 'SnackbarHost'].includes(node.type)).length, 0); f.cleanup();
 });
 test('Android Source start alignment follows actual theme direction rather than system-language or first strong character guesses', () => {
@@ -80,4 +92,18 @@ test('Android Source start alignment follows actual theme direction rather than 
     assert.equal(style.textAlign, textAlign); assert.equal(style.writingDirection, writingDirection); assert.equal(text.props.children, 'Latin source fallback');
   }
   f.cleanup();
+});
+test('same-inset real viewport width changes invalidate old height and reject clearly stale native widths while allowing documented fractional native rounding', () => {
+  const f = mounted('android', true); f.host.insets = { left: 11.636363636, right: 23.272727273, width: 400 }; f.show('width changes with same actual insets'); f.render(); let tree = f.host.render();
+  measured(tree).props.onLayout({ nativeEvent: { layout: { height: 64, width: 365.5 } } }); assert.equal(s.flattenStyle(inline(f.host.render()).props.style).height, 64);
+  f.host.insets = { ...f.host.insets, width: 600 }; tree = f.host.render(); assert.equal(s.flattenStyle(inline(tree).props.style).height, 0); const writes = f.host.runtime.counters.writes;
+  for (const width of [365.5, NaN, undefined, 0]) measured(tree).props.onLayout({ nativeEvent: { layout: { height: 99, width } } }); assert.equal(f.host.runtime.counters.writes, writes);
+  measured(tree).props.onLayout({ nativeEvent: { layout: { height: 44, width: 565.75 } } }); assert.equal(s.flattenStyle(inline(f.host.render()).props.style).height, 44); f.cleanup();
+});
+test('reentrant original Messenger callback changing committed inset version cannot publish the old native measurement after its guard', () => {
+  const f = mounted('android', true); f.host.insets = { left: 11, right: 23, width: 400 }; const shown = f.show('retained original banner'); f.render(); let tree = f.host.render(), once = true;
+  const old = measured(tree).props.onLayout, original = f.target.bannerFor.bind(f.target), writes = f.host.runtime.counters.writes;
+  f.target.bannerFor = ticket => { if (once) { once = false; f.host.insets = { left: 20, right: 10, width: 500 }; f.host.render(); } return original(ticket); };
+  old({ nativeEvent: { layout: { height: 88, width: 366 } } }); assert.equal(f.host.runtime.counters.writes, writes); assert.equal(f.target.getSnapshot().head, shown.banner); tree = f.host.render(); assert.equal(s.flattenStyle(inline(tree).props.style).height, 0);
+  measured(tree).props.onLayout({ nativeEvent: { layout: { height: 48, width: 470 } } }); assert.equal(s.flattenStyle(inline(f.host.render()).props.style).height, 48); f.cleanup();
 });
