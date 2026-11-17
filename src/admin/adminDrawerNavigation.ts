@@ -3,7 +3,7 @@ import { adminDrawerNavigationPlan, type AdminDrawerDestination } from './adminD
 import { adminDrawerActiveStack, type AdminDrawerNavigationState } from './adminDrawerNavigationState';
 
 export type AdminDrawerNavigationDependencies = {
-  platform: string; home: string; isCurrent: () => boolean;
+  platform: string; workspace?: 'admin' | 'brigader'; home: string; isCurrent: () => boolean;
   destination: (route: string) => string | null;
   rootState: () => AdminDrawerNavigationState | undefined;
   push: (path: string) => void; replace: (path: string) => void; popTo: (path: string) => void;
@@ -23,7 +23,7 @@ export class AdminDrawerNavigation {
     return this.active && !this.retired && epoch === this.epoch;
   }
   private stack() {
-    try { return adminDrawerActiveStack(this.deps.rootState(), this.deps.platform); } catch { return null; }
+    try { return adminDrawerActiveStack(this.deps.rootState(), this.deps.platform, this.deps.workspace); } catch { return null; }
   }
   private after(delay: number, callback: () => void) {
     const timer = setTimeout(() => { this.timers.delete(timer); callback(); }, delay); this.timers.add(timer);

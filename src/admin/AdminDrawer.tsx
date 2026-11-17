@@ -19,11 +19,12 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
   const { session, onLogout, isCurrent, destination } = useAdminShell(), state = useRoleDrawerState(), pathname = usePathname();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), home = homeRoute(session);
   const navigation = useNavigationContainerRef();
-  const owner = useMemo(() => new AdminDrawerNavigation({ platform: Platform.OS, home, isCurrent,
+  const workspace = session.profile.role === 'brigader' ? 'brigader' : 'admin';
+  const owner = useMemo(() => new AdminDrawerNavigation({ platform: Platform.OS, workspace, home, isCurrent,
     destination: route => destination(route, Platform.OS), rootState: () => navigation.getRootState(),
     push: path => router.push(path as Href), replace: path => router.replace(path as Href), popTo: path => router.dismissTo(path as Href),
     confirmLogout: confirmRoleDrawerLogout, logout: onLogout,
-  }), [home, isCurrent, destination, navigation, onLogout]);
+  }), [home, workspace, isCurrent, destination, navigation, onLogout]);
   useEffect(() => { owner.attach(); return () => owner.detach(); }, [owner]);
   const destinations = adminDrawerDestinations(session, locale).filter(item => item.routeName === home || !!destination(item.routeName, Platform.OS));
   const items = destinations

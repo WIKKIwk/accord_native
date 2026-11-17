@@ -11,32 +11,35 @@ import { useAppUpdate } from './AppUpdateProvider';
 
 type Props = { session?: Session; onClose: () => void; onLogout: () => void; preferences?: ReactNode; switchPin?: ReactNode;
   switchPinBusy?: boolean; onAppearanceChange?: (value: AppearancePreference) => Promise<void>;
-  translate?: (key: string) => string };
+  translate?: (key: string) => string; isCurrent?: () => boolean };
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 
 // @v2 _ProfileSettingsSheet
-export function ProfileSettings({ onClose, onLogout, preferences, switchPin, switchPinBusy = false, onAppearanceChange, translate }: Props) {
+export function ProfileSettings({ onClose, onLogout, preferences, switchPin, switchPinBusy = false, onAppearanceChange, translate, isCurrent }: Props) {
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
   const openUpdate = useAppUpdate();
   const [biometricBusy, setBiometricBusy] = useState(false);
+  const current = () => isCurrent === undefined || isCurrent() === true;
   const label = (key: string, fallback: string) => translate ? translate(key) : fallback;
   const setBiometric = (enabled: boolean) => {
+    if (!current()) return;
     setBiometricBusy(true);
-    void pin.security.setBiometric(enabled).catch(() => Alert.alert(
+    void pin.security.setBiometric(enabled).catch(() => { if (current()) Alert.alert(
       label('biometricEnableTitle', 'Biometrik tasdiq bajarilmadi'),
       label(enabled ? 'biometricEnableFailed' : 'biometricDisableFailed', 'Qurilma biometrik sozlamalarini tekshirib, qayta urinib ko‘ring.'),
-    )).finally(() => setBiometricBusy(false));
+    ); }).finally(() => { if (current()) setBiometricBusy(false); });
   };
   const submitPin = async () => {
+    if (!current()) return;
     const setting = pin.mode === 'set';
-    if (!(await pin.submit()) || !setting || !pin.security.canUseBiometric || pin.security.biometric) return;
+    if (!(await pin.submit()) || !current() || !setting || !pin.security.canUseBiometric || pin.security.biometric) return;
     Alert.alert(label('biometricQuickUnlockTitle', 'Tezkor ochish'), label('biometricQuickUnlockPrompt', 'Biometrik ochishni yoqasizmi?'), [
       { text: label('no', 'Yo‘q'), style: 'cancel' },
       { text: label('yes', 'Ha'), onPress: () => setBiometric(true) },
     ]);
   };
-  const closeSettings = () => { onClose(); };
+  const closeSettings = () => { if (current()) onClose(); };
   return <Group modifiers={[presentationDetents(['large']), presentationDragIndicator('visible'), interactiveDismissDisabled(pin.busy || biometricBusy || switchPinBusy)]}>
     <NavigationStack>
       <Toolbar modifiers={[navigationTitle(label('profileSettingsTitle', 'Sozlamalar')), navigationBarTitleDisplayMode('inline')]}>
@@ -47,8 +50,8 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
               <Image systemName="circle.lefthalf.filled" size={18} modifiers={[frame({ width: 22 }), secondary]} />
               <Text>{label('themeModeTitle', 'Yorug‘lik rejimi')}</Text>
             </HStack>} selection={appearance} onSelectionChange={value => {
-              if (isAppearancePreference(value)) void Promise.all([setAppearance(value), onAppearanceChange?.(value)])
-                .catch(() => Alert.alert('Saqlab bo‘lmadi', 'Sozlamani qayta saqlab ko‘ring.'));
+              if (current() && isAppearancePreference(value)) void Promise.all([setAppearance(value), onAppearanceChange?.(value)])
+                .catch(() => { if (current()) Alert.alert('Saqlab bo‘lmadi', 'Sozlamani qayta saqlab ko‘ring.'); });
             }} modifiers={[pickerStyle('menu')]}>
               <Text modifiers={[tag('system')]}>Auto</Text>
               <Text modifiers={[tag('light')]}>Yorug‘</Text>
@@ -74,7 +77,7 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           </Section>
           {switchPin}
           <Section title="Ilova">
-            <Button label={label('appUpdateSettingsTitle', 'Ilovani yangilash')} systemImage="arrow.triangle.2.circlepath" onPress={openUpdate} />
+            <Button label={label('appUpdateSettingsTitle', 'Ilovani yangilash')} systemImage="arrow.triangle.2.circlepath" onPress={() => { if (current()) openUpdate(); }} />
             <HStack spacing={12}>
               <Image systemName="info.circle" size={18} modifiers={[frame({ width: 22 }), secondary]} />
               <Text>Versiya</Text><Spacer />
@@ -83,10 +86,11 @@ export function ProfileSettings({ onClose, onLogout, preferences, switchPin, swi
           </Section>
           <Section>
             <Button role="destructive" label={label('disconnectSessionTitle', 'Sessiyani uzish')} systemImage="rectangle.portrait.and.arrow.right" modifiers={[buttonStyle('plain')]} onPress={() => {
+              if (!current()) return;
               onClose();
               Alert.alert(label('disconnectSessionTitle', 'Sessiyani uzish'), label('disconnectSessionBody', 'Ushbu qurilmada hisobdan chiqilsinmi?'), [
                 { text: label('no', 'Bekor qilish'), style: 'cancel' },
-                { text: label('yes', 'Uzish'), style: 'destructive', onPress: onLogout },
+                { text: label('yes', 'Uzish'), style: 'destructive', onPress: () => { if (current()) onLogout(); } },
               ]);
             }} />
           </Section>

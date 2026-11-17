@@ -134,6 +134,10 @@ export class InventoryMovementController {
   toggleScanning() {
     this.lookupBusy.clear(); this.update({ scanning: !this.state.scanning, qrAssets: [], selected: new Set(), qrStatus: 'QR kodni ramkaga keltiring' });
   }
+  /** V2 _openQrLookup always opens and resets its current results, including from the already-open panel. */
+  openScanning() {
+    this.lookupBusy.clear(); this.update({ scanning: true, qrAssets: [], selected: new Set(), qrStatus: 'QR kodni ramkaga keltiring' });
+  }
   async lookup(raw: string) {
     const barcode = movementScanBarcode(raw), key = barcode.toLowerCase();
     if (!this.current() || !barcode || this.lookupBusy.has(key)) return;
@@ -154,6 +158,7 @@ export class InventoryMovementController {
     if (!selected.delete(key)) selected.add(key); this.update({ selected });
   }
   clearSelection() { this.update({ selected: new Set() }); }
+  clearNotice() { this.update({ notice: '' }); }
   get selectedAssets() {
     const selected = new Map<string, MovementAsset>();
     for (const asset of [...this.state.assets, ...this.state.qrAssets]) if (this.state.selected.has(movementAssetKey(asset))) selected.set(movementAssetKey(asset), asset);

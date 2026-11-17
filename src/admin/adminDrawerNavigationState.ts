@@ -14,9 +14,9 @@ function activeIndex(state: AdminDrawerNavigationState): number | null {
 }
 
 /** The drawer lives above its child navigator: inspect the focused root chain, never parent/preloaded routes. */
-export function adminDrawerActiveStack(root: AdminDrawerNavigationState | undefined, platform: string): AdminDrawerStack | null {
+export function adminDrawerActiveStack(root: AdminDrawerNavigationState | undefined, platform: string, workspace: 'admin' | 'brigader' = 'admin'): AdminDrawerStack | null {
   if (platform !== 'ios' && platform !== 'android') return null;
-  const role = `${platform}-admin`; let state = root, prefix: string[] = [], inside = false, stack: AdminDrawerStack | null = null;
+  const role = `${platform}-${workspace}`; let state = root, prefix: string[] = [], inside = false, stack: AdminDrawerStack | null = null;
   // Only descend the selected tab/route. An inactive iOS Home stack is not Activity's history.
   for (let depth = 0; state && depth < 32; depth++) {
     const index = activeIndex(state); if (index === null) return null;

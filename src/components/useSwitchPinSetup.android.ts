@@ -8,7 +8,7 @@ import { useSwitchPinSetupCore } from './useSwitchPinSetupCore';
 const subscribe = (listener: () => void) => localeController.addListener(listener);
 const snapshot = () => localeController.locale;
 
-export function useSwitchPinSetup(session: Session) {
+export function useSwitchPinSetup(session: Session, isCurrent?: () => boolean) {
   const locale = useSyncExternalStore(subscribe, snapshot, snapshot);
-  return useSwitchPinSetupCore(session, useNativeState(''), key => localizedGetter(key, locale));
+  return useSwitchPinSetupCore(session, useNativeState(''), key => localizedGetter(key, locale), true, isCurrent);
 }

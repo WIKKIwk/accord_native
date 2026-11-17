@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import type { Session } from '../auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
@@ -16,10 +17,10 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const currentLocale = () => localeController.locale;
 
 /** One original account Messenger surrounds all genuine Admin stack scenes. */
-export function AdminShellNoticeProvider({ children }: { children: ReactNode }) {
+export function AdminShellNoticeProvider({ children, mayEnter }: { children: ReactNode; mayEnter?: (session: Session | null) => boolean }) {
   const shell = useAdminShell();
-  const owner = useMemo(() => createAdminTopNoticeSession({ session: shell.session, witness: shell.witness, isCurrent: shell.isCurrent }),
-    [shell.session, shell.witness, shell.isCurrent]);
+  const owner = useMemo(() => createAdminTopNoticeSession({ session: shell.session, witness: shell.witness, isCurrent: shell.isCurrent, mayEnter }),
+    [shell.session, shell.witness, shell.isCurrent, mayEnter]);
   const [accessibleNavigation, setAccessibleNavigation] = useState<boolean | null>(null);
   useEffect(() => {
     let mounted = true, revision = 0;

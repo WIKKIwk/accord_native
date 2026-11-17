@@ -37,7 +37,8 @@ async function readRecord(session: Session): Promise<LockRecord | null> {
   return entry as LockRecord;
 }
 
-function requireSession(session: Session) {
+function requireSession(session: Session, current?: () => boolean) {
+  if (current && current() !== true) throw new Error('Akkaunt o‘zgargan');
   if (!activeSessionToken(session)) throw new Error('Sessiya tugagan. Qayta kiring.');
 }
 
@@ -52,16 +53,16 @@ export async function loadAppLock(session: Session): Promise<{ hasPin: boolean; 
   return { hasPin: !!record, biometric: !!record?.biometric };
 }
 
-export async function saveAppPin(session: Session, pin: string): Promise<void> {
+export async function saveAppPin(session: Session, pin: string, current?: () => boolean): Promise<void> {
   return inStorageOrder(async () => {
-    requireSession(session);
+    requireSession(session, current);
     if (!validPin(pin)) throw new Error('PIN 4 ta raqamdan iborat bo‘lishi kerak.');
     const previous = await readRecord(session);
     const bytes = await Crypto.getRandomBytesAsync(16);
     const salt = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
     const record: LockRecord = { version: 1, salt, digest: await digestPin(salt, pin), biometric: !!previous?.biometric };
     const key = await keyFor(session);
-    requireSession(session);
+    requireSession(session, current);
     await SecureStore.setItemAsync(key, JSON.stringify(record));
   });
 }
@@ -96,15 +97,15 @@ export function biometricAvailable(): boolean {
   try { return SecureStore.canUseBiometricAuthentication(); } catch { return false; }
 }
 
-export async function setAppBiometric(session: Session, enabled: boolean): Promise<void> {
+export async function setAppBiometric(session: Session, enabled: boolean, current?: () => boolean): Promise<void> {
   return inStorageOrder(async () => {
-    requireSession(session);
+    requireSession(session, current);
     const record = await readRecord(session);
     if (!record) throw new Error('Avval PIN o‘rnating.');
     const key = await keyFor(session);
     const bioKey = `${key}_biometric`;
     if (!enabled) {
-      requireSession(session);
+      requireSession(session, current);
       await SecureStore.setItemAsync(key, JSON.stringify({ ...record, biometric: false }));
       await SecureStore.deleteItemAsync(bioKey, biometricOptions).catch(() => {});
       return;
@@ -112,9 +113,10 @@ export async function setAppBiometric(session: Session, enabled: boolean): Promi
     if (!biometricAvailable()) throw new Error('Bu qurilmada biometrik ochish mavjud emas.');
     const challenge = Crypto.randomUUID();
     try {
+      requireSession(session, current);
       await SecureStore.setItemAsync(bioKey, challenge, biometricOptions);
       if (await SecureStore.getItemAsync(bioKey, biometricOptions) !== challenge) throw new Error('Biometrik tasdiq bajarilmadi.');
-      requireSession(session);
+      requireSession(session, current);
       await SecureStore.setItemAsync(key, JSON.stringify({ ...record, biometric: true }));
     } catch (error) {
       await SecureStore.deleteItemAsync(bioKey, biometricOptions).catch(() => {});

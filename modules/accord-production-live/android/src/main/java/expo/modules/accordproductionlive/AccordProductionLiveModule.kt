@@ -27,6 +27,11 @@ class AccordProductionLiveModule : Module() {
             sockets.openSupplyTasks(id, origin, target)
             id
         }
+        Function("openInventory") { origin: String, target: String ->
+            val id = ProductionSocketIds.next()
+            sockets.openInventory(id, origin, target)
+            id
+        }
         OnDestroy { sockets.shutdown() }
     }
 }

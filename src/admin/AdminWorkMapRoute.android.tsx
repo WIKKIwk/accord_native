@@ -1,7 +1,7 @@
 import { ListItem } from '@expo/ui';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Redirect } from 'expo-router';
-import { isValidElement, useEffect } from 'react';
+import { isValidElement, useEffect, type ReactNode } from 'react';
 import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +22,7 @@ import { adminWorkMapPresentation } from './adminWorkMapPresentation';
 import { adminWorkMapText } from './adminWorkMapText';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminWorkMapView } from './useAdminWorkMapView';
-function BoundWorkMap() {
+function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
   const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), label = adminWorkMapText(locale), goBack = view.goBack;
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; }); return () => sub.remove(); }, [goBack]);
@@ -48,12 +48,12 @@ function BoundWorkMap() {
       {state.hasMore && !view.error && <ListItem onPress={() => { void controller.next(); }}>{label.more}</ListItem>}
     </OrdersList>}
     {view.controls.module !== 'audit' && view.controls.module !== 'move' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: insets.top + 80 }} />}
-    <AdminBottomBar active="home" />
+    {footer === undefined ? <AdminBottomBar active="home" /> : footer}
   </View>;
 }
-export function AdminWorkMapRoute() {
+export function AdminWorkMapRoute({ footer }: { footer?: ReactNode } = {}) {
   const shell = useAdminShell();
   if (!shell.isCurrent()) return <View style={{ flex: 1 }} />;
   if (!shell.destination(appRoutes.adminProductionMapOrders, Platform.OS)) return <Redirect href="/" />;
-  return <BoundWorkMap />;
+  return <BoundWorkMap footer={footer} />;
 }

@@ -58,6 +58,11 @@ internal fun supplyTasksSocketRequest(origin: String, target: String): Request {
         setOf("token", "kind", "apparatus", "limit", "search", "epoch", "rev", "scope"))
 }
 
+/** Inventory windows have their own fixed endpoint; no existing entry is widened. */
+internal fun inventorySocketRequest(origin: String, target: String): Request {
+    return liveSocketRequest(origin, target, "/v1/mobile/admin/inventory/live", setOf("token", "subscriptions"))
+}
+
 private fun liveSocketRequest(origin: String, target: String, path: String, allowed: Set<String>): Request {
     val base = origin.toHttpUrlOrNull() ?: throw IllegalArgumentException("Invalid production origin")
     require(base.isHttps && base.username.isEmpty() && base.password.isEmpty() &&
@@ -96,6 +101,10 @@ internal class ProductionLiveSockets(
 
     fun openSupplyTasks(id: String, origin: String, target: String) {
         openRequest(id, supplyTasksSocketRequest(origin, target), warehouseClient)
+    }
+
+    fun openInventory(id: String, origin: String, target: String) {
+        openRequest(id, inventorySocketRequest(origin, target), warehouseClient)
     }
 
     private fun openRequest(id: String, request: Request, transport: OkHttpClient = client) {

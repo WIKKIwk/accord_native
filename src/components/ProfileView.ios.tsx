@@ -5,6 +5,7 @@ import { useFocusEffect } from 'expo-router';
 import { PlatformColor } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { themeController } from '../shared/themeRuntime';
+import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.ios';
 import { ProfileSettings } from './ProfileSettings.ios';
@@ -122,11 +123,14 @@ export function ProfileView(props: ProfileViewProps) {
   if (settingsDisabled === true && settingsOpen) setSettingsOpen(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const { text } = useBaseLocale();
-  const settingsBlocked = settingsDisabled === true || !!settingsUnavailableMessage, settingsAllowed = useRef(!settingsBlocked);
+  const settingsCurrent = () => props.isCurrent === undefined || isProfileSessionCurrent(props.isCurrent);
+  const settingsBlocked = settingsDisabled === true || !!settingsUnavailableMessage || !settingsCurrent(), settingsAllowed = useRef(!settingsBlocked);
   useLayoutEffect(() => { settingsAllowed.current = !settingsBlocked; return () => { settingsAllowed.current = false; }; }, [settingsBlocked]);
-  const changeSettingsOpen = useCallback((open: boolean) => { if (settingsAllowed.current) setSettingsOpen(open); }, []);
-  const switchPin = useSwitchPinSetup(session, !settingsBlocked);
-  const closeSettings = () => { if (settingsAllowed.current && !switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
+  const changeSettingsOpen = useCallback((open: boolean) => {
+    if (settingsAllowed.current && (props.isCurrent === undefined || isProfileSessionCurrent(props.isCurrent))) setSettingsOpen(open);
+  }, [props.isCurrent]);
+  const switchPin = useSwitchPinSetup(session, !settingsBlocked, props.isCurrent);
+  const closeSettings = () => { if (settingsAllowed.current && settingsCurrent() && !switchPin.busy) { switchPin.close(); setSettingsOpen(false); } };
   return <>{registerSettingsOpener && !settingsBlocked ? <SettingsOpenerRegistration register={registerSettingsOpener} setOpen={changeSettingsOpen} /> : null}<Host style={{ flex: 1 }}>
     <List modifiers={[listStyle('insetGrouped'), listSectionSpacing('compact'), refreshable(props.onRefresh)]}>
       <HStack modifiers={[listRowBackground('transparent'), listRowSeparator('hidden'), listRowInsets({ top: 0, bottom: 0, leading: 0, trailing: 0 }), padding({ top: 14 })]}>
@@ -164,8 +168,8 @@ export function ProfileView(props: ProfileViewProps) {
         {settingsDisabled === true ? null : settingsUnavailableMessage ? <Text>{settingsUnavailableMessage}</Text> :
           <BottomSheet isPresented={settingsOpen} onIsPresentedChange={presented => { if (presented) changeSettingsOpen(true); else closeSettings(); }}
             anchor={<NavigationRow icon="gearshape" title={text('profileSettingsTitle')} onPress={() => changeSettingsOpen(true)} />}>
-            <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text}
-              preferences={<ProfileSettingsPreferences />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
+            <ProfileSettings onClose={closeSettings} onLogout={onLogout} translate={text} isCurrent={props.isCurrent}
+              preferences={<ProfileSettingsPreferences isCurrent={props.isCurrent} />} switchPin={<ProfileSwitchPin pin={switchPin} />} switchPinBusy={switchPin.busy}
               onAppearanceChange={value => value === 'system' ? Promise.resolve() : themeController.setThemeMode(value)} />
           </BottomSheet>}
       </Section> : null}

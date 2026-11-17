@@ -6,13 +6,13 @@ import { useBaseLocale } from './useBaseLocale.ios';
 
 const secondary = foregroundStyle({ type: 'hierarchical', style: 'secondary' });
 
-export function ProfileSettingsPreferences() {
+export function ProfileSettingsPreferences({ isCurrent }: { isCurrent?: () => boolean } = {}) {
   const { locale, text } = useBaseLocale();
   return <Section>
     <Picker label={<HStack spacing={12}><Image systemName="globe" size={18} modifiers={[frame({ width: 22 }), secondary]} />
       <Text>{text('languageTitle')}</Text></HStack>} selection={locale.split('-')[0]} onSelectionChange={value => {
-        if (value === 'uz' || value === 'en' || value === 'ru' || value === 'ur') {
-          void localeController.setLocale(value).catch(() => Alert.alert(text('languageTitle'), text('retry')));
+      if ((isCurrent === undefined || isCurrent() === true) && (value === 'uz' || value === 'en' || value === 'ru' || value === 'ur')) {
+          void localeController.setLocale(value).catch(() => { if (isCurrent === undefined || isCurrent() === true) Alert.alert(text('languageTitle'), text('retry')); });
         }
       }} modifiers={[pickerStyle('menu')]}>
       <Text modifiers={[tag('uz')]}>{text('uzbek')}</Text>

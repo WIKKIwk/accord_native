@@ -37,6 +37,11 @@ func supplyTasksSocketRequest(origin: String, target: String) throws -> URLReque
     allowed: ["token", "kind", "apparatus", "limit", "search", "epoch", "rev", "scope"])
 }
 
+/// Inventory windows have their own fixed endpoint; no existing entry is widened.
+func inventorySocketRequest(origin: String, target: String) throws -> URLRequest {
+  try liveSocketRequest(origin: origin, target: target, path: "/v1/mobile/admin/inventory/live", allowed: ["token", "subscriptions"])
+}
+
 private func liveSocketRequest(origin: String, target: String, path: String, allowed: Set<String>) throws -> URLRequest {
   guard let base = URLComponents(string: origin), base.scheme == "https",
         let host = base.host, !host.isEmpty, base.user == nil, base.password == nil,
@@ -91,6 +96,10 @@ final class ProductionLiveSockets: NSObject, URLSessionWebSocketDelegate, @unche
 
   func openSupplyTasks(id: String, origin: String, target: String) throws {
     try openRequest(id: id, request: supplyTasksSocketRequest(origin: origin, target: target))
+  }
+
+  func openInventory(id: String, origin: String, target: String) throws {
+    try openRequest(id: id, request: inventorySocketRequest(origin: origin, target: target))
   }
 
   private func openRequest(id: String, request: URLRequest) throws {

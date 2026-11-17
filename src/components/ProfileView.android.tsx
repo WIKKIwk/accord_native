@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { profileDisplay } from '../profileModel';
 import { useNativeSheet } from '../nativeSheet';
 import { localizedGetter } from '../shared/localization';
+import { isProfileSessionCurrent } from '../shared/profileSessionGuard';
 import { localeController } from '../shared/localization/runtime';
 import { ProfileAvatarPreview } from './ProfileAvatarPreview.android';
 import { ProfileEditor } from './ProfileEditor.android';
@@ -24,16 +25,17 @@ export function ProfileView(props: ProfileViewProps) {
   const [apparatusExpanded, setApparatusExpanded] = useState(false);
   const editorSheet = useNativeSheet();
   const settingsSheet = useNativeSheet();
-  const settingsBlocked = settingsDisabled === true || !!settingsUnavailableMessage, settingsAllowed = useRef(!settingsBlocked);
+  const settingsCurrent = useCallback(() => props.isCurrent === undefined || isProfileSessionCurrent(props.isCurrent), [props.isCurrent]);
+  const settingsBlocked = settingsDisabled === true || !!settingsUnavailableMessage || !settingsCurrent(), settingsAllowed = useRef(!settingsBlocked);
   useLayoutEffect(() => { settingsAllowed.current = !settingsBlocked; return () => { settingsAllowed.current = false; }; }, [settingsBlocked]);
   const disconnectPending = useRef(false);
   const requestDisconnect = useCallback(() => {
-    if (!settingsAllowed.current) return;
+    if (!settingsAllowed.current || !settingsCurrent()) return;
     disconnectPending.current = true;
     settingsSheet.close();
-  }, [settingsSheet]);
+  }, [settingsSheet, settingsCurrent]);
   const settingsDismissed = useCallback(() => {
-    if (!settingsAllowed.current) { disconnectPending.current = false; return; }
+    if (!settingsAllowed.current || !settingsCurrent()) { disconnectPending.current = false; return; }
     if (!disconnectPending.current) return;
     disconnectPending.current = false;
     const t = (key: string) => localizedGetter(key, locale);
@@ -41,7 +43,7 @@ export function ProfileView(props: ProfileViewProps) {
       { text: t('no'), style: 'cancel' },
       { text: t('disconnectSessionConfirm'), style: 'destructive', onPress: onLogout },
     ]);
-  }, [locale, onLogout]);
+  }, [locale, onLogout, settingsCurrent]);
   useLayoutEffect(() => {
     const content = <Host dynamicColors style={{ flex: 1 }}><ProfileEditor {...props} /></Host>;
     if (editing) {
@@ -55,12 +57,12 @@ export function ProfileView(props: ProfileViewProps) {
     if (settingsBlocked && settingsSheet.isOpen()) { disconnectPending.current = false; if (settingsDisabled === true) settingsSheet.update(null); settingsSheet.close(); }
     if (!settingsBlocked && settingsSheet.isOpen()) {
       settingsSheet.update(<Host dynamicColors style={{ flex: 1 }}>
-        <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
+        <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} isCurrent={props.isCurrent} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
   }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, settingsBlocked, settingsDisabled]);
-  const openSettings = () => { if (!settingsAllowed.current) return; settingsSheet.open(<Host dynamicColors style={{ flex: 1 }}>
-    <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} />
+  const openSettings = () => { if (!settingsAllowed.current || !settingsCurrent()) return; settingsSheet.open(<Host dynamicColors style={{ flex: 1 }}>
+    <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} isCurrent={props.isCurrent} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed }); };
   const details = profileDisplay(snapshot);
   return <Host dynamicColors style={{ flex: 1 }}>
