@@ -87,16 +87,21 @@ export type QolipPrintOptions = { qolipCode: string; driverUrl: string; printer?
   customerName?: string; qolipColor?: string; printTransport?: 'wifi' | 'offline' | 'bluetooth' };
 
 /** @v2 qolipPrintCodeQr */
-export async function qolipPrintCodeQr(session: Session, options: QolipPrintOptions): Promise<QolipCodeQrPrint> {
+export async function qolipPrintCodeQr(session: Session, options: QolipPrintOptions, beforeSend?: () => void): Promise<QolipCodeQrPrint> {
+  beforeSend?.();
   const printer = (options.printer ?? '').trim(), mode = (options.printMode ?? '').trim();
-  const response = await authorizedFetch(session, '/v1/mobile/qolip/code-qr/print', {
+  const init = {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ qolip_code: options.qolipCode.trim(), driver_url: options.driverUrl.trim().replace(/\/+$/, ''),
       ...(printer ? { printer } : {}), ...(mode ? { print_mode: mode } : {}),
       ...(['offline', 'bluetooth'].includes(options.printTransport ?? 'wifi') ? { print_transport: 'offline' } : {}) }),
-  });
+  };
+  const response = beforeSend ? await authorizedFetch(session, '/v1/mobile/qolip/code-qr/print', init, beforeSend)
+    : await authorizedFetch(session, '/v1/mobile/qolip/code-qr/print', init);
+  beforeSend?.();
   if (response.status !== 200) throw new Error('Qolip code QR print failed');
   const data = object(await response.json()), raw = object(data.qolip_qr);
+  beforeSend?.();
   const qr: QolipCodeQr = { qolip_code: text(raw.qolip_code), qr_payload: text(raw.qr_payload),
     item_code: text(raw.item_code), item_name: text(raw.item_name), item_group: text(raw.item_group),
     size: Math.trunc(number(raw.size, 0)!) };

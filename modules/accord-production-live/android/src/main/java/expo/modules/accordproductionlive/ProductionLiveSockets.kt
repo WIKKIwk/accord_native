@@ -53,6 +53,11 @@ internal fun warehouseSocketRequest(origin: String, target: String): Request {
     return liveSocketRequest(origin, target, "/v1/mobile/admin/warehouses/live", setOf("token"))
 }
 
+internal fun supplyTasksSocketRequest(origin: String, target: String): Request {
+    return liveSocketRequest(origin, target, "/v1/mobile/production-tasks/live",
+        setOf("token", "kind", "apparatus", "limit", "search", "epoch", "rev", "scope"))
+}
+
 private fun liveSocketRequest(origin: String, target: String, path: String, allowed: Set<String>): Request {
     val base = origin.toHttpUrlOrNull() ?: throw IllegalArgumentException("Invalid production origin")
     require(base.isHttps && base.username.isEmpty() && base.password.isEmpty() &&
@@ -87,6 +92,10 @@ internal class ProductionLiveSockets(
 
     fun openWarehouse(id: String, origin: String, target: String) {
         openRequest(id, warehouseSocketRequest(origin, target), warehouseClient)
+    }
+
+    fun openSupplyTasks(id: String, origin: String, target: String) {
+        openRequest(id, supplyTasksSocketRequest(origin, target))
     }
 
     private fun openRequest(id: String, request: Request, transport: OkHttpClient = client) {

@@ -1,0 +1,227 @@
+{
+ "source": "test/qolip_paddon_print_api_test.dart",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
+ "records": [
+  {
+   "test": "Bluetooth mold pallet label includes its current count and typed QR",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":104},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\",\"item_code\":\"QP-00012\",\"item_name\":\"Qolip paddoni QP-00012\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth mold pallet count uses a valid server value: (count: 0, expected: 0)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":0},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth mold pallet count uses a valid server value: (count: 3, expected: 3)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":3},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth mold pallet count uses a valid server value: (count: -1, expected: —)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":-1},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth mold pallet count uses a valid server value: (count: 1.5, expected: —)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":1.5},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth mold pallet count uses a valid server value: (count: 104, expected: —)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":\"104\"},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth mold pallet count uses a valid server value: (count: null, expected: —)",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":null},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth pallet refuses a different response pallet identity",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00013\",\"item_count\":12},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "Bluetooth pallet does not infer a count from a missing summary",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"item_count\":104},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "PrintTransport.offline keeps the existing mold pallet print contract",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"http://printer\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":104},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "PrintTransport.wifi keeps the existing mold pallet print contract",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"http://printer\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"paddon\":{\"code\":\"QP-00012\",\"item_count\":104},\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "printing uses scoped mold pallet endpoint without lifecycle writes",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"http://printer\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1,\"print_transport\":\"offline\"}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"qr_payload\":\"qolip-paddon:QP-00012\",\"print\":{\"qr_payload\":\"qolip-paddon:QP-00012\",\"label_kind\":\"paddon_code\"}}"
+   }
+  },
+  {
+   "test": "mismatched QR response cannot be printed",
+   "method": "POST",
+   "url": "https://mini-rs-erp-test.wspace.sbs/v1/mobile/qolip/paddons/qr/print",
+   "requestHeaders": {
+    "Authorization": "Bearer qolip-print-test",
+    "content-type": "text/plain; charset=utf-8"
+   },
+   "requestBody": {
+    "text": "{\"qolip_code\":\"QP-00012\",\"driver_url\":\"\",\"printer\":\"\",\"print_mode\":\"\",\"print_count\":1}"
+   },
+   "status": 200,
+   "responseHeaders": {},
+   "responseBody": {
+    "text": "{\"ok\":true,\"qr_payload\":\"QP-OTHER\",\"print\":{}}"
+   }
+  }
+ ]
+}

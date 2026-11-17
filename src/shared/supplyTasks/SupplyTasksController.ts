@@ -23,7 +23,7 @@ const empty = (kind: SupplyTaskKind, apparatus = ''): SupplyTasksState => Object
   query: Object.freeze({ kind, apparatus, limit: 10, search: '' }), searchInput: '', window: null, loading: true, error: null, active: false,
 });
 
-/** Unconnected f119 compact task-window state; no WebSocket, persistence, route or production reader is installed. */
+/** f119 compact task-window state; its role owner supplies transport, persistence and live subscription. */
 export class SupplyTasksController {
   private readonly session: Session;
   private readonly scope: string;
@@ -52,6 +52,7 @@ export class SupplyTasksController {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.state;
   canInteract = () => this.current();
+  queryRevision = () => this.generation;
   private update(patch: Partial<SupplyTasksState>) {
     this.state = Object.freeze({ ...this.state, ...patch });
     this.listeners.forEach(listener => listener());
@@ -65,9 +66,9 @@ export class SupplyTasksController {
         !this.closed && generation === this.generation;
     } catch { return false; }
   }
-  activate(): Promise<void> {
+  activate(initialApparatus?: string): Promise<void> {
     if (this.closed) return Promise.resolve();
-    this.update({ active: true });
+    this.update({ active: true, ...(initialApparatus !== undefined ? { query: Object.freeze({ ...this.state.query, apparatus: initialApparatus }) } : {}) });
     if (!this.current()) { this.invalidate(); return Promise.resolve(); }
     return this.refresh();
   }
@@ -127,6 +128,14 @@ export class SupplyTasksController {
     }, 250);
     return true;
   }
+  /** A validated source live message can advance this same compact window without an HTTP poll. */
+  adoptLive(next: SupplyTaskWindow) {
+    if (!this.current() || next.kind !== this.state.query.kind || next.limit !== this.state.query.limit || next.search !== this.state.query.search || this.retiredEpochs.has(next.epoch)) return false;
+    const old = this.state.window;
+    if (old && old.epoch !== next.epoch) this.retiredEpochs.add(old.epoch);
+    this.update({ window: next, query: Object.freeze({ ...this.state.query, apparatus: next.apparatus_id }), loading: false, error: null }); return true;
+  }
+  streamError(error: unknown, terminal = false) { if (this.current()) this.update({ error, ...(terminal ? { window: null } : {}) }); }
   /** The owner must call this on any session/scope event; that event source is not implemented here. */
   invalidate() {
     if (this.closed) return;

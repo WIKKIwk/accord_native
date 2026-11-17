@@ -2,7 +2,7 @@ import { activeSessionToken, type Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { UsbRpsPrintRequest } from '../printing/printModels';
 import { isLocalPrintTransport, printTransportClientApiValue, type PrintTransport } from '../printing/printTransport';
-import { dartString, jsonObject, trimDart } from './qolipApiCommon';
+import { assertQolipReadCurrent, dartString, jsonObject, trimDart, type QolipReadGuard } from './qolipApiCommon';
 import type { QolipBlock } from './qolipBlocksApi';
 import { qolipCellQrFromJson, type QolipCellQr } from './qolipQrApi';
 import { storageRequest } from './qolipStorageApi';
@@ -31,7 +31,8 @@ function cellPrintJob(cell: QolipCellQr): UsbRpsPrintRequest {
 /** @v2 qolipPrintCellQr */
 export async function qolipPrintCellQr(session: Session, input: { block: QolipBlock; rowLetter: string;
   columnNumber: number; driverUrl: string; printer?: string; printMode?: string;
-  printTransport?: PrintTransport }): Promise<QolipCellQrPrintResult> {
+  printTransport?: PrintTransport }, guard?: QolipReadGuard): Promise<QolipCellQrPrintResult> {
+  assertQolipReadCurrent(guard);
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
   const printer = trimDart(input.printer ?? ''), mode = trimDart(input.printMode ?? '');
   const transport = input.printTransport ?? 'wifi';
@@ -42,9 +43,11 @@ export async function qolipPrintCellQr(session: Session, input: { block: QolipBl
       driver_url: trimDart(input.driverUrl).replace(/\/+$/, ''), ...(printer ? { printer } : {}),
       ...(mode ? { print_mode: mode } : {}),
       ...(isLocalPrintTransport(transport) ? { print_transport: printTransportClientApiValue(transport) } : {}) }),
-  });
+  }, () => assertQolipReadCurrent(guard));
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw new Error('Qolip cell QR print failed');
   const data = requiredObject(await response.json()), cellQr = qolipCellQrFromJson(data.cell_qr);
+  assertQolipReadCurrent(guard);
   const printJob = data.print == null ? cellPrintJob(cellQr)
     : UsbRpsPrintRequest.fromPrintJson(requiredObject(data.print)).forQolipCell(cellLabel(cellQr));
   return { cellQr, printJob };
@@ -62,13 +65,14 @@ function paddonBluetoothLines(code: string, rawPaddon: unknown): string[] {
 
 /** @v2 qolipPrintPaddonQr */
 export async function qolipPrintPaddonQr(session: Session, input: { code: string; driverUrl: string;
-  printer?: string; printMode?: string; transport?: PrintTransport }): Promise<UsbRpsPrintRequest> {
+  printer?: string; printMode?: string; transport?: PrintTransport }, guard?: QolipReadGuard): Promise<UsbRpsPrintRequest> {
+  assertQolipReadCurrent(guard);
   const code = trimDart(input.code).toUpperCase(), transport = input.transport ?? 'wifi';
   const response = await storageRequest(session, 'paddons/qr/print', {}, {
     qolip_code: code, driver_url: trimDart(input.driverUrl).replace(/\/+$/, ''),
     printer: input.printer ?? '', print_mode: input.printMode ?? '', print_count: 1,
     ...(isLocalPrintTransport(transport) ? { print_transport: printTransportClientApiValue(transport) } : {}),
-  });
+  }, guard);
   if (response.qr_payload !== `qolip-paddon:${code}` || !jsonObject(response.print)) {
     throw new TypeError('Invalid mold pallet print response');
   }

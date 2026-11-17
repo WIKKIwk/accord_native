@@ -40,7 +40,7 @@ function setup(plan, change = '') {
   const api = compile('shared/supplyTasks/supplyTaskApi', { '../../auth': auth, '../../authorizedFetch': authorized,
     '../../sessionReadScope': scope, '../../workerControlsApi': controls, '../appRoutes': compile('shared/appRoutes'),
     '../dartApparatus': dart, '../mobileApiException': errors, '../camera/synchronousGuard': compile('shared/camera/synchronousGuard'),
-    './supplyTaskModels': model });
+    './supplyTaskModels': model, './supplyTaskJson': compile('shared/supplyTasks/supplyTaskJson') });
   const original = global.fetch;
   global.fetch = async (url, init) => {
     calls.push({ url: String(url), init }); const next = plan.shift();

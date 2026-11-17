@@ -8,7 +8,7 @@ import { assertQolipReadCurrent, dartQuery, dartString, jsonObject, optionalText
 
 type Product = ReturnType<typeof qolipProductFromJson>;
 /** @v2 QolipMoldDraft */
-export type QolipMoldDraft = { code: string; size?: number; color?: string; existingOnly?: boolean };
+export type QolipMoldDraft = { code: string; size?: number; sizeDecimal?: string; color?: string; existingOnly?: boolean };
 /** @v2 QolipSharedSet */
 export type QolipSharedSet = { id: string; fingerprint: string; members: Product[]; product_labels: string[] };
 /** @v2 QolipManagedSet */
@@ -75,12 +75,12 @@ function applyCatalogIfCurrent(session: Session, scope: string, data: Record<str
 }
 
 /** @v2 qolipCreateSet */
-export async function qolipCreateSet(session: Session, input: { warehouse: string; members: QolipMoldDraft[] }): Promise<QolipManagedSet> {
+export async function qolipCreateSet(session: Session, input: { warehouse: string; members: QolipMoldDraft[] }, guard?: QolipReadGuard): Promise<QolipManagedSet> {
   const response = await send(session, '/v1/mobile/qolip/sets/create', {
     warehouse: trimDart(input.warehouse), members: input.members.map(draftJson),
-  });
+  }, guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_save_failed', 'Komplekt saqlanmadi');
-  return qolipManagedSetFromJson((await dataFrom(response)).set);
+  return qolipManagedSetFromJson((await dataFrom(response, guard)).set);
 }
 
 /** @v2 qolipManagedSets */
@@ -102,14 +102,15 @@ export async function qolipManagedSets(session: Session, guard?: QolipReadGuard)
 }
 
 /** @v2 qolipRenameSet */
-export async function qolipRenameSet(session: Session, setId: string, name: string): Promise<QolipManagedSet> {
+export async function qolipRenameSet(session: Session, setId: string, name: string, guard?: QolipReadGuard): Promise<QolipManagedSet> {
   const normalized = trimDart(name).replace(/\s+/g, ' ');
   if (!normalized || [...normalized].length > 160 || /[\x00-\x1f\x7f-\x9f]/.test(normalized)) {
     throw new MobileApiException({ code: 'qolip_set_name_invalid', message: 'qolip_set_name_invalid' });
   }
-  const response = await send(session, '/v1/mobile/qolip/sets/rename', { set_id: setId, name: normalized });
+  const response = await send(session, '/v1/mobile/qolip/sets/rename', { set_id: setId, name: normalized }, guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_rename_failed', 'Komplekt nomi saqlanmadi');
-  const saved = qolipManagedSetFromJson((await dataFrom(response)).set);
+  const saved = qolipManagedSetFromJson((await dataFrom(response, guard)).set);
+  assertQolipReadCurrent(guard);
   if (saved.set.id !== setId) throw changed();
   return saved;
 }
@@ -117,24 +118,24 @@ export async function qolipRenameSet(session: Session, setId: string, name: stri
 /** @v2 qolipEditSet */
 export async function qolipEditSet(session: Session, input: {
   current: QolipManagedSet; add?: QolipMoldDraft[]; remove?: string[];
-}): Promise<QolipManagedSet> {
+}, guard?: QolipReadGuard): Promise<QolipManagedSet> {
   const scope = sessionReadScope(session);
   const response = await send(session, '/v1/mobile/qolip/sets', {
     set_id: input.current.set.id, fingerprint: input.current.set.fingerprint,
     add: (input.add ?? []).map(draftJson), remove: input.remove ?? [],
-  });
+  }, guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_save_failed', 'Komplekt saqlanmadi');
-  const data = await dataFrom(response);
+  const data = await dataFrom(response, guard);
   applyCatalogIfCurrent(session, scope, data);
   return qolipManagedSetFromJson(data.set);
 }
 
 /** @v2 qolipResolveSet */
-export async function qolipResolveSet(session: Session, identifier: string): Promise<QolipSharedSet | null> {
+export async function qolipResolveSet(session: Session, identifier: string, guard?: QolipReadGuard): Promise<QolipSharedSet | null> {
   const query = dartQuery({ identifier: trimDart(identifier) });
-  const response = await send(session, `/v1/mobile/qolip/shared-sets?${query}`);
+  const response = await send(session, `/v1/mobile/qolip/shared-sets?${query}`, undefined, guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_load_failed', 'Qolip komplekti yuklanmadi');
-  const data = await dataFrom(response);
+  const data = await dataFrom(response, guard);
   return data.set == null ? null : qolipSharedSetFromJson(data.set);
 }
 
@@ -146,38 +147,38 @@ function sharedMoldForProduct(mold: Product, product: Product): Product {
 }
 
 /** @v2 qolipReuseSet */
-export async function qolipReuseSet(session: Session, set: QolipSharedSet, product: Product): Promise<Product[]> {
+export async function qolipReuseSet(session: Session, set: QolipSharedSet, product: Product, guard?: QolipReadGuard): Promise<Product[]> {
   const scope = sessionReadScope(session);
   if (!set.members.length) throw changed();
   const response = await send(session, '/v1/mobile/qolip/shared-sets', {
     set_id: set.id, item_code: product.code, fingerprint: set.fingerprint,
-  });
+  }, guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_save_failed', 'Qolip komplekti ulanmagan');
-  const data = await dataFrom(response), saved = qolipSharedSetFromJson(data.set);
+  const data = await dataFrom(response, guard), saved = qolipSharedSetFromJson(data.set);
   if (saved.id !== set.id || saved.fingerprint !== set.fingerprint) throw changed();
   applyCatalogIfCurrent(session, scope, data);
   return saved.members.map(mold => sharedMoldForProduct(mold, product));
 }
 
-async function editProductMolds(session: Session, changes: Record<string, unknown>[]): Promise<void> {
-  const scope = sessionReadScope(session), response = await send(session, '/v1/mobile/qolip/product-molds', { changes });
+async function editProductMolds(session: Session, changes: Record<string, unknown>[], guard?: QolipReadGuard): Promise<void> {
+  const scope = sessionReadScope(session), response = await send(session, '/v1/mobile/qolip/product-molds', { changes }, guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_set_save_failed', 'Mahsulot qoliplari saqlanmadi');
-  applyCatalogIfCurrent(session, scope, await dataFrom(response));
+  applyCatalogIfCurrent(session, scope, await dataFrom(response, guard));
 }
 
 /** @v2 qolipAddProductMold */
-export async function qolipAddProductMold(session: Session, product: Product, draft: QolipMoldDraft): Promise<void> {
-  await editProductMolds(session, [{ item_code: product.code, warehouse: product.warehouse, add: [draftJson(draft)] }]);
+export async function qolipAddProductMold(session: Session, product: Product, draft: QolipMoldDraft, guard?: QolipReadGuard): Promise<void> {
+  await editProductMolds(session, [{ item_code: product.code, warehouse: product.warehouse, add: [draftJson(draft)] }], guard);
 }
 
 /** @v2 qolipRemoveProductMolds */
-export async function qolipRemoveProductMolds(session: Session, molds: Product[]): Promise<number> {
+export async function qolipRemoveProductMolds(session: Session, molds: Product[], guard?: QolipReadGuard): Promise<number> {
   const groups = new Map<string, Set<string>>();
   for (const mold of molds) {
     let codes = groups.get(mold.code);
     if (!codes) { codes = new Set(); groups.set(mold.code, codes); }
     codes.add(mold.qolip_code);
   }
-  await editProductMolds(session, [...groups].map(([itemCode, codes]) => ({ item_code: itemCode, remove: [...codes] })));
+  await editProductMolds(session, [...groups].map(([itemCode, codes]) => ({ item_code: itemCode, remove: [...codes] })), guard);
   return [...groups.values()].reduce((sum, codes) => sum + codes.size, 0);
 }

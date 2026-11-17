@@ -25,6 +25,15 @@ function harness(overrides = {}) {
   return { state, calls, notices };
 }
 
+test('original role expiry prevents block commands and drops a delayed mutation result', async () => {
+  const wait = deferred(), calls = [], notices = []; let current = true;
+  const state = new QolipBlocksState({ read: async () => { calls.push('read'); return response(blocks); },
+    update: () => { calls.push('update'); return wait.promise; }, remove: async () => { calls.push('remove'); } }, value => notices.push(value), () => current);
+  const pending = state.edit(blocks[0], 'Changed'); current = false; wait.resolve(); await pending;
+  await state.remove(blocks[0]); await state.reload();
+  assert.deepEqual(calls, ['update']); assert.deepEqual(notices, []); assert.equal(state.getSnapshot().blocks, null);
+});
+
 test('blocks load and search reuse the V2 matcher on names and warehouses', async () => {
   const { state } = harness(); await state.reload();
   assert.equal(state.getSnapshot().loading, false); assert.deepEqual(state.filtered, blocks);

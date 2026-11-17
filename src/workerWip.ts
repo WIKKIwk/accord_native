@@ -48,12 +48,12 @@ export function wipBatchRows(batch: WipBatch, names: WipApparatusNames) {
   ].filter(([, value]) => value);
 }
 
-export async function loadWorkerWipBatches(session: Session, orderId: string, apparatusId: string, signal: AbortSignal) {
+export async function loadWorkerWipBatches(session: Session, orderId: string, apparatusId: string, signal: AbortSignal, current?: () => boolean) {
   const order = orderId.trim(), apparatus = apparatusId.trim();
   if (!isCanonicalApparatusId(apparatus)) throw new WorkerControlException('apparatus_id_invalid', 'Canonical apparatus ID noto‘g‘ri');
   const batches = new Map<string, WipBatch>();
-  const loaded = await adminWipBatches(session, { status: 'all', orderId: order, producerApparatus: apparatus, limit: 500, signal });
-  if (signal.aborted) return [];
+  const loaded = await adminWipBatches(session, { status: 'all', orderId: order, producerApparatus: apparatus, limit: 500, signal, ...(current ? { current, readWitness: current } : {}) });
+  if (signal.aborted || current && current() !== true) return [];
   for (const batch of loaded) {
     const id = wipText(batch.batch_id);
     if (id && wipText(batch.order_id) === order && wipText(batch.apparatus) === apparatus) batches.set(id, batch);

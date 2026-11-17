@@ -82,6 +82,16 @@ test('cell print rejects non-200 and malformed responses', async () => {
   await assert.rejects(h.api.qolipPrintCellQr(h.session, { block, rowLetter: 'a', columnNumber: 1, driverUrl: '' }), TypeError);
 });
 
+test('cell and pallet printing refuse an expired originating role and ignore stale server results', async () => {
+  let current = false;
+  const h = harness(json({ cell_qr: cell }), { afterResponse: () => { current = false; } });
+  const input = { block, rowLetter: 'a', columnNumber: 1, driverUrl: '' };
+  await assert.rejects(h.api.qolipPrintCellQr(h.session, input, () => current), /qolip_read_expired/); assert.equal(h.calls.length, 0);
+  current = true; await assert.rejects(h.api.qolipPrintCellQr(h.session, input, () => current), /qolip_read_expired/); assert.equal(h.calls.length, 1);
+  const p = harness(json(payload()));
+  await assert.rejects(p.api.qolipPrintPaddonQr(p.session, { code: 'QP-00012', driverUrl: '' }, () => false), /qolip_read_expired/); assert.equal(p.calls.length, 0);
+});
+
 // @v2-test test/qolip_paddon_print_api_test.dart
 for (const [count, expected] of [[0, '0'], [3, '3'], [-1, '—'], [1.5, '—'], ['104', '—'], [null, '—']]) {
   test(`Bluetooth pallet count retains V2 value ${String(count)}`, async () => {

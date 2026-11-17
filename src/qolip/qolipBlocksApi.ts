@@ -72,19 +72,23 @@ export async function qolipCreateBlock(session: Session, input: { warehouse: str
 }
 
 /** @v2 qolipUpdateBlock */
-export async function qolipUpdateBlock(session: Session, block: QolipBlock, newName: string): Promise<QolipBlock> {
+export async function qolipUpdateBlock(session: Session, block: QolipBlock, newName: string, guard?: QolipReadGuard): Promise<QolipBlock> {
+  assertQolipReadCurrent(guard);
   const name = trimDart(newName);
   if (!name) throw new MobileApiException({ code: 'block_required', message: 'block_required' });
   const response = await send(session, jsonBody('PUT', {
     warehouse: trimDart(block.warehouse), block: trimDart(block.name), new_block: name,
-  }));
+  }), guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_block_update_failed', 'Blok tahrirlanmadi.');
   const data = jsonObject(await response.json());
+  assertQolipReadCurrent(guard);
   return qolipBlockFromJson(data?.block);
 }
 
 /** @v2 qolipDeleteBlock */
-export async function qolipDeleteBlock(session: Session, block: QolipBlock): Promise<void> {
-  const response = await send(session, jsonBody('DELETE', { warehouse: trimDart(block.warehouse), block: trimDart(block.name) }));
+export async function qolipDeleteBlock(session: Session, block: QolipBlock, guard?: QolipReadGuard): Promise<void> {
+  const response = await send(session, jsonBody('DELETE', { warehouse: trimDart(block.warehouse), block: trimDart(block.name) }), guard);
+  assertQolipReadCurrent(guard);
   if (response.status !== 200) throw await qolipApiResponseError(response, 'qolip_block_delete_failed', 'Blok o‘chirilmadi.');
 }

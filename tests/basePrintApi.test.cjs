@@ -60,3 +60,18 @@ test('qolip code print builds local transport requests and preserves print defau
   assert.equal(result.print_job.customer_name, 'Customer');
   assert.equal(result.print_job.unit, 'dona');
 });
+
+test('qolip printing original-owner guard blocks an initial send and a stale authentication retry', async () => {
+  let current = false, sends = 0;
+  const guard = () => { if (!current) throw new Error('qolip_owner_expired'); };
+  const api = fixture(async (_session, _route, _init, beforeSend) => {
+    beforeSend?.(); sends++;
+    current = false; beforeSend?.(); sends++;
+    throw new Error('retry must never send');
+  });
+  await assert.rejects(api.qolipPrintCodeQr({}, { qolipCode: 'M', driverUrl: '' }, guard), /qolip_owner_expired/);
+  assert.equal(sends, 0);
+  current = true;
+  await assert.rejects(api.qolipPrintCodeQr({}, { qolipCode: 'M', driverUrl: '' }, guard), /qolip_owner_expired/);
+  assert.equal(sends, 1);
+});

@@ -108,7 +108,7 @@ export async function storageRequest(session: Session, path: string, query: Reco
   if (activeSessionToken(session) === 'test-mode-token') throw new Error('Qolip test mode is not yet ported');
   const response = await authorizedFetch(session, target, body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: JSON.stringify(body),
-  }, guard, 10_000, readGuard === undefined ? undefined : { readWitness: () => { guard(); return true; } });
+  }, guard, 10_000, readGuard === undefined || body !== undefined ? undefined : { readWitness: () => { guard(); return true; } });
   guard();
   const raw = await response.text();
   guard();
@@ -188,13 +188,13 @@ export async function qolipStorageSet(session: Session, setId: string, warehouse
 }
 
 /** @v2 qolipPaddonAction */
-export async function qolipPaddonAction(session: Session, body: JsonObject): Promise<QolipPaddonDetail> {
-  return qolipPaddonDetailFromJson(await storageRequest(session, 'paddons/action', {}, body));
+export async function qolipPaddonAction(session: Session, body: JsonObject, guard?: QolipReadGuard): Promise<QolipPaddonDetail> {
+  return qolipPaddonDetailFromJson(await storageRequest(session, 'paddons/action', {}, body, guard));
 }
 
 /** @v2 qolipDeletePaddon */
-export async function qolipDeletePaddon(session: Session, body: JsonObject): Promise<void> {
-  const data = await storageRequest(session, 'paddons/action', {}, body);
+export async function qolipDeletePaddon(session: Session, body: JsonObject, guard?: QolipReadGuard): Promise<void> {
+  const data = await storageRequest(session, 'paddons/action', {}, body, guard);
   if (data.deleted !== true || data.code !== body.code) throw new TypeError('Invalid pallet deletion response');
 }
 
@@ -265,8 +265,8 @@ async function legacyArchiveMolds(session: Session, input: Required<Pick<QolipAr
 }
 
 /** @v2 qolipArchiveAction */
-export async function qolipArchiveAction(session: Session, body: JsonObject): Promise<QolipArchiveEntry[]> {
-  const data = await storageRequest(session, 'archive/action', {}, body);
+export async function qolipArchiveAction(session: Session, body: JsonObject, guard?: QolipReadGuard): Promise<QolipArchiveEntry[]> {
+  const data = await storageRequest(session, 'archive/action', {}, body, guard);
   if (!Array.isArray(data.entries)) throw new TypeError('Expected archive entries');
   return data.entries.map(qolipArchiveEntryFromJson);
 }

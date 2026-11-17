@@ -1,6 +1,6 @@
 {
  "source": "test/qolip_reworks_api_test.dart",
- "baseline": "7c87a54e78fa99eb89b7342101f6ec468ecf2e19",
+ "baseline": "f11910bb2c8c7081ce26770e69811b03fd0739ed",
  "records": [
   {
    "test": "wire API sends generated IDs and normalizes mold and return selections",
@@ -11,7 +11,7 @@
     "Content-Type": "application/json"
    },
    "requestBody": {
-    "text": "{\"request_id\":\"qolip-rework-1793855123115792-98cff679d04a63691aa5b16699a6464e\",\"qolip_codes\":[\"q-1\",\"q-2\"]}"
+    "text": "{\"request_id\":\"qolip-rework-1794900127593038-cba56c4592d02dd017fab6cce79896d4\",\"qolip_codes\":[\"q-1\",\"q-2\"]}"
    },
    "status": 200,
    "responseHeaders": {},
@@ -44,7 +44,7 @@
     "Content-Type": "application/json"
    },
    "requestBody": {
-    "text": "{\"request_id\":\"qolip-rework-1793855123115861-39c3c7071416a0e64dba6374e418e2b4\",\"rework_ids\":[\"r1\"]}"
+    "text": "{\"request_id\":\"qolip-rework-1794900127593264-a6bd9c17111f1d291c3efcb8c5fbef63\",\"rework_ids\":[\"r1\"]}"
    },
    "status": 200,
    "responseHeaders": {},
@@ -61,7 +61,7 @@
     "Content-Type": "application/json"
    },
    "requestBody": {
-    "text": "{\"request_id\":\"qolip-rework-1793855123146678-50049bae4cce9388db5e94ff9d4dc4f4\",\"qolip_codes\":[\"q-1\"]}"
+    "text": "{\"request_id\":\"qolip-rework-1794900128106819-6b337de696cde17324becf518ca6de17\",\"qolip_codes\":[\"q-1\"]}"
    },
    "error": "ClientException"
   },
@@ -74,7 +74,7 @@
     "Content-Type": "application/json"
    },
    "requestBody": {
-    "text": "{\"request_id\":\"qolip-rework-1793855123146678-50049bae4cce9388db5e94ff9d4dc4f4\",\"qolip_codes\":[\"q-1\"]}"
+    "text": "{\"request_id\":\"qolip-rework-1794900128106819-6b337de696cde17324becf518ca6de17\",\"qolip_codes\":[\"q-1\"]}"
    },
    "status": 200,
    "responseHeaders": {},
@@ -91,7 +91,7 @@
     "Content-Type": "application/json"
    },
    "requestBody": {
-    "text": "{\"request_id\":\"qolip-rework-1793855123152452-5717aac4d093b763cb94d4811123524b\",\"rework_ids\":[\"r1\"]}"
+    "text": "{\"request_id\":\"qolip-rework-1794900128280829-6b0f6e6d022edeb7967ddf405f876d90\",\"rework_ids\":[\"r1\"]}"
    },
    "error": "ClientException"
   },
@@ -104,7 +104,7 @@
     "Content-Type": "application/json"
    },
    "requestBody": {
-    "text": "{\"request_id\":\"qolip-rework-1793855123152452-5717aac4d093b763cb94d4811123524b\",\"rework_ids\":[\"r1\"]}"
+    "text": "{\"request_id\":\"qolip-rework-1794900128280829-6b0f6e6d022edeb7967ddf405f876d90\",\"rework_ids\":[\"r1\"]}"
    },
    "status": 200,
    "responseHeaders": {},

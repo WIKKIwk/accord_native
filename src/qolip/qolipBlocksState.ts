@@ -19,15 +19,16 @@ export class QolipBlocksState {
   private lifecycle = 0;
   private readonly listeners = new Set<() => void>();
   private readonly documents = new WeakMap<QolipBlock, QolipSearchDocument>();
-  constructor(private readonly api: BlockApi, private readonly notice: (value: QolipBlocksNotice) => void) {}
-  static forSession(session: Session, notice: (value: QolipBlocksNotice) => void) {
-    return new QolipBlocksState({ read: () => qolipBlocksData(session),
-      update: (block, name) => qolipUpdateBlock(session, block, name), remove: block => qolipDeleteBlock(session, block) }, notice);
+  constructor(private readonly api: BlockApi, private readonly notice: (value: QolipBlocksNotice) => void, private readonly isCurrent?: () => boolean) {}
+  static forSession(session: Session, notice: (value: QolipBlocksNotice) => void, isCurrent?: () => boolean) {
+    return new QolipBlocksState({ read: () => qolipBlocksData(session, isCurrent),
+      update: (block, name) => qolipUpdateBlock(session, block, name, isCurrent), remove: block => qolipDeleteBlock(session, block, isCurrent) }, notice, isCurrent);
   }
+  private current() { return this.active && this.isCurrent?.() !== false; }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.value;
   private update(patch: Partial<State>) {
-    if (!this.active) return;
+    if (!this.current()) return;
     this.value = { ...this.value, ...patch };
     for (const listener of this.listeners) listener();
   }
@@ -44,24 +45,24 @@ export class QolipBlocksState {
     });
   }
   async reload(): Promise<void> {
-    if (!this.active) return;
+    if (!this.current()) return;
     const generation = ++this.readGeneration;
     this.update({ loading: this.value.blocks === null, refreshing: true, error: false });
     try {
       const result = await this.api.read();
-      if (this.active && generation === this.readGeneration) this.update({ blocks: result.blocks, loading: false, refreshing: false, error: false });
+      if (this.current() && generation === this.readGeneration) this.update({ blocks: result.blocks, loading: false, refreshing: false, error: false });
     } catch (error) {
-      if (this.active && generation === this.readGeneration) this.update({ blocks: null, loading: false, refreshing: false, error: true });
+      if (this.current() && generation === this.readGeneration) this.update({ blocks: null, loading: false, refreshing: false, error: true });
       throw error;
     }
   }
   async edit(block: QolipBlock, rawName: string): Promise<void> {
     const name = trimDart(rawName);
-    if (!this.active || this.value.saving || !name || name === trimDart(block.name)) return;
+    if (!this.current() || this.value.saving || !name || name === trimDart(block.name)) return;
     await this.run(() => this.api.update(block, name), 'updated', 'update_failed');
   }
   async remove(block: QolipBlock): Promise<void> {
-    if (!this.active || this.value.saving) return;
+    if (!this.current() || this.value.saving) return;
     await this.run(() => this.api.remove(block), 'deleted', 'delete_failed');
   }
   private async run(action: () => Promise<unknown>, success: 'updated' | 'deleted', failure: 'update_failed' | 'delete_failed') {
@@ -69,11 +70,11 @@ export class QolipBlocksState {
     this.update({ saving: true });
     try {
       await action();
-      if (!this.active || lifecycle !== this.lifecycle) return;
+      if (!this.current() || lifecycle !== this.lifecycle) return;
       this.notice({ kind: success });
       await this.reload();
     } catch (error) {
-      if (this.active && lifecycle === this.lifecycle) this.notice({ kind: failure, error });
+      if (this.current() && lifecycle === this.lifecycle) this.notice({ kind: failure, error });
     } finally { if (lifecycle === this.lifecycle) this.update({ saving: false }); }
   }
   dispose() { this.active = false; this.readGeneration++; this.lifecycle++; this.listeners.clear(); }
