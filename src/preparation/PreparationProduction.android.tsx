@@ -9,6 +9,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
+import { WorkerIconButton } from '../components/WorkerIconButton';
 import { useNativeSheet } from '../nativeSheet';
 import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
@@ -24,6 +25,8 @@ import { reprintPreparationRollWithPrinter } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
 import { PreparationButton, PreparationDialogs, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
+import { PreparationProductionNoteDialog } from './PreparationProductionNoteDialog';
+import { usePreparationProductionNote } from './usePreparationProductionNote';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
 type Batch = ReturnType<typeof preparationProductionBatchFromJson>;
@@ -146,14 +149,17 @@ export function PreparationProductionOrderScreen() {
     createPreparationProductionOrderJournal(session, id, change), [session, id]);
   const { state, journal } = useJournal(createJournal);
   const t = usePreparationText(), order = state.summary;
-  return <PreparationPage title={order ? `${t('Buyurtma')}: ${order.order_code || order.order_id}` : 'Buyurtma ishlab chiqarishi'}
+  const editor = usePreparationProductionNote(session, id, order?.preparation_note, () => { void journal.load({ silent: true }); });
+  return <><PreparationPage title={order ? `${t('Buyurtma')}: ${order.order_code || order.order_id}` : 'Buyurtma ishlab chiqarishi'}
     refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
     <JournalHeader state={state} journal={journal} />
-    {order ? <PreparationRow title={order.order_title} subtitle={[order.customer_name, preparationProductionMetrics(order.roll_count, order.total_net_kg, order.total_length_m)].filter(Boolean).join('\n')} /> : null}
+    {order ? <PreparationRow title={order.order_title} subtitle={[order.customer_name, preparationProductionMetrics(order.roll_count, order.total_net_kg, order.total_length_m),
+      editor.note.text ? `${t('Eslatma')}: ${editor.note.text}` : ''].filter(Boolean).join('\n')}
+      trailing={<WorkerIconButton icon="edit" label={t('Buyurtma eslatmasini tahrirlash')} onPress={editor.open} />} /> : null}
     {state.items.length ? <View style={styles.list}>{state.items.map((batch, index) => <ProductionBatchRow key={batch.batch_id} batch={batch}
       first={index === 0} last={index === state.items.length - 1} />)}</View> : null}
     <JournalFooter state={state} journal={journal} emptyText="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." />
-  </PreparationPage>;
+  </PreparationPage><PreparationProductionNoteDialog editor={editor} /></>;
 }
 
 // @v2 RpsQrReprintSheet
@@ -183,6 +189,7 @@ function RollPreview({ roll, session, orderId }: { roll: Roll; session: Session;
     <PreparationText title>{t('Chop etilgan QR')}</PreparationText><PreparationText>{roll.item_name || roll.item_code}</PreparationText>
     {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
     <PreparationText>{roll.epc}</PreparationText>
+    {roll.preparation_note?.text ? <PreparationText>{`${t('Buyurtma eslatmasi')}: ${roll.preparation_note.text}`}</PreparationText> : null}
     {preparationProductionRecipeLines(roll.preparation_formula).map((line, index) => <PreparationText key={index}>{t(line)}</PreparationText>)}
     {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
     <PreparationButton label="Qayta chop etish" disabled={printing || !orderId} onPress={() => void reprint()} id="preparation-roll-reprint" />
@@ -202,6 +209,7 @@ export function PreparationProductionBatchScreen() {
       <PreparationRow title={t(batch.active ? 'Davom etmoqda' : 'Yakunlangan')}
         subtitle={`${batch.warehouse}\n${t('Boshlangan')}: ${preparationProductionDate(batch.started_at)}${batch.ended_at ? `\n${t('Tugagan')}: ${preparationProductionDate(batch.ended_at)}` : ''}\n${preparationProductionMetrics(batch.roll_count, batch.total_net_kg, batch.total_length_m)}`} />
       <View>{preparationProductionRecipeLines(batch.preparation_formula).map((line, index) => <PreparationText key={index}>{t(line)}</PreparationText>)}</View>
+      {batch.preparation_note.text ? <PreparationRow title={t('Buyurtma eslatmasi')} subtitle={batch.preparation_note.text} /> : null}
     </> : null}
     {state.items.map(roll => { const card = preparationProductionRollCard(roll); return <PreparationRow key={roll.epc} title={card.title}
       subtitle={`${card.subtitle}\n${card.metrics}`} onPress={() => sheet.open(<PreparationDialogs><RollPreview roll={roll} session={session} orderId={batch?.order_id ?? ''} /></PreparationDialogs>, { dismissible: true })} />; })}

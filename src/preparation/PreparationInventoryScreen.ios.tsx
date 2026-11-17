@@ -68,6 +68,7 @@ function AssetSheet({ session, asset, warehouses, store }: { session: Session; a
   return <Host style={{ minHeight: 350 }}><VStack spacing={10}><Text>{asset.item_name || asset.item_code}</Text><List>
     <Section><Text>{t('Identifikator')}: {asset.identifier}</Text><Text>{t('Miqdor')}: {asset.qty} {asset.uom}</Text>
       <Text>{t('Fizik joy')}: {asset.physical_location.name}</Text><Text>{t('Holat')}: {asset.status}</Text>
+      {!!asset.preparation_note?.text && <Text>{t('Buyurtma eslatmasi')}: {asset.preparation_note.text}</Text>}
       {!showAssignment && !!asset.order_assignment?.order_label && <Text>{t('Buyurtma')}: {asset.order_assignment.order_label}</Text>}
       {!!barcode && <Button label={t('QR kodni ko‘rish')} onPress={() => setShowQr(!showQr)} />}
       {showQr && !!qr && <RNHostView matchContents><Image source={{ uri: qr }} style={{ width: 200, height: 200, backgroundColor: 'white' }} contentFit="contain" /></RNHostView>}

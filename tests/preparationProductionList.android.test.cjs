@@ -28,6 +28,7 @@ test('production uses shared search, filter and virtual list with automatic pagi
     './PreparationUI.android': { usePreparationText: () => text => text, PreparationDock: 'PreparationDock', PreparationText: 'PreparationText',
       PreparationButton: 'PreparationButton', PreparationPage: 'PreparationPage', PreparationRow: 'PreparationRow' },
     './preparationJournalFactory': { createPreparationProductionOrdersJournal: () => journal, createPreparationProductionOrderJournal: () => journal },
+    './usePreparationProductionNote': { usePreparationProductionNote: () => ({ note: { text: '' } }) },
     './preparationProductionPresentation': { preparationProductionOrderCard: () => ({ title: 'Order', subtitle: 'Customer', metrics: '2 kg' }),
       preparationProductionBatchCard: batch => ({ title: batch.name, subtitle: 'Davom etmoqda', metrics: '12 kg' }),
       preparationProductionMetrics: () => '12 kg' },

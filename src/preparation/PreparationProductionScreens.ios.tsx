@@ -1,4 +1,4 @@
-import { Button, Host, List, ProgressView, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
+import { Button, Host, HStack, List, ProgressView, RNHostView, Section, Text, TextField, VStack } from '@expo/ui/swift-ui';
 import { disabled } from '@expo/ui/swift-ui/modifiers';
 import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -18,6 +18,9 @@ import type { preparationProductionBatchFromJson, preparationProductionOrderFrom
 import { reprintPreparationRollWithPrinter, type PreparationDeviceSelection } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
 import { PreparationPrinterPicker } from './PreparationPrinterPicker';
+import { WorkerIconButton } from '../components/WorkerIconButton';
+import { PreparationProductionNoteDialog } from './PreparationProductionNoteDialog';
+import { usePreparationProductionNote } from './usePreparationProductionNote';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
 type Batch = ReturnType<typeof preparationProductionBatchFromJson>;
@@ -96,6 +99,7 @@ function RollSheet({ roll, session, orderId }: { roll: Roll; session: Session; o
     {!!image && <RNHostView matchContents><Image source={{ uri: image }} style={{ width: 200, height: 200, backgroundColor: 'white' }}
       contentFit="contain" accessibilityLabel={t('Chop etilgan QR')} /></RNHostView>}
     <Text>{roll.epc}</Text><List><Recipe recipe={roll.preparation_formula} /></List>
+    {!!roll.preparation_note?.text && <Text>{t('Buyurtma eslatmasi')}: {roll.preparation_note.text}</Text>}
     {!!error && <Text>{error}</Text>}
     <Button label={t('Qayta chop etish')} modifiers={[disabled(busy)]} onPress={() => { void reprint(); }} />
   </VStack></Host>;
@@ -137,16 +141,20 @@ export function PreparationProductionOrder() {
   const { id = '' } = useLocalSearchParams<{ id: string }>(), { session } = usePreparationContext(), t = usePreparationText();
   const make = useCallback((changed: (state: JournalState<Batch, Order>) => void) => createPreparationProductionOrderJournal(session, id, changed), [session, id]);
   const { state, current } = useJournal(make);
+  const editor = usePreparationProductionNote(session, id, state.summary?.preparation_note, () => { void current.current?.load({ silent: true }); });
   return <><Stack.Screen options={{ title: state.summary ? `${t('Buyurtma')}: ${state.summary.order_code || state.summary.order_id}` : t('Buyurtma ishlab chiqarishi') }} />
     <PreparationList refresh={async () => { await current.current?.load(); }}>
       <JournalHeader state={state} reload={() => { void current.current?.load(); }} />
-      {state.summary && <Section><Text>{state.summary.order_title}</Text><Text>{state.summary.customer_name}</Text>
-        <Text>{preparationProductionMetrics(state.summary.roll_count, state.summary.total_net_kg, state.summary.total_length_m)}</Text></Section>}
+      {state.summary && <Section><HStack><Text>{state.summary.order_title}</Text>
+        <RNHostView matchContents><WorkerIconButton icon="edit" label={t('Buyurtma eslatmasini tahrirlash')} onPress={editor.open} /></RNHostView>
+      </HStack><Text>{state.summary.customer_name}</Text>
+        <Text>{preparationProductionMetrics(state.summary.roll_count, state.summary.total_net_kg, state.summary.total_length_m)}</Text>
+        {!!editor.note.text && <Text>{t('Eslatma')}: {editor.note.text}</Text>}</Section>}
       <Section>{state.items.map(batch => { const card = preparationProductionBatchCard(batch); return <Button key={batch.batch_id} onPress={() => openPreparationRoute('production-batch', { id: batch.batch_id })}>
         <VStack alignment="leading"><Text>{card.title}</Text><Text>{card.subtitle}</Text><Text>{card.metrics}</Text></VStack>
       </Button>; })}</Section>
       <JournalFooter state={state} empty="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." more={() => { void current.current?.load({ append: true }); }} />
-    </PreparationList></>;
+    </PreparationList><PreparationProductionNoteDialog editor={editor} /></>;
 }
 
 // @v2 PreparationProductionBatchScreen
@@ -161,6 +169,7 @@ export function PreparationProductionBatch() {
         <Text>{state.summary.warehouse}</Text><Text>{t('Boshlangan')}: {preparationProductionDate(state.summary.started_at)}</Text>
         {!!state.summary.ended_at && <Text>{t('Tugagan')}: {preparationProductionDate(state.summary.ended_at)}</Text>}
         <Text>{preparationProductionMetrics(state.summary.roll_count, state.summary.total_net_kg, state.summary.total_length_m)}</Text>
+        {!!state.summary.preparation_note.text && <Text>{t('Buyurtma eslatmasi')}: {state.summary.preparation_note.text}</Text>}
         <Recipe recipe={state.summary.preparation_formula} /></Section>}
       <Section>{state.items.map(roll => { const card = preparationProductionRollCard(roll); return <Button key={roll.epc} onPress={() => sheet.open(<RollSheet roll={roll} session={session}
         orderId={state.summary?.order_id ?? ''} />, { compact: true, dismissible: true })}>
