@@ -2,8 +2,9 @@ import { Button, CircularProgressIndicator, Column, IconButton, ListItem, RNHost
   useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { combinedClickable, defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
@@ -15,6 +16,24 @@ import { AdminText as Text } from './AdminTypography.android';
 import { adminSettingsFieldLabels, adminSettingsFieldNames, type AdminSettingsField } from './adminSettingsController';
 import type { AdminSettingsScreenProps } from './AdminSettingsTypes';
 import { useAdminSettings } from './useAdminSettings';
+
+/** V2 SmoothAppear applies its delay after the emphasized curve, within the total duration. */
+function SettingsSection({ delay, children }: { delay: 20 | 60; children: ReactNode }) {
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(1, { duration: 260 + delay, easing: Easing.bezier(.05, .7, .1, 1) });
+    return () => cancelAnimation(progress);
+  }, [delay, progress]);
+  const motion = useAnimatedStyle(() => {
+    const value = Math.min(1, Math.max(0, (progress.value * (260 + delay) - delay) / 260));
+    return { opacity: value, transform: [{ translateY: 16 * (1 - value) }] };
+  });
+  return <RNHostView matchContents={{ vertical: true }} modifiers={[fillMaxWidth()]}>
+    <Animated.View style={[styles.fullWidth, motion]}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
+      <Column modifiers={[fillMaxWidth()]}>{children}</Column>
+    </BaseHost></Animated.View>
+  </RNHostView>;
+}
 
 function SettingsField({ label, value, fillVersion, change, name }: { label: string; value: string; fillVersion: number;
   change: (value: string) => void; name: AdminSettingsField }) {
@@ -65,11 +84,11 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
             <ListItem.HeadlineContent><Text>{a('push.title')}</Text></ListItem.HeadlineContent>
             <ListItem.TrailingContent><RNHostView matchContents><SymbolView name={{ android: 'chevron_right' }} size={24} tintColor={colors.onSurfaceVariant} /></RNHostView></ListItem.TrailingContent>
           </ListItem> : null}
-          <Text style={{ typography: 'titleLarge' }}>{t('erpConnectionTitle')}</Text><Spacer modifiers={[height(6)]} />
+          <SettingsSection delay={20}><Text style={{ typography: 'titleLarge' }}>{t('erpConnectionTitle')}</Text><Spacer modifiers={[height(6)]} />
           <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall', lineHeight: 17.4 }}>{t('erpConnectionSubtitle')}</Text><Spacer modifiers={[height(18)]} />
           {adminSettingsFieldNames.slice(0, 5).map((name, index) => <Column key={name} modifiers={[fillMaxWidth()]}>
             {index ? <Spacer modifiers={[height(14)]} /> : null}{field(name)}</Column>)}
-          <Spacer modifiers={[height(16)]} /><Text style={{ typography: 'titleLarge' }}>{t('adminSettingsSectionTitle')}</Text><Spacer modifiers={[height(6)]} />
+          </SettingsSection><Spacer modifiers={[height(16)]} /><SettingsSection delay={60}><Text style={{ typography: 'titleLarge' }}>{t('adminSettingsSectionTitle')}</Text><Spacer modifiers={[height(6)]} />
           <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall', lineHeight: 17.4 }}>{t('adminSettingsSectionSubtitle')}</Text><Spacer modifiers={[height(18)]} />
           {field('werka_phone')}<Spacer modifiers={[height(12)]} />{field('werka_name')}<Spacer modifiers={[height(18)]} />
           <Button onClick={model.save} enabled={!state.saving} shape={Shape.RoundedCorner({ cornerRadii: { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 } })}
@@ -78,7 +97,7 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
               {state.saving ? <CircularProgressIndicator modifiers={[size(18, 18)]} /> : <RNHostView matchContents><SymbolView name={{ android: 'check' }} size={24} tintColor={colors.onPrimary} /></RNHostView>}
               <Text style={{ typography: 'labelLarge' }}>{t(state.saving ? 'pinSaving' : 'save')}</Text>
             </Row>
-          </Button>
+          </Button></SettingsSection>
         </Column>}
     </BaseHost>}
     </View></AdminShellBodyFrame>

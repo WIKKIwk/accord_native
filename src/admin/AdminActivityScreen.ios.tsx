@@ -1,5 +1,5 @@
 import { Button, HStack, List, ProgressView, RNHostView, Spacer, Text, VStack } from '@expo/ui/swift-ui';
-import { font, foregroundStyle, frame, lineLimit, listStyle, refreshable, scrollContentBackground } from '@expo/ui/swift-ui/modifiers';
+import { accessibilityIdentifier, buttonStyle, controlSize, font, foregroundStyle, frame, lineLimit, listStyle, refreshable, scrollContentBackground } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useSyncExternalStore } from 'react';
@@ -11,6 +11,7 @@ import { localeController } from '../shared/localization/runtime';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { adminActivityScreenModel, type AdminActivityRow } from './adminActivityScreenModel';
 import type { AdminActivityScreenProps } from './adminActivityScreenTypes';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -38,17 +39,19 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, o
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined,
       headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel={localizedGetter('clearTitle', locale)}
         onPress={onRequestClear} hitSlop={8} style={styles.clear}><SymbolView name="line.3.horizontal.decrease" size={22} tintColor={PlatformColor('label')} /></Pressable> }} />
-    <View style={styles.screen}><BaseHost style={styles.content}>
+    <View style={styles.screen}><AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-body-frame"><BaseHost style={styles.content}>
       {view === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         view === 'error' ? <VStack spacing={16}><Text>{localizedGetter('serverDisconnectedRetry', locale)}</Text>
-          <Button label={localizedGetter('retry', locale)} onPress={() => { void onRefresh(); }} /></VStack> :
+          <Button label={localizedGetter('retry', locale)} onPress={() => { void onRefresh(); }}
+            modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ minHeight: 54 }), accessibilityIdentifier('admin-activity-retry')]} /></VStack> :
           view === 'empty' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
             <Text>{localizedGetter('adminNoActivity', locale)}</Text></VStack> :
             <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), refreshable(onRefresh)]}>
               {rows.map((row, index) => <ActivityRow key={`${row.id}:${index}`} row={row} />)}
             </List>}
-    </BaseHost>{footer}</View>
+    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{footer}</View></View>
   </>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, clear: { width: 42, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   badge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' } });

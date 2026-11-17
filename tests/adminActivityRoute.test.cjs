@@ -79,16 +79,29 @@ for (const platform of ['ios', 'android']) test(`${platform} hidden-state pendin
   const calls = [], modifiers = new Proxy({}, { get: (_target, key) => (...args) => ({ name: String(key), args }) });
   const swift = new Proxy({}, { get: (_target, key) => String(key) });
   const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() }, '@expo/ui/swift-ui': swift,
-    '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurfaceVariant: 'text', primary: 'primary' }) },
-    'react-native': { View: 'View', Text: 'NativeText', ActivityIndicator: 'ActivityIndicator', PlatformColor: value => value, StyleSheet: { create: value => value } },
+    '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers,
+    '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Text: 'ComposeText', TextButton: 'TextButton', useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurfaceVariant: 'text', primary: 'primary' }) },
+    'react-native': { View: 'View', Text: 'NativeText', ActivityIndicator: 'ActivityIndicator', useWindowDimensions: () => ({ width: 390 }), PlatformColor: value => value, StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 12 }) }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' }, '../shared/localization': { localizedGetter: key => key },
-    '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } } };
+    '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
+    './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' } };
   const Pending = load(`admin/AdminActivityPending.${platform}.tsx`, mocks).AdminActivityPending;
   const tree = Pending({ status: 'error', onRetry: () => calls.push('retry'), navigation: { icon: 'back', label: 'Back', onPress: () => calls.push('back') }, footer: 'dock' });
-  const retry = nodes(tree, n => platform === 'ios' ? n.type === 'Button' : n.type === 'NativeText' && n.props.accessibilityRole === 'button')[0];
-  retry.props.onPress(); assert.deepEqual(calls, ['retry']);
+  const retry = nodes(tree, n => platform === 'ios' ? n.type === 'Button' : n.type === 'TextButton')[0];
+  (retry.props.onPress ?? retry.props.onClick)(); assert.deepEqual(calls, ['retry']);
+  assert.equal(nodes(tree, n => n.type === 'AdminShellBodyFrame')[0].props.hasFooter, true);
+  assert.equal(nodes(tree, n => n.props?.pointerEvents === 'box-none')[0].props.style.position, 'absolute');
+  if (platform === 'ios') {
+    assert.equal(retry.props.modifiers.find(m => m.name === 'buttonStyle').args[0], 'borderedProminent');
+    assert.equal(retry.props.modifiers.find(m => m.name === 'controlSize').args[0], 'large');
+    assert.equal(retry.props.modifiers.find(m => m.name === 'frame').args[0].minHeight, 54);
+  } else {
+    assert.deepEqual(retry.props.contentPadding, { start: 12, top: 8, end: 12, bottom: 8 });
+    assert.deepEqual(retry.props.modifiers.find(m => m.name === 'defaultMinSize').args[0], { minWidth: 0, minHeight: 0 });
+    assert.equal(nodes(tree, n => n.type === 'NativeText' && n.props.accessibilityRole === 'button').length, 0);
+  }
   assert.equal(nodes(tree, n => n.type === 'Pressable' || n.type === 'FlatList' || n.type === 'List').length, 0);
   if (platform === 'ios') assert.equal(nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight, undefined);
 });

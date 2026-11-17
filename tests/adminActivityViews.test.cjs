@@ -40,7 +40,8 @@ function render(platform, changes = {}, hidden = new Set(['hidden']), nav = true
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/localization': l10n,
     '../shared/localization/runtime': { localeController: { locale, addListener() {} } },
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
-    './adminActivityScreenModel': screenModel };
+    './adminActivityScreenModel': screenModel, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' },
+    './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' } };
   const screen = load(`admin/AdminActivityScreen.${platform}.tsx`, mocks).AdminActivityScreen;
   const navigation = nav ? { icon: 'back', label: 'Back', onPress: () => calls.push('back') } : null;
   const props = { snapshot: { ...initial, ...changes }, hiddenIds: hidden, navigation, footer: { type: 'ExistingDock', props: {} },
@@ -55,6 +56,9 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} activity delegates real back and clear confirmation and reuses supplied dock`, () => {
     const { tree, calls } = render(platform);
     assert.equal(nodes(tree, n => n.type === 'ExistingDock').length, 1);
+    assert.equal(nodes(tree, n => n.type === 'AdminShellBodyFrame')[0].props.hasFooter, true);
+    const footer = nodes(tree, n => n.props?.pointerEvents === 'box-none')[0];
+    assert.equal(footer.props.style.position, 'absolute');
     const screen = nodes(tree, n => n.type === 'Stack.Screen')[0];
     const navigation = platform === 'ios' ? screen.props.options.headerLeft().props : nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation;
     assert.equal(navigation.icon, 'back'); navigation.onPress();
@@ -68,11 +72,16 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} only initial loading/error with no visible rows replaces the list`, () => {
     const hiddenAll = new Set(['first', 'hidden', 'last']);
     const loading = render(platform, { loadingActivity: true, loadedActivity: false }, hiddenAll).tree;
-    assert.equal(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length, 1);
+    assert.equal(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'AdminLoadingIndicator')).length, 1);
     const failed = render(platform, { loadedActivity: false, activityError: new Error('offline') }, hiddenAll);
     const retry = nodes(failed.tree, n => platform === 'ios' ? n.type === 'Button' && n.props.label === l10n.localizedGetter('retry', 'en') :
       n.type === 'TextButton')[0];
     (retry.props.onPress ?? retry.props.onClick)(); assert.deepEqual(failed.calls, ['refresh']);
+    if (platform === 'ios') {
+      assert.equal(retry.props.modifiers.find(m => m.name === 'buttonStyle').args[0], 'borderedProminent');
+      assert.equal(retry.props.modifiers.find(m => m.name === 'controlSize').args[0], 'large');
+      assert.equal(retry.props.modifiers.find(m => m.name === 'frame').args[0].minHeight, 54);
+    }
     const loadedEmpty = render(platform, { activityItems: [] }, new Set()).tree;
     assert.equal(nodes(loadedEmpty, n => n.props?.children === l10n.localizedGetter('adminNoActivity', 'en')).length, 1);
     const laterError = render(platform, { activityError: new Error('later failure') }).tree;
@@ -118,6 +127,7 @@ for (const platform of ['ios', 'android']) {
 test('Android Activity keeps V2 segment spacing, card padding and status dimensions', () => {
   const { tree } = render('android');
   const list = nodes(tree, n => n.type === 'FlatList')[0];
+  assert.deepEqual(list.props.contentContainerStyle, { paddingTop: 4 });
   const entry = list.props.renderItem({ item: list.props.data[0], index: 0 });
   const card = entry.type(entry.props);
   assert.deepEqual(card.props.containerStyle, { paddingHorizontal: 4, paddingTop: 0, paddingBottom: 0 });

@@ -13,5 +13,7 @@ export type AdminHomeScreenProps = {
   isRouteAvailable: (route: string) => boolean;
   isSessionCurrent: () => boolean;
   navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null;
+  /** A genuine shell-owned profile/account control, when that destination is available. */
+  profileAction?: ReactNode;
   footer?: ReactNode;
 };

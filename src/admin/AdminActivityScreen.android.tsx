@@ -2,7 +2,7 @@ import { Column, Host, IconButton, RNHostView, Text as ComposeText, TextButton, 
 import { defaultMinSize, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useSyncExternalStore } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { localizedGetter } from '../shared/localization';
@@ -10,6 +10,8 @@ import { localeController } from '../shared/localization/runtime';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import { adminActivityScreenModel, type AdminActivityRow } from './adminActivityScreenModel';
 import type { AdminActivityScreenProps } from './adminActivityScreenTypes';
+import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -41,7 +43,8 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, o
         modifiers={[size(48, 48), semantics({ contentDescription: localizedGetter('clearTitle', locale) })]}>
         <RNHostView matchContents><SymbolView name={{ android: 'clear_all' }} size={24} tintColor={colors.onSurface} importantForAccessibility="no" /></RNHostView>
       </IconButton></Host></View>
-    {view === 'loading' ? <View style={styles.center}><ActivityIndicator /></View> :
+    <AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-body-frame">
+    {view === 'loading' ? <View style={styles.center}><Host matchContents><AdminLoadingIndicator /></Host></View> :
       view === 'error' ? <View style={styles.error}><Host matchContents={{ vertical: true }} style={{ width: retryWidth }}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }}>
           <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{localizedGetter('serverDisconnectedRetry', locale)}</ComposeText>
@@ -51,16 +54,17 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, o
           </TextButton>
         </Column>
       </Host></View> :
-        view === 'empty' ? <View style={styles.center}><Text style={{ color: colors.onSurface }}>{localizedGetter('adminNoActivity', locale)}</Text></View> :
+        view === 'empty' ? <View style={styles.center}><Text style={[styles.empty, { color: colors.onSurface }]}>{localizedGetter('adminNoActivity', locale)}</Text></View> :
           <FlatList data={rows} keyExtractor={(item, index) => `${item.id}:${index}`} style={styles.content}
-            contentContainerStyle={{ paddingTop: 4, paddingBottom: insets.bottom + 120 }}
+            contentContainerStyle={{ paddingTop: 4 }}
             refreshControl={<RefreshControl refreshing={snapshot.loadingActivity} onRefresh={() => { void onRefresh(); }} />}
             renderItem={({ item, index }) => <ActivityRow row={item} first={index === 0} last={index === rows.length - 1} />} />}
-    {footer}
+    </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{footer}</View>
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: { flex: 1 }, clear: { width: 48, height: 48, marginEnd: 4 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, empty: { fontSize: 16, fontWeight: '500', lineHeight: 24 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, error: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 16 },
   row: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingStart: 16, paddingEnd: 12 },
   badge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, description: { flex: 1, gap: 4, marginStart: 14 },

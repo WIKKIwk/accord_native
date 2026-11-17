@@ -1,23 +1,31 @@
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column, Host, Text as ComposeText, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { defaultMinSize } from '@expo/ui/jetpack-compose/modifiers';
 import { useSyncExternalStore } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
 import type { AdminActivityPendingProps } from './adminActivityPendingTypes';
+import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 export function AdminActivityPending({ status, onRetry, navigation, footer }: AdminActivityPendingProps) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const retryWidth = Math.min(360, Math.max(280, useWindowDimensions().width * 0.88));
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
     <RoleHeader title={localizedGetter('adminActivityTitle', locale)} navigation={navigation} />
-    {status === 'loading' ? <View style={styles.center}><ActivityIndicator /></View> : <View style={styles.error}>
-      <Text style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>{localizedGetter('serverDisconnectedRetry', locale)}</Text>
-      <Text accessibilityRole="button" onPress={onRetry} style={[styles.retry, { color: colors.primary }]}>{localizedGetter('retry', locale)}</Text></View>}
-    {footer}
+    <AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-pending-body-frame">
+    {status === 'loading' ? <View style={styles.center}><Host matchContents><AdminLoadingIndicator /></Host></View> : <View style={styles.error}>
+      <Host matchContents={{ vertical: true }} style={{ width: retryWidth }}><Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }}>
+        <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{localizedGetter('serverDisconnectedRetry', locale)}</ComposeText>
+        <TextButton onClick={onRetry} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
+          modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 })]}><ComposeText style={{ typography: 'bodyMedium', fontWeight: '600' }}>{localizedGetter('retry', locale)}</ComposeText></TextButton>
+      </Column></Host></View>}
+    </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{footer}</View>
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  error: { flex: 1, alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 16 },
-  retry: { paddingHorizontal: 12, paddingVertical: 8, fontWeight: '600' } });
+  error: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
