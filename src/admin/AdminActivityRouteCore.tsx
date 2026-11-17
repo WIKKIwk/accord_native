@@ -2,7 +2,7 @@ import { Redirect, router, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { Alert, BackHandler, Platform, View } from 'react-native';
 import { sessionReadScope } from '../sessionReadScope';
-import { appRoutes, canOpenRoute } from '../shared/appRoutes';
+import { appRoutes, canOpenRoute, homeRoute } from '../shared/appRoutes';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { refreshHub } from '../shared/notificationStoresRuntime';
@@ -35,8 +35,9 @@ function BoundActivity({ shell, binding, footer }: { shell: Shell; binding: Admi
   }, [binding, controller, session, isCurrent]);
   const goBack = useCallback(() => {
     if (!mounted.current || !isCurrent() || controller.getSnapshot().invalidated) return;
-    if (router.canGoBack()) router.back(); else router.replace(`/${Platform.OS}-admin` as Href);
-  }, [controller, isCurrent]);
+    if (router.canGoBack()) router.back();
+    else { const home = shell.destination(homeRoute(session), Platform.OS); if (home) router.replace(home as Href); }
+  }, [controller, isCurrent, shell, session]);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });

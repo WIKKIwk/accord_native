@@ -6,7 +6,7 @@ import { switchPinStore } from '../shared/switchPinRuntime';
 type Stage = 'entry' | 'confirm' | null;
 
 export function useSwitchPinSetupCore<T extends { set: (value: string) => void }>(
-  session: Session, field: T, text: (key: string) => string, enabled = true,
+  session: Session, field: T, text: (key: string) => string, enabled = true, isCurrent?: () => boolean,
 ) {
   const [hasPin, setHasPin] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>(null);
@@ -16,37 +16,39 @@ export function useSwitchPinSetupCore<T extends { set: (value: string) => void }
   const first = useRef('');
   const pending = useRef(false);
   const mounted = useRef(false);
+  const allowed = () => enabled && (isCurrent === undefined || isCurrent() === true);
 
   useEffect(() => {
     if (!enabled) return;
     mounted.current = true;
-    void switchPinStore.has(session).then(value => { if (mounted.current) setHasPin(value); }, () => {
-      if (mounted.current) Alert.alert(text('switchPinTitle'), text('pinSaveFailed'));
+    void switchPinStore.has(session, isCurrent).then(value => { if (mounted.current && allowed()) setHasPin(value); }, () => {
+      if (mounted.current && allowed()) Alert.alert(text('switchPinTitle'), text('pinSaveFailed'));
     });
     return () => { mounted.current = false; };
     // The session identity owns this state; language changes do not reload the PIN.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, enabled]);
+  }, [session, enabled, isCurrent]);
 
   const clearInput = () => { current.current = ''; field.set(''); setError(''); };
   const change = (value: string) => {
+    if (!allowed()) return;
     const next = value.replace(/\D/g, '').slice(0, 4);
     current.current = next;
     if (value !== next) field.set(next);
     setError('');
   };
-  const open = () => { if (!pending.current) { first.current = ''; clearInput(); setStage('entry'); } };
+  const open = () => { if (allowed() && !pending.current) { first.current = ''; clearInput(); setStage('entry'); } };
   const back = () => {
-    if (pending.current) return;
+    if (!allowed() || pending.current) return;
     clearInput(); first.current = '';
     setStage(stage === 'confirm' ? 'entry' : null);
   };
   const close = () => {
-    if (pending.current) return;
+    if (!allowed() || pending.current) return;
     clearInput(); first.current = ''; setStage(null);
   };
   const submit = async () => {
-    if (pending.current || !stage) return;
+    if (!allowed() || pending.current || !stage) return;
     const pin = current.current.trim();
     if (stage === 'entry') {
       if (pin.length !== 4) return;
@@ -55,17 +57,17 @@ export function useSwitchPinSetupCore<T extends { set: (value: string) => void }
     if (pin !== first.current) { clearInput(); setError(text('pinMismatch')); return; }
     pending.current = true; setBusy(true);
     try {
-      await switchPinStore.save(session, pin);
-      if (mounted.current) { setHasPin(true); clearInput(); first.current = ''; setStage(null); }
-    } catch { if (mounted.current) { clearInput(); setError(text('pinSaveFailed')); } }
-    finally { pending.current = false; if (mounted.current) setBusy(false); }
+      await switchPinStore.save(session, pin, isCurrent);
+      if (mounted.current && allowed()) { setHasPin(true); clearInput(); first.current = ''; setStage(null); }
+    } catch { if (mounted.current && allowed()) { clearInput(); setError(text('pinSaveFailed')); } }
+    finally { pending.current = false; if (mounted.current && allowed()) setBusy(false); }
   };
   const remove = async () => {
-    if (pending.current || !hasPin) return;
+    if (!allowed() || pending.current || !hasPin) return;
     pending.current = true; setBusy(true);
-    try { await switchPinStore.clear(session); if (mounted.current) setHasPin(false); }
-    catch { if (mounted.current) Alert.alert(text('switchPinTitle'), text('pinRemoveFailed')); }
-    finally { pending.current = false; if (mounted.current) setBusy(false); }
+    try { await switchPinStore.clear(session, isCurrent); if (mounted.current && allowed()) setHasPin(false); }
+    catch { if (mounted.current && allowed()) Alert.alert(text('switchPinTitle'), text('pinRemoveFailed')); }
+    finally { pending.current = false; if (mounted.current && allowed()) setBusy(false); }
   };
   return { field, hasPin, stage, busy, error, change, open, back, close, submit, remove };
 }

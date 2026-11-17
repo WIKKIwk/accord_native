@@ -42,6 +42,7 @@ function setup(role, mode = 'light', settingsOpen = false) {
     '../profileModel': { profileDisplay: () => ({ name: 'Operator', role: 'Role', phone: '123', legalName: '', apparatusLabels: [] }) },
     '../nativeSheet': { useNativeSheet: () => [editorSheet, settingsSheet][sheetIndex++] },
     '../shared/localization': { localizedGetter: key => key },
+    '../shared/profileSessionGuard': load('../shared/profileSessionGuard.ts', {}),
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     './BaseHost': { BaseHost }, './ProfileAvatarPreview.android': { ProfileAvatarPreview: 'Avatar' },
     './ProfileEditor.android': { ProfileEditor: 'Editor' }, './ProfileSettings': { ProfileSettings: 'Settings' },

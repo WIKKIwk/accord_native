@@ -27,4 +27,5 @@ export type ProfileViewProps = {
   registerSettingsOpener?: (open: () => void) => () => void;
   settingsUnavailableMessage?: string;
   settingsDisabled?: boolean;
+  isCurrent?: () => boolean;
 };

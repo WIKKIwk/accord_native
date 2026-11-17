@@ -2,7 +2,7 @@ import { router, type Href } from 'expo-router';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 import { useNativeSheet } from '../nativeSheet';
-import { appRoutes } from '../shared/appRoutes';
+import { appRoutes, homeRoute } from '../shared/appRoutes';
 import { adminText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminWorkMapDetail } from './AdminWorkMapDetail';
@@ -22,7 +22,11 @@ export function useAdminWorkMapView() {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, localeNow, localeNow), sheet = useNativeSheet();
   const { state, controller, workspace, workspaceState } = useAdminWorkMap(shell.session, shell.isCurrent), [query, setQuery] = useState('');
   const [filterExpanded, setFilterExpanded] = useState(false);
-  const goBack = useCallback(() => { if (router.canGoBack()) router.back(); else router.replace(`/${Platform.OS}-admin` as Href); }, []);
+  const goBack = useCallback(() => {
+    if (!shell.isCurrent()) return;
+    if (router.canGoBack()) router.back();
+    else { const home = shell.destination(homeRoute(shell.session), Platform.OS); if (home) router.replace(home as Href); }
+  }, [shell]);
   const onProfile = useCallback(() => {
     const path = shell.isCurrent() ? shell.destination(appRoutes.profile, Platform.OS) : null;
     if (path) router.push(path as Href);

@@ -11,6 +11,7 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const currentLocale = () => localeController.locale;
 
 type Security = {
+  isCurrent?: () => boolean;
   hasPin: boolean;
   biometric: boolean;
   canUseBiometric: boolean;
@@ -27,7 +28,7 @@ export function useWorkerSecurity(): Security {
   return value;
 }
 
-export function WorkerSecurityProvider({ session, onLogout, children }: { session: Session; onLogout: () => void; children: ReactNode }) {
+export function WorkerSecurityProvider({ session, onLogout, children, isCurrent }: { session: Session; onLogout: () => void; children: ReactNode; isCurrent?: () => boolean }) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const text = (key: string) => localizedGetter(key, locale);
   const dark = useColorScheme() === 'dark';
@@ -47,6 +48,10 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
   const autoBiometricAttempted = useRef(false);
   const lifecycleEpoch = useRef(0);
   const mounted = useRef(false);
+  const current = useCallback(() => {
+    try { return isCurrent === undefined || isCurrent() === true; } catch { return false; }
+  }, [isCurrent]);
+  const guard = isCurrent === undefined ? undefined : current;
 
   const load = useCallback(async () => {
     try {
@@ -92,30 +97,31 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
   }, []);
 
   const savePin = useCallback(async (pin: string) => {
-    await saveAppPin(session, pin);
-    if (mounted.current) {
+    await saveAppPin(session, pin, guard);
+    if (mounted.current && current()) {
       pinPresent.current = true;
       setHasPin(true);
       if (AppState.currentState !== 'active') { lifecycle.current.wasBackgrounded = true; setShield(true); }
     }
-  }, [session]);
+  }, [session, guard, current]);
 
   const removePin = useCallback(async () => {
-    await clearAppLock(session);
-    if (mounted.current) { pinPresent.current = false; setHasPin(false); setBiometric(false); setLocked(false); setShield(false); }
-  }, [session]);
+    await clearAppLock(session, guard);
+    if (mounted.current && current()) { pinPresent.current = false; setHasPin(false); setBiometric(false); setLocked(false); setShield(false); }
+  }, [session, guard, current]);
 
   const setBiometricEnabled = useCallback(async (enabled: boolean) => {
+    if (!current()) throw new Error('Akkaunt o‘zgargan');
     if (authenticating.current) throw new Error('Biometrik tasdiq davom etmoqda.');
     authenticating.current = enabled;
     try {
-      await setAppBiometric(session, enabled);
+      await setAppBiometric(session, enabled, guard);
       if (enabled) lifecycle.current.suspendResumeLock = true;
-      if (mounted.current) setBiometric(enabled);
+      if (mounted.current && current()) setBiometric(enabled);
     } finally {
       authenticating.current = false;
     }
-  }, [session]);
+  }, [session, guard, current]);
 
   const unlock = async () => {
     if (unlocking.current) return;
@@ -163,7 +169,8 @@ export function WorkerSecurityProvider({ session, onLogout, children }: { sessio
 
   const bg = dark ? '#000000' : '#f2f2f7';
   const foreground = dark ? '#ffffff' : '#1c1c1e';
-  const value: Security = { hasPin, biometric, canUseBiometric: biometricAvailable(), savePin, removePin, setBiometric: setBiometricEnabled };
+  const value: Security = { hasPin, biometric, canUseBiometric: biometricAvailable(), savePin, removePin, setBiometric: setBiometricEnabled,
+    ...(isCurrent === undefined ? {} : { isCurrent: current }) };
   return <SecurityContext.Provider value={value}>
     <View style={styles.flex}>{loaded && !loadError ? children : <View style={[styles.center, { backgroundColor: bg }]}>
       {loadError ? <><Text style={[styles.message, { color: foreground }]}>{loadError}</Text>

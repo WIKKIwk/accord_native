@@ -7,7 +7,7 @@ import { WorkerControlException } from '../workerControlsApi';
 /** @v2 inventoryRelocateBatch */
 export async function inventoryRelocateBatch(session: Session, input: {
   assets: readonly { kind: string; asset_ref: string }[]; physicalLocationId: string; idempotencyKey: string; note?: string;
-}, beforeSend?: () => void) {
+}, beforeSend?: () => void, afterResponse?: () => void) {
   const assets = new Map<string, { asset_kind: string; asset_ref: string }>();
   for (const asset of input.assets) {
     const ref = asset.asset_ref.trim();
@@ -20,8 +20,10 @@ export async function inventoryRelocateBatch(session: Session, input: {
     body: JSON.stringify({ assets: [...assets.values()], physical_location_id: location, idempotency_key: key,
       ...(input.note?.trim() ? { note: input.note.trim() } : {}) }),
   }, beforeSend);
-  if (!response.ok) throw await inventoryResponseError(response, 'inventory_relocation_failed', 'Joylashuv o‘zgartirilmadi');
+  afterResponse?.();
+  if (!response.ok) { const error = await inventoryResponseError(response, 'inventory_relocation_failed', 'Joylashuv o‘zgartirilmadi'); afterResponse?.(); throw error; }
   const payload: unknown = await response.json();
+  afterResponse?.();
   if (!Array.isArray(payload)) throw new TypeError('Invalid inventory assets');
   return payload.filter(row => row && typeof row === 'object' && !Array.isArray(row)).map(inventoryAssetFromJson);
 }

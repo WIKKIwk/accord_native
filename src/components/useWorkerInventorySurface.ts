@@ -11,7 +11,13 @@ export type InventorySheet = { id: number } & ({ kind: 'asset' | 'qr'; asset: Mo
 type SheetContent = InventorySheet extends infer S ? S extends InventorySheet ? Omit<S, 'id'> : never : never;
 
 export function useWorkerInventorySurface(session: Session) {
-  const inventory = useWorkerInventory(session), { owner, state } = inventory, { t } = useWorkerOrderText();
+  const inventory = useWorkerInventory(session);
+  return useInventorySurface(session, inventory);
+}
+
+/** Reuse the native inventory surface with an independently captured role owner. */
+export function useInventorySurface(session: Session, inventory: ReturnType<typeof useWorkerInventory>) {
+  const { owner, state } = inventory, { t } = useWorkerOrderText();
   const [sheet, setSheet] = useState<InventorySheet | null>(null), [alert, setAlert] = useState<WorkerAlertData | null>(null);
   const sequence = useRef(0), currentSheet = useRef<number | null>(null), continuation = useRef<(() => void) | null>(null);
   const open = (content: SheetContent) => {

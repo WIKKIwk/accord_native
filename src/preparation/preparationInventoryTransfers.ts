@@ -15,7 +15,7 @@ const jsonPost = (body: Record<string, unknown>): RequestInit => ({ method: 'POS
 
 /** @v2 inventoryCreateTransfer */
 export async function inventoryCreateTransfer(session: Session, input: { sourceWarehouseId: string; destinationWarehouseId: string;
-  assets: Asset[]; idempotencyKey: string; note?: string }, beforeSend?: () => void) {
+  assets: Asset[]; idempotencyKey: string; note?: string }, beforeSend?: () => void, afterResponse?: () => void) {
   const source = input.sourceWarehouseId.trim(), destination = input.destinationWarehouseId.trim(), key = input.idempotencyKey.trim();
   if (!source || !destination || source === destination || !input.assets.length || !key)
     throw new WorkerControlException('inventory_transfer_invalid', 'Manba, qabul qiluvchi va mahsulotni tanlang');
@@ -25,7 +25,8 @@ export async function inventoryCreateTransfer(session: Session, input: { sourceW
     assets: input.assets.map(asset => ({ asset_kind: asset.kind, asset_ref: asset.asset_ref })),
     idempotency_key: key, ...(note ? { note } : {}),
   }), beforeSend);
-  return decode(response, 'inventory_transfer_create_failed', 'Transfer yaratilmadi');
+  afterResponse?.();
+  try { return await decode(response, 'inventory_transfer_create_failed', 'Transfer yaratilmadi'); } finally { afterResponse?.(); }
 }
 
 /** @v2 inventoryTransferAction */

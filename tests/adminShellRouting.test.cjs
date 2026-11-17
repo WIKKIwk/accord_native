@@ -59,8 +59,9 @@ test('Admin home is held while separately ported roles retain their targets', ()
     assert.equal(routes.homeTarget(value, 'android'), null);
     assert.equal(routes.homeTarget(value, 'web'), null);
   }
-  for (const value of [sales, brigader]) { assert.equal(access.adminShellMayEnter(value), false);
-    assert.equal(routes.homeTarget(value, 'ios'), null); assert.equal(routes.homeTarget(value, 'android'), null); }
+  for (const value of [sales, brigader]) assert.equal(access.adminShellMayEnter(value), false);
+  assert.equal(routes.homeTarget(sales, 'ios'), null); assert.equal(routes.homeTarget(sales, 'android'), null);
+  assert.equal(routes.homeTarget(brigader, 'ios'), '/ios-brigader'); assert.equal(routes.homeTarget(brigader, 'android'), '/android-brigader');
   assert.equal(routes.homeTarget(worker, 'ios'), '/ios-worker'); assert.equal(routes.homeTarget(worker, 'android'), 'worker');
   assert.equal(routes.homeTarget(prep, 'ios'), '/ios-preparation'); assert.equal(routes.homeTarget(prep, 'android'), '/android-preparation');
   assert.equal(routes.homeTarget(session('supplier', ['supplier.access']), 'ios'), null);

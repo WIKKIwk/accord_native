@@ -16,7 +16,7 @@ import { useSwitchPinSetup } from './useSwitchPinSetup.android';
 import { BaseHost as Host } from './BaseHost';
 import { useAppUpdate } from './AppUpdateProvider';
 
-type Props = { session: Session; onClose: () => void; onLogout: () => void };
+type Props = { session: Session; onClose: () => void; onLogout: () => void; isCurrent?: () => boolean };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 const subscribeTheme = (listener: () => void) => themeController.addListener(listener);
@@ -27,18 +27,19 @@ const appearanceChoices: { id: AppearancePreference; label: string }[] = [
 
 // @v2 _ProfileSettingsSheet
 // @v2 _ProfileSelectionSheet
-export function ProfileSettings({ session, onClose, onLogout }: Props) {
+export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const t = (key: string) => localizedGetter(key, locale);
   const colors = useMaterialColors();
   const { appearance, setAppearance } = useAppSettings();
   const pin = usePinSetup();
-  const switchPin = useSwitchPinSetup(session);
+  const switchPin = useSwitchPinSetup(session, isCurrent);
   const openUpdate = useAppUpdate();
   const [biometricBusy, setBiometricBusy] = useState(false);
   const biometricPending = useRef(false);
   const selectionSheet = useNativeSheet();
+  const current = () => isCurrent === undefined || isCurrent() === true;
   const languages = [
     { id: 'uz', label: t('uzbek') }, { id: 'en', label: t('english') },
     { id: 'ru', label: t('russian') }, { id: 'ur-PK', label: 'اردو (پاکستان)' },
@@ -60,18 +61,19 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   });
 
   const setBiometric = async (enabled: boolean) => {
-    if (biometricPending.current) return;
+    if (!current() || biometricPending.current) return;
     biometricPending.current = true;
     setBiometricBusy(true);
     try { await pin.security.setBiometric(enabled); }
-    catch { Alert.alert(t(enabled ? 'biometricEnableFailed' : 'biometricDisableFailed')); }
-    finally { biometricPending.current = false; setBiometricBusy(false); }
+    catch { if (current()) Alert.alert(t(enabled ? 'biometricEnableFailed' : 'biometricDisableFailed')); }
+    finally { biometricPending.current = false; if (current()) setBiometricBusy(false); }
   };
 
   const submitPin = async () => {
+    if (!current()) return;
     const setting = pin.mode === 'set';
     const saved = await pin.submit();
-    if (saved && setting && pin.security.canUseBiometric && !pin.security.biometric) {
+    if (current() && saved && setting && pin.security.canUseBiometric && !pin.security.biometric) {
       Alert.alert(t('biometricQuickUnlockTitle'), t('biometricQuickUnlockPrompt'), [
         { text: t('no'), style: 'cancel' },
         { text: t('yes'), onPress: () => { void setBiometric(true); } },
@@ -80,22 +82,26 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   };
 
   const chooseLanguage = () => {
+    if (!current()) return;
     selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('languageTitle')}</Text>
       <Text color={colors.onSurfaceVariant}>{t('languageBody')}</Text>
       {languages.map(choice => <TextButton key={choice.id} onClick={() => {
+        if (!current()) return;
         selectionSheet.close();
-        void localeController.setLocale(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
+        void localeController.setLocale(choice.id).catch(() => { if (current()) Alert.alert('Saqlab bo‘lmadi'); });
       }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{locale === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row></TextButton>)}
     </Column></Host>, { dismissible: true });
   };
 
   const chooseAppearance = () => {
+    if (!current()) return;
     selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeModeTitle')}</Text>
       {appearanceChoices.map(choice => <TextButton key={choice.id} onClick={() => {
+        if (!current()) return;
         selectionSheet.close();
-        void setAppearance(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
+        void setAppearance(choice.id).catch(() => { if (current()) Alert.alert('Saqlab bo‘lmadi'); });
       }} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID(`profile-appearance-${choice.id}`)]}>
         <Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{appearance === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row>
       </TextButton>)}
@@ -103,12 +109,14 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   };
 
   const chooseTheme = () => {
+    if (!current()) return;
     selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeTitle')}</Text>
       <Text color={colors.onSurfaceVariant}>{t('themeBody')}</Text>
       {themes.map(choice => <TextButton key={choice.id} onClick={() => {
+        if (!current()) return;
         selectionSheet.close();
-        void themeController.setVariant(choice.id).catch(() => Alert.alert('Saqlab bo‘lmadi'));
+        void themeController.setVariant(choice.id).catch(() => { if (current()) Alert.alert('Saqlab bo‘lmadi'); });
       }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{variant === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row></TextButton>)}
     </Column></Host>, { dismissible: true });
   };
@@ -131,7 +139,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
   return <Column verticalArrangement={{ spacedBy: 12 }} modifiers={[fillMaxWidth(), verticalScroll(), padding(16, 8, 16, 28)]}>
     <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
       <Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }} modifiers={[weight(1)]}>{t('profileSettingsTitle')}</Text>
-      <IconButton enabled={!pin.busy && !switchPin.busy && !biometricBusy} onClick={onClose} modifiers={[semantics({ contentDescription: t('closeAction') })]}>
+      <IconButton enabled={!pin.busy && !switchPin.busy && !biometricBusy} onClick={() => { if (current()) onClose(); }} modifiers={[semantics({ contentDescription: t('closeAction') })]}>
         <Icon source={require('../../assets/icons/gscale/close.xml')} size={22} tint={colors.onSurfaceVariant} />
       </IconButton>
     </Row>
@@ -198,7 +206,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
     </Column>
     {sectionTitle(t('appTitle'))}
     <Column modifiers={cardModifiers}>
-      <TextButton onClick={openUpdate} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}>
+      <TextButton onClick={() => { if (current()) openUpdate(); }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}>
         <Column verticalArrangement={{ spacedBy: 3 }}><Text>{t('appUpdateSettingsTitle')}</Text>
           <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t('appUpdateSettingsBody')}</Text></Column>
       </Row></TextButton>
@@ -209,7 +217,7 @@ export function ProfileSettings({ session, onClose, onLogout }: Props) {
       </Row>
     </Column>
     <Column modifiers={cardModifiers}>
-      <TextButton onClick={onLogout} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID('profile-disconnect')]}><Row modifiers={[fillMaxWidth()]}>
+      <TextButton onClick={() => { if (current()) onLogout(); }} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID('profile-disconnect')]}><Row modifiers={[fillMaxWidth()]}>
         <Column verticalArrangement={{ spacedBy: 3 }}><Text color={colors.error}>{t('disconnectSessionTitle')}</Text>
           <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }}>{t('disconnectSessionBody')}</Text></Column>
       </Row></TextButton>

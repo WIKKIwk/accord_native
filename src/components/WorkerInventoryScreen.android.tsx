@@ -10,13 +10,22 @@ import { WorkerFormField } from './WorkerFormField';
 import { WorkerInventoryScanner } from './WorkerInventoryScanner';
 import { WorkerInventorySheet } from './WorkerInventorySheet';
 import { WorkerSheetButton } from './WorkerSheetButton';
-import { useWorkerInventorySurface } from './useWorkerInventorySurface';
+import { useWorkerInventorySurface, type WorkerInventorySurface } from './useWorkerInventorySurface';
 import { useWorkerInventoryKey } from './useWorkerInventory';
 
 /** @v2 InventoryMovementsScreen */
 export function WorkerInventoryScreen(props: { session: Session; onBack: () => void }) { const key = useWorkerInventoryKey(props.session); return <InventoryOwner key={key} {...props} />; }
 function InventoryOwner({ session, onBack }: { session: Session; onBack: () => void }) {
-  const surface = useWorkerInventorySurface(session), { state, owner, t } = surface, colors = useMaterialColors();
+  const surface = useWorkerInventorySurface(session), colors = useMaterialColors();
+  return renderWorkerInventoryContent({ session, onBack, surface, colors });
+}
+
+export function WorkerInventoryContent(props: { session: Session; onBack: () => void; surface: WorkerInventorySurface }) {
+  const colors = useMaterialColors();
+  return renderWorkerInventoryContent({ ...props, colors });
+}
+function renderWorkerInventoryContent({ session, onBack, surface, colors }: { session: Session; onBack: () => void; surface: WorkerInventorySurface; colors: ReturnType<typeof useMaterialColors> }) {
+  const { state, owner, t } = surface;
   const tabs = [{ id: 'assets', name: 'Mahsulotlar' }, { id: 'incoming', name: 'Kiruvchi' }, { id: 'outgoing', name: 'Chiquvchi' }];
   if (!surface.valid) return <Host style={{ flex: 1 }}><Text>{t('Inventar ruxsatlari o‘zgardi. Hisobni yangilang.')}</Text></Host>;
   return <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.surface }}>

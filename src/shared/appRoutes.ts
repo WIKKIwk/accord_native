@@ -716,6 +716,7 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
 
 // Add a single row when both platform screens for a V2 home become available.
 const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
+  [appRoutes.brigaderHome]: { ios: '/ios-brigader' as Href, android: '/android-brigader' as Href },
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
   [appRoutes.qolipHome]: { ios: '/ios-qolip' as Href, android: '/android-qolip' as Href },
   [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
@@ -728,6 +729,7 @@ const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
   const route = homeRoute(session);
+  if (session.profile.role === 'brigader' && session.token === 'test-mode-token') return null;
   if (session.profile.role === 'rezka_master') {
     if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, route)) return null;
     return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;

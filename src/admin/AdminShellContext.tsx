@@ -8,10 +8,12 @@ import { adminHomeSummaryReader } from './adminHomeSummaryReader';
 import { adminShellMayEnter, adminDestinationPath } from './adminShellAccess';
 import { AdminStore } from './adminStore';
 
-type AdminShell = { session: Session; witness: SessionWitness; store: AdminStore; onLogout: () => void; isCurrent: () => boolean;
+export type AdminShell = { session: Session; witness: SessionWitness; store: AdminStore; onLogout: () => void; isCurrent: () => boolean;
   destination: (route: string, platform: string) => string | null; isRouteAvailable: (route: string) => boolean;
   activityBinding: AdminActivityBinding | null };
 const Context = createContext<AdminShell | null>(null);
+/** Shared views retain the actual workspace owner rather than impersonating an Admin session. */
+export const AdminShellContextProvider = Context.Provider;
 // These reviewed child compositions remain behind the actual Admin root hold.
 const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.adminHome, appRoutes.profile,
   appRoutes.adminProductionMapOrders, appRoutes.adminActivity, appRoutes.adminFactoryLocations,

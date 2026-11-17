@@ -13,13 +13,13 @@ import { useWorkerColors } from './useWorkerColors';
 import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import type { WorkerInventorySurface } from './useWorkerInventorySurface';
 
-export function WorkerInventorySheet({ session, surface }: { session: Session; surface: WorkerInventorySurface }) {
+export function WorkerInventorySheet({ session, surface, showFooter = true }: { session: Session; surface: WorkerInventorySurface; showFooter?: boolean }) {
   const sheet = surface.sheet;
   return sheet ? <WorkerOrderSheet key={sheet.id} dismissible compact onClose={() => surface.dismiss(sheet.id)}>
-    <SheetContent session={session} surface={surface} />
+    <SheetContent session={session} surface={surface} showFooter={showFooter} />
   </WorkerOrderSheet> : null;
 }
-function SheetContent({ session, surface }: { session: Session; surface: WorkerInventorySurface }) {
+function SheetContent({ session, surface, showFooter }: { session: Session; surface: WorkerInventorySurface; showFooter: boolean }) {
   const { sheet, t } = surface, close = useContext(WorkerSheetCloseContext), colors = useWorkerColors();
   const [printing, setPrinting] = useState(false);
   if (!sheet) return null;
@@ -51,7 +51,7 @@ function SheetContent({ session, surface }: { session: Session; surface: WorkerI
       <WorkerSheetButton label={t('Joylashtirish')} disabled={!surface.canRelocate} onPress={() => after(() => surface.chooseRelocation(sheet.asset))} />
       <WorkerSheetButton label={t('Transfer')} variant="filled" disabled={!surface.canTransfer} onPress={() => after(() => surface.chooseTransfer(sheet.asset))} />
     </>}
-    <WorkerSheetButton label={t('Yopish')} disabled={printing} onPress={() => close?.()} />
+    {showFooter ? <WorkerSheetButton label={t('Yopish')} disabled={printing} onPress={() => close?.()} /> : null}
   </View>;
 }
 function InventoryQr({ session, asset, surface, onPrinting }: { session: Session; asset: MovementAsset; surface: WorkerInventorySurface; onPrinting: (value: boolean) => void }) {

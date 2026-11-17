@@ -15,7 +15,7 @@ export async function inventoryResponseError(response: Response, fallbackCode: s
 export interface InventoryAssetsOptions { warehouse_id?: string; query?: string; asset_kind?: 'raw_material' | 'finished_goods' | 'qolip';
   current_user_states_only?: boolean; include_order_assignment?: boolean; limit?: number; offset?: number }
 /** @v2 inventoryAssets */
-export async function inventoryAssets(session: Session, input: InventoryAssetsOptions = {}) {
+export async function inventoryAssets(session: Session, input: InventoryAssetsOptions = {}, beforeSend?: () => void, readWitness?: () => boolean) {
   const query = new URLSearchParams();
   if (input.warehouse_id?.trim()) query.set('warehouse_id', input.warehouse_id.trim());
   if (input.query?.trim()) query.set('query', input.query.trim());
@@ -24,31 +24,40 @@ export async function inventoryAssets(session: Session, input: InventoryAssetsOp
   if (input.include_order_assignment) query.set('include_order_assignment', 'true');
   query.set('limit', String(input.limit ?? 100));
   if ((input.offset ?? 0) > 0) query.set('offset', String(input.offset));
-  const response = await authorizedFetch(session, `/v1/mobile/admin/inventory/assets?${query}`);
-  if (response.status !== 200) throw await inventoryResponseError(response, 'inventory_assets_load_failed', 'Ombordagi mahsulotlar yuklanmadi');
+  beforeSend?.();
+  const response = await authorizedFetch(session, `/v1/mobile/admin/inventory/assets?${query}`, {}, beforeSend, 10_000, readWitness ? { readWitness } : undefined);
+  beforeSend?.();
+  if (response.status !== 200) { const error = await inventoryResponseError(response, 'inventory_assets_load_failed', 'Ombordagi mahsulotlar yuklanmadi'); beforeSend?.(); throw error; }
   const payload: unknown = await response.json();
+  beforeSend?.();
   if (!Array.isArray(payload)) throw new TypeError('Invalid inventory assets');
   return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryAssetFromJson);
 }
 
 /** @v2 inventoryLocations */
-export async function inventoryLocations(session: Session) {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/inventory/locations');
-  if (response.status !== 200) throw await inventoryResponseError(response, 'inventory_locations_load_failed', 'Joylashuvlar yuklanmadi');
+export async function inventoryLocations(session: Session, beforeSend?: () => void, readWitness?: () => boolean) {
+  beforeSend?.();
+  const response = await authorizedFetch(session, '/v1/mobile/admin/inventory/locations', {}, beforeSend, 10_000, readWitness ? { readWitness } : undefined);
+  beforeSend?.();
+  if (response.status !== 200) { const error = await inventoryResponseError(response, 'inventory_locations_load_failed', 'Joylashuvlar yuklanmadi'); beforeSend?.(); throw error; }
   const payload: unknown = await response.json();
+  beforeSend?.();
   if (!Array.isArray(payload)) throw new TypeError('Invalid inventory locations');
   return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryLocationFromJson);
 }
 
 /** @v2 inventoryTransfers */
-export async function inventoryTransfers(session: Session, input: { direction?: string; status?: string | null; limit?: number; offset?: number } = {}) {
+export async function inventoryTransfers(session: Session, input: { direction?: string; status?: string | null; limit?: number; offset?: number } = {}, beforeSend?: () => void, readWitness?: () => boolean) {
   const query = new URLSearchParams({ direction: input.direction ?? 'all' });
   if (input.status != null) query.set('status', input.status);
   query.set('limit', String(input.limit ?? 100));
   if ((input.offset ?? 0) > 0) query.set('offset', String(input.offset));
-  const response = await authorizedFetch(session, `/v1/mobile/admin/inventory/transfers?${query}`);
-  if (response.status !== 200) throw await inventoryResponseError(response, 'inventory_transfers_load_failed', 'Transferlar yuklanmadi');
+  beforeSend?.();
+  const response = await authorizedFetch(session, `/v1/mobile/admin/inventory/transfers?${query}`, {}, beforeSend, 10_000, readWitness ? { readWitness } : undefined);
+  beforeSend?.();
+  if (response.status !== 200) { const error = await inventoryResponseError(response, 'inventory_transfers_load_failed', 'Transferlar yuklanmadi'); beforeSend?.(); throw error; }
   const payload: unknown = await response.json();
+  beforeSend?.();
   if (!Array.isArray(payload)) throw new TypeError('Invalid inventory transfers');
   return payload.filter(value => value && typeof value === 'object' && !Array.isArray(value)).map(inventoryTransferFromJson);
 }
