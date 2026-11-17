@@ -6,23 +6,27 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { usePreparationText } from './PreparationUI.android';
 
 export type FormulaMenuAction = 'edit' | 'delete' | 'rename';
+type PopupAction = FormulaMenuAction | 'shares';
 const options = {
   edit: { label: 'Tahrirlash', icon: 'edit' },
   delete: { label: 'O‘chirish', icon: 'delete' },
   rename: { label: 'Nomini o‘zgartirish', icon: 'drive_file_rename_outline' },
+  shares: { label: 'Shnek ulushlarini belgilash', icon: 'tune' },
 } as const;
 const defaultActions: readonly FormulaMenuAction[] = ['edit', 'delete'];
 
-export function PreparationFormulaMenu({ name, disabled = false, actions = defaultActions, onSelect }: {
+export function PreparationFormulaMenu({ name, disabled = false, actions = defaultActions, onSelect, onShares, expanded: controlledExpanded, onExpandedChange }: {
   name: string; disabled?: boolean; actions?: readonly FormulaMenuAction[]; onSelect: (action: FormulaMenuAction) => void;
+  onShares?: () => void; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void;
 }) {
-  const colors = useMaterialColors(), t = usePreparationText(), [expanded, setExpanded] = useState(false);
-  const select = (action: FormulaMenuAction) => {
+  const colors = useMaterialColors(), t = usePreparationText(), [localExpanded, setLocalExpanded] = useState(false);
+  const expanded = controlledExpanded ?? localExpanded, setExpanded = onExpandedChange ?? setLocalExpanded;
+  const select = (action: PopupAction) => {
     setExpanded(false);
-    if (!disabled) requestAnimationFrame(() => onSelect(action));
+    if (!disabled) requestAnimationFrame(() => { if (action === 'shares') onShares?.(); else onSelect(action); });
   };
   return <View style={styles.trigger}>
-    {expanded && !disabled ? <FormulaMenuPopup close={() => setExpanded(false)} actions={actions} select={select} /> : null}
+    {expanded && !disabled ? <FormulaMenuPopup close={() => setExpanded(false)} actions={onShares ? [...actions, 'shares'] : actions} select={select} /> : null}
     <Pressable key="trigger" accessibilityRole="button" accessibilityLabel={`${name} — ${t('Amallar')}`} disabled={disabled}
       onPress={event => { event.stopPropagation(); setExpanded(true); }} style={styles.trigger}>
       <SymbolView name={{ android: 'more_vert' }} size={24} tintColor={colors.onSurfaceVariant} />
@@ -31,7 +35,7 @@ export function PreparationFormulaMenu({ name, disabled = false, actions = defau
 }
 
 function FormulaMenuPopup({ close, actions, select }: {
-  close: () => void; actions: readonly FormulaMenuAction[]; select: (action: FormulaMenuAction) => void;
+  close: () => void; actions: readonly PopupAction[]; select: (action: PopupAction) => void;
 }) {
   const colors = useMaterialColors(), t = usePreparationText(), [ready, setReady] = useState(false);
   return <Host pointerEvents="none" style={styles.overlay} onLayoutContent={({ nativeEvent }) => {

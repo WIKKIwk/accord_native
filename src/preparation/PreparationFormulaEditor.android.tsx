@@ -10,7 +10,7 @@ import { appRoutes, canOpenRoute } from '../shared/appRoutes';
 import { usePreparationContext } from './PreparationContext.android';
 import { PreparationFormulaEditForm } from './PreparationFormulaEditForm.android';
 import { PreparationFormulaMenu } from './PreparationFormulaMenu.android';
-import { PreparationFormulaDetails, type FormulaDetailAction } from './PreparationFormulaDetails.android';
+import type { FormulaDetailAction } from './PreparationFormulaDetails.android';
 import { InventorySheetButton } from './PreparationInventoryDetails.android';
 import { PreparationSeriyoPicker } from './PreparationSeriyoPicker.android';
 import type { PreparationMaterial } from './preparationLogic';
@@ -73,7 +73,7 @@ export function PreparationOrderFormulaScreen() {
 function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
   const { session } = usePreparationContext(), state = usePreparationFormulaView(session, options), dialogs = usePreparationDialogs(), t = usePreparationText();
   const colors = useMaterialColors();
-  const [shares, setShares] = useState(false), sheet = useNativeSheet();
+  const [shares, setShares] = useState(false), [menuOpen, setMenuOpen] = useState<string | null>(null), sheet = useNativeSheet();
   const { message: noticeMessage, show: showNotice } = usePreparationNotice();
   const scaleReturn = useRef<(() => void) | null>(null);
   useFocusEffect(useCallback(() => { scaleReturn.current?.(); scaleReturn.current = null; }, []));
@@ -89,12 +89,6 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
     else if (action === 'delete' && await dialogs.confirm('Formulani o‘chirish', `«${formula.name}» formulasi o‘chirilsinmi?`, 'O‘chirish')) {
       try { if (await state.controller.remove(formula.name)) showNotice(t('Formula o‘chirildi')); } catch (error) { showError(error); }
     }
-  };
-  const openFormula = (formula: PreparationFormula) => {
-    let selected: FormulaDetailAction | null = null;
-    sheet.open(<PreparationFormulaDetails formula={formula} formulas={state.formulas} materialName={options.materialName}
-      estimatedKg={state.estimatedMaterialKg} onSelect={action => { selected = action; sheet.close(); }} />,
-    { dismissible: true, compact: true, onDismiss: () => { if (selected) void formulaAction(formula, selected); } });
   };
   const chooseMaterial = (index: number) => {
     let selected: PreparationMaterial | null = null;
@@ -130,7 +124,7 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
       {state.formulas.length ? <View style={styles.formulas}>{state.formulas.map((formula, index) => {
         const card = preparationFormulaCard(formula, state.formulas, state.estimatedMaterialKg);
         return <WorkerQueueCard key={formula.name} backgroundColor={colors.surface} first={index === 0} last={index === state.formulas.length - 1}
-          onPress={blocked ? undefined : () => openFormula(formula)}>
+          onPress={blocked ? undefined : () => setMenuOpen(formula.name)}>
           <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
             <SymbolView name={{ android: 'functions' }} size={20} tintColor={colors.onSurfaceVariant} />
           </View>
@@ -138,7 +132,9 @@ function FormulaEditor({ options }: { options: PreparationFormulaOptions }) {
             <NativeText style={[styles.headline, { color: colors.onSurface }]}>{formula.name}</NativeText>
             <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{[card.count, card.share, ...card.lines].join('\n')}</NativeText>
           </View>
-          <View style={styles.menu}><PreparationFormulaMenu name={formula.name} disabled={blocked} onSelect={action => {
+          <View style={styles.menu}><PreparationFormulaMenu name={formula.name} disabled={blocked}
+            expanded={menuOpen === formula.name} onExpandedChange={open => setMenuOpen(open ? formula.name : null)}
+            onShares={() => { if (!blocked) void formulaAction(formula, 'shares'); }} onSelect={action => {
             if (!blocked && action !== 'rename') void formulaAction(formula, action);
           }} /></View>
         </WorkerQueueCard>;

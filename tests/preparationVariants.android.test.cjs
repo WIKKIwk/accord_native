@@ -149,6 +149,15 @@ test('only dots open the anchored menu and actions target the selected variant',
     innerTree = x.renderPart(innerMenu);
     const innerPopup = x.renderPart(nodes(innerTree, node => node.type?.name === 'FormulaMenuPopup')[0]);
     assert.deepEqual(nodes(innerPopup, node => node.type === x.menuItem).map(item => nodes(item, node => node.type === 'Text')[0].props.children), ['Tahrirlash', 'O‘chirish']);
+    const withShares = { type: x.menuControl, props: { ...innerMenu.props, expanded: true,
+      onExpandedChange: value => x.calls.push(['expanded', value]), onShares: () => x.calls.push(['shares']) } };
+    const sharesTree = x.renderPart(withShares);
+    const sharesPopup = x.renderPart(nodes(sharesTree, node => node.type?.name === 'FormulaMenuPopup')[0]);
+    const sharesItems = nodes(sharesPopup, node => node.type === x.menuItem);
+    assert.deepEqual(sharesItems.map(item => nodes(item, node => node.type === 'Text')[0].props.children),
+      ['Tahrirlash', 'O‘chirish', 'Shnek ulushlarini belgilash']);
+    sharesItems[2].props.onClick(); frames.shift()();
+    assert.deepEqual(x.calls.slice(-2), [['expanded', false], ['shares']]);
   } finally { global.requestAnimationFrame = previousFrame; }
 });
 
