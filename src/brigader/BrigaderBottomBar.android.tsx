@@ -14,7 +14,7 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const currentLocale = () => localeController.locale;
 
 /** Reuse V2's Admin dock policy and the existing native Material navigation bar. */
-export function BrigaderBottomBar({ active }: { active: AdminDockTab | null }) {
+export function BrigaderBottomBar({ active, primary = true }: { active: AdminDockTab | null; primary?: boolean }) {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), insets = useSafeAreaInsets();
   const navigation = useNavigation(), focused = useIsFocused(), focus = useRef(focused), mounted = useRef(false);
   useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -43,5 +43,5 @@ export function BrigaderBottomBar({ active }: { active: AdminDockTab | null }) {
       adminDockSelection(destination, active, context.currentPath() === homePath ? home : null, home) !== 'replaceRoot') return;
     adminRootNavigation.schedule(destination.routeName, context);
   };
-  return <><BrigaderPrimaryAction isCurrent={context.isCurrent} canInteract={context.isCurrent} /><RoleBottomBar active={destinations.find(item => item.tab === active)?.id ?? ''} items={items} onSelect={select} bottomInset={insets.bottom} /></>;
+  return <>{primary ? <BrigaderPrimaryAction isCurrent={context.isCurrent} canInteract={context.isCurrent} /> : null}<RoleBottomBar active={destinations.find(item => item.tab === active)?.id ?? ''} items={items} onSelect={select} bottomInset={insets.bottom} /></>;
 }

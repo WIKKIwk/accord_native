@@ -231,3 +231,23 @@ Final follow-up lint: zero errors, one pre-existing warning at `AdminClosedHisto
 - Post-merge iOS and Android TypeScript pass. Post-merge lint has zero errors and the same pre-existing dependency warning.
 - 145 relevant regression cases passed across original-role navigation, native composition, creation transport/state and shared Chat.
 - This merge completes the connections listed above; it does not complete the 25 absent source feature routes or full 1:1 Brigader parity.
+
+## Remaining-routes checkpoint: products
+
+Connected the original Item Create/Bulk Move and Item Detail native implementations on both platforms. Original
+DTOs and return values stay in a scoped private registry; a child result is delivered only after its actual native
+route unmounts. Customer creation retains the source customer-only User Create flow. The real native dialog/sheet
+attachment and detach acknowledgements guard decision commands. No Admin identity or permission is substituted.
+
+Added the actual per-route Source Scaffold/ScaffoldMessenger integration using the existing native layout observer,
+real viewport/dock markers, platform palette and accessibility settings. Accepted notices survive route changes.
+These adapters are shared supporting changes to `AdminFixedSnackBar*` and `useAdminTopNoticeScaffold`.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Item Create / bulk move: AppRouter item-create/bulk-move branches; admin_item_create_screen and dialogs | BrigaderItemCreate + existing AdminItemCreateScreen | source controls and result flow compared | source controls and result flow compared | Native platform controls; device acceptance pending |
+| Item detail edit/delete/group/customer/actions: admin_item_detail_screen, admin_item_detail_editors | BrigaderItemDetailPresentations + AdminItemDetail native leaves | dismissal/result lifecycle compared | native attach/detach lifecycle compared | Native platform controls; device acceptance pending |
+
+Verification: both platform TypeScript checks pass; Expo lint has zero errors and the one inherited
+AdminClosedHistoryOwner warning. No unit or device tests were run in this request, as requested by the user.
+The remaining 22 software routes are still in progress; this checkpoint is not completion of Brigader parity.

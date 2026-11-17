@@ -20,7 +20,7 @@ export function AdminFixedSnackBarProvider(props: AdminFixedSnackBarProviderProp
   const { messenger } = useAdminTopNoticeTarget(), { reader, visibility, palette, dismissLabel, disableAnimations } = props;
   if (!reader || typeof reader.isAvailable !== 'function' || typeof reader.observe !== 'function' || !visibility ||
     typeof visibility.subscribe !== 'function' || typeof visibility.canInteract !== 'function' || typeof visibility.tickerEnabled !== 'function' ||
-    !palette || typeof palette.inverseSurface !== 'string' || !palette.inverseSurface || typeof palette.onInverseSurface !== 'string' || !palette.onInverseSurface ||
+    !palette || !palette.inverseSurface || !palette.onInverseSurface ||
     typeof dismissLabel !== 'string' || typeof disableAnimations !== 'boolean') throw TypeError('Actual fixed SnackBar window, palette, visibility and accessibility facts are required');
   const queue = adminFixedSnackBarController(messenger), driver = useMemo(() => ({ queue }), [queue]);
   const readiness = useMemo(() => new AdminFixedSnackBarNativeReadiness(queue), [queue]); useSyncExternalStore(readiness.subscribe, readiness.getSnapshot, readiness.getSnapshot);

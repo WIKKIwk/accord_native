@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { useAdminShell } from '../admin/AdminShellContext';
 import { useAdminPageAuthority } from '../admin/useAdminPageAuthority';
 import { adminActivityBackLabel } from '../admin/adminActivityBackLabel';
-import { appRoutes, homeRoute } from '../shared/appRoutes';
+import { appRoutes, canOpenRoute, homeRoute } from '../shared/appRoutes';
 import { localeController } from '../shared/localization/runtime';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -13,7 +13,7 @@ const getLocale = () => localeController.locale;
 export function useBrigaderPage(route: string) {
   const shell = useAdminShell(), focused = useIsFocused(), focus = useRef(focused);
   useLayoutEffect(() => { focus.current = focused; return () => { focus.current = false; }; }, [focused]);
-  const parent = useCallback(() => shell.isCurrent() && !!shell.destination(route, Platform.OS), [shell, route]);
+  const parent = useCallback(() => shell.isCurrent() && canOpenRoute(shell.session, route), [shell, route]);
   const canInteract = useCallback(() => focus.current, []);
   const authority = useAdminPageAuthority(parent, canInteract);
   const { current, interactive } = authority;

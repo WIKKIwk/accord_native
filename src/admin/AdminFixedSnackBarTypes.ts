@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ColorValue } from 'react-native';
 import type { AdminCreateHubScaffoldLayout } from './AdminCreateHubProvider';
 import type { AdminItemCreateFixedSnackBarTarget } from './AdminItemCreateScreenAssemblyTypes';
 import type { AdminFixedSnackBarEntry } from './adminFixedSnackBarModel';
@@ -19,7 +20,7 @@ export type AdminFixedSnackBarSourceVisibility = Readonly<{
   canInteract: (scaffold: AdminTopNoticeScaffold) => boolean;
   tickerEnabled: (scaffold: AdminTopNoticeScaffold) => boolean;
 }>;
-export type AdminFixedSnackBarPalette = Readonly<{ inverseSurface: string; onInverseSurface: string }>;
+export type AdminFixedSnackBarPalette = Readonly<{ inverseSurface: ColorValue; onInverseSurface: ColorValue }>;
 export type AdminFixedSnackBarProviderProps = Readonly<{
   reader: AdminFixedSnackBarNativeReader; visibility: AdminFixedSnackBarSourceVisibility;
   /** Source ColorScheme roles are absent from the existing shared reduced palette. No guessed substitution. */

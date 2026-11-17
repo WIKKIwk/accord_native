@@ -8,6 +8,7 @@ import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { brigaderMayEnter } from './brigaderAccess';
 import { BrigaderShellProvider } from './BrigaderShellProvider';
 import { BrigaderNavigationProvider } from './BrigaderNavigationProvider';
+import { BrigaderNativePage } from './BrigaderFeedbackProvider';
 import { useBrigaderSession } from './useBrigaderSession';
 import { logoutBrigader } from './brigaderLogout';
 
@@ -24,7 +25,7 @@ function BrigaderSessionGate() {
   if (!brigaderMayEnter(session)) return <Redirect href="/" />;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout} isCurrent={isCurrent}>
     <BrigaderShellProvider session={session} witness={witness} onLogout={onLogout}>
-      <AdminShellNoticeProvider mayEnter={brigaderMayEnter}><BrigaderNavigationProvider><AdminDrawer><Stack screenOptions={{ headerShown: false, headerBackButtonDisplayMode: 'minimal' }} /></AdminDrawer></BrigaderNavigationProvider></AdminShellNoticeProvider>
+      <AdminShellNoticeProvider mayEnter={brigaderMayEnter}><BrigaderNavigationProvider><AdminDrawer><Stack screenLayout={({ children }) => <BrigaderNativePage>{children}</BrigaderNativePage>} screenOptions={{ headerShown: false, headerBackButtonDisplayMode: 'minimal' }} /></AdminDrawer></BrigaderNavigationProvider></AdminShellNoticeProvider>
     </BrigaderShellProvider>
   </WorkerSecurityProvider>;
 }
