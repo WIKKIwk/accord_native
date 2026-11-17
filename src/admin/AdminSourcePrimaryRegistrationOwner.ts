@@ -3,6 +3,8 @@ import { createProfileSessionGuard, type ProfileSessionGuard } from '../shared/p
 import type { AdminCreateHubController, AdminCreateHubPrimaryPresentation, AdminCreateHubTicket } from './adminCreateHubController';
 
 export type AdminSourcePrimaryRegistration = Readonly<{ identity: object; controller: AdminCreateHubController; isCurrent: () => boolean; canInteract: () => boolean }>;
+type Transport = Readonly<{ original: AdminSourcePrimaryRegistration; getSnapshot: () => AdminCreateHubTicket | null; subscribe: (listener: () => void) => () => void }>;
+const issued = new WeakMap<object, Transport>();
 /** One actual Source dock registration through blur. Only presentation fields rebuild; original native-command authority never retargets. */
 export class AdminSourcePrimaryRegistrationOwner {
   private readonly original: AdminSourcePrimaryRegistration; private presentation: AdminCreateHubPrimaryPresentation;
@@ -15,7 +17,9 @@ export class AdminSourcePrimaryRegistrationOwner {
     if (!original.identity || typeof original.identity !== 'object' || Array.isArray(original.identity) || !original.controller || typeof original.controller.register !== 'function' ||
       typeof original.isCurrent !== 'function' || typeof original.canInteract !== 'function') throw TypeError('The original global Hub and genuine Source dock guards are required');
     this.original = Object.freeze({ ...original }); this.interaction = createProfileSessionGuard(original.canInteract); this.presentation = this.copyPresentation(presentation);
+    issued.set(this, Object.freeze({ original: this.original, getSnapshot: () => this.ticket, subscribe: this.subscribe }));
   }
+  sourceWitness = () => this.original;
   private copyPresentation(presentation: AdminCreateHubPrimaryPresentation): AdminCreateHubPrimaryPresentation {
     const { showPrimaryFab, actions, hasReplacement, replacement } = presentation;
     if (actions !== this.sourceActions) { this.sourceActions = actions; this.actions = actions ? Object.freeze(actions.map(action => Object.freeze({ ...action, icon: Object.freeze({ ...action.icon }) }))) : undefined; }
@@ -71,3 +75,6 @@ export class AdminSourcePrimaryRegistrationOwner {
   detach = () => { this.active = false; this.focused = null; this.generation++; this.stopHub?.(); this.stopHub = null; const ticket = this.ticket; this.publish(null); if (ticket) this.original.controller.unregister(ticket); };
   invalidate() { if (this.retired) return; this.retired = true; this.detach(); }
 }
+export function isAdminSourcePrimaryRegistrationOwner(value: unknown): value is AdminSourcePrimaryRegistrationOwner { return !!value && typeof value === 'object' && issued.has(value); }
+/** Captured real instance projection; copied objects or replaced public methods cannot manufacture another ticket. */
+export function adminSourcePrimaryRegistrationTransport(value: unknown): Transport | null { return value && typeof value === 'object' ? issued.get(value) ?? null : null; }

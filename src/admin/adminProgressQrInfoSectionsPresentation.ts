@@ -18,7 +18,8 @@ export function adminProgressQrOrderDetails(order: AdminProgressQrOrderDetailsPr
   add('planned-length', 'worker.qr.report.planned_length', number(order.base_length));
   return Object.freeze({ id: 'order', title: p('worker.qr.report.product_order'), rows: Object.freeze(rows) });
 }
-/** @v2 _stateLabel. This is the QR label dictionary, not the worker queue stage dictionary. */
+/** @v2 _stateLabel
+ * The QR label dictionary is distinct from the worker queue stage dictionary. */
 export function adminProgressQrQueueStateLabel(value: string, p: (key: string) => string): string {
   const keys: Readonly<Record<string, string>> = {
     start: 'worker.qr.status.started', pause: 'worker.action.pause', detach_roll: 'worker.qr.status.roll_removed', resume: 'worker.qr.status.resumed',

@@ -14,13 +14,13 @@ export type AdminItemCreateFixedSnackBarTarget = Readonly<{
   /** Use the actual shared queue and Source Scaffold contentBottom, not safeArea.bottom plus a guessed offset. */
   render: (host: Readonly<{ scaffold: AdminTopNoticeScaffoldBinding; sourceLayout: AdminCreateHubScaffoldLayout; isCurrent: () => boolean }>) => ReactElement;
 }>;
-export type AdminItemCreateScreenAssemblyProps = Omit<AdminItemCreateScreenProps, 'footer'> & Readonly<{
+export type AdminItemCreateScreenAssemblyProps = Omit<AdminItemCreateScreenProps, 'footer' | 'renderPrimaryAction'> & Readonly<{
   canInteract: () => boolean;
   /** Source route pages are siblings even when their native carriers physically nest. No default root metadata. */
   sourceScaffoldAncestor: AdminTopNoticeScaffold | null;
   /** Actual localized native/Material semantic dismiss action, resolved by the root host. */
   topNoticeDismissLabel: string;
   fixedSnackBars: AdminItemCreateFixedSnackBarTarget;
-}> & (Readonly<{ expectedRootBinding?: undefined; footer: AdminItemCreateScreenProps['footer'] }> |
+}> & (Readonly<{ expectedRootBinding?: undefined; footer: AdminItemCreateScreenProps['footer']; renderPrimaryAction: NonNullable<AdminItemCreateScreenProps['renderPrimaryAction']> }> |
   /** The actual Root SourceDock owns the only dock. A scene never supplies a second footer. */
-  Readonly<{ expectedRootBinding: AdminRootRouterBinding; footer?: never }>);
+  Readonly<{ expectedRootBinding: AdminRootRouterBinding; footer?: never; renderPrimaryAction?: never }>);

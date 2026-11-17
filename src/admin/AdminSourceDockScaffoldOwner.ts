@@ -5,6 +5,8 @@ import type { AdminCreateHubController, AdminCreateHubTicket } from './adminCrea
 import type { AdminScaffoldLayoutBinding, AdminScaffoldLayoutBindingSnapshot } from './adminFixedSnackBarReader';
 import { adminSourceDockBodyBottom, adminSourceDockSizing, type AdminSourceDockPrimary, type AdminSourceDockSizing } from './adminSourceDockScaffoldPolicy';
 import type { AdminSourceDockHubRequest, AdminSourceDockScaffoldProps } from './AdminSourceDockScaffoldTypes';
+import { adminSourcePrimaryRegistrationTransport, type AdminSourcePrimaryRegistrationOwner } from './AdminSourcePrimaryRegistrationOwner';
+import type { AdminRootRouterBinding } from './AdminRootRouterTypes';
 
 type Host = Pick<AdminSourceDockScaffoldProps, 'identity' | 'reader' | 'scaffold' | 'sourceScaffoldAncestor' | 'isCurrent' | 'canInteract' | 'hubNativeHost' | 'rootBinding'>;
 export type AdminSourceDockTarget = Readonly<{ identity: object; nativeID: string; primary: AdminSourceDockPrimary; sizing: AdminSourceDockSizing }>;
@@ -20,6 +22,7 @@ export class AdminSourceDockScaffoldOwner {
   private layout: Readonly<{ metrics: AdminScaffoldLayoutBindingSnapshot['metrics']; hostHeight: number | null }> = Object.freeze({ metrics: null, hostHeight: null });
   private binding: AdminScaffoldLayoutBinding | null = null; private stopBinding: (() => void) | null = null; private stopHub: (() => void) | null = null;
   private ticket: AdminCreateHubTicket | null = null; private thin: boolean | null = null; private dockTarget: AdminSourceDockTarget | null = null;
+  private primary: Readonly<{ registration: AdminSourcePrimaryRegistrationOwner; stop: () => void }> | null = null;
   private state: AdminSourceDockSnapshot = Object.freeze({ revision: 0, generation: 0, retired: false, native: null, target: null, bodyBottom: null, geometryReady: false });
   constructor(props: Host, readonly hub: AdminCreateHubController) {
     if (!props.identity || typeof props.identity !== 'object' || Array.isArray(props.identity) || !props.reader || typeof props.reader.registerScaffold !== 'function' ||
@@ -38,6 +41,14 @@ export class AdminSourceDockScaffoldOwner {
   nativeHost = () => this.original.hubNativeHost;
   sourceWitness = () => this.original;
   sourceMembership = () => Object.freeze({ active: this.active, retired: this.retired, generation: this.state.generation });
+  connectPrimary(registration: AdminSourcePrimaryRegistrationOwner, binding: AdminRootRouterBinding): (() => void) | null {
+    const transport = adminSourcePrimaryRegistrationTransport(registration);
+    if (!this.active || this.retired || !this.original.rootBinding || binding !== this.original.rootBinding || this.primary || !transport) return null;
+    const witness = transport.original; if (witness.controller !== this.hub || witness.identity !== binding.identity || !this.current()) return null;
+    const refresh = () => { if (this.primary?.registration !== registration || !this.active || this.retired) return; this.ticket = transport.getSnapshot(); this.refresh(); };
+    const lease = { registration, stop: transport.subscribe(refresh) }; this.primary = lease; refresh();
+    return () => { if (this.primary !== lease) return; this.primary = null; lease.stop(); this.ticket = null; this.refresh(); };
+  }
   sourceLayout(available: boolean) {
     const known = available && this.state.geometryReady, metrics = known ? this.state.native?.metrics ?? null : null, hostHeight = known ? this.state.native?.dockHeight ?? null : null;
     if (this.layout.metrics !== metrics || this.layout.hostHeight !== hostHeight) this.layout = Object.freeze({ metrics, hostHeight });
@@ -85,12 +96,13 @@ export class AdminSourceDockScaffoldOwner {
     this.stopHub = this.hub.subscribe(() => this.refresh()); this.refresh();
   }
   detach = () => {
-    this.active = false; this.stopHub?.(); this.stopHub = null; this.stopBinding?.(); this.stopBinding = null; const binding = this.binding; this.binding = null; this.dockTarget = null;
+    this.active = false; const primary = this.primary; this.primary = null; primary?.stop(); if (this.original.rootBinding) this.ticket = null;
+    this.stopHub?.(); this.stopHub = null; this.stopBinding?.(); this.stopBinding = null; const binding = this.binding; this.binding = null; this.dockTarget = null;
     binding?.dispose(); this.publish({ generation: this.state.generation + 1, native: null, target: null, bodyBottom: null, geometryReady: false });
   };
   invalidate() { if (this.retired) return; this.retired = true; this.detach(); this.publish({ retired: true }); }
-  source(ticket: AdminCreateHubTicket | null, thinGestureBottom: boolean | null) {
-    if (this.retired) return; this.ticket = ticket; this.thin = thinGestureBottom; this.refresh();
+  source(ticket: AdminCreateHubTicket | null | undefined, thinGestureBottom: boolean | null) {
+    if (this.retired) return; if (!this.original.rootBinding) this.ticket = ticket ?? null; this.thin = thinGestureBottom; this.refresh();
   }
   bindViewport(marker: AdminScaffoldMarker, generation = this.state.generation) {
     if (!this.current(generation) || this.binding || marker.nativeID !== this.viewportID) return;

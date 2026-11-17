@@ -5,7 +5,7 @@ import type { AdminPrimaryActionProps } from './AdminCreateHubTypes';
 import { AdminSourcePrimaryRegistrationOwner } from './AdminSourcePrimaryRegistrationOwner';
 
 /** Actual route focus affects new commands, not the original dock's registration/read lifetime. New guard/identity requires a new mounted lifetime. */
-export function useAdminCreateHubSourcePrimary(props: AdminPrimaryActionProps & { identity: object }) {
+export function useAdminCreateHubSourcePrimaryRegistration(props: AdminPrimaryActionProps & { identity: object }) {
   const controller = useAdminCreateHubSourceController(), focused = useIsFocused(), original = { identity: props.identity, controller, isCurrent: props.isCurrent, canInteract: props.canInteract };
   const [owner] = useState(() => new AdminSourcePrimaryRegistrationOwner(original, { showPrimaryFab: props.showPrimaryFab, actions: props.actions, replacement: props.replacement, hasReplacement: props.replacement != null }));
   useLayoutEffect(() => { owner.commit(original); });
@@ -17,5 +17,6 @@ export function useAdminCreateHubSourcePrimary(props: AdminPrimaryActionProps & 
   const { showPrimaryFab, actions, replacement } = props;
   useLayoutEffect(() => { owner.update({ showPrimaryFab, actions, replacement, hasReplacement: replacement != null }); }, [owner, showPrimaryFab, actions, replacement]);
   const ticket = useSyncExternalStore(owner.subscribe, owner.getSnapshot, owner.getSnapshot);
-  return owner.matches(original) ? ticket : null;
+  return { owner, ticket: owner.matches(original) ? ticket : null, matches: owner.matches(original) };
 }
+export function useAdminCreateHubSourcePrimary(props: AdminPrimaryActionProps & { identity: object }) { return useAdminCreateHubSourcePrimaryRegistration(props).ticket; }

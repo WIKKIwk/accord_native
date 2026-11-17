@@ -23,5 +23,5 @@ export type AdminItemCreateScreenProps = {
   onCreateCustomer?: (initialName: string) => Promise<AdminItemCreateCustomer | null>;
   onReturnCreated?: (item: SupplierItem) => void;
   onBack: () => void; backLabel: string; profileAction: ReactElement; footer?: ReactNode;
-  renderPrimaryAction: (props: AdminPrimaryActionProps) => ReactElement;
+  renderPrimaryAction?: (props: AdminPrimaryActionProps) => ReactElement;
 };

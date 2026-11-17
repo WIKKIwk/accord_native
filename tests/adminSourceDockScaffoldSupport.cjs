@@ -5,9 +5,10 @@ const hubModel = native.load('admin/adminCreateHubModel', { './adminDockModel': 
 const shell = native.load('admin/adminShellLayoutPolicy');
 const policy = native.load('admin/adminSourceDockScaffoldPolicy', { './adminCreateHubModel': hubModel, './adminShellLayoutPolicy': shell });
 const hubDomain = native.load('admin/adminCreateHubController', { '../shared/camera/synchronousGuard': native.strict });
+const primaryDomain = native.load('admin/AdminSourcePrimaryRegistrationOwner', { '../shared/camera/synchronousGuard': native.strict, '../shared/profileSessionGuard': native.load('shared/profileSessionGuard') });
 let serial = 0;
 const domain = native.load('admin/AdminSourceDockScaffoldOwner', { '../shared/camera/synchronousGuard': native.strict, './adminSourceDockScaffoldPolicy': policy,
-  './adminPresentationWindowTicket': { createAdminPresentationWindowTicket: () => `source-dock-test-${++serial}` } });
+  './AdminSourcePrimaryRegistrationOwner': primaryDomain, './adminPresentationWindowTicket': { createAdminPresentationWindowTicket: () => `source-dock-test-${++serial}` } });
 function fixture(options = {}) {
   const source = native.fixture(options); let current = true, focused = true, top = true, available = true, host = true, overlayTop = false, own = true;
   const hub = new hubDomain.AdminCreateHubController({ isCurrent: () => current,
@@ -27,4 +28,4 @@ function fixture(options = {}) {
     current: value => { current = value; }, focus: value => { focused = value; }, top: value => { top = value; }, host: value => { host = value; }, overlayTop: value => { overlayTop = value; },
     available: value => { available = value; hub.refreshLocale(); }, own: value => { own = value; }, cleanup: () => { owner.detach(); hub.dispose(); source.cleanup(); } };
 }
-module.exports = { ...native, views, policy, domain, hubDomain, fixture };
+module.exports = { ...native, views, policy, domain, hubDomain, primaryDomain, fixture };

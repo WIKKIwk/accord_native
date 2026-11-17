@@ -5,6 +5,7 @@ import type { useAdminTopNoticeTarget } from './AdminTopNoticeProvider';
 import type { AdminTopNoticeScaffold } from './adminTopNoticeModel';
 import type { AdminTopNoticeScaffoldBinding } from './useAdminTopNoticeScaffold';
 import { createProfileSessionGuard } from '../shared/profileSessionGuard';
+import type { AdminSourcePrimaryRegistrationOwner } from './AdminSourcePrimaryRegistrationOwner';
 
 export type AdminSourceSceneOriginal = Readonly<{ root: AdminRootRouterPageContext; binding: AdminRootRouterBinding;
   source: AdminSourceDockScaffoldOwner; target: ReturnType<typeof useAdminTopNoticeTarget> }>;
@@ -15,11 +16,14 @@ export class AdminSourceSceneScaffoldOwner {
   private readonly original: AdminSourceSceneOriginal;
   private readonly members = new Set<object>(); private readonly listeners = new Set<() => void>(); private stops: (() => void)[] = [];
   private passive = false; private checking: { valid: boolean } | null = null;
+  private disconnectPrimary: (() => void) | null = null;
   private readonly interaction: () => boolean;
+  private readonly primaryInteraction: () => boolean;
   private state: AdminSourceSceneSnapshot = Object.freeze({ phase: 'pending', generation: 0, revision: 0 });
   constructor(original: AdminSourceSceneOriginal) {
     this.original = Object.freeze({ ...original, root: Object.freeze({ ...original.root }), target: Object.freeze({ ...original.target }) });
     this.interaction = createProfileSessionGuard(() => this.original.root.controller.canInteract(this.original.binding));
+    this.primaryInteraction = createProfileSessionGuard(() => this.original.source.hubRequest()?.canOpenPrimary() === true);
     if (!this.structure()) throw TypeError('The exact original Root scene and its genuine Source Scaffold binding are required'); issued.add(this);
   }
   getSnapshot = () => this.state;
@@ -57,8 +61,9 @@ export class AdminSourceSceneScaffoldOwner {
     return () => { if (detached) return; detached = true; this.members.delete(member); if (!this.members.size) { this.passive = false; this.stop(); if (this.state.phase !== 'retired') this.publish('pending', true); } };
   };
   start = () => { if (this.state.phase === 'retired' || !this.members.size) return; this.passive = true; this.refresh(); };
-  private stop() { const stops = this.stops; this.stops = []; stops.forEach(stop => { try { stop(); } catch {} }); }
-  private suspend() { if (this.state.phase === 'active') this.publish('pending', true); }
+  private releasePrimary() { const stop = this.disconnectPrimary; this.disconnectPrimary = null; stop?.(); }
+  private stop() { this.releasePrimary(); const stops = this.stops; this.stops = []; stops.forEach(stop => { try { stop(); } catch {} }); }
+  private suspend() { if (this.state.phase === 'active') { this.releasePrimary(); this.publish('pending', true); } }
   private refresh = () => {
     if (this.checking) { this.checking.valid = false; return; }
     if (!this.members.size || !this.passive || this.state.phase === 'retired') return;
@@ -89,6 +94,15 @@ export class AdminSourceSceneScaffoldOwner {
     return this.state.phase === 'active' && this.passive && this.members.size > 0 && generation === this.state.generation && !membership.retired;
   };
   canInteract = (generation = this.state.generation) => this.readCurrent(generation) && this.interaction() && this.readCurrent(generation);
+  /** New dock intent only. Original read/registration and an already accepted Add do not use this geometry/host fence. */
+  canOpenPrimary = (generation = this.state.generation) => this.canInteract(generation) && this.primaryInteraction() && this.readCurrent(generation);
+  primaryIdentity = () => this.original.binding.identity;
+  connectPrimary(registration: AdminSourcePrimaryRegistrationOwner, generation: number): (() => void) | null {
+    if (this.disconnectPrimary || !this.readCurrent(generation)) return null;
+    const detach = this.original.source.connectPrimary(registration, this.original.binding);
+    if (!detach) return null; if (!this.readCurrent(generation)) { detach(); return null; }
+    const stop = () => { if (this.disconnectPrimary !== stop) return; this.disconnectPrimary = null; detach(); }; this.disconnectPrimary = stop; return stop;
+  }
   readScaffold(generation = this.state.generation): AdminTopNoticeScaffoldBinding | null {
     if (!this.readCurrent(generation)) return null;
     // All account/member callbacks complete before this single pure Source snapshot read.

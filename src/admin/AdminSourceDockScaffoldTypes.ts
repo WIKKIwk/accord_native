@@ -36,8 +36,6 @@ export type AdminSourceDockScaffoldProps = Readonly<{
   /** Exact logical ancestor supplied to the caller's genuine Source Scaffold hook. */
   sourceScaffoldAncestor: AdminTopNoticeScaffold | null;
   isCurrent: () => boolean; canInteract: () => boolean;
-  /** Original global Hub registration. Null/unknown keeps Source geometry held. */
-  primaryTicket: AdminCreateHubTicket | null;
   /** Actual Source navigation-mode fact; no safe-area or zero fallback. */
   thinGestureBottom: boolean | null;
   /** Entire real native scene including iOS header. Actual content below the platform header must use AdminSourceDockBody; Android's custom header also stays outside that held boundary. */
@@ -45,4 +43,4 @@ export type AdminSourceDockScaffoldProps = Readonly<{
   renderDock: (facts: AdminSourceDockRenderFacts) => ReactElement;
   /** Explicitly unavailable until genuine original-window FAB/global-overlay placement exists. */
   hubNativeHost: AdminSourceDockHubNativeHost | null;
-}>;
+}> & (Readonly<{ rootBinding: AdminRootRouterBinding; primaryTicket?: never }> | Readonly<{ rootBinding?: undefined; primaryTicket: AdminCreateHubTicket | null }>);

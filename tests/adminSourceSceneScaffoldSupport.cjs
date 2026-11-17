@@ -14,18 +14,22 @@ function fixture(options = {}) {
   const reader = new readerDomain.AdminFixedSnackBarReaderOwner({ observer: native.native, messenger, isCurrent: () => true });
   const props = { ...native.props, identity: binding.identity, rootBinding: binding, reader, scaffold,
     isCurrent: () => typeof current === 'function' ? current() : current, canInteract: () => top };
-  const owner = new source.domain.AdminSourceDockScaffoldOwner(props, native.hub); owner.source(native.ticket, true);
+  delete props.primaryTicket;
+  const owner = new source.domain.AdminSourceDockScaffoldOwner(props, native.hub); owner.source(undefined, true);
   const rootContext = { controller: root.owner, binding, isCurrent: () => root.owner.readCurrent(binding), canInteract: () => root.owner.canInteract(binding) };
   const original = { root: rootContext, binding, source: owner, target }, scope = new scene.AdminSourceSceneScaffoldOwner(original);
   const detach = scope.attach(); scope.start();
   const commitScene = () => { stopScene ??= root.owner.attachScene(binding); };
-  const startSource = () => { owner.start(); owner.source(native.ticket, true); };
-  const commit = () => { commitScene(); startSource(); scope.start(); };
+  let registration, stopPrimary;
+  const startSource = () => { owner.start(); owner.source(undefined, true); };
+  const connectPrimary = () => { const generation = scope.getSnapshot().generation; registration = new source.primaryDomain.AdminSourcePrimaryRegistrationOwner({ identity: binding.identity, controller: native.hub, isCurrent: () => scope.readCurrent(generation), canInteract: () => scope.canInteract(generation) }, {}); stopPrimary = scope.connectPrimary(registration, generation); registration.commitFocus(true); registration.start(); return registration; };
+  const commit = () => { commitScene(); startSource(); scope.start(); connectPrimary(); };
   const viewport = () => owner.bindViewport({ tag: 31, nativeID: owner.viewportID });
   const bindDock = () => { const value = owner.getSnapshot().target; owner.bindDock({ tag: 32, nativeID: value.nativeID }, value); };
-  return { native, root, binding, messenger, progress, target, scaffold, reader, props, owner, rootContext, original, scope, counts, commit, commitScene, startSource, viewport, bindDock,
+  return { native, root, binding, messenger, progress, target, scaffold, reader, props, owner, rootContext, original, scope, counts, commit, commitScene, startSource, viewport, bindDock, connectPrimary, registration: () => registration,
+    dropPrimary: () => { stopPrimary?.(); registration?.detach(); stopPrimary = null; registration = null; },
     current: value => { current = value; }, top: value => { top = value; }, dropScene: () => { stopScene?.(); stopScene = null; }, detach,
-    cleanup: () => { detach(); scope.invalidate(); owner.detach(); reader.dispose(); stopScene?.(); stopScaffold?.(); root.owner.dispose(); root.rootStop(); native.cleanup(); messenger.createScaffold = create; messenger.attachScaffold = attach; } };
+    cleanup: () => { stopPrimary?.(); registration?.detach(); detach(); scope.invalidate(); owner.detach(); reader.dispose(); stopScene?.(); stopScaffold?.(); root.owner.dispose(); root.rootStop(); native.cleanup(); messenger.createScaffold = create; messenger.attachScaffold = attach; } };
 }
 /** Controlled React effect/context harness; ONLY production Providers issue the values consumed by these scenes. */
 function runtime() {
@@ -71,7 +75,7 @@ function runtime() {
 /** Production Root descriptor -> SourceDock -> SAME-ticket ItemCreate, with controlled native/device/API edges. */
 function nativeFixture(platform = 'android', options = {}) {
   const base = require('./adminItemDetailViewsSupport.cjs'), session = require('./adminItemCreateSessionSupport.cjs'), notices = require('./adminTopNoticeSupport.cjs');
-  const domain = session.fixture(options), native = source.fixture(), r = runtime(), { react, jsx } = r, leaf = {}, nodes = base.nodes, counts = { create: 0, attach: 0, descriptor: 0, domain: 0 };
+  const domain = session.fixture(options), native = source.fixture(), r = runtime(), { react, jsx } = r, leaf = {}, nodes = base.nodes, counts = { create: 0, attach: 0, descriptor: 0, domain: 0, register: 0 };
   const clock = source.scheduler(), service = new notices.service.AdminTopNoticeService({ setTimer: clock.set, clearTimer: clock.clear }), authListeners = new Set(), frames = new Map();
   const messenger = new notices.messenger.AdminTopNoticeMessenger({ isCurrent: domain.owner.current }), create = messenger.createScaffold.bind(messenger), attach = messenger.attachScaffold.bind(messenger);
   messenger.createScaffold = (...args) => { counts.create++; return create(...args); }; messenger.attachScaffold = (...args) => { counts.attach++; return attach(...args); };
@@ -86,7 +90,7 @@ function nativeFixture(platform = 'android', options = {}) {
   const safe = react.createContext({ top: 999, left: 888, right: 777, bottom: 666 }), safeModule = { SafeAreaView: 'SafeAreaView', SafeAreaInsetsContext: safe, useSafeAreaInsets: () => react.useContext(safe) };
   const auth = { activeSessionEpoch: () => domain.authority.epoch, activeSessionToken: () => domain.authority.token, isSessionWitnessCurrent: value => value === domain.witness && domain.authority.witness,
     subscribeSessionWitness: callback => { authListeners.add(callback); return () => authListeners.delete(callback); } };
-  const locale = { locale: 'uz', addListener: () => () => {} }, l10n = source.l10n, shellPolicy = source.load('admin/adminShellLayoutPolicy');
+  const localeListeners = new Set(), locale = { locale: 'uz', addListener: listener => { localeListeners.add(listener); return () => localeListeners.delete(listener); } }, l10n = source.l10n, shellPolicy = source.load('admin/adminShellLayoutPolicy');
   const compile = (name, mocks = {}) => base.compile(name, { react, 'react/jsx-runtime': jsx, 'react-native': rn, 'react-native-safe-area-context': safeModule,
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: source.views.colors }) }, ...mocks });
   const rootContext = compile('AdminRootRouterContext.tsx'), noticeProvider = compile('AdminTopNoticeProvider.tsx', { 'react-native-reanimated': reanimated,
@@ -108,7 +112,14 @@ function nativeFixture(platform = 'android', options = {}) {
   const sourceHook = compile('useAdminSourceDockScaffold.ts', { './AdminCreateHubProvider': hub, './AdminSourceDockScaffoldOwner': source.domain });
   const sourceView = compile('AdminSourceDockScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellSourceWindowLayoutContext': shellContext, './useAdminSourceDockScaffold': sourceHook, './AdminSourceSceneScaffoldContext': sourceContext });
   const primary = compile('useAdminCreateHubSourcePrimary.ts', { 'expo-router': { useIsFocused: () => focused() }, './AdminCreateHubProvider': hub,
-    './AdminSourcePrimaryRegistrationOwner': source.load('admin/AdminSourcePrimaryRegistrationOwner', { '../shared/camera/synchronousGuard': source.strict, '../shared/profileSessionGuard': guards }) });
+    './AdminSourcePrimaryRegistrationOwner': source.primaryDomain });
+  const scopedPrimary = compile('useAdminSourceScenePrimary.ts', { '../shared/profileSessionGuard': guards, './useAdminCreateHubSourcePrimary': primary, './AdminSourceSceneScaffoldContext': sourceContext, './AdminSourceSceneScaffoldOwner': scene });
+  const itemPrimaryHook = compile('useAdminItemCreatePrimaryAction.ts', { './AdminSourceSceneScaffoldContext': sourceContext });
+  const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) }), compose = new Proxy({}, { get: (_target, name) => String(name) });
+  const nativePrimary = compile(`AdminItemCreatePrimaryAction.${platform}.tsx`, { '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
+    '@expo/ui/swift-ui': compose, '@expo/ui/swift-ui/modifiers': modifiers, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
+    './AdminTypography.android': { AdminText: 'Text' }, './AdminItemCreateNative.android': { ItemCreateIcon: 'Icon', itemCreateRounded: radius => ({ radius }) },
+    './useAdminItemCreatePrimaryAction': itemPrimaryHook, './AdminSourceSceneScaffoldContext': sourceContext, './useAdminSourceScenePrimary': scopedPrimary });
   const scaffoldHook = compile('useAdminTopNoticeScaffold.ts', { './AdminTopNoticeProvider': noticeProvider });
   const boundary = compile('adminItemCreateScreenBoundary.ts', { '../shared/camera/synchronousGuard': source.strict, './AdminSourceSceneScaffoldOwner': scene });
   const gate = compile('AdminItemCreateSourceScene.tsx', { '../shared/profileSessionGuard': guards, './AdminRootRouterContext': rootContext, './AdminSourceSceneScaffoldContext': sourceContext,
@@ -121,17 +132,21 @@ function nativeFixture(platform = 'android', options = {}) {
     './AdminTopNoticeContent': { AdminTopNoticeContent: ({ banner }) => jsx.jsx('OriginalNativeNoticeTextFixture', { banner, children: banner.message }) } });
   let model, sourceOwner, scopedOwner, originalScaffold, accessible = false, expectedOverride, expectedProvided = false, descriptorScene = true, screenProps;
   const nativeLeaf = (name, field) => props => { leaf[field] = props; return jsx.jsx(name, props); };
+  // Explicitly controlled native placement edge for command protocol tests; never a production/default capability.
+  const placements = new Set(), primaryHost = options.controlledPrimaryPlacement ? { identity: {}, isAvailable: request => placements.has(request.windowIdentity) && request.isCurrent(), ownsOverlayTop: () => false,
+    renderPrimary: request => jsx.jsx('ControlledOriginalPrimaryHostFixture', { request, children: request.primary.replacement ? request.primary.replacementValue : jsx.jsx('ControlledNativeFabFixture', { onPress: () => { if (request.canOpenPrimary()) request.controller.open(request.ticket); } }) }),
+    renderOverlay: request => jsx.jsx('ControlledOriginalOverlayHostFixture', { request }) } : null;
   const itemScreen = compile(`AdminItemCreateScreen.${platform}.tsx`, { 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, './AdminCreateHubProvider': hub, './AdminShellInlineSafeArea': inline,
     './AdminItemCreateSourceScene': gate, './AdminItemCreateScaffold': itemScaffold, './AdminTopNoticeHost': { AdminTopNoticeHost: props => { leaf.notice = props; return jsx.jsx(noticeHost.AdminTopNoticeHost, props); } },
     './adminItemCreateScreenBoundary': boundary, './useAdminItemCreateNoticePresentation': noticeBridge,
     './useAdminItemCreate': { useAdminItemCreate: props => { counts.domain++; model = itemHook.useAdminItemCreate(props); return model; } },
     [`./AdminItemCreateHeader.${platform}`]: { AdminItemCreateHeader: nativeLeaf('ActualNativeHeaderFixture', 'header') }, [`./AdminItemCreateList.${platform}`]: { AdminItemCreateList: nativeLeaf('ActualNativeListFixture', 'list') },
-    [`./AdminItemCreateOverlays.${platform}`]: { AdminItemCreateOverlays: nativeLeaf('ActualNativeOverlaysFixture', 'overlays') }, [`./AdminItemCreatePrimaryAction.${platform}`]: { AdminItemCreatePrimaryAction: nativeLeaf('ActualNativePrimaryFixture', 'primary') } });
+    [`./AdminItemCreateOverlays.${platform}`]: { AdminItemCreateOverlays: nativeLeaf('ActualNativeOverlaysFixture', 'overlays') }, [`./AdminItemCreatePrimaryAction.${platform}`]: nativePrimary });
   function SourceContainer(props) {
-    const scaffold = scaffoldHook.useAdminTopNoticeScaffold(props.sourceScaffoldAncestor), ticket = primary.useAdminCreateHubSourcePrimary({ identity: props.binding.identity, isCurrent: props.isCurrent, canInteract: props.canInteract });
+    const scaffold = scaffoldHook.useAdminTopNoticeScaffold(props.sourceScaffoldAncestor);
     originalScaffold = scaffold;
     return jsx.jsx(sourceView.AdminSourceDockScaffold, { identity: props.binding.identity, rootBinding: props.binding, reader: observer, scaffold, sourceScaffoldAncestor: props.sourceScaffoldAncestor,
-      isCurrent: props.isCurrent, canInteract: props.canInteract, primaryTicket: ticket, thinGestureBottom: true, nativeScene: props.nativeScene, outlet: props.outlet, renderDock: () => jsx.jsx('ActualDockFixture', {}), hubNativeHost: null });
+      isCurrent: props.isCurrent, canInteract: props.canInteract, thinGestureBottom: true, nativeScene: props.nativeScene, outlet: props.outlet, renderDock: () => jsx.jsx('ActualDockFixture', {}), hubNativeHost: primaryHost });
   }
   const root = routes.fixture(platform, { attachBase: false, rootOptions: { isCurrent: domain.owner.current, renderSceneContainer: props => jsx.jsx(SourceContainer, props) } }), binding = root.owner.rootScene().binding;
   function focused() { const state = root.state(); return state.routes[state.index]?.key === binding.routeKey; }
@@ -143,6 +158,7 @@ function nativeFixture(platform = 'android', options = {}) {
     renderPrimaryAction: value => jsx.jsx('ActualPrimaryRendererFixture', value), fixedSnackBars: { isAvailable: () => true, enqueue: value => fixed.push(value), render: props => { fixedHosts.push(props); return jsx.jsx('OriginalFixedHostFixture', props); } },
     dialogPortal: { isAvailable: () => true, render: value => jsx.jsx('OriginalDialogPortalFixture', value) }, windowObserver: { arm() {}, waitForDetach() {}, cancelPending() {}, cancel() {} } };
   delete screenProps.footer;
+  delete screenProps.renderPrimaryAction;
   const renderDescriptor = () => { counts.descriptor++; return jsx.jsx(itemScreen.AdminItemCreateScreen, { ...screenProps, expectedRootBinding: expectedProvided ? expectedOverride : binding }); };
   const commitFrame = () => { const frameValue = root.frame(); frameValue.descriptors[binding.routeKey].render = renderDescriptor; return root.owner.commitFrame(frameValue); }; commitFrame(); root.detachRenderer();
   function SceneProbe() { sourceOwner = sourceContext.useAdminSourceSceneScaffold(); return null; }
@@ -153,14 +169,19 @@ function nativeFixture(platform = 'android', options = {}) {
   const viewWithProbe = compile('AdminSourceDockScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellSourceWindowLayoutContext': shellContext, './useAdminSourceDockScaffold': sourceHook, './AdminSourceSceneScaffoldContext': sourceContext });
   sourceView.AdminSourceDockScaffold = viewWithProbe.AdminSourceDockScaffold;
   function RendererHost() { react.useLayoutEffect(() => root.owner.attachRenderer(root.render), []); return descriptorScene ? jsx.jsx(rootScene.AdminRootRouterScene, { controller: root.owner, binding, outlet, state: { interactive: true, retained: false, retired: false } }) : null; }
+  let globalHub; const seenHubs = new WeakSet();
+  function HubProbe() { globalHub = hub.useAdminCreateHubSourceController(); if (!seenHubs.has(globalHub)) { seenHubs.add(globalHub); const register = globalHub.register.bind(globalHub); globalHub.register = request => { counts.register++; return register(request); }; } return null; }
   function App() { return jsx.jsx(noticeProvider.AdminTopNoticeProvider, { messenger, accessibleNavigation: accessible, children: jsx.jsx(hub.AdminCreateHubProvider, {
     session: domain.session, witness: domain.witness, isCurrent: domain.owner.current, isRouteAvailable: unavailable, onOpenRoute: noRoute, profileOnStack: false, sourceWindows: true,
-    children: jsx.jsx(RendererHost, {}) }) }); }
+    children: jsx.jsxs('Fragment', { children: [jsx.jsx(HubProbe, {}), jsx.jsx(RendererHost, {})] }) }) }); }
   function unavailable() { return false; } function noRoute() { throw Error('No unavailable destination can open'); }
   const render = () => r.render(jsx.jsx(App, {}));
   return { ...domain, ...r, root, binding, messenger, service, clock, observer, native, counts, leaf, fixed, fixedHosts, sourceContext, rootContext, compile, render,
-    renderDirty: () => r.render(), commitFrame, model: () => model, scope: () => sourceOwner, sourceOwner: () => scopedOwner, originalScaffold: () => originalScaffold, props: screenProps,
+    renderDirty: () => r.render(), commitFrame, model: () => model, scope: () => sourceOwner, sourceOwner: () => scopedOwner, originalScaffold: () => originalScaffold, props: screenProps, hub: () => globalHub,
     accessible: value => { accessible = value; }, expected: value => { expectedProvided = true; expectedOverride = value; }, descriptorScene: value => { descriptorScene = value; },
+    runFrames: () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback()); },
+    locale: value => { locale.locale = value; localeListeners.forEach(listener => listener()); },
+    acknowledgePrimaryPlacement: () => { const request = scopedOwner.hubRequest(); if (!request) throw Error('An actual Reader window request is required'); placements.add(request.windowIdentity); },
     show: message => service.show(messenger, { message, tone: 'success' }), notify: () => authListeners.forEach(callback => callback()),
     cleanup: () => { r.cleanup(); observer.dispose(); root.owner.dispose(); root.rootStop(); native.cleanup(); messenger.retire(); global.requestAnimationFrame = oldRaf; global.cancelAnimationFrame = oldCancel; } };
 }

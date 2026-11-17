@@ -6,6 +6,7 @@ function fixture() {
   const f = s.catalogModel(); let valid = true, focused = true; f.model.state.generation = 1; f.model.searchFocused = false; f.model.profileVisible = true;
   f.model.current = () => valid; f.model.nativeCurrent = () => valid && focused; f.model.owner.controller.getSnapshot = () => f.model.state;
   f.model.owner.controller.openDialog = () => f.calls.push('dialog'); f.model.back = () => f.calls.push('back'); f.model.requestMove = () => f.calls.push('move');
+  f.model.owner.controller.list = { requestMove: () => f.calls.push('move') };
   f.model.search = value => f.calls.push(['search', value]); f.model.searchFocus = value => f.calls.push(['focus', value]);
   return { ...f, valid: value => { valid = value; }, focus: value => { focused = value; } };
 }
@@ -21,9 +22,10 @@ function view(kind, platform, f = fixture(), r = s.runtime()) {
   }, { DecorationBox: 'DecorationBox', InnerTextField: 'InnerTextField', Placeholder: 'Placeholder' });
   const useNativeState = initial => { const ref = r.react.useRef(null); return ref.current ??= { value: initial, set(value) { this.value = value; } }; };
   const compose = new Proxy({ useNativeState }, { get: (target, name) => target[name] ?? (native.get(name) || native.set(name, component(String(name))).get(name)) });
-  const primaryHook = s.load('admin/useAdminItemCreatePrimaryAction', { react: r.react });
+  const primaryHook = s.load('admin/useAdminItemCreatePrimaryAction', { react: r.react, './AdminSourceSceneScaffoldContext': { useAdminSourceSceneScaffold: () => null } });
   const props = { backLabel: 'Back', profileAction: { type: 'ActualProfileAction', props: {} }, renderPrimaryAction: value => { root.push(value); return { type: 'RootPrimaryAction', props: value }; } };
   const mocks = { react: r.react, '@expo/ui/jetpack-compose': compose, '@expo/ui/swift-ui': compose, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui/modifiers': modifiers,
+    './AdminSourceSceneScaffoldContext': { useAdminSourceSceneScaffold: () => null }, './useAdminSourceScenePrimary': { useAdminSourceScenePrimary() { throw Error('Legacy must not register a Source primary'); } },
     './useAdminItemCreatePrimaryAction': primaryHook, './AdminTextFields.android': { AdminBasicTextField: component('BasicTextField') }, './AdminTypography.android': { AdminText: 'Text' }, './AdminItemCreateNative.android': { ItemCreateIcon: 'Icon', itemCreateRounded: radius => ({ radius }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: s.colors, mode: 'light' }) },
     'react-native': { View: 'View', PlatformColor: value => value, StyleSheet: { create: value => value, absoluteFill: { position: 'absolute' } } },
