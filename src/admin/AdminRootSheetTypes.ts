@@ -1,16 +1,20 @@
 import type { AdminOwnedSheetCapability } from '../../modules/accord-admin-presentation/src/AccordAdminOwnedSheet';
+import type { AdminOwnedSheetRetirementCapability } from '../../modules/accord-admin-presentation/src/AccordAdminOwnedSheetRetirement';
 import type { AdminRootPresentationContent, AdminRootPresentationParent } from './adminRootPresentationChain';
+import type { AdminRootSheetCancellationLease } from './adminRootSheetLifecycle';
 
 /** Only the owned native foundation's fixed geometry is supported. No intrinsic sizing or resize receipt is inferred. */
 export type AdminRootSheetOptions = Readonly<{ heightPoints: number; cornerRadius: number }> &
   (Readonly<{ platform: 'android'; barrierOpacity: number }> | Readonly<{ platform: 'ios' }>);
 export type AdminRootSheetRequest = Readonly<{
   kind: 'sheet'; parent: AdminRootPresentationParent; identity: object; presentation: AdminRootSheetOptions;
-  nativeCapability: AdminOwnedSheetCapability; renderContent: AdminRootPresentationContent;
-  isCurrent: () => boolean; onRequestClose: () => void;
+  nativeCapability: AdminOwnedSheetCapability; retirementCapability: AdminOwnedSheetRetirementCapability;
+  renderContent: AdminRootPresentationContent;
+  isCurrent: () => boolean; subscribeCurrent: (changed: () => void) => (() => void);
+  onRequestClose: (lease?: AdminRootSheetCancellationLease) => void;
 }>;
-/** The actual Root cleanup/authority producer and renderer are not connected. Module availability cannot unlock this gate. */
-export const adminRootSheetAdmission = Object.freeze({ status: 'unavailable' as const, reason: 'original-cleanup-coordinator-unavailable' as const });
+/** Each request needs the same original show/cleanup binding and a subscribed Source owner, then real native receipts. */
+export const adminRootSheetAdmission = Object.freeze({ status: 'conditional' as const, reason: 'original-owner-and-native-receipts-required' as const });
 export function captureAdminRootSheetOptions(value: AdminRootSheetOptions): AdminRootSheetOptions | null {
   try {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

@@ -1,4 +1,4 @@
-const { load, core, guard, tickets, presentation, deferred, flush } = require('./adminRootPresentationSupport.cjs');
+const { load, core, guard, tickets, presentation, deferred, flush, parentDomain } = require('./adminRootPresentationSupport.cjs');
 function nodes(tree, match, output = []) {
   if (Array.isArray(tree)) tree.forEach(value => nodes(value, match, output));
   else if (tree && typeof tree === 'object') { if (match(tree)) output.push(tree); nodes(tree.props?.children, match, output); } return output;
@@ -23,12 +23,15 @@ async function nativeFixture(platform) {
   const jsx = { jsx: (type, props, key) => ({ type, props: props ?? {}, key }), jsxs: (type, props, key) => ({ type, props: props ?? {}, key }) };
   const windowOwner = load('admin/adminPresentationWindowOwner', { '../shared/camera/synchronousGuard': guard });
   const hook = load('admin/useAdminPresentationWindow', { react, './adminPresentationWindowOwner': windowOwner });
-  const parentOwner = load('admin/adminRootNativeParentOwner', { '../shared/camera/synchronousGuard': guard });
   const parentContext = load('admin/AdminRootNativeParentContext.tsx', { react, 'react/jsx-runtime': jsx,
-    'react-native': { View: 'View', StyleSheet: { create: value => value }, findNodeHandle: value => value?.tag ?? null }, './adminRootNativeParentOwner': parentOwner });
+    'react-native': { View: 'View', StyleSheet: { create: value => value }, findNodeHandle: value => value?.tag ?? null }, './adminRootNativeParentOwner': parentDomain });
+  const ownedProtocol = load('../modules/accord-admin-presentation/src/AccordAdminOwnedSheet', { expo: {} });
+  const ownedCarrier = load('admin/AdminRootOwnedSheetCarrier.tsx', { react, 'react/jsx-runtime': jsx,
+    'react-native': { View: 'View', StyleSheet: { create: value => value } },
+    '../../modules/accord-admin-presentation/src/AccordAdminOwnedSheet': ownedProtocol, './AdminRootNativeParentContext': parentContext });
   const component = load(`admin/AdminRootPresentation.${platform}.tsx`, { react, 'react/jsx-runtime': jsx,
     'react-native': { Modal: 'Modal', View: 'View', StyleSheet: { create: value => value }, findNodeHandle: value => value?.tag },
-    './adminRootPresentationChain': core, './adminPresentationWindowTicket': tickets, './useAdminPresentationWindow': hook, './AdminRootNativeParentContext': parentContext });
+    './adminRootPresentationChain': core, './adminPresentationWindowTicket': tickets, './useAdminPresentationWindow': hook, './AdminRootNativeParentContext': parentContext, './AdminRootOwnedSheetCarrier': ownedCarrier });
   const rootIdentity = {}, chain = new core.AdminRootPresentationChain({ platform, rootIdentity, isCurrent: () => current });
   const body = name => (outlet, state) => jsx.jsxs('RealBody', { name, state, children: [jsx.jsx('NativeControlFixture', { name }), outlet] });
   let props = { chain, rootIdentity, presentation, renderContent: body('root'), onRequestClose: () => calls.push('root-back'), windowObserver: observer };

@@ -54,8 +54,19 @@ unexpected root loss remains fail-closed; no retry timer or synthetic success is
 
 ## Blocking integration / physical Open items
 
-- Only page/dialog RNModal carriers exist. No SwiftUI-sheet parent presentation receipt is implemented.
-  SDK58 `BottomSheet.onIsPresentedChange` and SwiftUI `onAppear` are not presentation-complete proof.
+- Page/dialog RNModal carriers and the owned native sheet carrier now share this actual ordered chain.
+  Sheet requests require the same original show/retirement capability pair, a synchronous Source subscription
+  installed at acceptance, and a genuine inherited native parent marker. An old binary without retirement
+  support remains held. No SwiftUI `onAppear`, BottomSheet toggle or React layout is a shown/removed receipt.
+  Fixed native height/corner/barrier options are supported; intrinsic sizing and resize receipts remain Open.
+- Each sheet has its original transaction/authority coordinator. Native gesture completion dispatches the
+  original cancellation lease; only explicit Source `chain.requestClose(entry, lease)` accepts cancellation.
+  Programmatic closure has no borrowed gesture transaction. Actual `closeJoined` settles a successful
+  result; Source/account retirement always settles `retired`, retains its inert portal/outlet and waits for
+  the same native module's opaque retirement receipt. Queued and mounted children both block cleanup.
+- Both platform Outlets now mount that real native portal; actual fixture tests exercise it through the
+  chain/lifecycle/native event props. The application Root/Source container and feature picker producers
+  are still not assembled, so this foundation does not expose Admin or declare source picker parity.
 - No original Expo file-page navigation/back context forwarding, native iOS carrier header, Profile/UserCreate
   body adapter, source global popup provider, Source rapid-role coalescer correction, or route/native dual
   close fence is connected. Do not mount a native Expo Stack inside an Android RNModal: the installed

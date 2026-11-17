@@ -1,5 +1,15 @@
 # Admin UI contract (partial)
 
+## 2026-11-17: Root owned sheets (connected native foundation)
+
+Source ordering: f119 `admin_user_create_screen_widgets_part_01.dart:77–113` waits for roles before opening its picker and applies a nonnull result only while mounted; `admin_item_create_screen__AdminItemCreateScreenState_methods_01.dart:287–347` retains the root customer sheet while pushing CustomerCreate, then applies the original returned customer after the picker closes. Their fixed/adaptive UI sizing and actual application producers remain separate Open work.
+
+The actual `AdminRootPresentationChain` now accepts a sheet only with an issued matching original native show/cleanup capability pair and a real synchronous owner subscription. It subscribes that Source owner immediately, including queued requests. Both platform Outlets mount `AdminRootOwnedSheetCarrier` inside the inherited original native parent slot. Layout/capability availability does not mark it shown. Only the actual owned native shown event enables interaction; pending gestures, closing and retirement fence new commands.
+
+The original coordinator separates Source result from native resource removal. An actual native cancellation receives its own opaque lease; a callback or gesture alone never accepts a Source close. Explicit acceptance waits for the native `closeJoined` event before returning `closed`. Already accepted children retain their parent/outlet; parent closing/retirement cannot remove it first. Owner/account retirement returns `retired`, while the original inert portal remains until the same module's opaque resource retirement receipt. Copied/foreign capability pairs, changed parent bindings, RNModal callbacks, layout, failed bridge calls and React cleanup cannot certify removal. StrictMode reconnect preserves the same original parent/identity, including descendant-first replay.
+
+This connects real native carriers to the transaction/resource policy. It does not mount the application Root, route any source picker, provide dynamic/intrinsic sheet sizing, or finish the global CreateHub host. Those actual callers, typed results and physical native validation remain Open; Admin global entry stays held.
+
 ## 2026-11-17: Inactive suppliers
 
 Source: `admin_inactive_suppliers_screen.dart` at f119. `AdminInactiveSuppliersScreen.*` uses `useAdminInactiveSuppliers` and the shared existing supplier parsers/status API. GET `/admin/suppliers/inactive` returns the source list in response order; restore POST preserves the original untrimmed ref in its query and has no body/content type. Unblock reuses the existing PUT status with `blocked:false`.
