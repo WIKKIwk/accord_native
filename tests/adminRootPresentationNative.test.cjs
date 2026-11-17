@@ -78,3 +78,42 @@ test('captured real-body live guards reject queued native events through blur/cl
   assert.equal(state.canInteract(), false); assert.equal(state.isCurrent(), true); f.chain.requestClose(b.entry); const modal = f.modals()[2]; f.render(); modal.props.onDismiss(); f.render(); assert.equal(state.canInteract(), true);
   f.chain.requestClose(a.entry); assert.equal(state.canInteract(), false); assert.equal(state.isCurrent(), true); f.chain.cancel(a.entry); assert.equal(state.isCurrent(), false); f.cleanup(); await flush();
 });
+
+for (const platform of ['android', 'ios']) test(`${platform} actual outlet ancestor supplies only its explicit original native parent; origin descriptor cannot inherit its own slot`, async () => {
+  const f = await nativeFixture(platform); let outside = 'unset', physical, wrong;
+  function OriginProbe() { outside = f.parentContext.useAdminRootNativeParent(f.chain, f.chain.root); return null; }
+  f.props({ renderContent: outlet => f.jsx.jsxs('OriginalRootBody', { children: [f.jsx.jsx(OriginProbe, {}), outlet] }) });
+  await f.readyRoot(); assert.equal(outside, null); let child;
+  function ChildProbe() {
+    physical = f.parentContext.useAdminRootNativeParent(f.chain, f.chain.root);
+    wrong = f.parentContext.useAdminRootNativeParent(f.chain, child.entry);
+    return f.jsx.jsx('ActualNativeParentConsumer', {});
+  }
+  child = f.open('child', { renderContent: outlet => f.jsx.jsxs('OriginalChildBody', { children: [f.jsx.jsx(ChildProbe, {}), outlet] }) }); f.render();
+  assert.ok(physical); assert.equal(wrong, null); assert.equal(physical.parent, f.chain.root); assert.equal(physical.chain, f.chain);
+  const slot = nodes(f.tree(), node => node.props.testID === 'admin-root-native-parent-slot' && node.props.nativeID === f.chain.root.id)[0];
+  assert.equal(slot.props.collapsable, false); assert.equal(slot.props.pointerEvents, 'box-none'); assert.equal(physical.marker.tag, slot.props.ref.current.tag); assert.equal(physical.marker.nativeID, slot.props.nativeID);
+  assert.equal(nodes(slot, node => node.type === 'Modal').length, 1); assert.equal(nodes(slot, node => node.type === OriginProbe).length, 0);
+  assert.deepEqual(slot.props.style, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }); assert.equal(f.modals().length, 2);
+  const saved = physical; f.replay(); await flush(); f.render(); assert.equal(physical, saved); assert.equal(saved.isCurrent(), true);
+  f.current(false); assert.equal(saved.isCurrent(), false); f.current(true); assert.equal(saved.isCurrent(), false); f.cleanup(); await flush();
+});
+
+test('actual retained retired parent slot and outlet survive beneath its child with Source authority kept separate', async () => {
+  const f = await nativeFixture('ios'); await f.readyRoot(); const a = f.open('retained'); f.render(); f.modals()[1].props.onShow(); f.render(); let binding;
+  function Probe() { binding = f.parentContext.useAdminRootNativeParent(f.chain, a.entry); return null; }
+  const b = f.open('independent-child', { renderContent: outlet => f.jsx.jsxs('ActualChildBody', { children: [f.jsx.jsx(Probe, {}), outlet] }) }); f.render(); f.modals()[2].props.onShow(); f.render();
+  const original = binding, slot = nodes(f.tree(), node => node.props.testID === 'admin-root-native-parent-slot' && node.props.nativeID === a.entry.id)[0]; assert.ok(original);
+  f.chain.cancel(a.entry); f.render(); assert.equal(binding, original); assert.equal(original.isCurrent(), true); assert.equal(original.sourceCurrent(), false);
+  assert.equal(f.modals().length, 3); assert.equal(nodes(f.tree(), node => node.props.testID === 'admin-root-native-parent-slot' && node.props.nativeID === a.entry.id)[0].props.ref.current, slot.props.ref.current);
+  f.chain.requestClose(b.entry); const native = f.modals()[2]; f.render(); native.props.onDismiss(); f.render(); assert.equal(await b.closed, 'closed'); assert.equal(await a.closed, 'retired'); f.cleanup(); await flush();
+});
+
+test('actual marker View replacement never retargets an already returned native parent DTO or acknowledges its window', async () => {
+  const f = await nativeFixture('ios'); await f.readyRoot(); let binding;
+  function Probe() { binding = f.parentContext.useAdminRootNativeParent(f.chain, f.chain.root); return null; }
+  f.open('child', { renderContent: outlet => f.jsx.jsxs('ActualChild', { children: [f.jsx.jsx(Probe, {}), outlet] }) }); f.render(); const original = binding;
+  const slot = nodes(f.tree(), node => node.props.testID === 'admin-root-native-parent-slot' && node.props.nativeID === f.chain.root.id)[0];
+  slot.props.ref.current = { tag: original.marker.tag + 1000 }; slot.props.onLayout(); assert.equal(original.isCurrent(), false); assert.equal(original.marker.tag, slot.props.ref.current.tag - 1000);
+  assert.equal(f.chain.getSnapshot().rootReady, true); f.render(); assert.equal(binding, null); f.cleanup(); await flush();
+});

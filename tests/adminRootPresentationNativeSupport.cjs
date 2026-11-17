@@ -12,6 +12,9 @@ async function nativeFixture(platform) {
   const adapter = load('admin/adminPresentationWindow', { expo: { requireOptionalNativeModule: () => raw } }), capability = await adapter.readAdminPresentationWindowCapability('android'), observer = capability.observer;
   const instances = new Map(), markers = new Map(), equal = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
   const react = {
+    createContext(value) { const context = { value }; context.Provider = { context }; return context; },
+    useContext(context) { return context.value; },
+    useState(create) { const index = active.cursor++; if (!active.slots[index]) active.slots[index] = { value: typeof create === 'function' ? create() : create }; return [active.slots[index].value, value => { active.slots[index].value = value; dirty = true; }]; },
     useMemo(create, deps) { const index = active.cursor++; let value = active.slots[index]; if (!value || !equal(value.deps, deps)) active.slots[index] = value = { value: create(), deps }; return value.value; },
     useRef(value) { const index = active.cursor++; if (!active.slots[index]) active.slots[index] = { value: { current: value } }; return active.slots[index].value; },
     useLayoutEffect(create, deps) { const index = active.cursor++; let value = active.slots[index]; if (!value || !equal(value.deps, deps)) { value?.cleanup?.(); active.slots[index] = value = { create, deps, cleanup: null }; pending.push(() => { value.cleanup = create(); }); } },
@@ -20,15 +23,23 @@ async function nativeFixture(platform) {
   const jsx = { jsx: (type, props, key) => ({ type, props: props ?? {}, key }), jsxs: (type, props, key) => ({ type, props: props ?? {}, key }) };
   const windowOwner = load('admin/adminPresentationWindowOwner', { '../shared/camera/synchronousGuard': guard });
   const hook = load('admin/useAdminPresentationWindow', { react, './adminPresentationWindowOwner': windowOwner });
+  const parentOwner = load('admin/adminRootNativeParentOwner', { '../shared/camera/synchronousGuard': guard });
+  const parentContext = load('admin/AdminRootNativeParentContext.tsx', { react, 'react/jsx-runtime': jsx,
+    'react-native': { View: 'View', StyleSheet: { create: value => value }, findNodeHandle: value => value?.tag ?? null }, './adminRootNativeParentOwner': parentOwner });
   const component = load(`admin/AdminRootPresentation.${platform}.tsx`, { react, 'react/jsx-runtime': jsx,
     'react-native': { Modal: 'Modal', View: 'View', StyleSheet: { create: value => value }, findNodeHandle: value => value?.tag },
-    './adminRootPresentationChain': core, './adminPresentationWindowTicket': tickets, './useAdminPresentationWindow': hook });
+    './adminRootPresentationChain': core, './adminPresentationWindowTicket': tickets, './useAdminPresentationWindow': hook, './AdminRootNativeParentContext': parentContext });
   const rootIdentity = {}, chain = new core.AdminRootPresentationChain({ platform, rootIdentity, isCurrent: () => current });
   const body = name => (outlet, state) => jsx.jsxs('RealBody', { name, state, children: [jsx.jsx('NativeControlFixture', { name }), outlet] });
   let props = { chain, rootIdentity, presentation, renderContent: body('root'), onRequestClose: () => calls.push('root-back'), windowObserver: observer };
   function expand(node, path) {
     if (Array.isArray(node)) return node.map((value, index) => expand(value, `${path}/${value?.key ?? index}`));
     if (!node || typeof node !== 'object') return node;
+    if (node.type?.context) {
+      const context = node.type.context, previous = context.value; context.value = node.props.value;
+      try { return { ...node, props: { ...node.props, children: expand(node.props.children, `${path}/provider`) } }; }
+      finally { context.value = previous; }
+    }
     if (typeof node.type === 'function') {
       const key = `${path}/${node.type.name}:${node.key ?? ''}`; let instance = instances.get(key); if (!instance) instances.set(key, instance = { slots: [] }); visited.add(key); const previous = active; active = instance; active.cursor = 0;
       const output = node.type(node.props); active = previous; return expand(output, `${key}/out`);
@@ -44,7 +55,7 @@ async function nativeFixture(platform) {
     } throw Error('Native Root fixture did not settle');
   }
   const modals = () => nodes(tree, value => value.type === 'Modal');
-  function marker(index) { const modal = modals()[index]; return nodes(modal.props.children, value => value.type === 'View' && value.props.nativeID)[0]; }
+  function marker(index) { const modal = modals()[index]; return nodes(modal.props.children, value => value.type === 'View' && value.props.nativeID && value.props.testID !== 'admin-root-native-parent-slot')[0]; }
   const layout = index => { const value = marker(index); value.props.onLayout(); return value.props.nativeID; };
   const ack = async index => { const ticket = marker(index).props.nativeID, value = native.get(ticket); value.arm.resolve(value.value); await flush(); render(); };
   const detach = async ticket => { const value = native.get(ticket); value.detach.resolve({ ...value.value, state: 'detached' }); await flush(); render(); };
@@ -52,6 +63,6 @@ async function nativeFixture(platform) {
   const open = (name, changes = {}) => chain.open({ parent: chain.top(), identity: {}, kind: 'dialog', renderContent: body(name), presentation: { ...presentation, transparent: true, presentationStyle: 'overFullScreen' }, isCurrent: () => current, onRequestClose: () => calls.push(['close', name]), ...changes });
   const replay = () => { const effects = [...instances.values()].flatMap(value => value.slots).filter(value => value.create); effects.forEach(value => value.cleanup?.()); effects.forEach(value => { value.cleanup = value.create(); }); };
   const cleanup = () => { for (const instance of instances.values()) instance.slots.forEach(value => value.cleanup?.()); instances.clear(); };
-  return { chain, rootIdentity, calls, native, observer, component, props: value => { props = { ...props, ...value }; }, copies: value => { copies = value; }, render, modals, layout, ack, detach, readyRoot, open, replay, cleanup, current: value => { current = value; }, tree: () => tree };
+  return { chain, rootIdentity, calls, native, observer, component, parentContext, jsx, props: value => { props = { ...props, ...value }; }, copies: value => { copies = value; }, render, modals, layout, ack, detach, readyRoot, open, replay, cleanup, current: value => { current = value; }, tree: () => tree };
 }
 module.exports = { nativeFixture, nodes };

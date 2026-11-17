@@ -5,6 +5,7 @@ import { createAdminPresentationWindowTicket } from './adminPresentationWindowTi
 import { captureAdminRootPresentationOptions, type AdminRootPresentationChain, type AdminRootPresentationContent, type AdminRootPresentationEntry, type AdminRootPresentationOptions, type AdminRootPresentationParent } from './adminRootPresentationChain';
 import type { AdminRootPresentationRootProps } from './AdminRootPresentationTypes';
 import { useAdminPresentationWindow } from './useAdminPresentationWindow';
+import { AdminRootNativeParentSlot } from './AdminRootNativeParentContext';
 
 type Observer = Readonly<{ windowObserver: AdminPresentationWindowObserver }>;
 type CarrierProps = Observer & Readonly<{ chain: AdminRootPresentationChain; parent: AdminRootPresentationParent;
@@ -46,7 +47,7 @@ function Carrier(props: CarrierProps) {
     <View style={styles.fill} pointerEvents={interactive ? 'auto' : 'none'} accessibilityElementsHidden={!interactive} importantForAccessibility={interactive ? 'auto' : 'no-hide-descendants'}>
       <View ref={marker} collapsable={false} nativeID={original.ticket} pointerEvents="none" style={styles.marker}
         onLayout={() => { const tag = findNodeHandle(marker.current); if (typeof tag === 'number') window.owner.markerTag(tag); }} />
-      {original.renderContent(<Outlet chain={chain} parent={parent} windowObserver={original.observer} />, Object.freeze({ interactive, retained, retired: chain.isRetired(parent), canInteract: original.canInteract, isCurrent: original.isCurrent }))}
+      {original.renderContent(<AdminRootNativeParentSlot chain={chain} parent={parent} nativeIdentity={original.identity}><Outlet chain={chain} parent={parent} windowObserver={original.observer} /></AdminRootNativeParentSlot>, Object.freeze({ interactive, retained, retired: chain.isRetired(parent), canInteract: original.canInteract, isCurrent: original.isCurrent }))}
     </View>
   </Modal>;
 }

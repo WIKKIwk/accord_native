@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useSyncExternalStore } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import { captureAdminRootPresentationOptions, type AdminRootPresentationChain, type AdminRootPresentationContent, type AdminRootPresentationEntry, type AdminRootPresentationOptions, type AdminRootPresentationParent } from './adminRootPresentationChain';
 import type { AdminRootPresentationRootProps } from './AdminRootPresentationTypes';
+import { AdminRootNativeParentSlot } from './AdminRootNativeParentContext';
 
 type CarrierProps = Readonly<{ chain: AdminRootPresentationChain; parent: AdminRootPresentationParent; rootIdentity?: object;
   presentation: AdminRootPresentationOptions; renderContent: AdminRootPresentationContent; onRequestClose?: () => void }>;
@@ -33,7 +34,7 @@ function Carrier(props: CarrierProps) {
       else if (chain.canInteract(parent)) { try { void Promise.resolve(original.onRequestClose?.()).catch(() => {}); } catch {} }
     }}>
     <View style={styles.fill} pointerEvents={interactive ? 'auto' : 'none'} accessibilityElementsHidden={!interactive}>
-      {original.renderContent(<Outlet chain={chain} parent={parent} />, Object.freeze({ interactive, retained, retired: chain.isRetired(parent), canInteract: original.canInteract, isCurrent: original.isCurrent }))}
+      {original.renderContent(<AdminRootNativeParentSlot chain={chain} parent={parent} nativeIdentity={original.identity}><Outlet chain={chain} parent={parent} /></AdminRootNativeParentSlot>, Object.freeze({ interactive, retained, retired: chain.isRetired(parent), canInteract: original.canInteract, isCurrent: original.isCurrent }))}
     </View>
   </Modal>;
 }
