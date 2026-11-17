@@ -36,6 +36,7 @@ test('inventory uses shared tabs, search and paging and opens QR scanning from t
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const render = () => { cursor = 0; return mod.exports.PreparationInventoryScreen(); };
   let page = render(), workspace = nodes(page, n => n.type === 'OrdersWorkspace')[0];
+  assert.equal(nodes(page, n => n.type === 'PreparationDock').length, 0);
   assert.deepEqual(workspace.props.tabs.map(tab => tab.id), ['assets', 'incoming', 'outgoing']); assert.equal(workspace.props.distributeTabs, true);
   const header = nodes(workspace.props.header, n => n.type === 'OrdersHeader')[0]; header.props.onSearchChange('film'); assert.deepEqual(calls.at(-1), ['query', 'film']);
   let list = workspace.props.children('assets', 'gesture');

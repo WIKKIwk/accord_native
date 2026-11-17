@@ -24,7 +24,7 @@ import { preparationInventoryAssetBarcode, preparationInventoryQuantity, prepara
   type PreparationInventoryAsset, type PreparationInventoryTransfer } from './preparationInventory';
 import { reprintPreparationInventoryAsset } from './preparationInventoryReprint';
 import { PreparationReprintCancelled } from './preparationReprint';
-import { PreparationButton, PreparationDialogs, PreparationDock, PreparationField, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationField, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationInventory } from './usePreparationInventory.android';
 
 type Inventory = ReturnType<typeof usePreparationInventory>;
@@ -52,7 +52,7 @@ export function PreparationInventoryScreen() {
     scanLock.current = true;
     try { await inventory.lookup(value); } finally { scanLock.current = false; }
   };
-  const setDockHeight = usePreparationFab('inventory', { actions: [{ id: 'scan', label: t(scanning ? 'QR izlashni yopish' : 'QR orqali izlash'), icon: 'qr_code_scanner', width: 230 }],
+  usePreparationFab('inventory', { actions: [{ id: 'scan', label: t(scanning ? 'QR izlashni yopish' : 'QR orqali izlash'), icon: 'qr_code_scanner', width: 230 }],
     enabled: true, visible: true, onSelect: () => {
       if (!scanning && !permission?.granted) void requestPermission();
       setScanning(!scanning); setManualOpen(false); lastScan.current = ''; inventory.clearQr();
@@ -115,7 +115,6 @@ export function PreparationInventoryScreen() {
       </OrdersList>;
       }}
     </OrdersWorkspace>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     </View>
     <InventoryDetails ref={details} inventory={inventory} assigned={assigned} />
   </>;
