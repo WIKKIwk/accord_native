@@ -5,7 +5,7 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { loadSession, logout, registerSessionResetHook, type Session } from '../auth';
 import { clearAppLock } from '../appLock';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
-import { PreparationDialogs } from './PreparationUI.android';
+import { PreparationDialogs, PreparationDock } from './PreparationUI.android';
 import { usePreparationHome } from './usePreparationHome';
 import { PreparationDrawer } from './PreparationDrawer.android';
 import { PreparationFabProvider } from './PreparationFab.android';
@@ -17,7 +17,7 @@ function Provider({ session, onLogout, children }: { session: Session; onLogout:
   const home = usePreparationHome(session);
   useEffect(() => registerSessionResetHook(async () => { home.controller.invalidate(); }), [home.controller]);
   return <PreparationContext.Provider value={{ session, home, onLogout }}><PreparationDialogs>
-    <PreparationDrawer><PreparationFabProvider>{children}</PreparationFabProvider></PreparationDrawer>
+    <PreparationDrawer><PreparationFabProvider sharedDock={<PreparationDock />}>{children}</PreparationFabProvider></PreparationDrawer>
   </PreparationDialogs></PreparationContext.Provider>;
 }
 

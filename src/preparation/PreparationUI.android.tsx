@@ -94,7 +94,7 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
       {children}
     </ScrollView>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
+    {!root && <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>}
   </View>;
 }
 

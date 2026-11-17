@@ -116,7 +116,6 @@ export function PreparationSequenceScreen() {
       <PreparationSequenceList session={session} controller={binding.controller}
         openOrder={row => { const scope = binding.controller.getSnapshot().window?.scope; if (scope) setSelected({ row, scope }); }} />
     </View>
-    <View style={{ flexShrink: 0 }}><PreparationDock /></View>
     {selected ? <PreparationDetailSheet>
       <PreparationDialogs><PreparationSequenceDetail session={session} controller={binding.controller} selected={selected}
         isCurrent={binding.current} close={() => setSelected(null)} openVariants={openVariants} /></PreparationDialogs>

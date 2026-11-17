@@ -21,6 +21,40 @@ function load(mocks) {
   return mod.exports;
 }
 
+test('home and orders keep the same dock outside the screen stack', () => {
+  let pathname = '/android-preparation', cursor = 0;
+  const state = [];
+  const react = {
+    createContext: () => ({ Provider: 'FabContext' }), useContext() {}, useLayoutEffect() {},
+    useRef: value => ({ current: value }), useCallback: fn => fn, useMemo: fn => fn(),
+    useState(initial) { const at = cursor++; if (!(at in state)) state[at] = initial;
+      return [state[at], next => { state[at] = typeof next === 'function' ? next(state[at]) : next; }]; },
+  };
+  const { PreparationFabProvider } = load({ 'react/jsx-runtime': jsx, react,
+    'expo-router': { usePathname: () => pathname, useFocusEffect() {} },
+    'react-native': { View: 'View', StyleSheet: { absoluteFill: {}, create: value => value } },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
+    '../shared/navigation/RoleFab.android': { RoleFab: 'RoleFab' },
+  });
+  const render = () => { cursor = 0; return PreparationFabProvider({ children: 'native-stack', sharedDock: { type: 'PreparationDock', props: {} } }); };
+  const children = tree => tree.props.children.props.children;
+  const home = children(render());
+  assert.equal(home[0].props.children, 'native-stack');
+  assert.equal(home[1].props.children.type, 'PreparationDock');
+  home[1].props.onLayout({ nativeEvent: { layout: { height: 104 } } });
+
+  pathname = '/android-preparation/sequence';
+  const orders = children(render());
+  assert.equal(orders[0].type, home[0].type);
+  assert.equal(orders[1].type, home[1].type);
+  assert.equal(orders[1].key, home[1].key);
+  assert.equal(orders[1].props.children.type, home[1].props.children.type);
+  assert.equal(nodes(orders[2], node => node.type === 'RoleFab')[0].props.bottomOffset, 120);
+
+  pathname = '/android-preparation/warehouse';
+  assert.equal(children(render())[1], null);
+});
+
 test('one FAB stays mounted and visible across home, warehouse loading and back', () => {
   let pathname = '/android-preparation', cursor = 0;
   const state = [], calls = [];

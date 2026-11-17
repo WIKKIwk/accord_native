@@ -26,7 +26,7 @@ function fabScope(pathname: string): Scope | null {
 }
 
 /** One FAB stays above the native stack while each focused screen supplies its menu. */
-export function PreparationFabProvider({ children }: { children: ReactNode }) {
+export function PreparationFabProvider({ children, sharedDock }: { children: ReactNode; sharedDock?: ReactNode }) {
   const pathname = usePathname(), insets = useSafeAreaInsets();
   const [entries, setEntries] = useState<Partial<Record<Scope, Entry>>>({});
   const [dockHeight, updateDockHeight] = useState(80 + insets.bottom);
@@ -44,10 +44,12 @@ export function PreparationFabProvider({ children }: { children: ReactNode }) {
   }, [insets.bottom]);
   const context = useMemo(() => ({ register, setDockHeight }), [register, setDockHeight]);
   const scope = fabScope(pathname), entry = scope ? entries[scope] : undefined;
+  const showSharedDock = scope === 'home' || pathname.replace(/\/+$/, '') === '/android-preparation/sequence';
   const visible = scope !== null && (entry?.visible ?? true);
   const enabled = visible && !!entry?.enabled && entry.actions.length > 0;
   return <Context.Provider value={context}><View style={styles.root}>
-    {children}
+    <View style={styles.content}>{children}</View>
+    {showSharedDock && sharedDock ? <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}>{sharedDock}</View> : null}
     <View style={[StyleSheet.absoluteFill, { opacity: visible ? 1 : 0 }]} pointerEvents={enabled ? 'box-none' : 'none'}
       accessibilityElementsHidden={!enabled} importantForAccessibility={enabled ? 'auto' : 'no-hide-descendants'}>
       <RoleFab actions={entry?.actions ?? emptyActions} onSelect={entry?.onSelect ?? noSelect} bottomOffset={dockHeight + 16}
@@ -74,4 +76,4 @@ export function usePreparationFab(scope: Scope | null, options: FabOptions) {
   return setDockHeight;
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 } });
+const styles = StyleSheet.create({ root: { flex: 1 }, content: { flex: 1 } });

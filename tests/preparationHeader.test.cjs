@@ -48,7 +48,7 @@ test('Android preparation headers show only the drawer at home and only back on 
   const router = { canGoBack: () => canGoBack, back: () => calls.push('back'), replace: value => calls.push(value), navigate: value => calls.push(value) };
   const ui = new Proxy({}, { get: (_, key) => key === 'useMaterialColors' ? () => ({ surfaceContainerLow: 'surface' }) : key });
   const modifiers = new Proxy({}, { get: (_, key) => (...args) => ({ key, args }) });
-  const { PreparationPage } = load('preparation/PreparationUI.android.tsx', {
+  const { PreparationPage, PreparationDock } = load('preparation/PreparationUI.android.tsx', {
     '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers,
     'expo-router': { router }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl' },
@@ -62,11 +62,13 @@ test('Android preparation headers show only the drawer at home and only back on 
     './PreparationFab.android': { usePreparationFab: (scope, options) => { fabRegistrations.push({ scope, ...options }); return () => {}; } },
   });
   const root = PreparationPage({ title: 'Tayyorlov', root: true, drawer: true });
+  assert.equal(findAll(root, node => node.type === PreparationDock).length, 0);
   const rootHeader = findAll(root, node => node.type === 'RoleHeader')[0];
   assert.equal(rootHeader.props.navigation.icon, 'menu');
   assert.equal(rootHeader.props.navigation.label, 'Menyu');
   rootHeader.props.navigation.onPress();
   const child = PreparationPage({ title: 'Ombor', drawer: true });
+  assert.equal(findAll(child, node => node.type === PreparationDock).length, 1);
   const childHeader = findAll(child, node => node.type === 'RoleHeader')[0];
   assert.equal(childHeader.props.navigation.icon, 'back');
   assert.equal(childHeader.props.navigation.label, 'Orqaga');

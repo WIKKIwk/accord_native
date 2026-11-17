@@ -23,7 +23,7 @@ test('Android preparation keeps earlier native screens attached with the default
     'expo-router': { Redirect: 'Redirect', Stack, router: {} },
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: 'android' }, View: 'View' },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },
-    './PreparationUI.android': { PreparationDialogs: 'PreparationDialogs' },
+    './PreparationUI.android': { PreparationDialogs: 'PreparationDialogs', PreparationDock: 'PreparationDock' },
     './PreparationDrawer.android': { PreparationDrawer: 'PreparationDrawer' },
     './PreparationFab.android': { PreparationFabProvider: 'PreparationFabProvider' },
     './usePreparationHome': { usePreparationHome: () => ({ controller: {} }) },
@@ -48,4 +48,5 @@ test('Android preparation keeps earlier native screens attached with the default
   const drawer = nodes(layout, node => node.type === 'PreparationDrawer')[0];
   assert.equal(drawer.props.children.type, 'PreparationFabProvider');
   assert.equal(drawer.props.children.props.children.type, Stack);
+  assert.equal(drawer.props.children.props.sharedDock.type, 'PreparationDock');
 });

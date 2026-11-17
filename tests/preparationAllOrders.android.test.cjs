@@ -94,7 +94,7 @@ test('orders header uses a back button for preparation and keeps the worker menu
   assert.deepEqual(actions, ['back', 'menu']);
 });
 
-test('preparation orders keep navigation available on the list and order detail', () => {
+test('preparation orders reuse shared navigation while order detail keeps its dock', () => {
   const session = { token: 'token' }, focusEffects = [], row = { id: 'one' };
   let selected = null;
   class Controller { getSnapshot() { return { window: { scope: 'orders' } }; } sessionChanged() {} }
@@ -124,12 +124,12 @@ test('preparation orders keep navigation available on the list and order detail'
   }).outputText, filename);
 
   let page = mod.exports.PreparationSequenceScreen();
-  assert.equal(nodes(page, node => node.type === 'PreparationDock').length, 1);
+  assert.equal(nodes(page, node => node.type === 'PreparationDock').length, 0);
   const list = nodes(page, node => node.type === mod.exports.PreparationSequenceList)[0];
   list.props.openOrder(row);
   assert.deepEqual(selected, { row, scope: 'orders' });
   page = mod.exports.PreparationSequenceScreen();
-  assert.equal(nodes(page, node => node.type === 'PreparationDock').length, 1);
+  assert.equal(nodes(page, node => node.type === 'PreparationDock').length, 0);
   const sheet = nodes(page, node => typeof node.type === 'function' && node.type.name === 'PreparationDetailSheet')[0];
   assert.ok(sheet);
   const sheetTree = sheet.type(sheet.props);
