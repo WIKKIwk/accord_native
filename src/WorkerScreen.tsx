@@ -1,7 +1,7 @@
 import { workerPaddonListRoute } from './workerPaddonNavigation';
 import { ListItem, Spacer } from '@expo/ui';
 import { useFonts } from 'expo-font';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,12 +55,12 @@ import { workerDailyWorkVisible, workerInventoryVisible } from './workerNavigati
 import { workerQueueLimitLabels } from './workerQueuePresentation';
 import { WorkerInventoryScreen } from './components/WorkerInventoryScreen';
 
-type Props = { onSelectDestination?: (id:string) => boolean; initialQr?:string; session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
+type Props = { renderPrimaryAction?: (onScan: () => void) => ReactNode; onSelectDestination?: (id:string) => boolean; initialQr?:string; session: Session; onLogout: () => void; nativeNavigation?: boolean; onNavigate?: (id: 'profile' | 'chat' | 'daily') => void; onOpenDrawer?: () => void };
 type ActiveOrder = { apparatusId: string; orderId: string; preview?: QueueOrder; readOnly?: boolean; requireFreshDetail?: boolean; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; presentationId?: number; onClose?: () => void };
 type ActionScope = { window: string; scope: string; readScope: string; witness: SessionWitness | null };
 type ActionOrder = { apparatusId: string; order: QueueOrder; completed: boolean; prepared: WorkerPreparedActionSheet; presentationId?: number; onChoose: (action: WorkerActionChoice) => void };
 
-export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer,onSelectDestination,initialQr = '' }: Props) {
+export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNavigate, onOpenDrawer,onSelectDestination,renderPrimaryAction,initialQr = '' }: Props) {
   const pageFocused = useIsFocused();
   const colors = useWorkerColors();
   const { p, t, locale } = useWorkerOrderText();
@@ -592,7 +592,7 @@ export function WorkerScreen({ session, onLogout, nativeNavigation = false, onNa
       {!nativeNavigation && section !== 'paddons' && section !== 'inventory' && <View onLayout={event => setNavBarHeight(event.nativeEvent.layout.height)}>
         <WorkerBottomBar active={section} onSelect={selectDestination} onScan={openScanner} />
       </View>}
-      {section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' ? <WorkerFab onSelect={selectDestination} onScan={openScanner} showPaddons={showPaddons} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} /> : null}
+      {section !== 'daily' && section !== 'instructions' && section !== 'paddons' && section !== 'inventory' ? (renderPrimaryAction ? renderPrimaryAction(openScanner) : <WorkerFab onSelect={selectDestination} onScan={openScanner} showPaddons={showPaddons} bottomOffset={nativeNavigation ? 88 : navBarHeight + insets.bottom + 16} />) : null}
       {activeOrder ? <WorkerOrderSheet key={activeOrder.presentationId} onClose={activeOrder.onClose!}>
         {renderOrderRoute(activeOrder, activeOrder.onClose!, queue)}
       </WorkerOrderSheet> : null}

@@ -1,3 +1,4 @@
+import { useBrigaderApparatusDrawer } from './useBrigaderApparatusDrawer';
 import { FlatList } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { adminText, localizedGetter } from '../shared/localization';
@@ -18,6 +19,7 @@ export function BrigaderPaddons() {
 }
 function List() {
   const { page,owner,state,p } = useBrigaderPaddons(), a = (key:string) => adminText(key,page.locale), title = owner.name ? p('worker.paddon.apparatus',{ apparatus:owner.name }) : p('worker.paddons');
+  useBrigaderApparatusDrawer(appRoutes.apparatusPaddons);
   const actions = [{ id:'transfer',label:p('worker.paddon.transfer.title'),icon:{ ios:'arrow.up.arrow.down' as const,android:'swap_vert' as const },enabled:!state.creating && !state.deleting,onPress:() => { void owner.transfer(); } },{ id:'create',label:p('worker.paddon.create'),icon:{ ios:'plus' as const,android:'add' as const },enabled:!state.creating,onPress:() => { void owner.create(); } }].filter(item => item.id !== 'transfer' || state.canTransfer);
   return <BrigaderFeatureFrame route={appRoutes.apparatusPaddons} title={title} drawer footer={<BrigaderApparatusDock actions={actions} />}>
     {state.loading && !state.hasData ? <FeatureBusy /> : state.error && !state.hasData ? <FeatureError message={p('worker.paddon.load_failed')} label={localizedGetter('retry',page.locale)} retry={() => { void owner.load(); }} /> : <FlatList data={state.rows} refreshing={state.refreshing} onRefresh={owner.load} keyExtractor={row => row.code} contentContainerStyle={{ padding:4,paddingBottom:120 }} ListHeaderComponent={<Form><Label>{p('worker.paddon.location.title')}</Label><Label>{p('worker.paddon.location.subtitle')}</Label><Label>{`${p('worker.paddons')}: ${state.rows.length}   ${p('worker.daily.wip')}: ${state.rows.reduce((sum,row) => sum+row.item_count,0)}`}</Label><Label>{title}</Label></Form>} ListEmptyComponent={<Form><Label>{p('worker.paddon.empty.title')}</Label><Label>{p('worker.paddon.empty.body')}</Label></Form>} renderItem={({ item,index }) => <FeatureRow title={item.code} subtitle={[item.contains_peremotka ? p('worker.rezka.print.peremotka') : '',p('worker.paddon.wip_count',{ count:item.item_count })].filter(Boolean).join(' • ')} index={index} count={state.rows.length} onPress={() => { void owner.open(item); }} onLongPress={state.deleting ? undefined : () => { void owner.remove(item); }} />} />}

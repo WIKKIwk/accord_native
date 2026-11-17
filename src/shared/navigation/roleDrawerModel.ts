@@ -21,6 +21,7 @@ export type RoleDrawerProps = {
   footerAction?: RoleDrawerItem & { destructive?: boolean };
   closeAccessibilityLabel: string;
   children: ReactNode;
+  width?: number;
 };
 
 /** @v2 RoleNavigationDrawer: selecting the current destination only closes it. */

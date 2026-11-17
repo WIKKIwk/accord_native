@@ -1,10 +1,10 @@
 import { useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState,useSyncExternalStore } from 'react';
-import { AppState } from 'react-native';
+import { AppState,Platform } from 'react-native';
 import { useCameraSurfacePermission } from '../shared/camera/useCameraSurfacePermission';
 import { BrigaderCameraSession } from './brigaderCameraSession';
-export function useBrigaderCamera(current:()=>boolean,enabled:boolean,autoStart=false){
+export function useBrigaderCamera(current:()=>boolean,enabled:boolean,autoStart=false,detectionSpeed:'normal'|'noDuplicates'='noDuplicates'){
  const permission=useCameraSurfacePermission(),{requestPermission,refreshPermission,canUseCamera}=permission;
- const owner=useMemo(()=>new BrigaderCameraSession(current),[current]);
+ const owner=useMemo(()=>new BrigaderCameraSession(current,Platform.OS==='ios'?'ios':'android',detectionSpeed),[current,detectionSpeed]);
  const state=useSyncExternalStore(owner.subscribe,owner.getSnapshot,owner.getSnapshot);
  const [foreground,setForeground]=useState(AppState.currentState==='active'),prompted=useRef(false),resumeOnActive=useRef(false);
  useEffect(()=>owner.mount(),[owner]);

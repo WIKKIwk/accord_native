@@ -21,7 +21,7 @@ Without that capability, show the 17 allowed inherited action rows immediately; 
 Source ordering/text comes from the existing `adminHomeModel.ts`, including all four supported languages.
 Refresh on admin-topic push, explicit pull, and actual return from an opened child. Reject duplicate opens.
 Use existing `AdminHomeScreen.*`, `AdminHomeController`, `AdminStore`, summary reader and refresh hub.
-Readiness filtering is an explicit partial implementation; it does not establish parity for absent destinations.
+The 25 formerly missing route compositions are now connected. Readiness is tied to actual native implementations and original scoped argument owners.
 
 ## Navigation
 
@@ -33,7 +33,7 @@ Use `AdminDrawer` and its existing navigation planner with the Brigader namespac
 
 Source dock `widgets/admin_dock.dart`: Home, User, Create, Activity. Create opens five source actions:
 user creation, item creation, progress QR, saved calculations, calculate order. No substitute destinations.
-Users and its real nested detail routes are connected. The genuine Create owner currently exposes only implemented destinations; the remaining four default actions are explicit Open items. No placeholder action is substituted.
+All five default actions and their real child flows are connected through the genuine shared Create owner; no placeholder action is substituted.
 
 ## Ready shared compositions
 
@@ -67,7 +67,7 @@ The exact 47 routes from `app_router_AppRouter_resplit_class_AppRouter_resplit2_
 ```
 
 Always-open shared source routes include profile, Chat and PIN; these still require an actual native owner.
-Remaining shared Admin/Chat/PIN compositions are tracked individually in the session status.
+Original scoped Users detail, Chat and PIN compositions remain connected; current scope and hardware limits are recorded in the session status.
 
 ## Connected Users, creation, warehouse and Chat follow-up
 
@@ -88,4 +88,26 @@ and native conversation route. Self-target suppression comes from `adminProfileC
 source mapping. Android keeps the compact tonal source control; iOS uses a native button with a 44-point minimum height.
 
 All iOS Brigader routes now share one native stack so awaited child returns remain attached to their real parent. Both native
-docks use the same source Home/User/Activity policy plus a genuine creation owner. Full 47-route coverage remains open in status.
+docks use the same source Home/User/Activity policy plus a genuine creation owner. The remaining 25 source entries now have native compositions; existing inherited surface limitations are distinguished from route availability in status.
+
+
+## Remaining 25 routes — current contract
+
+The current route/surface audit is recorded in `docs/port/status/brigader.md` and file mapping in `MIGRATION.md`.
+Calculator/archive/graph state is scoped to the original account. Canonical response identities and revision/idempotency
+contracts survive retries, and a real child result is returned only after actual route/window removal.
+Factory Map uses the bundled source model/renderer, real live/stock/binding services and source read-only detail reads.
+Raw-material aliases retain Source's initial tab, material/tooling policy, actual assignment model and real scanner/manual return.
+Opening WIP retains created IDs, successful print progress, retry rules and actual printer-status errors.
+
+The apparatus workspace uses its own four source drawer destinations for Brigader: monitoring, instructions,
+transfer (push), and profile. It never invents assigned machines or operator identity. The one root native drawer
+changes presentation with actual focused pages, preserving the source 220ms navigation / 120ms logout delays.
+The apparatus dock retains Home/Profile and its three source actions even without an assigned apparatus; the queue
+scan action invokes the real WorkerScreen scanner. Paddon detail supplies its real controller actions to the genuine
+Create menu, with its selection/scanning/back decisions preserved.
+
+Android uses the existing Compose controls and source dimensions where those controls allow them; iOS uses comfortable
+SwiftUI controls and native stack headers. Raw scanner containment, normal/noDuplicates handling and two-attempt
+8s start / 4s release rules are ported. V2 focus-point/auto-zoom and physical torch/printer acceptance are not certified:
+Expo Camera lacks those native focus/MLKit controls, and the user owns device tests. GoDEX remains excluded.

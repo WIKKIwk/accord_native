@@ -11,6 +11,7 @@ import { adminDrawerDestinations } from './adminDrawerModel';
 import { AdminDrawerNavigation } from './adminDrawerNavigation';
 import { adminHomeSymbol } from './adminHomeSymbols';
 import { useAdminShell } from './AdminShellContext';
+import { useAdminDrawerPresentation } from './AdminDrawerPresentationContext';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -19,6 +20,7 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
   const { session, onLogout, isCurrent, destination } = useAdminShell(), state = useRoleDrawerState(), pathname = usePathname();
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), home = homeRoute(session);
   const navigation = useNavigationContainerRef();
+  const presentation = useAdminDrawerPresentation();
   const workspace = session.profile.role === 'brigader' ? 'brigader' : 'admin';
   const owner = useMemo(() => new AdminDrawerNavigation({ platform: Platform.OS, workspace, home, isCurrent,
     destination: route => destination(route, Platform.OS), rootState: () => navigation.getRootState(),
@@ -26,8 +28,8 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
     confirmLogout: confirmRoleDrawerLogout, logout: onLogout,
   }), [home, workspace, isCurrent, destination, navigation, onLogout]);
   useEffect(() => { owner.attach(); return () => owner.detach(); }, [owner]);
-  const destinations = adminDrawerDestinations(session, locale).filter(item => item.routeName === home || !!destination(item.routeName, Platform.OS));
-  const items = destinations
+  const destinations = presentation?.destinations ?? adminDrawerDestinations(session, locale).filter(item => item.routeName === home || !!destination(item.routeName, Platform.OS));
+  const items = presentation?.items ?? destinations
     .map(item => ({ id: item.routeName, label: item.label, symbol: item.routeName === home ? { ios: 'house' as const, android: 'home' as const }
       : item.routeName === appRoutes.profile ? { ios: 'person' as const, android: 'person' as const }
       : item.routeName === appRoutes.adminSuppliers ? { ios: 'person.3' as const, android: 'groups' as const }
@@ -47,7 +49,7 @@ export function AdminDrawer({ children }: { children: ReactNode }) {
     : pathname.endsWith('/additional-settings') ? appRoutes.adminAdditionalSettings : pathname.endsWith('/item-groups') ? appRoutes.adminItemGroupCreate
     : pathname.endsWith('/roles') ? appRoutes.adminRoles : pathname.endsWith('/queue-policies') ? appRoutes.adminApparatusSettings
     : pathname.endsWith('/settings') ? appRoutes.adminSettings : home;
-  return <RoleDrawer {...state} title={localizedGetter('adminDrawerSections', locale)} items={items} active={active} onSelect={select}
+  return <RoleDrawer {...state} title={presentation?.title ?? localizedGetter('adminDrawerSections', locale)} items={items} active={presentation?.active ?? active} onSelect={select} width={presentation?.width}
     closeAccessibilityLabel={localizedGetter('closeAction', locale)}
     footerAction={{ id: 'logout', label: localizedGetter('logoutTitle', locale), destructive: true }}>
     {children}

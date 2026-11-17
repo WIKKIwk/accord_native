@@ -12,6 +12,7 @@ import { ChatRouteProvider } from '../shared/chat/ChatRouteContext';
 import { brigaderProfileOnStack } from './brigaderProfilePresence';
 import { BrigaderFlowProvider } from './BrigaderFlowProvider';
 import { BrigaderFeedbackProvider } from './BrigaderFeedbackProvider';
+import { AdminDrawerPresentationProvider } from '../admin/AdminDrawerPresentationContext';
 
 function OwnedProfilePresence({ onChange }: { onChange: (value: boolean) => void }) {
   const { owner } = useAdminOwnedNavigation(), state = useRootNavigationState();
@@ -41,6 +42,6 @@ export function BrigaderNavigationProvider({ children }: { children: ReactNode }
   }, [shell]);
   return <AdminCreateHubProvider session={shell.session} witness={shell.witness} isCurrent={shell.isCurrent}
     isRouteAvailable={shell.isRouteAvailable} onOpenRoute={open} profileOnStack={profileOnStack}>
-    <ChatRouteProvider session={shell.session} basePath={`/${Platform.OS}-brigader/chat`} onBack={() => { if (shell.isCurrent() && router.canGoBack()) router.back(); }}><OwnedPages onProfilePresence={setOwnedProfile}><BrigaderFlowProvider><BrigaderFeedbackProvider>{children}</BrigaderFeedbackProvider></BrigaderFlowProvider></OwnedPages></ChatRouteProvider>
+    <ChatRouteProvider session={shell.session} basePath={`/${Platform.OS}-brigader/chat`} onBack={() => { if (shell.isCurrent() && router.canGoBack()) router.back(); }}><OwnedPages onProfilePresence={setOwnedProfile}><BrigaderFlowProvider><BrigaderFeedbackProvider><AdminDrawerPresentationProvider>{children}</AdminDrawerPresentationProvider></BrigaderFeedbackProvider></BrigaderFlowProvider></OwnedPages></ChatRouteProvider>
   </AdminCreateHubProvider>;
 }

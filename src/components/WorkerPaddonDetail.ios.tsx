@@ -22,7 +22,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
   usePreventRemove(h.blockBack, ({ data }) => { void h.requestBack(() => navigation.dispatch(data.action)); });
   if (!h.current()) return null;
   const columns = width >= 340 && fontScale <= 1.3 ? 2 : 1;
-  const actions: MenuAction[] = state.scanning ? [
+  const actions: (MenuAction & { id:string })[] = state.scanning ? [
     { id: 'confirm', title: p('worker.paddon.scan.confirm', { count: state.scanned.length }), image: 'checkmark', attributes: { disabled: !h.canConfirmScan } },
     { id: 'close', title: p('worker.paddon.scan.close'), image: 'xmark', attributes: { disabled: h.blocked } },
   ] : [
@@ -33,6 +33,17 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
       attributes: { disabled: !h.canManage || !!state.selected.length && state.mode !== mode } })),
     ...(state.selected.length ? [{ id: 'cancel', title: p('worker.action.cancel'), image: 'xmark' as const, attributes: { disabled: h.blocked } }] : []),
   ];
+  const selectAction = (id:string) => {
+    if (!h.current() || h.presentation.isOpen()) return;
+      const action = actions.find(item => item.id === id);
+      if (!action || action.attributes?.disabled) return;
+      if (action.id === 'scan') h.controller.startScan();
+      else if (action.id === 'add' || action.id === 'remove') void h.edit(action.id);
+      else if (action.id === 'cancel') void h.cancelSelection();
+      else if (action.id === 'confirm') void h.controller.confirmScan();
+      else if (action.id === 'close') void h.cancelScan();
+
+  };
   const metric = (value: string) => <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }),
     padding({ horizontal: 10, vertical: 6 }), background(PlatformColor('tertiarySystemFill'), shapes.roundedRectangle({ cornerRadius: 10 }))]}>{value}</Text>;
   const weight = (value: string) => <Text modifiers={[font({ textStyle: 'subheadline', weight: 'semibold' }),
@@ -40,7 +51,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
   const reviewData = h.presentation.data?.kind === 'review' ? { ...h.presentation.data,
     title: p('worker.paddon.scan.pending', { count: state.scanned.length }), confirmLabel: p('worker.paddon.scan.confirm', { count: state.scanned.length }), confirmDisabled: !h.canConfirmScan } : h.presentation.data;
   return <View style={{ flex: 1, backgroundColor: colors.background }}>
-    <Stack.Screen options={{ title: props.code, headerBackButtonDisplayMode: 'minimal' }} />
+    <Stack.Screen options={{ title: props.code, headerBackButtonDisplayMode: 'minimal', ...(props.onOpenDrawer ? { headerShown:true, headerLeft:() => <BaseHost matchContents><Button systemImage="line.3.horizontal" onPress={props.onOpenDrawer} modifiers={[buttonStyle('plain'),frame({ minWidth:44,minHeight:44 })]} /></BaseHost> } : {}) }} />
     <BaseHost matchContents={{ vertical: true }} style={{ width: '100%', paddingHorizontal: 20, paddingTop: 8 }}>
       <Text modifiers={[font({ textStyle: 'subheadline' }), foregroundStyle('secondary')]}>{p('worker.paddon.detail.subtitle')}</Text>
     </BaseHost>
@@ -93,23 +104,16 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps) {
         </SwipeActions>) : <Text>{h.itemsEmpty}</Text>}</Section>
       </>}
     {props.footer?<Section><RNHostView matchContents><View>{props.footer}</View></RNHostView></Section>:null}</List></AccordListScrollReader></BaseHost>
-    {header && props.manageItems!==false ? <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: 88, width: 56, height: 56 }} onPressAction={event => {
-      const action = actions.find(item => item.id === event.nativeEvent.event);
-      if (!action || action.attributes?.disabled) return;
-      if (action.id === 'scan') h.controller.startScan();
-      else if (action.id === 'add' || action.id === 'remove') void h.edit(action.id);
-      else if (action.id === 'cancel') void h.cancelSelection();
-      else if (action.id === 'confirm') void h.controller.confirmScan();
-      else if (action.id === 'close') void h.cancelScan();
-    }}>
+    {(header || props.renderPrimaryAction) && props.manageItems!==false ? (props.renderPrimaryAction ? props.renderPrimaryAction(actions.map(action => ({ id:action.id,label:action.title,enabled:!action.attributes?.disabled })),selectAction) : <MenuView actions={actions} style={{ position: 'absolute', right: 16, bottom: 88, width: 56, height: 56 }} onPressAction={event => selectAction(event.nativeEvent.event)}>
       <View accessibilityRole="button" accessibilityLabel={h.t('Amallar')} style={{ width: 56, height: 56, alignItems: 'center', justifyContent: 'center' }}>
         <SymbolView name="plus.circle.fill" size={44} tintColor={PlatformColor('systemBlue')} />
       </View>
-    </MenuView> : null}
+    </MenuView>) : null}
     <WorkerPaddonDialog data={reviewData} visible={h.presentation.visible} close={h.presentation.close} dismissed={h.presentation.dismissed}>
       {h.presentation.data?.kind === 'review' ? <ScrollView contentContainerStyle={{ gap: 10 }}>{h.scanned.map(row => <Pressable key={row.batch.batch_id} onPress={() => h.controller.unstage(row.batch.batch_id)}>
         <WorkerPaddonWipCard content={row} selectable selectionIcon="close" /></Pressable>)}</ScrollView> : null}
     </WorkerPaddonDialog>
+    {props.renderBottomBar?.(navigate => { if (h.current() && !h.blocked && !h.presentation.isOpen()) void h.requestBack(navigate); })}
     {h.printerDialogs}<WorkerPaddonFeedback message={h.presentation.notice} />
   </View>;
 }

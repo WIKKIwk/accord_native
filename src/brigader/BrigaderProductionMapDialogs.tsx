@@ -10,7 +10,7 @@ import { BrigaderSurfaceHeader } from './BrigaderSurfaceHeader';
 import { BrigaderOrderConfirmation } from './BrigaderOrderConfirmation';
 import { BrigaderAsyncPicker } from './BrigaderAsyncPicker';
 import type { BrigaderPresentation, BrigaderPresentations } from './brigaderPresentations';
-import { productionFormulaDisplay, productionFormulaInternal, productionFormulaVariables, productionFormulaInsert, productionFormulaSuggestion } from './productionFormulaEditor';
+import { productionFormulaDisplay, productionFormulaInternal, productionFormulaVariables, productionFormulaInsert, productionFormulaSuggestion,productionFormulaGhost } from './productionFormulaEditor';
 import { productionGroupLabel } from './productionMapGroupLabel';
 function FormulaEditor({ data, interactive, close }: {
     data: {
@@ -23,7 +23,7 @@ function FormulaEditor({ data, interactive, close }: {
     return; const value = productionFormulaInsert(text, cursor, variable, space); setText(value.text); setCursor(value.cursor); setVersion(value => value + 1); }; return <Form><Label>{`${data.title} yozish`}</Label><CalculateField autofocus multiline minHeight={170} label={data.title} value={text} onChange={value => { if (interactive())
     setText(value); }} selection={cursor} selectionVersion={version} onSelectionChange={selection => { if (interactive())
     setCursor(selection.start); }} focusVersion={focus} onSubmit={() => { if (!interactive())
-    return; if (suggestion && cursor === text.length)
+    return; if (suggestion && productionFormulaGhost(text,cursor))
     insert(suggestion, true); setFocus(value => value + 1); }}/><ChoiceChips options={productionFormulaVariables.map(variable => ({ label: variable.label, selected: false, onChange: () => insert(variable) }))}/><Action label="Saqlash" onPress={() => close(productionFormulaInternal(text.trim()))}/></Form>; }
 function NodeEditor({ node, owner, interactive, close }: {
     node: Node;

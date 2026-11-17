@@ -1,3 +1,4 @@
+import { checkedAdminGuard,type AdminRequestGuard } from './adminProductionRequest';
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { MobileApiException } from '../shared/mobileApiException';
@@ -49,37 +50,45 @@ function normalizeIds(values: readonly string[]): string[] {
 function collectionPath(collection: AdminApparatusCollection): string {
   return `${path}/${encodeURIComponent(dartTrim(collection.id))}`;
 }
-async function mutationResult(response: Response, code: string, message: string): Promise<AdminApparatusCollection> {
-  if (response.status !== 200) throw await adminApiError(response, code, message);
-  return adminApparatusCollectionFromJson(await response.json());
+async function mutationResult(response: Response, code: string, message: string,check?:()=>void): Promise<AdminApparatusCollection> {
+  check?.();if (response.status !== 200) {const error=await adminApiError(response, code, message);check?.();throw error;}
+  const raw:unknown=await response.json();check?.();return adminApparatusCollectionFromJson(raw);
 }
 /** @v2 adminApparatusCollections */
-export async function adminApparatusCollections(session: Session): Promise<AdminApparatusCollection[]> {
-  const response = await authorizedFetch(session, path);
+export async function adminApparatusCollections(session: Session,beforeSend?:AdminRequestGuard): Promise<AdminApparatusCollection[]> {
+  const check=checkedAdminGuard(beforeSend);check?.();
+  const response = await authorizedFetch(session, path,undefined,check);
+  check?.();
   if (response.status === 404) return [];
+  check?.();
   if (response.status !== 200) throw await adminApiError(response, 'apparatus_collections_list_failed', 'Aparat guruhlari yuklanmadi');
   const value: unknown = await response.json();
+  check?.();
   if (!Array.isArray(value)) throw new TypeError('Invalid apparatus collections list');
   return value.map(adminApparatusCollectionFromJson);
 }
 /** @v2 adminCreateApparatusCollection */
-export async function adminCreateApparatusCollection(session: Session, name: string, apparatusIds: readonly string[]): Promise<AdminApparatusCollection> {
+export async function adminCreateApparatusCollection(session: Session, name: string, apparatusIds: readonly string[],beforeSend?:AdminRequestGuard): Promise<AdminApparatusCollection> {
+  const check=checkedAdminGuard(beforeSend);check?.();
   const normalizedName = normalizeName(name), ids = normalizeIds(apparatusIds);
   const response = await authorizedFetch(session, path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: normalizedName, apparatus_ids: ids }) });
-  return mutationResult(response, 'apparatus_collection_create_failed', 'Aparat guruhi yaratilmadi');
+    body: JSON.stringify({ name: normalizedName, apparatus_ids: ids }) },check);
+  return mutationResult(response, 'apparatus_collection_create_failed', 'Aparat guruhi yaratilmadi',check);
 }
 /** @v2 adminUpdateApparatusCollection */
 export async function adminUpdateApparatusCollection(session: Session, collection: AdminApparatusCollection,
-  name: string, apparatusIds: readonly string[]): Promise<AdminApparatusCollection> {
+  name: string, apparatusIds: readonly string[],beforeSend?:AdminRequestGuard): Promise<AdminApparatusCollection> {
+  const check=checkedAdminGuard(beforeSend);check?.();
   const normalizedName = normalizeName(name), ids = normalizeIds(apparatusIds);
   const response = await authorizedFetch(session, collectionPath(collection), { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ expected_revision: collection.revision, name: normalizedName, apparatus_ids: ids }) });
-  return mutationResult(response, 'apparatus_collection_update_failed', 'Aparat guruhi saqlanmadi');
+    body: JSON.stringify({ expected_revision: collection.revision, name: normalizedName, apparatus_ids: ids }) },check);
+  return mutationResult(response, 'apparatus_collection_update_failed', 'Aparat guruhi saqlanmadi',check);
 }
 /** @v2 adminDeleteApparatusCollection */
-export async function adminDeleteApparatusCollection(session: Session, collection: AdminApparatusCollection): Promise<void> {
+export async function adminDeleteApparatusCollection(session: Session, collection: AdminApparatusCollection,beforeSend?:AdminRequestGuard): Promise<void> {
+  const check=checkedAdminGuard(beforeSend);check?.();
   const response = await authorizedFetch(session, collectionPath(collection), { method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ expected_revision: collection.revision }) });
+    body: JSON.stringify({ expected_revision: collection.revision }) },check);
+  check?.();
   if (response.status !== 204) throw await adminApiError(response, 'apparatus_collection_delete_failed', 'Aparat guruhi o‘chirilmadi');
 }

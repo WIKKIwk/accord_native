@@ -13,6 +13,7 @@ import { MobileApiException } from '../shared/mobileApiException';
 import type { AdminOpeningWipQuantityBasis } from '../admin/openingWipInput';
 import { BrigaderModel } from './brigaderModel';
 import { BrigaderPresentations } from './brigaderPresentations';
+import { OpeningWipPrintStateError } from './openingWipPrintState';
 export type OpeningRecord = Awaited<ReturnType<typeof adminOpeningWipRecords>>[number];
 export type OpeningBatch = OpeningRecord['batches'][number];
 export type OpeningEntry = { record:OpeningRecord;batch:OpeningBatch };
@@ -20,7 +21,7 @@ export type OpeningOrder = Awaited<ReturnType<typeof adminProductionMaps>>[numbe
 export type OpeningRoll = { meter:string;kg:string;bobina:string;diameter:string };
 type State = { loading:boolean;hasData:boolean;error:unknown;orders:OpeningOrder[];apparatus:AdminApparatus[];snapshot:Record<string,any>|null;tab:number;selectedOrder:string;sourceNode:string;rollCount:string;rolls:OpeningRoll[];basis:AdminOpeningWipQuantityBasis;submitting:boolean;validation:Record<string,string>;submitError:string;created:OpeningRecord|null;printed:ReadonlySet<string>;records:OpeningRecord[];listLoading:boolean;listHasData:boolean;listError:unknown;filter:string;expanded:boolean;deleting:string;reprinting:string;reprintMessage:string };
 const roll = ():OpeningRoll => ({ meter:'',kg:'',bobina:'',diameter:'' });
-const parse = (value:string) => value.trim() && Number.isFinite(Number(value.trim().replaceAll(',','.'))) ? Number(value.trim().replaceAll(',','.')) : null;
+const parse = (value:string) => {const raw=value.trim().replaceAll(',','.');return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(raw)&&Number.isFinite(Number(raw))?Number(raw):null;};
 const sourceError = (error:unknown) => error instanceof MobileApiException || error instanceof WorkerControlException ? error.message : null;
 export const openingWipBatchCanDelete = (batch:OpeningBatch) => batch.wip_status.trim().toLowerCase() === 'waiting' && !batch.used_by_session_id.trim() && !batch.used_by_apparatus.trim() && !batch.processed_by_session_id.trim() && !batch.processed_by_apparatus.trim();
 export const openingWipSourceApparatus = (record:OpeningRecord) => [record.intake.source_apparatus.trim(),record.intake.entry_apparatus.trim()].find(isCanonicalApparatusId) ?? '';
@@ -82,7 +83,7 @@ export class BrigaderOpeningWipModel extends BrigaderModel<State> {
   reprint = async (entry:OpeningEntry) => {
     if (!this.interactive() || this.state.reprinting) return;this.patch({ reprinting:entry.batch.batch_id,reprintMessage:'' });
     try { const printer = await this.print.pick();if (!printer || !this.current()) return;await this.print.batch(entry.batch,printer);this.guard();this.notice(this.a('production.opening_wip.reprint_success')); }
-    catch (error) { this.patch({ reprintMessage:sourceError(error)?.trim() || (error instanceof Error ? error.message.trim() : '') || this.a('production.opening_wip.reprint_failed') }); }
+    catch (error) { this.patch({ reprintMessage:sourceError(error)?.trim() || (error instanceof OpeningWipPrintStateError ? error.message.trim() : '') || this.a('production.opening_wip.reprint_failed') }); }
     finally { this.patch({ reprinting:'' }); }
   };
   remove = async (entry:OpeningEntry) => { if (!this.interactive() || this.state.deleting) return;const canDelete = openingWipBatchCanDelete(entry.batch);if (await this.presentations.request<boolean>('delete',{ entry,canDelete }) !== true || !this.current()) return;if (!canDelete) { this.notice(this.a('wip.delete.locked'));return; }this.patch({ deleting:entry.batch.batch_id });try { await adminDeleteOpeningWipBatch(this.session,entry.batch.batch_id,this.guard);this.guard();await this.loadList();if (this.current()) this.notice(this.a('wip.delete.success')); }catch (error) { if (this.current()) this.notice(sourceError(error) ?? this.a('wip.delete.failed')); }finally { this.patch({ deleting:'' }); } };

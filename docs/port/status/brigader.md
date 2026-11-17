@@ -1,7 +1,7 @@
 # Brigader
 
-Status: in progress — all 25 requested route compositions are implemented; final source/surface/text audit and careful integration remain.
-Current work: final source comparison and integration of the 25 remaining Brigader routes; continue until finished.
+Status: all 25 requested route compositions implemented and statically source-audited; software checks and integration evidence below. Physical acceptance belongs to the user; camera/text-tool limitations are explicit.
+Current scope: the 25 remaining routes requested on 2026-11-17. Earlier checkpoint sections below are historical, not a current missing-route inventory.
 Branch: `port/brigader`, isolated worktree `accord_mobile_v4-brigader`, based on main `b6aee7b9`.
 Source: baseline `f11910bb2c8c7081ce26770e69811b03fd0739ed`; Brigader core is unchanged at current V2 `052655a4`.
 Scope: Brigader only; the ledger combines Sales Manager with this id, but Sales Manager is outside this request.
@@ -18,7 +18,7 @@ Validation: 14 focused source-derived tests passed. These are not recorded V2 HT
 Source references: `core/api/calculate/mobile_api_calculate_models_part_01.dart`,
 `features/admin/state/calculate_order_store.dart`, `core/api/calculate/mobile_api_calculate_declarations_part_03.dart`.
 
-## Open items
+## Historical open items before the remaining-routes implementation
 
 | Where | V2 reference | Required result |
 |---|---|---|
@@ -31,7 +31,7 @@ Source references: `core/api/calculate/mobile_api_calculate_models_part_01.dart`
 | Physical native acceptance | Android/iOS shell, dialogs, keyboard, native live, PIN, camera/printer paths | Real phones/development binaries are required; no device or simulator used. |
 | Required native development client | `AccordAdminLayout.readInsets`, `AccordProductionLive.openInventory`, `AccordNativeClock` | Rebuild before using this branch. Expo Go/older binaries do not contain these methods. In particular the reused Admin frame waits for genuine native inset metrics, so an older binary can show a header with hidden Home content. No synthetic geometry was added. |
 
-## Surface audit
+## Historical baseline surface audit
 
 | V2 surface and location | V4 file | iOS | Android | What differs |
 |---|---|---|---|---|
@@ -113,7 +113,7 @@ The role ledger estimates 65k source tokens; this is not a measurement of tokens
 V2 is read-only. No production backend calls, simulator or physical device used.
 Main and the user's existing uncommitted work are untouched.
 
-## Route coverage
+## Historical baseline route coverage
 
 All 47 source Brigader routes are accounted for below. A native route existing does not certify every inherited surface.
 
@@ -199,7 +199,7 @@ This integration does not mark the unfinished Brigader source routes or text/dev
   this remains a source parity gap, not a completed five-action Create flow.
 - FAB obstruction now follows actual mounted named/private profile routes, including a profile covered by another native route.
 
-### Remaining software routes (25 of 47)
+### Historical remaining software routes (25 of 47)
 
 `adminFactoryMap`, `adminCalculateOrders`, `adminCalculate`, `adminProductionMapTest`, `adminItemBulkMove`,
 `adminOpeningWip`, `adminWipBatches`, `adminNotifications`, `adminApparatusSettings`, `adminApparatusGroups`,
@@ -432,3 +432,80 @@ not being reported as a passing text gate. Its generated scope contains only 48 
 the newly composed route surfaces require the explicit source comparison as well.
 
 Audit refinements in this checkpoint: source worker deactivation tooltip and opening-WIP report heading, 48px inner raw-material tabs, captured original worker-group identity across save, barrier-versus-system-back dismissal, and Android factory machine reads after the genuine native sheet entrance animation. No device tests were run.
+
+
+## Surface audit — all 25 requested routes, 2026-11-17
+
+These are Source-code comparisons of states, fields, order, validation, request contracts, selection and dismissal/results.
+They are not device/pixel acceptance. Android uses actual Compose controls; iOS uses actual SwiftUI/native controls.
+Paths in the Source column are under `lib/src/features/`; V4 domain paths are under `src/brigader/` unless qualified.
+Earlier checkpoint counts and open-route tables describe their earlier snapshots.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| adminFactoryMap: admin/presentation/admin_factory_map_screen*, machine/attach/read-only order sheets | BrigaderFactoryMap*, brigaderFactoryMapModel, BrigaderFactoryOrderDetail, useBrigaderFactoryDetailReaders | code compared | code compared | Native controls; real WebView GLB renderer. Device WebGL acceptance pending |
+| adminCalculateOrders: admin/presentation/admin_calculate_orders_screen*, query/delete/edit/image | BrigaderCalculateOrders*, brigaderCalculateOrdersModel | code compared | code compared | Native list/header/image viewer |
+| adminCalculate: admin/presentation/admin_calculate_screen*, full/compact, pickers, combos, confirmation/error | BrigaderCalculateContent, BrigaderCalculateDialogs, brigaderCalculateModel/Draft | code compared | code compared | Native fields/actions, Android 64px fields/60px primary; iOS comfortable native sizing |
+| adminProductionMapTest: admin/presentation/admin_production_map_test_screen*, node/formula/group/save | BrigaderProductionMap*, BrigaderProductionCanvas, brigaderProductionMapModel, productionMap* | code compared | code compared | Native node controls over SVG grid/edges; inline ghost appearance follows native input; cursor insertion/submit rules preserved |
+| adminItemBulkMove: AppRouter branch and admin/presentation/admin_item_create_screen* | BrigaderItemCreate bulk + real AdminItemCreateScreen | code compared | code compared | Existing native shared screen; source bulk argument retained |
+| adminOpeningWip: admin/presentation/admin_production_map_orders_opening_wip.dart, wizard/list/detail/duplicate/delete/print | BrigaderOpeningWip*, brigaderOpeningWipModel, openingWipPrintState | code compared | code compared | Supported real printer transports; GoDEX excluded by D13 |
+| adminWipBatches: admin/presentation/admin_wip_batches_screen*, apparatus/stock filters | BrigaderWipBatches*, brigaderWipModel | code compared | code compared | Native filter/card controls |
+| adminNotifications: admin/presentation/admin_notifications_screen*, decisions/live | BrigaderNotifications*, brigaderNotificationsModel | code compared | code compared | Native rows/dialogs and genuine foreground/live owner |
+| adminApparatusSettings: admin/presentation/admin_apparatus_settings_screen*, edits, queue policies, capacity/schedule/reservation | BrigaderApparatusScreen*, BrigaderApparatusSurfaces, brigaderApparatusController | code compared | code compared | Native fields/pickers/dialogs; per-original-account warm cache |
+| adminApparatusGroups: AppRouter branch; same apparatus source, group CRUD | BrigaderApparatusScreen*/controller group branch | code compared | code compared | Native group controls |
+| adminRawMaterialSettings: admin/presentation/admin_raw_material_rules_screen* settings wrapper | BrigaderRawSettings*, BrigaderRawRules*, brigaderRawRulesModel | code compared | code compared | Source initial tab and nested default preserved; Android inner tabs 48px |
+| adminRawMaterialRules: same source rule/tooling editors and revisions | BrigaderRawSettings*/RawRules*, brigaderRawRulesModel | code compared | code compared | Native selectors/fields; actual material/tooling models |
+| adminRawMaterialAssignments: admin/presentation/admin_raw_material_assignment_screen*, candidates/link/unlink/scan/manual | BrigaderRawAssignments*, BrigaderRawScanDialog, existing Material assignment owner | code compared | code compared | Real restricted detection window; native focus-point/auto-zoom limitation below |
+| adminCalculateMaterials: admin/presentation/admin_calculate_materials_screen*, variants/edit/delete/reorder | BrigaderCalculateMaterials*, brigaderCalculateMaterialsModel, BrigaderSequenceList | code compared | code compared | Actual native controls and real gesture/autoscroll viewport |
+| adminWorkerSettings: admin/presentation/admin_worker_settings_screen*, worker/group/level/deactivate | BrigaderWorkerSettings*, BrigaderWorkerSurfaces, brigaderWorkerSettingsModel | code compared | code compared | Native tabs/forms; source tooltip and original group identity captured across save |
+| adminCreateHub: admin/presentation/admin_create_hub_screen* and widgets/admin_create_hub_sheet* | BrigaderCreateHub*, BrigaderPrimaryAction, AdminCreateHubProvider | code compared | code compared | Six page rows, five default Create actions; genuine shared native close owner |
+| adminItemCreate: admin/presentation/admin_item_create_screen*, customer/product pickers and creation return | BrigaderItemCreate*, BrigaderCustomerCreateFlow, shared AdminItemCreateScreen | code compared | code compared | Native shared pickers; original customer-only creation args |
+| adminItemDetail: admin/presentation/admin_item_detail_screen*, edit/group/customer/delete/actions | BrigaderItemDetail*, BrigaderItemDetailPresentations | code compared | code compared | Real native sheet/dialog removal before original result |
+| adminApparatusCreate: AppRouter branch, apparatus source creation form | BrigaderApparatusScreen* creation branch/controller | code compared | code compared | Native form and canonical guarded mutation |
+| adminProgressQrScan: admin/presentation/admin_progress_qr*, all report/manual/scan-only/PDF surfaces | BrigaderProgressQr*, brigaderProgressQrModel, admin/adminProgressQrPassport/Pdf | code compared | code compared | Actual Expo camera/native controls; torch hardware availability is device dependent |
+| apparatusQueue: AppRouter workerMode branch; admin queue worker source | BrigaderApparatusPages*, WorkerScreen/controllers, BrigaderApparatusPrimary | code compared | code compared | Existing worker native UI; real queue scan callback and default three actions |
+| apparatusWorkInstructions: aparatchi/presentation/aparatchi_work_instructions_screen.dart | BrigaderApparatusPages*, WorkerWorkInstructions, useBrigaderApparatusDrawer | code compared | code compared | Real source four-destination drawer and original assignments |
+| apparatusDailyWork: aparatchi/presentation/aparatchi_daily_work_screen* | BrigaderApparatusPages*, DailyWorkScreen/controllers | code compared | code compared | Existing date/WIP/native controls; source apparatus drawer/dock |
+| apparatusPaddons: aparatchi/presentation/aparatchi_paddons_screen*, all-apparatus/create/delete/transfer | BrigaderPaddons*, brigaderPaddonListModel | code compared | code compared | Actual non-operator Source branch and native dialogs/menu |
+| apparatusPaddonDetail: aparatchi/presentation/aparatchi_paddon_detail_screen*, QR/review/discard/select/edit/print | WorkerPaddonDetail, BrigaderPaddonPrimary, BrigaderApparatusDock | code compared | code compared | Controller supplies real actions and enable rules to shared menu; guarded navigation and native header |
+
+### Last source-audit corrections
+
+- Scoped the apparatus warm cache to the original account; added optional original-request guards to actual apparatus option/collection APIs.
+- Factory read-only order detail now reads the Source scoped queue snapshot with a 5s timeout and waits before assignment/mold loads.
+  It does not issue hidden worker-only bootstrap/WIP/material-requirement requests for a non-worker read-only sheet.
+- Source sync errors use a genuine measured bottom overlay inside the detail sheet, sharing the global latest-notice owner,
+  5s lifetime and 220ms entrance/reverse motion. No fabricated banner DTO, geometry or native acknowledgement is used.
+- Opening WIP local print errors preserve actual printer-status text; unexpected errors use the Source fallback.
+  Quantities follow Dart decimal/exponent syntax rather than JavaScript hexadecimal acceptance.
+- Formula submit inserts a completion only when Source's actual cursor/token ghost is nonempty.
+- Scanner normal/noDuplicates policies follow the actual vendored Android/iOS implementations. Raw scan requires full corner
+  containment and normal 250ms delivery; progress scanner retains noDuplicates behavior. Startup uses two real attempts,
+  8s start / 4s release timeouts and actual native ready/unmount signals. A cancelled start does not become a camera failure.
+- Focused apparatus pages replace the contents of the one real shell drawer. No nested drawer or competing edge gesture was added.
+  Queue scan uses the original WorkerScreen callback; the real global paddon action remains available without fabricated assignments.
+- Paddon detail preserves its real action, review, selection, scanner, print and back controller while using the genuine shared menu.
+
+### Current verification record
+
+No unit/device/emulator/simulator tests were run in this request, as explicitly requested by the user.
+Android and iOS TypeScript passed; focused lint passed with no errors or warnings. `git diff --check` passed.
+All 41 direct namespace entries (including profile and the two Home aliases) resolve on both platforms; the 25 requested
+source route entries are present. The seven existing private detail compositions retain their original argument registry.
+
+The ordinary role text script did not pass: 33 missing / 325 additional on iOS, 33 missing / 330 additional on Android;
+0 ambiguous tags, 611/617 global-only diagnostics. It reaches only 48 V2 strings and two Create surfaces while selecting
+915/930 native files. No blanket exceptions or false passing verdicts were added. A separate TypeScript AST audit
+found 17 direct visible literal occurrences and 821 static localization/text calls in the 317 changed/new source files;
+every one occurs in V2. Dynamic text/flow comparisons are covered by the source surface audit above; AST matches alone
+are not a behavior proof. See `docs/port/text/brigader-audit.md`.
+
+### Remaining limitations, distinguished from missing requested routes
+
+All 25 requested route compositions are connected. Device tests belong to the user. Expo Camera does not expose V2's
+native focus-point / Android MLKit auto-zoom or a torch-availability query: those hardware details are not simulated
+or represented as verified. Existing native controls provide their usual focusing behavior, and Source scan containment,
+detection, error/retry, permission and manual-entry rules are implemented. GoDEX remains excluded by project D13.
+The pre-existing shared Work Map surface differences are outside these 25 routes and have not been relabeled complete.
+The broad text-script diagnostics remain a tooling/audit limitation, not a passing gate.
+A development client containing react-native-webview and the existing local native modules is required for physical acceptance.

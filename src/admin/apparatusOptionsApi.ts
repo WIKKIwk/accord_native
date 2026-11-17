@@ -1,3 +1,4 @@
+import { checkedAdminGuard,type AdminRequestGuard } from './adminProductionRequest';
 import type { Session } from '../auth';
 import { authorizedFetch } from '../authorizedFetch';
 import { apparatusFamilyForNormalizedOperation, apparatusKindForNormalizedTechnology } from '../apparatusApi';
@@ -49,10 +50,10 @@ export function apparatusSupportsCapability(options: AdminApparatusMasterOptions
   return options.capabilities.includes(dartPartialLower(dartTrim(capability)));
 }
 /** @v2 adminApparatusMasterOptions */
-export async function adminApparatusMasterOptions(session: Session): Promise<AdminApparatusMasterOptions> {
-  const response = await authorizedFetch(session, '/v1/mobile/admin/apparatus/options');
+export async function adminApparatusMasterOptions(session: Session,beforeSend?:AdminRequestGuard): Promise<AdminApparatusMasterOptions> {
+  const check=checkedAdminGuard(beforeSend);check?.();const response = await authorizedFetch(session, '/v1/mobile/admin/apparatus/options',undefined,check);check?.();
   if (response.status !== 200) throw new Error('Admin apparatus options failed');
-  return adminApparatusMasterOptionsFromJson(await response.json());
+  const raw:unknown=await response.json();check?.();return adminApparatusMasterOptionsFromJson(raw);
 }
 
 // Reuse the existing normalized vocabulary projection in Admin create logic.

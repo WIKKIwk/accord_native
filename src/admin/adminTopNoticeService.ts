@@ -3,6 +3,13 @@ import { adminTopNoticeDuration, captureAdminTopNoticeMessage, type AdminTopNoti
 
 type Timer = ReturnType<typeof setTimeout>;
 type Dependencies = Readonly<{ setTimer?: (callback: () => void, delay: number) => Timer; clearTimer?: (timer: Timer) => void }>;
+/** Actual Source anchored-overlay lifetime; it does not enqueue a MaterialBanner. */
+export class AdminAnchoredNoticeHandle {
+  private timer:Timer|null=null;private exit:Timer|null=null;private closed=false;
+  constructor(private readonly service:AdminTopNoticeService,private readonly current:()=>boolean,private readonly hide:()=>void,private readonly reverse:()=>void){}
+  start(){this.timer=this.service.setTimer(()=>{this.timer=null;if(this.closed)return;if(!this.current()){this.close();return;}this.reverse();this.exit=this.service.setTimer(()=>this.close(),220);},adminTopNoticeDuration);}
+  close=()=>{if(this.closed)return;this.closed=true;if(this.timer!==null)this.service.clearTimer(this.timer);if(this.exit!==null)this.service.clearTimer(this.exit);this.service.forget(this);this.hide();};
+}
 /** @v2 _AdminTopNoticeHandle */
 export class AdminTopNoticeHandle {
   readonly banner: AdminTopNoticeBanner;
@@ -28,11 +35,15 @@ export class AdminTopNoticeHandle {
 }
 /** One latest handle across every genuine Admin Messenger target. Ordinary SnackBars are a different queue. */
 export class AdminTopNoticeService {
-  private latest: AdminTopNoticeHandle | null = null; private issuing = false;
+  private latest: AdminTopNoticeHandle|AdminAnchoredNoticeHandle | null = null; private issuing = false;
   readonly setTimer: NonNullable<Dependencies['setTimer']>; readonly clearTimer: NonNullable<Dependencies['clearTimer']>;
   constructor(deps: Dependencies = {}) { this.setTimer = deps.setTimer ?? setTimeout; this.clearTimer = deps.clearTimer ?? clearTimeout; }
-  isLatest = (handle: AdminTopNoticeHandle): boolean => this.latest === handle;
-  forget(handle: AdminTopNoticeHandle): void { if (this.latest === handle) this.latest = null; }
+  isLatest = (handle: AdminTopNoticeHandle|AdminAnchoredNoticeHandle): boolean => this.latest === handle;
+  forget(handle: AdminTopNoticeHandle|AdminAnchoredNoticeHandle): void { if (this.latest === handle) this.latest = null; }
+  /** @v2 _showAnchoredAdminBottomNotice; current includes the actual measured native anchor. */
+  showAnchored(input:AdminTopNoticeMessage,current:()=>boolean,show:(value:AdminTopNoticeMessage)=>void,hide:()=>void,reverse:()=>void):AdminAnchoredNoticeHandle|null{
+    if(this.issuing)return null;this.issuing=true;try{const value=captureAdminTopNoticeMessage(input);if(!value||current()!==true)return null;const previous=this.latest;this.latest=null;previous?.close();if(current()!==true)return null;const handle=new AdminAnchoredNoticeHandle(this,current,hide,reverse);this.latest=handle;show(value);if(current()!==true){handle.close();return null;}handle.start();return handle;}finally{this.issuing=false;}
+  }
   /** @v2 showAdminTopNotice */
   show(target: AdminTopNoticeMessenger, input: AdminTopNoticeMessage): AdminTopNoticeHandle | null {
     if (this.issuing) return null; this.issuing = true;

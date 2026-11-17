@@ -5,11 +5,11 @@ import { WorkInstructionsView } from '../rezka/RezkaWorkInstructions';
 import { useWorkerWorkInstructions } from './useWorkerWorkInstructions';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export function WorkerWorkInstructions({ session, onBack }: { session: Session; onBack(): void }) {
+export function WorkerWorkInstructions({ session, onBack, onOpenDrawer }: { session: Session; onBack(): void; onOpenDrawer?: () => void }) {
   const { t } = useWorkerOrderText();
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true; });
     return () => listener.remove();
   }, [onBack]);
-  return <WorkInstructionsView model={useWorkerWorkInstructions(session)} navigation={{ icon: 'back', label: t('Orqaga'), onPress: onBack }} />;
+  return <WorkInstructionsView model={useWorkerWorkInstructions(session)} navigation={{ icon: onOpenDrawer ? 'menu' : 'back', label: t(onOpenDrawer ? 'Bo‘limlar' : 'Orqaga'), onPress: onOpenDrawer ?? onBack }} />;
 }

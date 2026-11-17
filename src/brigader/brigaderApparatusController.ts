@@ -1,3 +1,4 @@
+import { sessionReadScope } from '../sessionReadScope';
 import { dartFutureWait } from '../shared/dartFutureWait';
 import { adminApparatus, type AdminApparatus } from '../apparatusApi';
 import type { Session } from '../auth';
@@ -16,28 +17,28 @@ type Editor = { current: AdminApparatus | null; name: string; family: string | n
 type CollectionEditor = { current: AdminApparatusCollection | null; name: string; selected: string[] };
 type Cache = { apparatus: AdminApparatus[]; collections: AdminApparatusCollection[]; options: AdminApparatusMasterOptions; trainingAvailable: boolean };
 type State = { module: ApparatusModule; loading: boolean; error: unknown; saving: boolean; apparatus: AdminApparatus[]; collections: AdminApparatusCollection[]; options: AdminApparatusMasterOptions | null; trainingAvailable: boolean; editor: Editor | null; collection: CollectionEditor | null; expanded: ReadonlySet<string> };
-let warmCache: Cache | null = null;
+let warmCache: {scope:string;data:Cache} | null = null;
 const compare = (a: AdminApparatus,b: AdminApparatus) => a.sort_order-b.sort_order || a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 export class BrigaderApparatusController extends BrigaderModel<State> {
   readonly presentations = new BrigaderPresentations(this.current);
   readonly bindings: FactoryMapBindings;
   private loadGeneration = 0; private focusedOpened = false;
   constructor(private readonly session: Session, module: ApparatusModule, private readonly focusName: boolean, current: () => boolean, interactive: () => boolean, private readonly notice: (message: string,tone: 'error'|'success') => void, private readonly locale: () => string, private readonly onSaved?: (item: AdminApparatus) => void, seed?: Cache) {
-    const initial = seed ?? warmCache;
+    const initial = seed ?? (warmCache?.scope===sessionReadScope(session)?warmCache.data:null);
     super({ module:focusName ? 'catalog' : module, loading:!initial, error:null, saving:false, apparatus:initial?.apparatus ?? [], collections:initial?.collections ?? [], options:initial?.options ?? null, trainingAvailable:initial?.trainingAvailable ?? false, editor:null,collection:null,expanded:new Set() },current,interactive);
     this.bindings = new FactoryMapBindings(() => adminApparatus(session,{ limit:500,beforeSend:this.guard }),id => adminCanonicalApparatus(session,id,this.guard),(item,objectId) => adminPatchCanonicalApparatus(session,item,{ placement:objectId ? { factory_map_object_id:objectId } : null },this.guard),this.current);
   }
   private a(key: string, values?: Record<string,unknown>) { return adminText(key,this.locale(),values); }
-  private cache() { if (this.state.options) warmCache = { apparatus:this.state.apparatus,collections:this.state.collections,options:this.state.options,trainingAvailable:this.state.trainingAvailable }; }
+  private cache() { if (this.current()&&this.state.options) warmCache = {scope:sessionReadScope(this.session),data:{ apparatus:this.state.apparatus,collections:this.state.collections,options:this.state.options,trainingAvailable:this.state.trainingAvailable }}; }
   private failure(error: unknown,key: string) { this.notice(error instanceof MobileApiException ? error.message : this.a(key),'error'); }
-  load = async (showLoading = !warmCache) => {
+  load = async (showLoading = warmCache?.scope!==sessionReadScope(this.session)) => {
     if (!this.current() || this.bindings.saving) return; const generation = ++this.loadGeneration; if (showLoading) this.patch({ loading:true,error:null });
     try { let trainingAvailable = true; const modesFuture = adminTrainingApparatusModes(this.session,this.guard).catch(() => { trainingAvailable = false; return {} as Record<string,boolean>; });
-      const [catalog,options,collections,modes] = await dartFutureWait([adminApparatus(this.session,{limit:500,beforeSend:this.guard}),adminApparatusMasterOptions(this.session),adminApparatusCollections(this.session),modesFuture] as const);
+      const [catalog,options,collections,modes] = await dartFutureWait([adminApparatus(this.session,{limit:500,beforeSend:this.guard}),adminApparatusMasterOptions(this.session,this.guard),adminApparatusCollections(this.session,this.guard),modesFuture] as const);
       if (!this.current() || generation !== this.loadGeneration) return;
       const apparatus = catalog.filter(item => item.lifecycle_state === 'active').map(item => ({ ...item,training_enabled:modes[item.id] ?? false })).sort(compare);
       this.patch({ apparatus,options,collections,trainingAvailable,loading:false,error:null }); this.cache(); this.maybeFocus();
-    } catch (error) { if (this.current() && generation === this.loadGeneration) this.patch(warmCache ? { loading:false } : { loading:false,error }); }
+    } catch (error) { if (this.current() && generation === this.loadGeneration) this.patch(warmCache?.scope===sessionReadScope(this.session) ? { loading:false } : { loading:false,error }); }
   };
   maybeFocus() { if (this.current() && this.focusName && !this.focusedOpened && !this.state.loading) { this.focusedOpened = true; queueMicrotask(() => { if (this.current()) void this.edit(); }); } }
   module = (module: ApparatusModule) => { if (this.interactive()) this.patch({ module }); };
@@ -69,13 +70,13 @@ export class BrigaderApparatusController extends BrigaderModel<State> {
   collectionMember = (id: string,selected: boolean) => { const editor = this.state.collection; if (!editor || this.state.saving || !this.interactive()) return; this.patch({ collection:{ ...editor,selected:selected ? [...new Set([...editor.selected,id])] : editor.selected.filter(value => value !== id) } }); };
   saveCollection = async (id: number) => {
     const editor = this.state.collection; if (!editor || this.state.saving || !this.interactive()) return; this.patch({ saving:true });
-    try { this.guard(); const saved = editor.current ? await adminUpdateApparatusCollection(this.session,editor.current,editor.name,editor.selected) : await adminCreateApparatusCollection(this.session,editor.name,editor.selected); this.guard(); this.patch({ collections:[...this.state.collections.filter(item => item.id !== saved.id),saved].sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())) }); this.cache(); this.presentations.close(id); this.notice(this.a(editor.current ? 'apparatus.group_updated' : 'apparatus.group_added'),'success'); }
+    try { this.guard(); const saved = editor.current ? await adminUpdateApparatusCollection(this.session,editor.current,editor.name,editor.selected,this.guard) : await adminCreateApparatusCollection(this.session,editor.name,editor.selected,this.guard); this.guard(); this.patch({ collections:[...this.state.collections.filter(item => item.id !== saved.id),saved].sort((a,b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())) }); this.cache(); this.presentations.close(id); this.notice(this.a(editor.current ? 'apparatus.group_updated' : 'apparatus.group_added'),'success'); }
     catch (error) { if (this.current()) this.failure(error,'apparatus.group_save_failed'); } finally { this.patch({ saving:false }); }
   };
   deleteCollection = async (collection: AdminApparatusCollection) => {
     if (!this.interactive() || this.state.saving) return;
     if (await this.presentations.request<boolean>('deleteCollection',collection) !== true || !this.current()) return;
-    this.patch({ saving:true }); try { await adminDeleteApparatusCollection(this.session,collection); this.guard(); this.patch({ collections:this.state.collections.filter(item => item.id !== collection.id) }); this.cache(); this.notice(this.a('apparatus.group_deleted'),'success'); }
+    this.patch({ saving:true }); try { await adminDeleteApparatusCollection(this.session,collection,this.guard); this.guard(); this.patch({ collections:this.state.collections.filter(item => item.id !== collection.id) }); this.cache(); this.notice(this.a('apparatus.group_deleted'),'success'); }
     catch (error) { if (this.current()) this.failure(error,'apparatus.group_delete_failed'); } finally { this.patch({ saving:false }); }
   };
   toggleExpanded = (id: string) => { if (!this.interactive()) return; const expanded = new Set(this.state.expanded); if (!expanded.delete(id)) expanded.add(id); this.patch({ expanded }); };

@@ -20,7 +20,7 @@ import { useWorkerPaddonPresentation } from './useWorkerPaddonPresentation';
 import { useWorkerPrinterSelector } from './useWorkerPrinterSelector';
 import { useWorkerOrderText } from './useWorkerOrderText';
 
-export type WorkerPaddonDetailProps = { session: Session; code: string; apparatus?: string; initialSnapshot?: WorkerPaddonDetailSeed; onBack(): void; manageItems?:boolean; loader?:(guard:()=>void)=>Promise<import('../workerPaddonModel').WorkerPaddonSnapshot>;catalog?:readonly AdminApparatus[];footer?:import('react').ReactNode };
+export type WorkerPaddonDetailProps = { session: Session; code: string; apparatus?: string; initialSnapshot?: WorkerPaddonDetailSeed; onBack(): void; manageItems?:boolean; loader?:(guard:()=>void)=>Promise<import('../workerPaddonModel').WorkerPaddonSnapshot>;catalog?:readonly AdminApparatus[];footer?:import('react').ReactNode; onOpenDrawer?:()=>void; renderPrimaryAction?:(actions:readonly {id:string;label:string;enabled:boolean}[],select:(id:string)=>void)=>import('react').ReactNode; renderBottomBar?:(requestNavigate:(navigate:()=>void)=>void)=>import('react').ReactNode };
 export function useWorkerPaddonDetail({ session, code, apparatus = '', initialSnapshot,manageItems=true,loader,catalog:providedCatalog }: WorkerPaddonDetailProps) {
   const owner = useWorkerPaddonOwner(session, apparatus), [initial] = useState(() => initialSnapshot?.takeForCode(code)), controller = useMemo(() => owner.detail(code,initial,loader,manageItems), [owner, code,initial,loader,manageItems]);
   const state = useWorkerPaddonState(controller), presentation = useWorkerPaddonPresentation(owner.current), wipSheet = useNativeSheet();

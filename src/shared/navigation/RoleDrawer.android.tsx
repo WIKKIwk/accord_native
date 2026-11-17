@@ -23,7 +23,7 @@ export function RoleDrawer(props: RoleDrawerProps) {
 
   return <RoleDrawerContext.Provider value={{ open: onOpen, close: onClose }}><GestureHandlerRootView style={styles.root}>
     <Drawer open={visible} onOpen={onOpen} onClose={onClose} drawerType="front"
-      drawerStyle={{ width: Math.min(320, width - 56), backgroundColor: colors.surfaceContainerLow, borderTopRightRadius: 16, borderBottomRightRadius: 16, overflow: 'hidden' }}
+      drawerStyle={{ width: Math.min(props.width ?? 320, width - 56), backgroundColor: colors.surfaceContainerLow, borderTopRightRadius: 16, borderBottomRightRadius: 16, overflow: 'hidden' }}
       overlayAccessibilityLabel={closeAccessibilityLabel}
       renderDrawerContent={() => <View style={[styles.content, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 14) }]}>
         <Text style={[styles.title, { color: colors.onSurfaceVariant }]}>{title}</Text>

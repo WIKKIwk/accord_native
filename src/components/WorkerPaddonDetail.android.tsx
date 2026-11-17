@@ -30,6 +30,16 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps & { onSelect?:
       disabled: !h.canManage || !!state.selected.length && state.mode !== mode })),
     ...(state.selected.length ? [{ id: 'cancel', label: p('worker.action.cancel'), icon: 'close' as const, width: 200, disabled: !h.canManage }] : []),
   ];
+  const selectAction = (id:string) => {
+        const action = actions.find(item => item.id === id);
+        if (!action || action.disabled || !h.current() || h.presentation.isOpen()) return;
+        if (id === 'scan') h.controller.startScan();
+        else if (id === 'add' || id === 'remove') void h.edit(id);
+        else if (id === 'cancel') void h.cancelSelection();
+        else if (id === 'confirm') void h.controller.confirmScan();
+        else if (id === 'close') void h.cancelScan();
+
+  };
   const content = <>{header ? <WorkerQueueCard first last backgroundColor={colors.surfaceContainerLowest}><View style={{ width: '100%', paddingVertical: 6, gap: 12 }}>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
       <Host matchContents={{ vertical: true }} style={{ flexGrow: 1, flexShrink: 1, minWidth: 100 }}>
@@ -65,7 +75,7 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps & { onSelect?:
   const reviewData = h.presentation.data?.kind === 'review' ? { ...h.presentation.data, title: p('worker.paddon.scan.pending', { count: state.scanned.length }),
     confirmLabel: p('worker.paddon.scan.confirm', { count: state.scanned.length }), confirmDisabled: !h.canConfirmScan } : h.presentation.data;
   return <View style={{ flex: 1, backgroundColor: colors.background }}><View style={{ flex: 1 }}>
-    <RoleHeader title={props.code} subtitle={p('worker.paddon.detail.subtitle')} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: () => { void h.requestBack(props.onBack); } }} />
+    <RoleHeader title={props.code} subtitle={p('worker.paddon.detail.subtitle')} navigation={{ icon: props.onOpenDrawer ? 'menu' : 'back', label: h.t(props.onOpenDrawer ? 'Bo‘limlar' : 'Orqaga'), onPress: props.onOpenDrawer ?? (() => { void h.requestBack(props.onBack); }) }} />
     {state.phase === 'loading' ? <ActivityIndicator style={{ flex: 1 }} /> : state.phase === 'error' ? <View style={{ flex: 1, padding: 20, gap: 16 }}>
       <Host matchContents><Text>{p('worker.paddon.load_failed')}</Text></Host><WorkerOrderButton label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} />
     </View> : <FlatList ref={list} data={h.rows} keyExtractor={row => row.batch.batch_id} ListHeaderComponent={content} ListFooterComponent={props.footer?<View>{props.footer}</View>:undefined} contentContainerStyle={{ padding: 12, gap: 3, paddingBottom: 112 }}
@@ -79,22 +89,15 @@ export function WorkerPaddonDetail(props: WorkerPaddonDetailProps & { onSelect?:
         return row.removable ? <ReanimatedSwipeable overshootRight={false} renderRightActions={() => <View style={{ width: 125, justifyContent: 'center', padding: 8 }}>
           <WorkerOrderButton label={p('worker.paddon.remove')} onPress={() => { void h.remove(row.batch); }} /></View>}>{card}</ReanimatedSwipeable> : card;
       }} />}
-    {header && props.manageItems!==false ? <RoleFab actions={actions} bottomOffset={16} testIDPrefix="worker-paddon-detail-fab"
+    {(header || props.renderPrimaryAction) && props.manageItems!==false ? (props.renderPrimaryAction ? props.renderPrimaryAction(actions.map(action => ({ id:action.id,label:action.label,enabled:!action.disabled })),selectAction) : <RoleFab actions={actions} bottomOffset={16} testIDPrefix="worker-paddon-detail-fab"
       openLabel={h.t('Amallarni ochish')} closeLabel={h.t('Amallarni yopish')} resetKey={`${state.scanning}:${state.mode ?? ''}`}
-      onSelect={id => {
-        const action = actions.find(item => item.id === id);
-        if (!action || action.disabled || !h.current() || h.presentation.isOpen()) return;
-        if (id === 'scan') h.controller.startScan();
-        else if (id === 'add' || id === 'remove') void h.edit(id);
-        else if (id === 'cancel') void h.cancelSelection();
-        else if (id === 'confirm') void h.controller.confirmScan();
-        else if (id === 'close') void h.cancelScan();
-      }} /> : null}
+      onSelect={selectAction} />) : null}
     <WorkerPaddonDialog data={reviewData} visible={h.presentation.visible} close={h.presentation.close} dismissed={h.presentation.dismissed}>
       {h.presentation.data?.kind === 'review' ? <ScrollView contentContainerStyle={{ gap: 10 }}>{h.scanned.map(row => <Pressable key={row.batch.batch_id} onPress={() => h.controller.unstage(row.batch.batch_id)}>
         <WorkerPaddonWipCard content={row} selectable selectionIcon="close" /></Pressable>)}</ScrollView> : null}
     </WorkerPaddonDialog>{h.printerDialogs}
   </View>
+    {props.renderBottomBar?.(navigate => { if (h.current() && !h.blocked && !h.presentation.isOpen()) void h.requestBack(navigate); })}
     {props.onSelect ? <WorkerBottomBar active="" onSelect={id => {
       if (!h.current() || h.blocked || h.presentation.isOpen()) return;
       void h.requestBack(() => props.onSelect?.(id));
