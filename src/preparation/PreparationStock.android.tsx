@@ -27,7 +27,7 @@ import { preparationWarehouseDeleteMessage, preparationWarehouseErrorMessage } f
 import { usePreparationNotice } from './usePreparationNotice';
 import { usePreparationStockActions } from './usePreparationStockActions.android';
 import { openPreparationScale } from './preparationNavigation.android';
-import { PreparationButton, PreparationDock, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 function useStockReturnReload(controller: ReturnType<typeof usePreparationContext>['home']['controller']) {
   useFocusEffect(useCallback(() => { void controller.loadForPage(); }, [controller]));
@@ -176,8 +176,6 @@ export function PreparationHistoryScreen() {
   const { home, session } = usePreparationContext(), dialogs = usePreparationDialogs(), t = usePreparationText();
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
-  const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
-    openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   const notice = usePreparationNotice();
   const [query, setQuery] = useState('');
   const [optimistic, setOptimistic] = useState<{ snapshot: typeof home.snapshot; history: Record<string, unknown>[] } | null>(null);
@@ -216,7 +214,6 @@ export function PreparationHistoryScreen() {
       canReverse={doc.can_reverse === true}
       onReverse={doc.kind === 'receipt' && doc.reversed !== true ? () => { void reverse(doc); } : undefined} />)}
     </OrdersList>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
     <PreparationNotice message={notice.message} /></View>;
 }
 

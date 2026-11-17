@@ -85,6 +85,12 @@ test('home and preparation lists keep the same dock outside the screen stack', (
   assert.equal(nodes(inventory[2], node => node.type === 'RoleFab')[0].props.bottomOffset, 120);
 
   pathname = '/android-preparation/history';
+  const history = children(render());
+  assert.equal(history[1].type, home[1].type);
+  assert.equal(history[1].key, home[1].key);
+  assert.equal(history[1].props.children.type, home[1].props.children.type);
+
+  pathname = '/android-preparation/formulas';
   assert.equal(children(render())[1], null);
 });
 

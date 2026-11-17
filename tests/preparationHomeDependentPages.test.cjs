@@ -110,6 +110,7 @@ test('android history uses shared search and virtual list while retaining receip
     { id: '2', name: 'PET', kind: 'receipt', can_reverse: true },
   ] };
   let page = view.render();
+  assert.equal(findAll(page, node => node.type === 'PreparationDock').length, 0);
   const header = findAll(page, node => node.type === 'OrdersHeader')[0];
   assert.ok(header); assert.ok(findAll(page, node => node.type === 'OrdersList').length);
   header.props.onSearchChange('bopp');
