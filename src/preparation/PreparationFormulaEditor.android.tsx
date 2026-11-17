@@ -19,7 +19,7 @@ import { openPreparationScale, preparationShareDisplay, readPreparationRouteData
 import { preparationNextFormulaName } from './preparationLogic';
 import { preparationFormulaCard, preparationFormulaHeading } from './preparationFormulaPresentation';
 import { PreparationNotice } from './PreparationNotice';
-import { PreparationButton, PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationField, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import { usePreparationFormulaView } from './usePreparationAndroidView.android';
 import { preparationFormulaErrorMessage, type PreparationFormulaOptions } from './usePreparationFormula';
 import { preparationShareErrorMessage, preparationShareIntroduction, preparationShareSummary } from './preparationSharePresentation';
@@ -57,7 +57,7 @@ export function PreparationSharesDialog({ formulas, materialName, onSave, onClos
           initial={values[index]} decimal suffix="%" enabled={!saving} onChange={value => { setError(null); setValues(old => old.map((entry, i) => i === index ? value : entry)); }} />)}
         <PreparationText>{status.total === null ? t('Har bir shnek uchun 0 dan katta, 100 gacha foiz kiriting') : `${t('Jami')}: ${status.total}% / 100%`}</PreparationText>
         {error ? <PreparationText>{error}</PreparationText> : null}
-        <PreparationButton label={saving ? 'Saqlanmoqda…' : 'Saqlash'} id="preparation-screw-shares-save" disabled={!status.valid || saving} onPress={() => void save()} />
+        <InventorySheetButton label={saving ? 'Saqlanmoqda…' : 'Saqlash'} large id="preparation-screw-shares-save" disabled={!status.valid || saving} onPress={() => void save()} />
       </ScrollView></RNHostView>
     </ModalBottomSheet>
   </Host>;
