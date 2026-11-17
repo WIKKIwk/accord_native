@@ -44,7 +44,8 @@ export function PreparationFabProvider({ children, sharedDock }: { children: Rea
   }, [insets.bottom]);
   const context = useMemo(() => ({ register, setDockHeight }), [register, setDockHeight]);
   const scope = fabScope(pathname), entry = scope ? entries[scope] : undefined;
-  const showSharedDock = scope === 'home' || pathname.replace(/\/+$/, '') === '/android-preparation/sequence';
+  const path = pathname.replace(/\/+$/, '');
+  const showSharedDock = scope === 'home' || path === '/android-preparation/sequence' || path === '/android-preparation/production';
   const visible = scope !== null && (entry?.visible ?? true);
   const enabled = visible && !!entry?.enabled && entry.actions.length > 0;
   return <Context.Provider value={context}><View style={styles.root}>

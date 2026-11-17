@@ -22,8 +22,7 @@ import { preparationProductionBatchCard, preparationProductionDate, preparationP
 import { selectPreparationDevice } from './preparationDevicePicker.android';
 import { reprintPreparationRollWithPrinter } from './preparationPrinter';
 import { PreparationReprintCancelled } from './preparationReprint';
-import { usePreparationFab } from './PreparationFab.android';
-import { PreparationButton, PreparationDialogs, PreparationDock, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationButton, PreparationDialogs, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
@@ -97,8 +96,6 @@ export function PreparationProductionScreen() {
   const [query, setQuery] = useState(''), [status, setStatus] = useState('all');
   const colors = useMaterialColors(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
-  const setDockHeight = usePreparationFab(null, { actions: [], onSelect: () => {}, enabled: false, visible: true,
-    openLabel: t('Amallarni ochish'), closeLabel: t('Amallarni yopish') });
   const filters = useRef({ query: '', status: 'all' });
   const createJournal = useCallback((change: (state: JournalState<Order>) => void) =>
     createPreparationProductionOrdersJournal(session, () => filters.current, change), [session]);
@@ -130,7 +127,6 @@ export function PreparationProductionScreen() {
     {state.items.map((order, index) => <ProductionOrderRow key={order.order_id} order={order} last={index === state.items.length - 1} />)}
     {state.loading ? <ActivityIndicator style={styles.status} /> : null}
     </OrdersList>
-    <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>
   </View>;
 }
 

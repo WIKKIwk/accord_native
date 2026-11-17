@@ -37,6 +37,7 @@ test('production uses shared search, filter and virtual list with automatic pagi
   mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const tree = mod.exports.PreparationProductionScreen();
+  assert.equal(nodes(tree, n => n.type === 'PreparationDock').length, 0);
   const header = nodes(tree, n => n.type === 'OrdersHeader')[0], list = nodes(tree, n => n.type === 'OrdersList')[0];
   assert.ok(header && list); header.props.onSearchChange('BOPP'); assert.deepEqual(calls.at(-1), ['set', 'BOPP']);
   const filter = nodes(list, n => n.type === 'DropdownFilter')[0];
