@@ -321,3 +321,22 @@ Bluetooth preference remains in effect; no GoDEX implementation or hardware test
 
 Both platform TypeScript checks pass. Expo lint: zero errors and the inherited AdminClosedHistoryOwner warning.
 No unit or device tests were run. Fourteen of the requested 25 routes are composed; eleven remain in progress.
+
+## Remaining-routes checkpoint: workers and calculation materials
+
+Connected full non-Rezka Worker Settings: two retained tabs, worker create/name/level dialogs and picker, canonical
+apparatus assignment, server deletion check with blocked/dependency confirmation, group creation, schedule/time
+pickers, unique worker selection, edit cancellation, previous-identity updates and version-triggered reloads.
+
+Connected calculation materials: active/inactive list, actual drag handle for the reorderable active prefix, exact
+editor defaults and field validation, variants/coefficient construction, sheet-result-before-save ordering, optimistic
+insert/deactivation ordering, authoritative reload, sequence rollback and FIFO snack messages. Native form headers,
+segmented expandable cards and fields are reused by both platforms. No Material role identity was substituted.
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| admin_worker_settings_screen and all eight parts | BrigaderWorkerSettingsContent, brigaderWorkerSettingsModel, workerSettingsApi, BrigaderWorkerSurfaces | flows/requests/controls compared | flows/requests/controls compared | Native controls; device acceptance pending |
+| admin_calculate_materials_screen and both parts; m3_sequence_list | BrigaderCalculateMaterialsContent, brigaderCalculateMaterialsModel, calculateMaterialCommands, BrigaderSequenceList | fields/state/drag path ported | fields/state/drag path ported | Gesture/native control carrier; device acceptance pending |
+
+Both platform TypeScript checks pass; Expo lint has zero errors and the inherited AdminClosedHistoryOwner warning.
+No unit or device tests were run. Sixteen of the requested 25 routes are composed; nine remain in progress.

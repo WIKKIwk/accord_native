@@ -25,6 +25,8 @@ const destinations: Readonly<Record<string, string>> = Object.freeze({
   [appRoutes.apparatusPaddonDetail]: '/paddon-detail',
   [appRoutes.adminWipBatches]: '/wip-batches',
   [appRoutes.adminOpeningWip]: '/opening-wip',
+  [appRoutes.adminWorkerSettings]: '/worker-settings',
+  [appRoutes.adminCalculateMaterials]: '/calculate-materials',
   [appRoutes.adminActivity]: '/activity',
   [appRoutes.adminSuppliers]: '/users',
   [appRoutes.adminUserCreate]: '/user-create',

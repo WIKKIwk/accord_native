@@ -1,0 +1,7 @@
+import { Button,HStack,Image,RNHostView,Text,VStack } from '@expo/ui/swift-ui';
+import { background,buttonStyle,cornerRadius,font,foregroundStyle,frame,padding } from '@expo/ui/swift-ui/modifiers';
+import { View } from 'react-native';
+import { BaseHost } from '../components/BaseHost.ios';
+import { useBaseTheme } from '../components/useBaseTheme';
+import type { BrigaderExpandableCardProps } from './BrigaderExpandableCardTypes';
+export function BrigaderExpandableCard({title,subtitle,expanded,onToggle,children,icon}:BrigaderExpandableCardProps){const{colors}=useBaseTheme();return <View style={{paddingHorizontal:4,paddingBottom:4}}><BaseHost matchContents={{vertical:true}} style={{width:'100%'}}><VStack alignment="leading" spacing={0} modifiers={[frame({maxWidth:Infinity}),background(colors.surface),cornerRadius(16)]}><Button onPress={onToggle} modifiers={[buttonStyle('plain')]}><HStack spacing={14} modifiers={[frame({minHeight:60,maxWidth:Infinity}),padding({horizontal:14,vertical:8})]}><Image systemName={icon==='group'?'person.3.fill':'person.crop.circle'} size={24}/><VStack alignment="leading" spacing={4} modifiers={[frame({maxWidth:Infinity,alignment:'leading'})]}><Text modifiers={[font({textStyle:'headline'})]}>{title}</Text>{subtitle?<Text modifiers={[font({textStyle:'caption'}),foregroundStyle('secondary')]}>{subtitle}</Text>:null}</VStack><Image systemName={expanded?'chevron.up':'chevron.down'} size={18}/></HStack></Button>{expanded?<RNHostView matchContents><View>{children}</View></RNHostView>:null}</VStack></BaseHost></View>;}

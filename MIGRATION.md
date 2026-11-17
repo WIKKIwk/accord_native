@@ -10,7 +10,7 @@ in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read
 | Module | Status | Logic | API + fixtures | Tests | iOS UI | Android UI | Notes |
 |---|---|---|---|---|---|---|---|
 | Brigader products/apparatus/notifications/operations/WIP | composed | ported/reused | source requests; no invented fixtures | user owns device tests | native | native | See checkpoints; full-role audit pending |
-| Remaining eleven Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
+| Remaining nine Brigader routes | in progress | in progress | in progress | user requested own tests | in progress | in progress | Continue until all complete |
 
 ## File mapping
 
@@ -18,6 +18,9 @@ in docs/port/status/brigader.md and docs/port/roles/brigader.md. V2 remains read
 |---|---|---|
 | lib/src/features/admin/presentation/admin_wip_batches_screen*.dart | src/brigader/brigaderWipModel.ts, BrigaderWipBatches.* | composed |
 | lib/src/features/admin/presentation/admin_production_map_orders_opening_wip.dart | src/brigader/brigaderOpeningWipModel.ts, BrigaderOpeningWip*, src/admin/openingWipDeleteApi.ts | composed |
+
+| lib/src/features/admin/presentation/admin_worker_settings_screen*.dart | src/brigader/brigaderWorkerSettingsModel.ts, BrigaderWorkerSettings*, BrigaderWorkerSurfaces.tsx, src/admin/workerSettingsApi.ts | composed |
+| lib/src/features/admin/presentation/admin_calculate_materials_screen*.dart | src/brigader/brigaderCalculateMaterialsModel.ts, BrigaderCalculateMaterials*, BrigaderSequenceList.tsx, src/admin/calculateMaterialCommands.ts | composed |
 
 ## Open parity items
 

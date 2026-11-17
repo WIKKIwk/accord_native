@@ -1,4 +1,4 @@
-import { Button, Checkbox, FlowRow, FilterChip, DropdownMenu, DropdownMenuItem, Column, OutlinedButton, Spacer, Switch, Row, useNativeState } from '@expo/ui/jetpack-compose';
+import { Button, Checkbox, FlowRow, FilterChip, DropdownMenu, DropdownMenuItem, Column, OutlinedButton, Spacer, Switch, Row, RNHostView, useNativeState } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useEffect } from 'react';
 import { BaseHost } from '../components/BaseHost.android';
@@ -6,15 +6,15 @@ import { AdminOutlinedTextField } from '../admin/AdminTextFields.android';
 import { AdminText as Text } from '../admin/AdminTypography.android';
 import { userCreateRounded } from '../admin/AdminUserCreateNative.android';
 import { useBaseTheme } from '../components/useBaseTheme';
-import type { ReactNode } from 'react';
+import type { ReactNode,ReactElement } from 'react';
 
 export function Form({ children }: { children: ReactNode }) { return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column modifiers={[fillMaxWidth(), padding(12, 12, 12, 24)]}>{children}</Column></BaseHost>; }
-export function Field({ label, value, onChange, numeric, multiline, disabled, error,unit }: { label: string; value: string; onChange: (value: string) => void; numeric?: boolean; multiline?: boolean; disabled?: boolean; error?: string;unit?:string }) {
+export function Field({ label, value, onChange, numeric, multiline, disabled, error,unit,hint }: { label: string; value: string; onChange: (value: string) => void; numeric?: boolean; multiline?: boolean; disabled?: boolean; error?: string;unit?:string;hint?:string }) {
   const state = useNativeState(value), { colors, mode } = useBaseTheme();
   useEffect(() => { state.set(value); }, [state, value]);
   return <Column modifiers={[fillMaxWidth(), padding(0, 0, 0, 12)]}><AdminOutlinedTextField value={state} onValueChange={onChange} singleLine={!multiline} enabled={!disabled} isError={!!error} shape={userCreateRounded(18)}
     keyboardOptions={{ keyboardType: numeric ? 'decimal' : 'text' }} colors={{ focusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest, unfocusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest }} modifiers={[fillMaxWidth()]}>
-    <AdminOutlinedTextField.Label><Text>{label}</Text></AdminOutlinedTextField.Label>{unit ? <AdminOutlinedTextField.Suffix><Text>{unit}</Text></AdminOutlinedTextField.Suffix> : null}{error ? <AdminOutlinedTextField.SupportingText><Text color={colors.error}>{error}</Text></AdminOutlinedTextField.SupportingText> : null}
+    <AdminOutlinedTextField.Label><Text>{label}</Text></AdminOutlinedTextField.Label>{hint ? <AdminOutlinedTextField.Placeholder><Text>{hint}</Text></AdminOutlinedTextField.Placeholder> : null}{unit ? <AdminOutlinedTextField.Suffix><Text>{unit}</Text></AdminOutlinedTextField.Suffix> : null}{error ? <AdminOutlinedTextField.SupportingText><Text color={colors.error}>{error}</Text></AdminOutlinedTextField.SupportingText> : null}
   </AdminOutlinedTextField></Column>;
 }
 export function Action({ label, onPress, disabled, secondary }: { label: string; onPress: () => void; disabled?: boolean; secondary?: boolean }) {
@@ -37,3 +37,4 @@ export function ChoiceChips({ options,disabled }: { options:{ label:string;selec
 }
 export function Check({ label,value,onChange,disabled }: { label:string;value:boolean;onChange:(value:boolean)=>void;disabled?:boolean }) { return <Row verticalAlignment="center" modifiers={[fillMaxWidth(),defaultMinSize({ minHeight:56 })]}><Checkbox value={value} onCheckedChange={onChange} enabled={!disabled} /><Text modifiers={[weight(1)]}>{label}</Text></Row>; }
 export function Columns({ children }: { children:ReactNode[] }) { return <Row horizontalArrangement={{ spacedBy:8 }} modifiers={[fillMaxWidth()]}>{children.map((child,index) => <Column key={index} modifiers={[weight(1)]}>{child}</Column>)}</Row>; }
+export function FieldsRow({children,action}:{children:ReactNode[];action?:ReactElement}){return <Row verticalAlignment="top" horizontalArrangement={{spacedBy:8}} modifiers={[fillMaxWidth()]}>{children.map((child,index)=><Column key={index} modifiers={[weight(1)]}>{child}</Column>)}{action?<RNHostView matchContents>{action}</RNHostView>:null}</Row>;}
