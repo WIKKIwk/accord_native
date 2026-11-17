@@ -94,7 +94,7 @@ test('orders header uses a back button for preparation and keeps the worker menu
   assert.deepEqual(actions, ['back', 'menu']);
 });
 
-test('preparation orders reuse shared navigation while order detail keeps its dock', () => {
+test('preparation order sheet stays above the shared navigation without duplicating it', () => {
   const session = { token: 'token' }, focusEffects = [], row = { id: 'one' };
   let selected = null;
   class Controller { getSnapshot() { return { window: { scope: 'orders' } }; } sessionChanged() {} }
@@ -135,7 +135,7 @@ test('preparation orders reuse shared navigation while order detail keeps its do
   const sheetTree = sheet.type(sheet.props);
   const surface = nodes(sheetTree, node => typeof node.type === 'function' && node.type.name === 'PreparationDetailSurface')[0];
   const modal = nodes(surface.type(surface.props), node => node.type === 'ModalBottomSheet')[0];
-  assert.equal(nodes(modal, node => node.type === 'PreparationDock').length, 1);
+  assert.equal(nodes(modal, node => node.type === 'PreparationDock').length, 0);
   focusEffects.at(-1)()();
   assert.equal(selected, null);
 });

@@ -26,7 +26,7 @@ import { preparationOrderDisplayCode, preparationOrderMetrics, preparationOrderP
 import { subscribePreparationOrdersLive } from './preparationOrdersLive';
 import { PreparationOrdersState } from './preparationOrdersState';
 import { preparationAllOrdersWarmStore } from './preparationRuntime';
-import { PreparationDialogs, PreparationDock, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
+import { PreparationDialogs, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 
 type Props = { session: Session; controller: PreparationOrdersState; openOrder: (row: PreparationOrderListRow) => void };
 type VariantOptions = { orderId: string; orderCode: string; productCode: string; productTitle: string; materialId: string; materialName: string };
@@ -136,7 +136,6 @@ function PreparationDetailSurface({ children, width, maxHeight }: { children: Re
       containerColor={colors.surface} properties={{ shouldDismissOnBackPress: false, shouldDismissOnClickOutside: false }}>
       <RNHostView matchContents><View style={{ width, maxHeight }}>
         <View style={{ flexShrink: 1, minHeight: 0 }}>{children}</View>
-        <View style={{ flexShrink: 0 }}><PreparationDock /></View>
       </View></RNHostView>
     </ModalBottomSheet>;
 }
