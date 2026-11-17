@@ -1,13 +1,15 @@
-import { isValidElement, useLayoutEffect, useMemo, useSyncExternalStore, type ReactElement } from 'react';
+import { isValidElement, useMemo, useSyncExternalStore, type ReactElement } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { AdminRootPresentationRenderState } from './adminRootPresentationChain';
 import { AdminRootRouterPageProvider } from './AdminRootRouterContext';
 import type { AdminRootRouterBinding, AdminRootRouterScene as Scene } from './AdminRootRouterTypes';
 import type { AdminRootRouterController } from './adminRootRouterController';
+import { useAdminRootRouterSceneMembership } from './useAdminRootRouterSceneMembership';
 
 /** No ScreenContainer/NativeStack is mounted inside Android's ComponentDialog. */
 function NativeScene({ controller, binding, scene }: { controller: AdminRootRouterController; binding: AdminRootRouterBinding; scene: Scene | null }) {
-  useLayoutEffect(() => controller.attachScene(binding) ?? undefined, [controller, binding]); return <View style={styles.fill}>{scene?.descriptor.render()}</View>;
+  const body = scene?.descriptor.render(); useAdminRootRouterSceneMembership(controller, binding, scene !== null);
+  return <View style={styles.fill}>{body}</View>;
 }
 export function AdminRootRouterScene({ controller, binding, outlet, state }: { controller: AdminRootRouterController; binding: AdminRootRouterBinding; outlet: ReactElement; state: AdminRootPresentationRenderState }) {
   useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot); const scene = controller.scene(binding);

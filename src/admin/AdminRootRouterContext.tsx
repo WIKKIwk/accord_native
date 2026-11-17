@@ -2,7 +2,8 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { AdminRootRouterBinding } from './AdminRootRouterTypes';
 import type { AdminRootRouterController } from './adminRootRouterController';
 
-type Value = Readonly<{ controller: AdminRootRouterController; binding: AdminRootRouterBinding; isCurrent: () => boolean; canInteract: () => boolean }>;
+export type AdminRootRouterPageContext = Readonly<{ controller: AdminRootRouterController; binding: AdminRootRouterBinding; isCurrent: () => boolean; canInteract: () => boolean }>;
+type Value = AdminRootRouterPageContext;
 const Context = createContext<Value | null>(null);
 /** Adds physical Root authority around the REAL descriptor; it never replaces navigation/focus/remove contexts. */
 export function AdminRootRouterPageProvider({ controller, binding, children }: { controller: AdminRootRouterController; binding: AdminRootRouterBinding; children: ReactNode }) {
@@ -10,3 +11,5 @@ export function AdminRootRouterPageProvider({ controller, binding, children }: {
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export function useAdminRootRouterPage() { const value = useContext(Context); if (!value) throw Error('A genuine original Root route descriptor is required'); return value; }
+/** Optional lookup only; an absent context never supplies a synthetic route or original owner. */
+export function useOptionalAdminRootRouterPage() { return useContext(Context); }

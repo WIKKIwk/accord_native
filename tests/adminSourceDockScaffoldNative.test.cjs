@@ -8,6 +8,7 @@ function fixture(t, options) {
     'react-native': { View: 'View', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 } }, findNodeHandle: ref => { tags.push(ref); return ref?.actualTag ?? null; } },
     './AdminCreateHubProvider': { AdminCreateHubSourceLayout: 'ActualSourceLayout.Provider' },
     './AdminShellSourceWindowLayoutContext': { AdminShellSourceWindowLayout: 'ActualOriginalWindowShellScope' },
+    './AdminSourceSceneScaffoldContext': { AdminSourceSceneScaffoldProvider: 'ActualSceneScaffoldScope' },
     './useAdminSourceDockScaffold': { useAdminSourceDockScaffold: props => ({ owner: f.scaffoldOwner, state: f.scaffoldOwner.getSnapshot(), matches: f.scaffoldOwner.matches(props) }) } });
   const render = () => r.render(() => exports.AdminSourceDockScaffold(f.props));
   const id = (tree, value) => s.views.nodes(tree, node => node.props.testID === value)[0];

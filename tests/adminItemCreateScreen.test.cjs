@@ -41,7 +41,7 @@ for (const platform of ['android', 'ios']) {
   });
   test(`${platform} original-window header/banner use actual viewport facts while unknown geometry preserves original owner and header Back`, async () => {
     const f = s.fixture(platform); try {
-      f.safeAvailable(false); f.sourceWindowScope({ safeInsets: null, viewportWidth: null, metrics: null, thinGestureBottom: null }); f.sourceLayout.metrics = null; f.sourceLayout.hostHeight = null;
+      f.bindSourceScene(); f.safeAvailable(false); f.sourceWindowScope({ safeInsets: null, viewportWidth: null, metrics: null, thinGestureBottom: null }); f.sourceLayout.metrics = null; f.sourceLayout.hostHeight = null;
       f.render(); await s.flush(); let tree = f.render(); const original = f.model().owner; assert.ok(s.nodes(tree, node => node.type === 'GenuineNativeHeader').length); assert.equal(f.leaf.notice.inlineInsets, null);
       assert.equal(s.flattenStyle(root(tree).props.style).paddingTop, undefined); assert.equal(s.nodes(tree, node => node.type === 'SafeAreaView').length, 0); assert.equal(f.leaf.list.bottomPadding, null); f.leaf.header.model.back();
       f.sourceWindowScope({ safeInsets: { top: 61, left: 19, right: 27 }, viewportWidth: 480, metrics: null, thinGestureBottom: true }); tree = f.render(); assert.equal(f.model().owner, original); assert.deepEqual(f.leaf.notice.inlineInsets, { left: 19, right: 27, width: 480 });

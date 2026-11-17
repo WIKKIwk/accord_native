@@ -3,17 +3,20 @@ const path = require('node:path'), React = require('react'), source = require('.
 const { flattenStyle } = require('./adminShellFrameViewSupport.cjs');
 function fixture(platform = 'android', overrides = {}) {
   const f = source.fixture(overrides), r = view.runtime(), listeners = new Set(), frames = new Map(), fixed = [], fixedHosts = [], leaf = {}, locale = { locale: 'uz', addListener: () => () => {} };
+  let dirty = false;
+  r.react.useSyncExternalStore = (subscribe, getSnapshot) => { const value = getSnapshot(); r.react.useLayoutEffect(() => { const stop = subscribe(() => { dirty = true; }); if (getSnapshot() !== value) dirty = true; return stop; }, [subscribe, getSnapshot, value]); return value; };
   const clock = source.scheduler(), service = new notices.service.AdminTopNoticeService({ setTimer: clock.set, clearTimer: clock.clear });
   const messenger = new notices.messenger.AdminTopNoticeMessenger({ isCurrent: f.owner.current, subscribeCurrent: callback => { listeners.add(callback); return () => listeners.delete(callback); } }), driver = {}; messenger.attachDriver(driver, false);
   const progress = { value: 1, get() { return this.value; } }; let focused = true, top = true, hookCalls = 0, latest = null, serial = 0;
   const oldFrame = global.requestAnimationFrame, oldCancel = global.cancelAnimationFrame; global.requestAnimationFrame = callback => { frames.set(++serial, callback); return serial; }; global.cancelAnimationFrame = id => frames.delete(id);
   const sourceLayout = { metrics: { platform, width: 390, height: 844, viewInsetsBottom: 0, viewPaddingBottom: 20, systemGestureInsetsBottom: 20 }, hostHeight: 199 };
-  let hubAvailable = true, noticeAvailable = true, safeAvailable = true, sourceWindowScope = null;
+  let hubAvailable = true, noticeAvailable = true, safeAvailable = true, sourceWindowScope = null, rootPage = null, sourceScene = null, bindingFixture = null;
   const safe = { top: 24, left: 11, right: 23, bottom: 20 }, props = { ...f.props, canInteract: () => top, backLabel: 'Back', topNoticeDismissLabel: 'Source localized dismiss', profileAction: React.createElement('GenuineProfileAction'), footer: React.createElement('GenuineDock'), sourceScaffoldAncestor: null,
     fixedSnackBars: { isAvailable: () => true, enqueue: value => fixed.push(value), render: host => { fixedHosts.push(host); return React.createElement('GenuineFixedSnackBarHost', host); } },
     renderPrimaryAction: value => React.createElement('GenuineRootPrimaryAction', value),
     dialogPortal: { isAvailable: () => true, render: value => React.createElement('GenuineOriginalDialogPortal', value) }, windowObserver: { arm() {}, waitForDetach() {}, cancelPending() {}, cancel() {} }, ...overrides.screenProps };
-  const owned = source.load('admin/adminItemCreateScreenBoundary', { react: React, '../shared/camera/synchronousGuard': source.strict });
+  const sceneSupport = require('./adminSourceSceneScaffoldSupport.cjs');
+  const owned = source.load('admin/adminItemCreateScreenBoundary', { react: React, '../shared/camera/synchronousGuard': source.strict, './AdminSourceSceneScaffoldOwner': sceneSupport.scene });
   const safeContext = { current: safe }, inlineSafe = view.compile(path.resolve(__dirname, '../src/admin/AdminShellInlineSafeArea.tsx'), {
     react: { ...r.react, useContext: context => context.current }, 'react-native': { View: 'View' },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', SafeAreaInsetsContext: safeContext },
@@ -24,6 +27,10 @@ function fixture(platform = 'android', overrides = {}) {
     './AdminOwnedBackContext': { useAdminOwnedBack() {} }, './adminItemCreateSession': f.factory, './dartJsonString': source.strings });
   const scaffold = source.load('admin/useAdminTopNoticeScaffold', { react: r.react, './AdminTopNoticeProvider': { useAdminTopNoticeTarget: () => { if (!noticeAvailable) throw Error('genuine TopNotice provider required'); return { messenger, progress }; } } });
   const bridge = source.load('admin/useAdminItemCreateNoticePresentation', { react: r.react, '../shared/localization': source.l10n, '../shared/localization/runtime': { localeController: locale }, '../shared/camera/synchronousGuard': source.strict, './adminTopNoticeRuntime': { adminTopNoticeService: service } });
+  const sourceGate = view.compile(path.resolve(__dirname, '../src/admin/AdminItemCreateSourceScene.tsx'), { react: r.react, '../shared/profileSessionGuard': source.profile,
+    './AdminRootRouterContext': { useOptionalAdminRootRouterPage: () => rootPage }, './AdminShellSourceWindowLayoutContext': { useAdminShellSourceWindowLayout: () => sourceWindowScope },
+    './AdminSourceSceneScaffoldContext': { useAdminSourceSceneScaffold: () => sourceScene, useAdminSourceScenePlacement: () => sourceScene !== null }, './AdminSourceSceneScaffoldOwner': sceneSupport.scene,
+    './adminItemCreateScreenBoundary': owned, './useAdminTopNoticeScaffold': scaffold });
   const nativeLeaf = (name, id) => value => { leaf[id] = value; return { type: name, props: value }; };
   const assembly = view.compile(path.resolve(__dirname, `../src/admin/AdminItemCreateScreen.${platform}.tsx`), { react: r.react,
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'react-native': { View: 'View', StyleSheet: { create: value => value } }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => { if (!safeAvailable) throw Error('genuine SafeArea provider required'); return safe; } },
@@ -35,11 +42,14 @@ function fixture(platform = 'android', overrides = {}) {
     './AdminItemCreateScaffold': { AdminItemCreateScaffold: value => ({ type: 'SourceBodyFrame', props: { children: value.children(sourceLayout.metrics === null || sourceLayout.hostHeight === null ? null : sourceLayout.hostHeight + 240) } }) },
     './AdminTopNoticeHost': { AdminTopNoticeHost: nativeLeaf('GenuineInlineTopNoticeHost', 'notice') }, './adminItemCreateScreenBoundary': owned,
     './AdminShellInlineSafeArea': inlineSafe,
+    './AdminItemCreateSourceScene': sourceGate,
     './useAdminItemCreate': { useAdminItemCreate: value => { hookCalls++; latest = hook.useAdminItemCreate(value); return latest; } }, './useAdminItemCreateNoticePresentation': bridge, './useAdminTopNoticeScaffold': scaffold });
   return { ...f, r, props, locale, sourceLayout, safe, messenger, service, clock, fixed, fixedHosts, leaf, hookCalls: () => hookCalls, model: () => latest,
-    render: () => r.render(() => view.expand(assembly.AdminItemCreateScreen(props))), focus: value => { focused = value; }, top: value => { top = value; },
+    render: () => { for (let i = 0; i < 18; i++) { dirty = false; const tree = r.render(() => view.expand(assembly.AdminItemCreateScreen(props))); if (!dirty) return tree; } throw Error('Actual screen store subscriptions did not settle'); }, focus: value => { focused = value; }, top: value => { top = value; },
     hubAvailable: value => { hubAvailable = value; }, noticeAvailable: value => { noticeAvailable = value; }, safeAvailable: value => { safeAvailable = value; safeContext.current = value ? safe : null; }, sourceWindowScope: value => { sourceWindowScope = value; },
+    bindSourceScene: () => { bindingFixture = sceneSupport.fixture({ messenger, progress }); rootPage = bindingFixture.rootContext; sourceScene = bindingFixture.scope; props.expectedRootBinding = bindingFixture.binding; bindingFixture.commit(); bindingFixture.root.rootReady(); return bindingFixture; },
+    rootPage: value => { rootPage = value; }, sourceScene: value => { sourceScene = value; }, bindingFixture: () => bindingFixture,
     notify: () => [...listeners].forEach(callback => callback()), frame: () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback()); },
-    cleanup: () => { r.unmount(); messenger.retire(); global.requestAnimationFrame = oldFrame; global.cancelAnimationFrame = oldCancel; } };
+    cleanup: () => { r.unmount(); bindingFixture?.cleanup(); messenger.retire(); global.requestAnimationFrame = oldFrame; global.cancelAnimationFrame = oldCancel; } };
 }
 module.exports = { ...source, ...view, fixture, flattenStyle };

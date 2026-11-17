@@ -6,9 +6,10 @@ function fixture(platform = 'ios', options = {}) {
   react.createContext = initial => { const context = { value: initial }; context.Provider = function Provider(props) { context.value = props.value; return jsx.jsx('ActualRootAuthorityProvider', props); }; return context; };
   react.useContext = context => context.value;
   const context = base.compile('AdminRootRouterContext.tsx', { react, 'react/jsx-runtime': jsx });
+  const membership = base.compile('useAdminRootRouterSceneMembership.ts', { react });
   function NativeStackView(props) { calls.push(['native-stack', props]); return props.state.routes.map(route => props.descriptors[route.key].render()); }
   const scene = base.compile(`AdminRootRouterScene.${platform}.tsx`, { react, 'react/jsx-runtime': jsx, 'react-native': { View: 'View', StyleSheet: { create: value => value } },
-    'expo-router': { NativeStackView }, './AdminRootRouterContext': context }).AdminRootRouterScene;
+    'expo-router': { NativeStackView }, './AdminRootRouterContext': context, './useAdminRootRouterSceneMembership': membership }).AdminRootRouterScene;
   let binding, page, native, state;
   function render() { const parent = page?.native ?? f.chain.root; state = { interactive: f.chain.canInteract(parent), retained: page ? f.chain.retained(page.native) : false, retired: f.chain.isRetired(parent),
     isCurrent: () => f.owner.readCurrent(binding), canInteract: () => f.owner.canInteract(binding) };

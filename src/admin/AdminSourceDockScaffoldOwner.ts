@@ -6,7 +6,7 @@ import type { AdminScaffoldLayoutBinding, AdminScaffoldLayoutBindingSnapshot } f
 import { adminSourceDockBodyBottom, adminSourceDockSizing, type AdminSourceDockPrimary, type AdminSourceDockSizing } from './adminSourceDockScaffoldPolicy';
 import type { AdminSourceDockHubRequest, AdminSourceDockScaffoldProps } from './AdminSourceDockScaffoldTypes';
 
-type Host = Pick<AdminSourceDockScaffoldProps, 'identity' | 'reader' | 'scaffold' | 'sourceScaffoldAncestor' | 'isCurrent' | 'canInteract' | 'hubNativeHost'>;
+type Host = Pick<AdminSourceDockScaffoldProps, 'identity' | 'reader' | 'scaffold' | 'sourceScaffoldAncestor' | 'isCurrent' | 'canInteract' | 'hubNativeHost' | 'rootBinding'>;
 export type AdminSourceDockTarget = Readonly<{ identity: object; nativeID: string; primary: AdminSourceDockPrimary; sizing: AdminSourceDockSizing }>;
 export type AdminSourceDockSnapshot = Readonly<{ revision: number; generation: number; retired: boolean; native: AdminScaffoldLayoutBindingSnapshot | null;
   target: AdminSourceDockTarget | null; bodyBottom: number | null; geometryReady: boolean }>;
@@ -31,11 +31,13 @@ export class AdminSourceDockScaffoldOwner {
     this.original = Object.freeze({ ...props, scaffold: Object.freeze({ ...props.scaffold }), hubNativeHost: props.hubNativeHost ? Object.freeze({ ...props.hubNativeHost }) : null });
   }
   matches = (props: Host) => props.identity === this.original.identity && props.reader === this.original.reader && props.scaffold.messenger === this.original.scaffold.messenger &&
-    props.scaffold.ticket === this.original.scaffold.ticket && props.sourceScaffoldAncestor === this.original.sourceScaffoldAncestor && props.isCurrent === this.original.isCurrent && props.canInteract === this.original.canInteract && props.hubNativeHost === this.hostReference &&
+    props.scaffold.ticket === this.original.scaffold.ticket && props.scaffold.progress === this.original.scaffold.progress && props.rootBinding === this.original.rootBinding && props.sourceScaffoldAncestor === this.original.sourceScaffoldAncestor && props.isCurrent === this.original.isCurrent && props.canInteract === this.original.canInteract && props.hubNativeHost === this.hostReference &&
     (!props.hubNativeHost || ['identity', 'isAvailable', 'ownsOverlayTop', 'renderPrimary', 'renderOverlay'].every(key => props.hubNativeHost![key as keyof NonNullable<Host['hubNativeHost']>] === this.original.hubNativeHost![key as keyof NonNullable<Host['hubNativeHost']>]));
   commit(props: Host) { if (!this.matches(props)) this.invalidate(); }
   getSnapshot = () => this.state;
   nativeHost = () => this.original.hubNativeHost;
+  sourceWitness = () => this.original;
+  sourceMembership = () => Object.freeze({ active: this.active, retired: this.retired, generation: this.state.generation });
   sourceLayout(available: boolean) {
     const known = available && this.state.geometryReady, metrics = known ? this.state.native?.metrics ?? null : null, hostHeight = known ? this.state.native?.dockHeight ?? null : null;
     if (this.layout.metrics !== metrics || this.layout.hostHeight !== hostHeight) this.layout = Object.freeze({ metrics, hostHeight });

@@ -4,6 +4,7 @@ import type { AdminTopNoticeScaffoldBinding } from './useAdminTopNoticeScaffold'
 import type { AdminCreateHubController, AdminCreateHubSnapshot, AdminCreateHubTicket } from './adminCreateHubController';
 import type { AdminTopNoticeScaffold } from './adminTopNoticeModel';
 import type { AdminSourceDockPrimary, AdminSourceDockSizing } from './adminSourceDockScaffoldPolicy';
+import type { AdminRootRouterBinding } from './AdminRootRouterTypes';
 
 export type AdminSourceDockHubRequest = Readonly<{
   controller: AdminCreateHubController; ticket: AdminCreateHubTicket; primary: AdminSourceDockPrimary; state: AdminCreateHubSnapshot;
@@ -30,6 +31,8 @@ export type AdminSourceDockRenderFacts = Readonly<{
 }>;
 export type AdminSourceDockScaffoldProps = Readonly<{
   identity: object; reader: AdminFixedSnackBarReaderOwner; scaffold: AdminTopNoticeScaffoldBinding;
+  /** Exact issued binding supplied by this actual Root scene container. Its identity must be the Scaffold identity. */
+  rootBinding?: AdminRootRouterBinding;
   /** Exact logical ancestor supplied to the caller's genuine Source Scaffold hook. */
   sourceScaffoldAncestor: AdminTopNoticeScaffold | null;
   isCurrent: () => boolean; canInteract: () => boolean;

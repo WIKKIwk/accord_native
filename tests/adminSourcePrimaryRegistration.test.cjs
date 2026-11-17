@@ -85,3 +85,13 @@ test('Source update rechecks actual membership after retained request getters on
     assert.equal(f.hub.getSnapshot().version, before + 1); assert.equal(f.hub.primaryFor(ticket), null);
   }
 });
+test('real parent-first Hub cleanup is pending until child passive reconnect, which issues a fresh original ticket without reviving old commands', t => {
+  const f = fixture(t); const owner = new domain.AdminSourcePrimaryRegistrationOwner({ identity: {}, controller: f.hub, isCurrent: () => true, canInteract: () => true }, {});
+  owner.commitFocus(true); owner.start(); const old = owner.getSnapshot(); assert.ok(old); f.hub.dispose(); assert.equal(owner.getSnapshot(), null); assert.equal(owner.canInteract(), false); owner.detach();
+  owner.commitFocus(true); f.hub.start(); owner.start(); const fresh = owner.getSnapshot(); assert.ok(fresh); assert.notEqual(fresh, old); assert.equal(f.hub.open(old), false); assert.equal(f.hub.primaryFor(fresh).ticket, fresh); t.after(owner.detach);
+});
+test('genuine global account retirement cannot restart its controller or issue a Source ticket even if same-object fields later look current', t => {
+  const f = fixture(t); let current = true; const owner = new domain.AdminSourcePrimaryRegistrationOwner({ identity: {}, controller: f.hub, isCurrent: () => current, canInteract: () => true }, {});
+  owner.commitFocus(true); owner.start(); const old = owner.getSnapshot(); f.hub.invalidate(); assert.equal(owner.getSnapshot(), null); owner.detach(); current = true; owner.commitFocus(true); f.hub.start(); owner.start();
+  assert.equal(owner.getSnapshot(), null); assert.equal(owner.canInteract(), false); assert.equal(f.hub.open(old), false); t.after(owner.detach);
+});

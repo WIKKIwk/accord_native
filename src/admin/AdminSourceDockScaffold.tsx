@@ -4,6 +4,7 @@ import { AdminCreateHubSourceLayout } from './AdminCreateHubProvider';
 import { AdminShellSourceWindowLayout } from './AdminShellSourceWindowLayoutContext';
 import type { AdminSourceDockScaffoldProps } from './AdminSourceDockScaffoldTypes';
 import { useAdminSourceDockScaffold } from './useAdminSourceDockScaffold';
+import { AdminSourceSceneScaffoldProvider } from './AdminSourceSceneScaffoldContext';
 type BodyScope = Readonly<{ ready: boolean; canInteract: () => boolean }>;
 const BodyContext = createContext<BodyScope | null>(null);
 
@@ -37,7 +38,7 @@ export function AdminSourceDockScaffold(props: AdminSourceDockScaffoldProps) {
   return <AdminCreateHubSourceLayout layout={layout}><AdminShellSourceWindowLayout owner={owner} thinGestureBottom={props.thinGestureBottom} available={ready}><View ref={viewport} collapsable={false} nativeID={owner.viewportID} style={styles.root} testID="admin-source-scaffold-viewport"
     onLayout={() => { if (!current()) return; const tag = findNodeHandle(viewport.current); if (typeof tag === 'number' && Number.isInteger(tag) && tag > 0 && current()) owner.bindViewport({ tag, nativeID: owner.viewportID }, generation); }}>
     <View testID="admin-source-scaffold-scene" pointerEvents="box-none" style={[styles.scene, { bottom: ready ? state.bodyBottom ?? 0 : 0 }]}>
-      <BodyContext.Provider value={{ ready, canInteract }}>{props.nativeScene}</BodyContext.Provider>
+      <AdminSourceSceneScaffoldProvider source={owner} binding={props.rootBinding} available={matches}><BodyContext.Provider value={{ ready, canInteract }}>{props.nativeScene}</BodyContext.Provider></AdminSourceSceneScaffoldProvider>
     </View>
     {target ? <View key={target.nativeID} ref={dock} collapsable={false} nativeID={target.nativeID} pointerEvents={interactive ? 'box-none' : 'none'}
       accessibilityElementsHidden={!ready} importantForAccessibility={ready ? 'auto' : 'no-hide-descendants'} testID="admin-source-scaffold-dock-marker"

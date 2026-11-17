@@ -144,6 +144,12 @@ export class AdminRootRouterController {
     if (this.root?.binding === binding) return this.rendererMembers.size > 0 && this.current() && this.routePresent(binding); const page = this.bound(binding);
     return !!page && page.binding === binding && !page.nativeClosed && !page.logicalGone && this.original(page) && this.routePresent(binding);
   };
+  /** Actual committed descriptor membership, independently of native onShow/top/focus/geometry. */
+  hasScene = (binding: AdminRootRouterBinding): boolean => {
+    if (this.root?.binding === binding) return this.rootSceneMembers.size > 0 && this.readCurrent(binding) && this.root?.binding === binding && this.rootSceneMembers.size > 0 && !this.retired && this.rendererMembers.size > 0;
+    const page = this.bound(binding);
+    return !!page && page.binding === binding && page.members.size > 0 && this.readCurrent(binding) && this.bound(binding) === page && page.members.size > 0 && !this.retired && this.rendererMembers.size > 0;
+  };
   canInteract = (binding: AdminRootRouterBinding): boolean => {
     if (!this.readCurrent(binding) || !this.routePresent(binding, true)) return false;
     if (this.root?.binding === binding) return this.rootSceneMembers.size > 0 && this.chain.canInteract(this.chain.root);

@@ -37,13 +37,18 @@ export class AdminSourcePrimaryRegistrationOwner {
     if (this.active || this.retired) return; this.active = true; const generation = ++this.generation;
     this.stopHub = this.original.controller.subscribe(() => {
       if (!this.active || this.retired || this.registering) return;
+      if (!this.original.controller.getSnapshot().valid) {
+        // Parent-first React cleanup removes global registrations before child layout cleanup.
+        // Revoke the real ticket, but do not mistake structural absence for a Source account failure.
+        const ticket = this.ticket; this.publish(null); if (ticket) this.original.controller.unregister(ticket); return;
+      }
       if (!this.ticket) { if (this.original.controller.getSnapshot().valid) this.register(generation); }
       else if (!this.original.controller.primaryFor(this.ticket)) this.invalidate();
     });
     this.register(generation);
   }
   private register(generation: number) {
-    if (!this.current(generation) || this.ticket || this.registering) return; this.registering = true;
+    if (!this.original.controller.getSnapshot().valid || !this.current(generation) || this.ticket || this.registering) return; this.registering = true;
     try {
     const ticket = this.original.controller.register(Object.freeze({ ...this.presentation, isCurrent: () => this.current(generation),
       isFocused: () => this.focused === true && this.current(generation),
@@ -58,7 +63,7 @@ export class AdminSourcePrimaryRegistrationOwner {
     try {
       const next = this.copyPresentation(presentation); if (!frame.valid || this.retired) return false;
       // Remember ordinary committed Source data before the passive registration; this grants no ticket or command authority.
-      if (!this.active) { this.presentation = next; return true; }
+      if (!this.active || !this.ticket && !this.original.controller.getSnapshot().valid) { this.presentation = next; return true; }
       if (!this.current() || !this.ticket || !this.original.controller.updatePrimary(this.ticket, next) || !this.current() || !frame.valid) return false;
       this.presentation = next; return true;
     } catch { return false; } finally { this.updating = null; }
