@@ -49,7 +49,7 @@ This repo is a 1:1 behavioural port of the Flutter app in `../accord_mobile_v2`.
 - For API, models, business rules, realtime, localization and native bridges: use `$accord-port`.
 - For `*.ios.tsx` views: use `$accord-port-ios`. For `*.android.tsx` views: use `$accord-port-android`.
 - Work goes role by role, in parallel sessions. Logic is ported once and shared; Android and iOS each own their screens and routes.
-- Each session works in its own folder on branch `port/<name>`, made by `.agents/skills/accord-port/scripts/port_worktree.sh <name>`. Never work on `main`.
+- Work in the current checkout and branch, including `main`. Create a branch or worktree only with the user's explicit permission; this overrides conflicting port skill instructions.
 - A role part's reading list and gates define the requested result. Finish them, then stop. Record anything without a 1:1 answer in `docs/port/status/<name>.md` rather than guessing.
 - Commit at every checkpoint (a finished group of work with its tests green), staging explicit paths and using `port(<role>/<part>): <area>`. Never push, amend, rebase or reset. Details: "Commits" in `$accord-port`.
 - Tests run with `node --test tests/*.test.cjs`. Type-check platform code with `npx tsc --noEmit -p tsconfig.ios.json` and `-p tsconfig.android.json`.

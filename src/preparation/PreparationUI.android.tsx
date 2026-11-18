@@ -10,6 +10,7 @@ import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/RoleBottomBar.android';
 import type { RoleFabAction } from '../shared/navigation/RoleFab.android';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { usePreparationFab } from './PreparationFab.android';
 import { preparationInputError, preparationQuantityInput } from './preparationLogic';
 
@@ -89,7 +90,11 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
       if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href);
     } } : undefined;
   return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <RoleHeader title={t(title)} subtitle={subtitle ? t(subtitle) : undefined} navigation={navigation} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 10 }}>
+      <View style={{ flex: 1 }}><RoleHeader title={t(title)} subtitle={subtitle ? t(subtitle) : undefined} navigation={navigation} /></View>
+      <RoleHeaderButton icon="profile" label={t('Profil')} testID="header-profile" tintColor={colors.onSurfaceVariant}
+        onPress={() => router.navigate('/android-preparation/profile' as Href)} />
+    </View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 10, paddingBottom: insets.bottom + 24 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
       {children}
