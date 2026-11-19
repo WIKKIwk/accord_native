@@ -108,9 +108,11 @@ Factory Map checkpoint: 76 focused route and role tests, both platform type chec
 | Attach production map, return result and material catalog | Existing map editor/result owner and calculation materials controller |
 | Create a product from the catalog picker | Existing native item-create flow depends on AccordAdminPresentation. This path stays held in Expo Go. |
 
-- [ ] Connect both Android shortcuts to the existing controllers and apply V2 route gates, loading/error handling and saved template results.
-- [ ] Verify the private flow registry cannot adopt stale, foreign or unauthorized arguments. Verify formula and template tests.
+- [x] Connect both Android shortcuts to the existing controllers and apply V2 route gates, loading/error handling and saved template results.
+- [x] Verify the private flow registry cannot adopt stale, foreign or unauthorized arguments. Verify formula and template tests.
 - [ ] Verify a complete order with backend data on an authorized test account. Native item creation from the picker remains open.
+
+Quick Orders and Open Order checkpoint: 94 targeted tests, both platform type checks, changed-file lint and the iOS export passed. The Admin calculation routes use the V2 template and production-map result contracts already ported in V4. The materials route uses the existing native SnackbarHost for messages in Expo Go. The original catalog-create action requires AccordAdminPresentation and stays held. Verify the full live submission on a device.
 
 ## Ish xaritasi mapping
 
@@ -128,6 +130,17 @@ Factory Map checkpoint: 76 focused route and role tests, both platform type chec
 - [ ] Complete the source's apparatus-filter long-press order editor, inactive-window cache, move actions and closed history after their respective data/presentation contracts are ready.
 
 Ish xaritasi checkpoint: 258 focused tests, both platform type checks, changed-file ESLint, and both Expo exports passed. Android uses the Worker tab height and dropdown presentation. Sequence and orders use the Worker's staged thumbnail loading. The list requests at most one page per gesture at the source's strict 400 dp threshold. The existing Work Map data owner still loads only the selected module. The connected phone did not complete an inspector query, so native gesture and visual verification remain open.
+
+## Factory Locations and Inactive Suppliers list mapping
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| Factory Locations list, segmented location and empty/create action | OrdersList keyed locations, existing WorkerQueueCard and WorkerSheetButton |
+| Factory location loading/retry, editor and actions | AdminLoadingIndicator, WorkerSheetButton and original location owners |
+| Inactive Suppliers ListView.separated and AppRefreshIndicator | OrdersList keyed supplier cards with V2 scroll-extent refresh guard |
+| Supplier SoftCard, status, restore and unblock | WorkerQueueCard with source spacing, device palette and the existing guarded action controls |
+
+- [ ] Verify initial loading, empty, retry, refresh, row identity and the original edit/restore actions.
 
 ## Decisions
 
@@ -774,3 +787,4 @@ Ish xaritasi checkpoint: 258 focused tests, both platform type checks, changed-f
 - Warehouses drawer route, list and both sets of tabs (`src/app/android-admin/warehouses.tsx`, `src/admin/AdminWarehouseMainScreen.android.tsx`).
 - Factory Map route and its role shell (`src/app/android-admin/factory-map.tsx`, `src/admin/AdminHomeShortcutRoute.android.tsx`).
 - Work Map tabs, apparatus selector, keyed pages and Move picker (`src/admin/AdminWorkMapRoute.android.tsx`, `src/admin/AdminWorkMap*.android.tsx`).
+- Quick Orders, Open Order and calculation materials, including the private calculation result route (`src/app/android-admin/calculate*.tsx`, `src/app/android-admin/flow/[id].tsx`).

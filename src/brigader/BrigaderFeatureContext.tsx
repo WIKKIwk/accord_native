@@ -5,6 +5,7 @@ import { useBrigaderPage } from './useBrigaderPage';
 type Authority = { current: () => boolean; interactive: () => boolean; back: (result?: unknown) => void; args?: unknown;registerBackResult?:(read:()=>unknown)=>void };
 const Context = createContext<Authority | null>(null);
 export const BrigaderFeatureAuthority = Context.Provider;
+export const AdminFeatureChromeContext = createContext(false);
 export function useBrigaderFeature(route: string) {
   const page = useBrigaderPage(route), owned = useContext(Context);
   return owned ? { ...page, current: owned.current, interactive: owned.interactive, back: owned.back, args: owned.args,registerBackResult:owned.registerBackResult } : { ...page, args: undefined as unknown,registerBackResult:undefined };

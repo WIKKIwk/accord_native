@@ -3,6 +3,10 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { isSessionWitnessCurrent, logout, sessionWitnessVersion, subscribeSessionWitness } from '../auth';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
+import { BrigaderCalculateStoreProvider } from '../brigader/BrigaderCalculateStore';
+import { AdminFeatureChromeContext } from '../brigader/BrigaderFeatureContext';
+import { BrigaderFlowProvider } from '../brigader/BrigaderFlowProvider';
+import { appRoutes } from '../shared/appRoutes';
 import { AdminDrawer } from './AdminDrawer';
 import { AdminTestTokenNotice } from './AdminTestTokenNotice';
 import { AdminTypographyProvider } from './AdminTypography.android';
@@ -11,6 +15,8 @@ import { adminShellMayEnter } from './adminShellAccess';
 import { useAdminShellSession } from './useAdminShellSession';
 import { AdminOwnedNavigationProvider } from './AdminOwnedNavigationContext';
 import { AdminShellNoticeProvider } from './AdminShellNoticeProvider';
+
+const calculationRoutes = new Set<string>([appRoutes.adminCalculate, appRoutes.adminProductionMapTest]);
 
 function AdminSessionGate() {
   const admission = useAdminShellSession(), session = admission?.session, witness = admission?.witness;
@@ -24,7 +30,13 @@ function AdminSessionGate() {
   if (!adminShellMayEnter(session)) return <Redirect href="/" />;
   if (session.token === 'test-mode-token') return <AdminTestTokenNotice />;
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
-    <AdminShellProvider session={session} witness={witness} onLogout={onLogout}><AdminShellNoticeProvider><AdminOwnedNavigationProvider><AdminDrawer><Stack screenOptions={{ headerShown: false }} /></AdminDrawer></AdminOwnedNavigationProvider></AdminShellNoticeProvider></AdminShellProvider>
+    <AdminShellProvider session={session} witness={witness} onLogout={onLogout}>
+      <AdminShellNoticeProvider><AdminOwnedNavigationProvider>
+        <BrigaderCalculateStoreProvider><BrigaderFlowProvider rootPath="/android-admin" supportedRoutes={calculationRoutes}>
+          <AdminFeatureChromeContext.Provider value><AdminDrawer><Stack screenOptions={{ headerShown: false }} /></AdminDrawer></AdminFeatureChromeContext.Provider>
+        </BrigaderFlowProvider></BrigaderCalculateStoreProvider>
+      </AdminOwnedNavigationProvider></AdminShellNoticeProvider>
+    </AdminShellProvider>
   </WorkerSecurityProvider>;
 }
 

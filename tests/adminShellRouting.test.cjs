@@ -190,6 +190,28 @@ test('Android Factory Map uses the original guarded Admin frame and the existing
   assert.equal(screen.props.children.props.embedded, true);
 });
 
+test('Android Quick Orders and Open Order mount the original workflows behind their shortcut gates', () => {
+  let active = true, allowed = true, routeName;
+  const mocks = {
+    'expo-router': { Redirect: 'Redirect' }, 'react-native': { View: 'View' }, 'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    '../../admin/useAdminHomeShortcutRoute': { useAdminHomeShortcutRoute: route => { routeName = route; return { current: active, shortcut: allowed ? {} : null }; } },
+    '../../admin/AdminLoadingIndicator.android': { AdminLoadingIndicator: 'Loading' }, '../../components/BaseHost.android': { BaseHost: 'Host' },
+    '../../brigader/BrigaderCalculate': { BrigaderCalculate: 'Calculate' },
+    '../../brigader/BrigaderCalculateOrdersContent': { BrigaderCalculateOrdersContent: 'SavedOrders' },
+    '../../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, '../../shared/appRoutes': routes,
+  };
+  const quick = load('app/android-admin/calculate-orders.tsx', mocks).default;
+  const calculate = load('app/android-admin/calculate.tsx', mocks).default;
+  const saved = quick(); assert.equal(routeName, r.adminCalculateOrders); assert.equal(saved.type, 'SavedOrders');
+  const rows = [{ id: 'saved-id' }], rendered = [], props = { rows, bottomPadding: 250, empty: { type: 'Empty' }, renderRow: value => rendered.push(value) };
+  const templateList = saved.props.renderList(props), list = templateList.type(templateList.props);
+  assert.equal(list.type, 'OrdersList'); assert.equal(list.props.rows, rows); assert.equal(list.props.rowKey(rows[0]), 'saved-id');
+  list.props.renderRow(rows[0]); assert.deepEqual(rendered, rows);
+  assert.equal(calculate().type, 'Calculate'); assert.equal(routeName, r.adminCalculate);
+  allowed = false; assert.equal(quick().type, 'Redirect'); assert.equal(calculate().type, 'Redirect');
+  active = false; assert.equal(quick(), null); assert.equal(calculate(), null);
+});
+
 test('session hook captures once and rejects stale loads, inactive and unauthorized sessions', async () => {
   async function run(result, { reset = false, unmount = false, active = true } = {}) {
     const updates = []; let effect, resetHook, resolve, unregistered = false, unobserved = false;
@@ -229,6 +251,9 @@ function layout(platform, value, active = true, os = platform, pathname = '/ios-
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: os }, View: 'View' },
     '../auth': { isSessionWitnessCurrent: () => active, logout: async () => {}, sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../shared/appRoutes': routes,
+    '../brigader/BrigaderCalculateStore': { BrigaderCalculateStoreProvider: 'CalculateStoreProvider' },
+    '../brigader/BrigaderFlowProvider': { BrigaderFlowProvider: 'PrivateFlowProvider' },
+    '../brigader/BrigaderFeatureContext': { AdminFeatureChromeContext: { Provider: 'AdminFeatureChrome' } },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: 'chrome', primary: 'tint', onSurfaceVariant: 'muted' } }) },
     '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 2 }, './adminDockModel': { adminDockChatDestination: { label: 'Chat' } },
     '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
@@ -331,7 +356,7 @@ test('a witness version change creates a fresh admission gate instead of recaptu
     '../auth': { sessionWitnessVersion: () => version, subscribeSessionWitness: () => () => {}, isSessionWitnessCurrent: () => true, logout: async () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, './AdminDrawer': { AdminDrawer: 'AdminDrawer' },
     './AdminTypography.android': { AdminTypographyProvider: 'AdminTypographyProvider' }, './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' }, './AdminShellContext': { AdminShellProvider: 'AdminShellProvider' },
-    './adminShellAccess': access, './useAdminShellSession': { useAdminShellSession: () => undefined } };
+    './adminShellAccess': access, './useAdminShellSession': { useAdminShellSession: () => undefined }, '../shared/appRoutes': routes };
   const Layout = load('admin/AdminLayout.android.tsx', mocks).AdminLayout;
   const before = Layout(); version++; const after = Layout(); assert.equal(before.type, 'AdminTypographyProvider'); assert.equal(after.type, 'AdminTypographyProvider'); assert.notEqual(before.props.children.key, after.props.children.key);
 });

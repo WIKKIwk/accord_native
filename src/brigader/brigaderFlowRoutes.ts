@@ -11,7 +11,9 @@ let sequence = 0;
 export class BrigaderFlowRoutes {
   private active = false; private retired = false; private version = 0;
   private readonly entries = new Map<string, Entry>(); private readonly listeners = new Set<() => void>();
-  constructor(private readonly session: Session, private readonly original: () => boolean, private readonly push: (id: string) => void) {}
+  constructor(private readonly session: Session, private readonly original: () => boolean, private readonly push: (id: string) => void,
+    private readonly supportedRoutes: ReadonlySet<string> = brigaderFlowSupport) {}
+  supportsRoute = (route: string) => this.supportedRoutes.has(route);
   getSnapshot = () => this.version;
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish() { this.version++; this.listeners.forEach(listener => listener()); }
@@ -27,7 +29,7 @@ export class BrigaderFlowRoutes {
     return this.current() && this.entries.get(entry.value.id) === entry;
   }
   open<T = unknown>(target: BrigaderFlowTarget, parent: { isCurrent: () => boolean; canInteract: () => boolean }): Promise<T | undefined> {
-    if (!this.current() || !isSynchronouslyTrue(parent.isCurrent) || !isSynchronouslyTrue(parent.canInteract) || !brigaderFlowSupport.has(target.route) || !canOpenRoute(this.session, target.route)) return Promise.resolve(undefined);
+    if (!this.current() || !isSynchronouslyTrue(parent.isCurrent) || !isSynchronouslyTrue(parent.canInteract) || !this.supportsRoute(target.route) || !canOpenRoute(this.session, target.route)) return Promise.resolve(undefined);
     const id = String(++sequence); let resolve!: (value: unknown) => void;
     const result = new Promise<T | undefined>(done => { resolve = done as (value: unknown) => void; });
     const entry: Entry = { value: Object.freeze({ id, target: Object.freeze({ ...target }), isCurrent: () => this.entryCurrent(entry) }), parent: parent.isCurrent,

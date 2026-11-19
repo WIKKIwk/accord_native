@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs');
@@ -28,6 +29,36 @@ function fixture(handler = async () => ({ status: 200, json: async () => ({ temp
 }
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const response = (body, status = 200) => ({ status, json: async () => body });
+
+test('Admin calculation routes retain template arguments inside the original authenticated stack entry', async () => {
+  const f = fixture(), { BrigaderFlowRoutes } = f.load('brigader/brigaderFlowRoutes.ts'), { appRoutes } = f.load('shared/appRoutes.ts');
+  const allowed = new Set([appRoutes.adminCalculate, appRoutes.adminProductionMapTest]);
+  const account = { ...f.session, profile: { role: 'admin', ref: 'original' }, capabilities: ['admin.access', 'catalog.item.create'] };
+  let current = true, interactive = true;
+  const paths = [], flow = new BrigaderFlowRoutes(account, () => current, id => paths.push(id), allowed);
+  const parent = { isCurrent: () => current, canInteract: () => interactive };
+  flow.start();
+  assert.equal(flow.supportsRoute(appRoutes.adminItemCreate), false);
+  assert.equal(await flow.open({ route: appRoutes.adminItemCreate }, parent), undefined);
+  assert.deepEqual(paths, []);
+  const args = { id: 'saved template' }, result = flow.open({ route: appRoutes.adminCalculate, args }, parent);
+  assert.equal(paths.length, 1); const [id] = paths;
+  assert.equal(flow.get(id).target.args, args);
+  const unmount = flow.mount(id, 'original-screen');
+  assert.equal(flow.mount(id, 'foreign-screen'), null);
+  interactive = false;
+  assert.equal(await flow.open({ route: appRoutes.adminCalculate }, parent), undefined);
+  assert.equal(flow.get(id).target.args, args);
+  assert.equal(flow.accept(id, 'foreign-screen', args), false);
+  assert.equal(flow.accept(id, 'original-screen', args), true);
+  unmount(); assert.equal(await result, args); assert.equal(flow.get(id), null);
+  interactive = true;
+  const pending = flow.open({ route: appRoutes.adminProductionMapTest }, parent), second = paths.at(-1);
+  current = false;
+  assert.equal(flow.get(second), null); assert.equal(await pending, undefined);
+  const brigader = new BrigaderFlowRoutes(f.session, () => true, () => {});
+  assert.equal(brigader.supportsRoute(appRoutes.adminItemCreate), true);
+});
 
 // @v2-test test/admin_calculate_order_store_test.dart
 test('archive API uses source GET, preserves list order/defaults and skips only non-map entries', async () => {

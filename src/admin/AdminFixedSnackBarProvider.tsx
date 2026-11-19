@@ -50,7 +50,9 @@ export function AdminFixedSnackBarProvider(props: AdminFixedSnackBarProviderProp
   const context = useMemo(() => Object.freeze({ ...props, queue, progress, target, readiness }), [props, queue, progress, target, readiness]);
   return leased ? <FixedContext.Provider value={context}>{props.children}</FixedContext.Provider> : null;
 }
+export function useOptionalAdminFixedSnackBarContext() { return useContext(FixedContext); }
+
 export function useAdminFixedSnackBarContext(): AdminFixedSnackBarContext {
-  const value = useContext(FixedContext); if (!value) throw Error('The genuine AdminFixedSnackBarProvider is required'); return value;
+  const value = useOptionalAdminFixedSnackBarContext(); if (!value) throw Error('The genuine AdminFixedSnackBarProvider is required'); return value;
 }
 export function useAdminFixedSnackBarTarget(): AdminItemCreateFixedSnackBarTarget { return useAdminFixedSnackBarContext().target; }

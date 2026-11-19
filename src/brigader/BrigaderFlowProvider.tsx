@@ -7,9 +7,10 @@ import { useAdminPageAuthority } from '../admin/useAdminPageAuthority';
 import { BrigaderFlowRoutes } from './brigaderFlowRoutes';
 
 const Context = createContext<BrigaderFlowRoutes | null>(null);
-export function BrigaderFlowProvider({ children }: { children: ReactNode }) {
+export function BrigaderFlowProvider({ children, rootPath, supportedRoutes }: { children: ReactNode; rootPath?: string; supportedRoutes?: ReadonlySet<string> }) {
   const shell = useAdminShell();
-  const registry = useMemo(() => new BrigaderFlowRoutes(shell.session, shell.isCurrent, id => router.push(`/${Platform.OS}-brigader/flow/${id}` as Href)), [shell]);
+  const workspacePath = rootPath ?? `/${Platform.OS}-brigader`;
+  const registry = useMemo(() => new BrigaderFlowRoutes(shell.session, shell.isCurrent, id => router.push(`${workspacePath}/flow/${id}` as Href), supportedRoutes), [shell, workspacePath, supportedRoutes]);
   useLayoutEffect(() => { registry.start(); return () => registry.detach(); }, [registry]);
   useEffect(() => { const stop = subscribeSessionWitness(() => { if (!shell.isCurrent()) registry.invalidate(); }); return stop; }, [registry, shell]);
   return <Context.Provider value={registry}>{children}</Context.Provider>;
