@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -103,7 +104,14 @@ test('closing a pending parent move suppresses its old callback and does not ref
 test('items use 40-row pages, append in order, retain earlier rows on failure and retry from page zero', async () => {
   const f = fixture(); await tick(); const pages = [Array.from({ length: 40 }, (_, i) => ({ code: String(i) })), [{ code: '40' }]];
   f.deps.items = async (group, offset, guard) => { guard(); f.calls.push(['items', group, offset]); return pages.shift(); };
-  f.controller.selectGroup('A'); await tick(); assert.equal(f.controller.getSnapshot().hasMore, true); await f.controller.loadItems(false);
+  f.controller.selectGroup('A'); await tick(); assert.equal(f.controller.getSnapshot().hasMore, true);
+  const scroll = { contentHeight: 1000, viewportHeight: 400 };
+  f.controller.itemsScrolled({ ...scroll, offset: 179 });
+  f.controller.setTab('tree'); f.controller.itemsScrolled({ ...scroll, offset: 180 });
+  assert.deepEqual(f.calls.filter(Array.isArray), [['items', 'A', 0]]);
+  f.controller.setTab('items'); f.controller.itemsScrolled({ ...scroll, offset: 180 });
+  f.controller.itemsScrolled({ ...scroll, offset: 181 });
+  await tick();
   assert.equal(f.controller.getSnapshot().items.length, 41); assert.equal(f.controller.getSnapshot().hasMore, false);
   assert.deepEqual(f.calls.filter(Array.isArray), [['items', 'A', 0], ['items', 'A', 40]]);
 });

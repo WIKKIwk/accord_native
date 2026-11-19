@@ -4,6 +4,8 @@ import type { SharedValue } from 'react-native-reanimated';
 import type { Session } from '../../auth';
 
 export type OrdersTab = { id: string; name: string };
+export const ORDERS_TAB_BAR_HEIGHT = 48;
+
 export type OrdersWorkspaceProps = {
   session: Session;
   tabs: readonly OrdersTab[];
@@ -16,6 +18,7 @@ export type OrdersWorkspaceProps = {
   headerOffset?: SharedValue<number>;
   fontFamily?: string;
   distributeTabs?: boolean;
+  swipeEnabled?: boolean;
   search?: string;
   onSearchChange?: (value: string) => void;
   onMenu?: () => void;

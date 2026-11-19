@@ -3,13 +3,14 @@ import { Children, cloneElement, isValidElement, useCallback, useEffect, useMemo
 import { RefreshControl, View, type FlatList } from 'react-native';
 import { GestureDetector, useNativeGesture } from 'react-native-gesture-handler';
 import Animated, { scrollTo, useAnimatedReaction, useAnimatedRef, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { OrderListItem } from './OrderListItem';
 import { WorkerOrderPalette } from '../../components/workerOrderPalette';
 import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
 import type { OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, keyboardShouldPersistTaps }: OrdersListProps<T>) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshing, setRefreshing] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -68,6 +69,7 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
       const previous = context.previous ?? current;
       context.previous = current;
       scrollOffset.set(current);
+      if (active && onScrollMetrics) scheduleOnRN(onScrollMetrics, { offset: current, viewportHeight: event.layoutMeasurement.height, contentHeight: event.contentSize.height });
       if (active && (context.dragging || context.momentum)) {
         const next = Math.max(0, Math.min(current, headerHeight.get(), headerOffset.get() + current - previous));
         headerOffset.set(next);
@@ -98,7 +100,7 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     onLayout={event => { const height = event.nativeEvent.layout.height; setViewportHeight(height); viewHeight.set(height); }}
     onEndReached={onEndReached} onEndReachedThreshold={0.5}
     onContentSizeChange={(_width, height) => { contentHeight.set(height); }}
-    onScroll={onScroll} scrollEventThrottle={16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
+    onScroll={onScroll} scrollEventThrottle={onScrollMetrics ? 100 : 16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     keyboardShouldPersistTaps={keyboardShouldPersistTaps}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
     refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}

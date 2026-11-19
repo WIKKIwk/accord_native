@@ -1,5 +1,6 @@
 import type { SupplierItem } from '../shared/catalogApi';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
+import type { OrdersListScrollMetrics } from '../shared/orders/OrdersList.types';
 import { dartTrim } from './dartJsonString';
 import { itemGroupsCreateParent, itemGroupsMerge, itemGroupsMoveChoices, itemGroupsPickerPage } from './itemGroupsModel';
 import type { AdminItemGroup, AdminItemGroupTreeEntry } from './itemGroupModel';
@@ -62,6 +63,11 @@ export class ItemGroupsController {
   toggleFilter() { if (this.interact()) this.publish({ filterExpanded: !this.state.filterExpanded }); }
   selectGroup(value: string) { if (!this.interact()) return; const group = dartTrim(value); this.publish({ selectedGroup: group || null, tab: 'items', filterExpanded: false });
     if (group && group !== this.state.loadedGroup) void this.loadItems(true); }
+  itemsScrolled = ({ contentHeight, offset, viewportHeight }: OrdersListScrollMetrics) => {
+    if (this.interact() && this.state.tab === 'items' && !this.state.dialog && contentHeight - offset - viewportHeight <= 420) {
+      void this.loadItems(false);
+    }
+  };
   async loadItems(replace: boolean) {
     const group = this.state.selectedGroup;
     if (!this.current() || !group || (!replace && (this.state.itemsLoading || this.state.loadingMore || !this.state.hasMore))) return;

@@ -1,3 +1,4 @@
+/* global __dirname */
 const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -64,7 +65,8 @@ test('Android type switch keeps both labels beside the native switch and delegat
   assert.deepEqual(nodes(row.props.children[0], node => node.type === 'Text').map(node => node.props.children), ['Group', 'Contains other groups']);
 });
 for (const platform of ['android', 'ios']) test(`${platform} native route preserves source swipe pages, menu order, focus visibility and stable action identities`, () => {
-  const calls = [], pages = [], t = key => key, controller = { open: kind => calls.push(kind), setTab: tab => calls.push(['tab', tab]) }, current = () => true;
+  const calls = [], t = key => key, controller = { open: kind => calls.push(kind), setTab: tab => calls.push(['tab', tab]),
+    reload: async () => calls.push('refresh-tree'), loadItems: async replace => calls.push(['refresh-items', replace]), itemsScrolled() {} }, current = () => true;
   const state = { valid: true, treePhase: 'ready', parentsPhase: 'ready', tab: 'tree', expanded: new Set(), items: [], notice: null, dialog: null, picker: null };
   const model = { state, controller, t, locale: 'en', roots: [], displayGroups: [], current, focused: true };
   let cursor = 0, effects = []; const memos = [];
@@ -74,35 +76,52 @@ for (const platform of ['android', 'ios']) test(`${platform} native route preser
     react, 'react-native': { ...rn, FlatList: 'FlatList', RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', Pressable: 'Pressable', Modal: 'Modal', KeyboardAvoidingView: 'KeyboardAvoidingView',
     PlatformColor: value => value, useWindowDimensions: () => ({ height: 800, width: 400 }) },
     '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifier,
-    '@expo/ui/community/pager-view': { __esModule: true, default: 'Pager' },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
+    '../shared/orders/ordersWorkspaceTypes': { ORDERS_TAB_BAR_HEIGHT: 48 }, './AdminTypography.android': { AdminText: 'Text' },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) },
     '../shared/localization': { localizedGetter: key => key }, './useItemGroupsRoute': { useItemGroupsRoute: () => model },
     './itemGroupsModel': { itemGroupsVisibleTree: () => [] }, [`./AdminCreateMenu.${platform}`]: { AdminCreateMenu: 'Menu' } };
   const Route = load(`admin/ItemGroupsRoute.${platform}.tsx`, mocks).ItemGroupsRoute, props = { navigation: null };
   cursor = 0; const tree = Route(props), menu = nodes(tree, node => node.type === 'Menu')[0];
   assert.deepEqual(menu.props.actions.map(action => action.label), ['item_group.add', 'item_group.move_parent']); menu.props.actions[0].onPress(); menu.props.actions[1].onPress(); assert.deepEqual(calls, ['create', 'move']);
-  const pager = nodes(tree, node => node.type === (platform === 'android' ? 'Pager' : 'TabView'))[0]; assert.equal(pager.props.children.length, 2);
+  const pagerType = platform === 'android' ? 'OrdersWorkspace' : 'TabView';
+  const pager = nodes(tree, node => node.type === pagerType)[0];
   if (platform === 'android') {
-    assert.equal(pager.props.initialPage, 0); assert.equal(pager.props.scrollEnabled, true);
-    pager.props.ref.current = { setPage: page => pages.push(page) }; effects.forEach(callback => callback()); assert.deepEqual(pages, [0]);
-    pager.props.onPageSelected({ nativeEvent: { position: 1 } }); pager.props.onPageSelected({ nativeEvent: { position: 0 } }); pager.props.onPageSelected({ nativeEvent: { position: 3 } });
+    assert.equal(pager.props.selected, 'tree'); assert.equal(pager.props.swipeEnabled, true);
+    assert.deepEqual(pager.props.tabs, [{ id: 'tree', name: 'item_group.tree_tab' }, { id: 'items', name: 'item_group.items_tab' }]);
+    pager.props.onSelect('items'); pager.props.onSelect('tree'); pager.props.onSelect('unknown');
   } else {
+    assert.equal(pager.props.children.length, 2);
     assert.equal(pager.props.selection, 'tree'); assert.deepEqual(pager.props.children.map(tab => tab.props.value), ['tree', 'items']);
     assert.deepEqual(pager.props.modifiers.find(value => value.name === 'tabViewStyle').args[0], { type: 'page', indexDisplayMode: 'never' });
     pager.props.onSelectionChange('items'); pager.props.onSelectionChange('tree'); pager.props.onSelectionChange('unknown');
   }
   assert.deepEqual(calls.slice(2), [['tab', 'items'], ['tab', 'tree']]);
   if (platform === 'android') {
-    const surface = nodes(tree, node => node.type === 'Surface')[0]; assert.equal(surface.props.shadowElevation, 4); assert.equal(surface.props.shape.cornerRadii.topStart, 18);
+    const gesture = {}, treeList = pager.props.children('tree', gesture);
+    assert.equal(treeList.type, 'OrdersList'); assert.equal(treeList.props.pagerGesture, gesture); assert.equal(treeList.props.active, true);
+    treeList.props.onRefresh();
+    const surface = nodes(treeList, node => node.type === 'Surface')[0]; assert.equal(surface.props.shadowElevation, 4); assert.equal(surface.props.shape.cornerRadii.topStart, 18);
     assert.equal(surface.props.children.props.children.props.style.padding, 14);
-    assert.equal(nodes(tree, node => node.type === 'FlatList').length, 0);
+    const itemsList = pager.props.children('items', gesture);
+    assert.equal(itemsList.type, 'OrdersList'); assert.equal(itemsList.props.active, false); assert.equal(itemsList.props.onScrollMetrics, controller.itemsScrolled);
+    itemsList.props.onRefresh();
+    assert.deepEqual(calls.slice(-2), ['refresh-tree', ['refresh-items', true]]);
   }
-  cursor = 0; effects = []; state.tab = 'items'; const selected = Route(props), selectedPager = nodes(selected, node => node.type === (platform === 'android' ? 'Pager' : 'TabView'))[0];
-  if (platform === 'android') { selectedPager.props.ref.current = { setPage: page => pages.push(page) }; effects.forEach(callback => callback()); assert.deepEqual(pages, [0, 1]); }
+  cursor = 0; effects = []; state.tab = 'items';
+  state.selectedGroup = 'Group A'; state.items = [{ code: 'same', name: 'First', uom: 'kg' }, { code: 'same', name: 'Second', uom: 'kg' }];
+  const selected = Route(props), selectedPager = nodes(selected, node => node.type === pagerType)[0];
+  if (platform === 'android') {
+    assert.equal(selectedPager.props.selected, 'items');
+    const itemList = selectedPager.props.children('items');
+    assert.equal(itemList.props.active, true); assert.equal(itemList.props.rows, state.items);
+    assert.deepEqual(itemList.props.rows.map(itemList.props.rowKey), ['0:same', '1:same']);
+  }
   else assert.equal(selectedPager.props.selection, 'items');
   cursor = 0; model.focused = false; const second = Route(props), next = nodes(second, node => node.type === 'Menu')[0];
   assert.equal(next.props.visible, false); assert.equal(menu.props.actions, next.props.actions); assert.equal(menu.props.isCurrent, next.props.isCurrent);
-  if (platform === 'android') assert.equal(nodes(second, node => node.type === 'Pager')[0].props.scrollEnabled, false);
+  if (platform === 'android') assert.equal(nodes(second, node => node.type === pagerType)[0].props.swipeEnabled, false);
   else assert.equal(nodes(second, node => node.type === 'TabView')[0].props.modifiers.find(value => value.name === 'disabled').args[0], true);
 });
 test('actual route hook keeps owner and menu identity across focus loss and StrictMode reattachment', () => {
@@ -165,7 +184,9 @@ for (const platform of ['android', 'ios']) test(`${platform} native route uses t
     react: { useMemo: create => create(), useRef: () => ({ current: { setPage() {}, showSnackbar: message => snackbars.push(message) } }), useEffect: callback => callback() },
     'react-native': { ...rn, RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', PlatformColor: value => value, useWindowDimensions: () => ({ height: 800, width: 400 }) },
     '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifier,
-    '@expo/ui/community/pager-view': { __esModule: true, default: 'Pager' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
+    '../shared/orders/ordersWorkspaceTypes': { ORDERS_TAB_BAR_HEIGHT: 48 }, './AdminTypography.android': { AdminText: 'Text' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 20 }) }, './useItemGroupsRoute': { useItemGroupsRoute: () => model },
     '../shared/localization': { localizedGetter: key => key }, './itemGroupsModel': { itemGroupsVisibleTree: () => [] } };
   const Route = load(`admin/ItemGroupsRoute.${platform}.tsx`, mocks).ItemGroupsRoute;

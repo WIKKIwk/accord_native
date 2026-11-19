@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import type { PanGesture } from 'react-native-gesture-handler';
 import type { SharedValue } from 'react-native-reanimated';
 
+export type OrdersListScrollMetrics = { offset: number; viewportHeight: number; contentHeight: number };
+
 export type OrdersListProps<T = never> = {
   children: ReactNode;
   footer?: ReactNode;
@@ -15,6 +17,7 @@ export type OrdersListProps<T = never> = {
   headerHeight: SharedValue<number>;
   topInset: number;
   onEndReached?: () => void;
+  onScrollMetrics?: (metrics: OrdersListScrollMetrics) => void;
   passthrough?: (item: ReactNode) => boolean;
   keyboardShouldPersistTaps?: 'never' | 'always' | 'handled';
 };

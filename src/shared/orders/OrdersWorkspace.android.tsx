@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureDetector, usePanGesture, useTapGesture, type PanGestureConfig } from 'react-native-gesture-handler';
 import Animated, { cancelAnimation, scrollTo, useAnimatedRef, useAnimatedStyle, useSharedValue, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
-import { visibleOrdersTabs, type OrdersWorkspaceProps, type OrdersTab } from './ordersWorkspaceTypes';
+import { ORDERS_TAB_BAR_HEIGHT, visibleOrdersTabs, type OrdersWorkspaceProps, type OrdersTab } from './ordersWorkspaceTypes';
 
 type TabLayout = { x: number; width: number };
 
@@ -40,7 +40,7 @@ const NativeTab = memo(function NativeTab({ tab, index, selected, fixedWidth, fo
           <Host key={fixedWidth ? 'fixed' : 'scrollable'} matchContents={fixedWidth ? false : { horizontal: true }}
             style={[styles.tabHost, fixedWidth ? { width: fixedWidth } : undefined]}>
             <Box contentAlignment="center" modifiers={[
-              height(48), fixedWidth ? fillMaxWidth() : defaultMinSize({ minWidth: 90 }),
+              height(ORDERS_TAB_BAR_HEIGHT), fixedWidth ? fillMaxWidth() : defaultMinSize({ minWidth: 90 }),
               testID(`worker-tab-${tab.id}`), padding(16, 0, 16, 0),
             ]}>
               {/* Not onGloballyPositioned: it sends a JS event for every tab on every frame the bar moves. */}
@@ -52,7 +52,7 @@ const NativeTab = memo(function NativeTab({ tab, index, selected, fixedWidth, fo
         </Animated.View>
         <Animated.View pointerEvents="none" importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFill, activeLabel]}>
           <Host style={styles.activeTabHost}>
-            <Box contentAlignment="center" modifiers={[height(48), fillMaxWidth(), padding(16, 0, 16, 0)]}>
+            <Box contentAlignment="center" modifiers={[height(ORDERS_TAB_BAR_HEIGHT), fillMaxWidth(), padding(16, 0, 16, 0)]}>
               <Text color={colors.primary} style={{ typography: 'titleSmall', fontFamily }} maxLines={1} overflow="ellipsis">{tab.name}</Text>
             </Box>
           </Host>
@@ -67,7 +67,7 @@ export function OrdersWorkspace(props: OrdersWorkspaceProps) {
   return <NativeOrdersTabs key={JSON.stringify(tabs.map(tab => tab.id))} {...props} tabs={tabs} />;
 }
 
-function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header, headerOffset, fontFamily, distributeTabs }: OrdersWorkspaceProps & { tabs: readonly OrdersTab[] }) {
+function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header, headerOffset, fontFamily, distributeTabs, swipeEnabled = true }: OrdersWorkspaceProps & { tabs: readonly OrdersTab[] }) {
   const colors = useMaterialColors();
   const defaultHeaderOffset = useSharedValue(0);
   const offset = headerOffset ?? defaultHeaderOffset;
@@ -134,7 +134,7 @@ function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header,
   }, [selectedId, selectedIndex, goToPage]);
 
   const pagerGestureConfig = useMemo<PanGestureConfig>(() => ({
-    enabled: tabs.length > 1 && pageWidth > 0,
+    enabled: swipeEnabled && tabs.length > 1 && pageWidth > 0,
     activeOffsetX: [-16, 16],
     failOffsetY: [-10, 10],
     onActivate: () => {
@@ -161,7 +161,7 @@ function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header,
       }
       goToPage(Math.max(0, Math.min(tabs.length - 1, target)), -event.velocityX / pageWidth);
     },
-  }), [tabs.length, pageWidth, pagePosition, gestureStartPage, gestureStartPosition, goToPage]);
+  }), [swipeEnabled, tabs.length, pageWidth, pagePosition, gestureStartPage, gestureStartPosition, goToPage]);
   const pagerGesture = usePanGesture(pagerGestureConfig);
 
   // Apply measurements atomically on the UI thread. Reading then replacing
@@ -244,10 +244,10 @@ function NativeOrdersTabs({ tabs, selected, onSelect, loading, children, header,
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
   headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
-  tabBar: { height: 48 },
-  tabRow: { flexDirection: 'row', height: 48 },
-  tabHost: { height: 48 },
-  activeTabHost: { width: '100%', height: 48 },
+  tabBar: { height: ORDERS_TAB_BAR_HEIGHT },
+  tabRow: { flexDirection: 'row', height: ORDERS_TAB_BAR_HEIGHT },
+  tabHost: { height: ORDERS_TAB_BAR_HEIGHT },
+  activeTabHost: { width: '100%', height: ORDERS_TAB_BAR_HEIGHT },
   indicator: { position: 'absolute', left: 0, bottom: 0, height: 3, borderRadius: 3 },
   pager: { flex: 1, overflow: 'hidden' },
   pages: { flexDirection: 'row' },

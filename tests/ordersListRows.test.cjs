@@ -49,6 +49,7 @@ function android() {
     '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', useMaterialColors: () => ({}) },
     'react-native': { RefreshControl: 'RefreshControl', View: 'View' },
     'react-native-gesture-handler': { GestureDetector: 'GestureDetector', useNativeGesture: config => config },
+    'react-native-worklets': { scheduleOnRN: (callback, value) => callback(value) },
     'react-native-reanimated': { __esModule: true, default: { FlatList: 'FlatList' }, scrollTo() {}, useAnimatedReaction() {},
       useAnimatedRef: () => null, useAnimatedScrollHandler: handlers => handlers, useSharedValue: state },
     './OrderListItem': { OrderListItem: 'OrderListItem' },
@@ -109,6 +110,18 @@ test('Android existing element children preserve passthrough, image gating and r
     assert.equal(nodes(list.props.renderItem({ item: order, index: 1 }), 'OrderListItem')[0].props.imageActive, false);
     await list.props.refreshControl.props.onRefresh();
     assert.equal(refreshed, 1);
+  } finally { x.restore(); }
+});
+
+test('Android scroll metrics preserve the native geometry and are scoped to the active list', () => {
+  const x = android(), calls = [];
+  const event = { contentSize: { height: 1000 }, layoutMeasurement: { height: 400 }, contentOffset: { y: 180 } };
+  try {
+    const props = { ...common, children: null, onScrollMetrics: value => calls.push(value) };
+    x.render({ ...props, active: false }).props.onScroll.onScroll(event, {});
+    x.render(props).props.onScroll.onScroll(event, {});
+    assert.deepEqual(calls, [{ offset: 180, contentHeight: 1000, viewportHeight: 400 }]);
+    assert.equal(x.render({ ...common, children: null }).props.scrollEventThrottle, 16);
   } finally { x.restore(); }
 });
 
