@@ -21,6 +21,8 @@ function expand(tree) {
   if (!tree || typeof tree !== 'object') return tree;
   if (typeof tree.type === 'function' && !compounds.has(tree.type)) return expand(tree.type(tree.props));
   if (tree.type === 'LazyColumn.Items') return { ...tree, props: { ...tree.props, children: tree.props.data.map((item, index) => expand(tree.props.children({ item, index }))) } };
+  if (tree.type === 'OrdersWorkspace') return { ...tree, props: { ...tree.props, children: tree.props.tabs.map(tab => expand(tree.props.children(tab.id, 'PagerGesture'))) } };
+  if (tree.type === 'OrdersList') return { ...tree, props: { ...tree.props, children: expand([tree.props.children, ...tree.props.rows.map(tree.props.renderRow)]) } };
   return { ...tree, props: { ...tree.props, children: expand(tree.props?.children) } };
 }
 function nodes(tree, predicate) {
@@ -44,7 +46,10 @@ function render(platform, options = {}) {
     profileAction: { type: 'RealProfile', props: {} }, footer: { type: 'RealDock', props: {} }, topNotice: { type: 'RealTopNotice', props: {} } };
   const model = hook.useAdminRoles(props);
   const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui/modifiers': modifiers,
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'react-native': { View: 'View', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
+    'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' }, useIsFocused: () => options.focused !== false }, 'react-native': { View: 'View', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
+    '../shared/orders/ordersWorkspaceTypes': { ORDERS_TAB_BAR_HEIGHT: 48 },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
@@ -112,5 +117,23 @@ test('Android apparatus row/name and checkbox share one native checkbox target, 
     const row = nodes(tree, node => id(node, 'admin-role-apparatus-row-0'))[0], checkbox = nodes(row, node => id(node, 'admin-role-apparatus-0'))[0];
     assert.equal(row.props.modifiers.find(m => m.name === 'toggleable').args[2].enabled, false);
     assert.equal(checkbox.props.enabled, false);
+  }
+});
+
+test('Android Roles uses the shared tab host and refreshes both keyed lists through the same controller', () => {
+  const { tree, calls } = render('android', { state: { tab: 1, refreshing: true } });
+  const workspace = nodes(tree, node => node.type === 'OrdersWorkspace')[0];
+  assert.deepEqual(workspace.props.tabs.map(tab => tab.id), ['roles', 'assignments']);
+  assert.equal(workspace.props.selected, 'assignments');
+  assert.equal(workspace.props.swipeEnabled, true);
+  workspace.props.onSelect('roles'); workspace.props.onSelect('unknown');
+  const lists = nodes(tree, node => node.type === 'OrdersList');
+  assert.deepEqual(lists.map(list => list.props.active), [false, true]);
+  assert.ok(lists.every(list => list.props.refreshing && list.props.pagerGesture === 'PagerGesture'));
+  for (const list of lists) list.props.onRefresh();
+  assert.deepEqual(calls, [['selectTab', 0], ['reload'], ['reload']]);
+  for (const options of [{ editor: true }, { focused: false }]) {
+    const held = nodes(render('android', options).tree, node => node.type === 'OrdersWorkspace')[0];
+    assert.equal(held.props.swipeEnabled, false);
   }
 });

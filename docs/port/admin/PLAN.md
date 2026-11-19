@@ -51,6 +51,35 @@ A partial entry has a route, implementation, or tag to check against V2. Missing
 
 Activity checkpoint: 56 focused tests, both platform type checks, changed-file lint and the iOS export passed. The existing dispatch API and confirmation controller are the source of truth for the list. Android device verification remains open.
 
+## Roles mapping
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| AdminShell and AdminDock | Existing Admin header, body frame and settings dock |
+| AdminSurfaceTabBar, TabBarView and both ListViews | OrdersWorkspace with keyed OrdersList pages and shared pull-to-refresh |
+| Role and assignment rows, capability disclosure | Existing Compose role tile with source segment geometry, summary, disclosure and assignment handlers |
+| Initial loading, retry and background reload | AdminLoadingIndicator, the existing localized retry action and native 2 dp progress indicator |
+| Role editor and assignment modal results | Existing owned sheets and AdminRolesController; retain post-dismissal writes, field and apparatus validation |
+
+- [x] Verify source tab order, swipe, refresh on both lists, native sheet lifecycle and the seven initial requests with existing limits.
+
+Roles checkpoint: 29 focused tests, both platform type checks, changed-file lint and the iOS export passed. The shared 48 dp tabs replace the source 38 dp tabs. Existing role sheets and server writes still use the same controller. Android device verification remains open.
+
+## Warehouses mapping
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| AdminShell, warehouse search field and AdminDock | Existing warehouse shell and controller-owned search, routed with the guarded Admin drawer and settings dock |
+| Products/Settings TabBarView | OrdersWorkspace with horizontal swipe; preserve the Material States preset and Werka single page |
+| Available/Reserved AdminSurfaceTabBar inside the scrolling list | OrdersWorkspace selection without horizontal swipe, tab strip follows vertical scroll; reserved appears only when stock or reservations exist |
+| Warehouse list and page extent | OrdersList keyed entries, 420 dp pagination, available list reset point and persisted warehouse unchanged |
+| Warehouse filter, stock detail cards, sections and overlays | Existing inline filter, existing source-specific row composition and the existing warehouse detail, roll and QR sheet owners |
+| Retry and loading | Source summary, item and page retry callbacks, with existing Admin loader |
+
+- [ ] Wire the existing warehouse screen to the Admin drawer on Android using the V2 capability gate.
+- [ ] Check Products/Settings swipe, Available/Reserved selection and the unchanged Werka/Material/Brigader presets.
+- [ ] Verify retained filter, query paging, reserved-row routing and stale-snapshot protections.
+
 ## Decisions
 
 - Existing V4 components may fill a listed gap when V2 behavior is preserved. Retry surfaces can use FeatureError, cards can use the mapped card composition, and metadata/status/actions can use their mapped role components where those contracts fit.
@@ -692,3 +721,4 @@ Activity checkpoint: 56 focused tests, both platform type checks, changed-file l
 
 - Item Groups tabs and item list (`src/admin/ItemGroupsRoute.android.tsx`).
 - Activity list and retry typography (`src/admin/AdminActivityScreen.android.tsx`).
+- Roles and Assignments tabs and list hosts (`src/admin/AdminRolesScreen.android.tsx`).

@@ -1,13 +1,18 @@
-import { Box, Button, Checkbox, Column, FilledTonalIconButton, HorizontalPager, IconButton, LazyColumn, LinearProgressIndicator, ModalBottomSheet, OutlinedButton,
-  PullToRefreshBox, RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, TextButton, useNativeState, type HorizontalPagerHandle, type ModalBottomSheetRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
-import { AdminTopBar } from './AdminTopBar.android';
-import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, selectable, selectableGroup, semantics, size, testID, toggleable, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { Box, Button, Checkbox, Column, FilledTonalIconButton, IconButton, LazyColumn, LinearProgressIndicator, ModalBottomSheet, OutlinedButton,
+  RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, TextButton, useNativeState, type ModalBottomSheetRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { AdminScreenHeader } from './AdminTopBar.android';
+import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, toggleable, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { useIsFocused } from 'expo-router';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { OrdersList } from '../shared/orders/OrdersList';
+import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
+import { ORDERS_TAB_BAR_HEIGHT } from '../shared/orders/ordersWorkspaceTypes';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -17,6 +22,7 @@ import type { AdminRolesScreenProps } from './AdminRolesTypes';
 import { useAdminRoles, type AdminRolesScreenModel } from './useAdminRoles';
 
 const rounded = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
+const passthrough = () => true;
 const segmented = (index: number, count: number) => Shape.RoundedCorner({ cornerRadii: { topStart: index === 0 ? 18 : 6, topEnd: index === 0 ? 18 : 6,
   bottomStart: index > 0 && index === count - 1 ? 18 : 6, bottomEnd: index > 0 && index === count - 1 ? 18 : 6 } });
 function Icon({ name, color, iconSize = 24 }: { name: AndroidSymbol; color: string; iconSize?: number }) {
@@ -119,38 +125,43 @@ function RolesSheet({ model }: { model: AdminRolesScreenModel }) {
 /** @v2 AdminRolesScreen */
 export function AdminRolesScreen(props: AdminRolesScreenProps) {
   const model = useAdminRoles(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
-  const pager = useRef<HorizontalPagerHandle>(null), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
-  useEffect(() => { void pager.current?.animateScrollToPage(state.tab); }, [state.tab]);
+  const focused = useIsFocused(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
   useEffect(() => { if (model.snackbar && shown.current !== model.snackbar.serial && model.current) { shown.current = model.snackbar.serial; void snackbar.current?.showSnackbar({ message: model.snackbar.message, duration: 'short' }); } }, [model]);
   if (!model.current) return null;
-  const rolePage = <PullToRefreshBox isRefreshing={state.refreshing} onRefresh={() => { void model.controller.reload(); }} modifiers={[fillMaxSize()]}><LazyColumn contentPadding={{ start: 4, end: 4, top: 4, bottom: insets.bottom + 136 }} verticalArrangement={{ spacedBy: 2 }} modifiers={[fillMaxSize()]}>
-    <Button onClick={() => model.controller.openEditor()} shape={rounded(20)} modifiers={[fillMaxWidth(), height(56), testID('admin-role-create')]}><Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }}><Icon name="add" color={colors.onPrimary} /><Text style={{ typography: 'labelLarge' }}>{model.t('adminNewRole')}</Text></Row></Button><Spacer modifiers={[height(10)]} />
-    <LazyColumn.Items data={model.roles} keyExtractor={(row, index) => `${row.role.id}:${index}`} estimatedItemSize={72}>{({ item, index }) => <RoleRow row={item} index={index} model={model} />}</LazyColumn.Items>
-  </LazyColumn></PullToRefreshBox>;
-  const assignmentPage = <PullToRefreshBox isRefreshing={state.refreshing} onRefresh={() => { void model.controller.reload(); }} modifiers={[fillMaxSize()]}><LazyColumn contentPadding={{ start: 4, end: 4, top: 4, bottom: insets.bottom + 136 }} verticalArrangement={{ spacedBy: 2 }} modifiers={[fillMaxSize()]}>
-    <LazyColumn.Items data={model.principals} keyExtractor={(row, index) => `${row.principal.role}:${row.principal.ref}:${index}`} estimatedItemSize={100}>{({ item, index }) => <AssignmentRow row={item} index={index} model={model} />}</LazyColumn.Items>
-  </LazyColumn></PullToRefreshBox>;
+  const tabs = [{ id: 'roles', name: model.t('adminRolesTitle') }, { id: 'assignments', name: model.t('adminRolesAssignTab') }];
+  const currentTab = tabs[state.tab].id;
+  const listProps = { headerOffset, headerHeight, passthrough, refreshing: state.refreshing,
+    topInset: ORDERS_TAB_BAR_HEIGHT + 4, footer: <View style={{ height: insets.bottom + 136 }} />,
+    onRefresh: () => model.controller.reload() };
   return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
-    <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}><AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label })]}><Icon name={props.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} /></IconButton>}
-      title={<Text style={{ typography: 'titleLarge' }}>{model.t('adminRolesTitle')}</Text>}
-      actions={props.profileAction ? <RNHostView matchContents><>{props.profileAction}</></RNHostView> : null} /></Column></BaseHost></SafeAreaView>{props.topNotice}
-    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-roles-body-frame"><BaseHost style={styles.screen}>
-      {!state.data ? state.loading ? <Box contentAlignment="center" modifiers={[fillMaxSize()]}><AdminLoadingIndicator /></Box> : <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(24, 40, 24, 40)]}>
+    <AdminScreenHeader title={model.t('adminRolesTitle')} navigation={props.navigation} profileAction={props.profileAction} />{props.topNotice}
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-roles-body-frame">
+      {!state.data ? <BaseHost style={styles.screen}>{state.loading ? <Box contentAlignment="center" modifiers={[fillMaxSize()]}><AdminLoadingIndicator /></Box> : <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(24, 40, 24, 40)]}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth()]}><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center' }}>{model.t('serverDisconnectedRetry')}</Text>
           <TextButton onClick={() => { void model.controller.reload(); }} contentPadding={{ start: 12, end: 12, top: 8, bottom: 8 }} modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 })]}><Text>{model.t('retry')}</Text></TextButton>
-        </Column></Column> : <Column modifiers={[fillMaxSize()]}>
-          {state.refreshing ? <LinearProgressIndicator modifiers={[fillMaxWidth(), height(2)]} /> : null}
-          <Row modifiers={[fillMaxWidth(), selectableGroup()]}>{([0, 1] as const).map(tab => <Surface key={tab} color={colors.surfaceContainer} modifiers={[weight(1), height(38), selectable(state.tab === tab, () => model.controller.selectTab(tab), 'tab'), testID(`admin-roles-tab-${tab}`)]}>
-            <Column horizontalAlignment="center" verticalArrangement="bottom" modifiers={[fillMaxSize()]}><Text color={state.tab === tab ? colors.primary : colors.onSurfaceVariant} style={{ typography: 'bodyMedium' }} modifiers={[padding(0, 7, 0, 7)]}>{model.t(tab === 0 ? 'adminRolesTitle' : 'adminRolesAssignTab')}</Text>
-              <Surface color={state.tab === tab ? colors.primary : 'transparent'} modifiers={[height(3), fillMaxWidth()]} />
-            </Column>
-          </Surface>)}</Row>
-          <HorizontalPager ref={pager} initialPage={state.tab} onCurrentPageChange={page => { if (page === 0 || page === 1) model.controller.selectTab(page); }} beyondViewportPageCount={1} modifiers={[fillMaxWidth(), weight(1)]}>{rolePage}{assignmentPage}</HorizontalPager>
-        </Column>}
-      {state.sheet ? <RolesSheet key={state.sheet.id} model={model} /> : null}
-    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+        </Column></Column>}</BaseHost> : <>
+          {state.refreshing ? <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><LinearProgressIndicator modifiers={[fillMaxWidth(), height(2)]} /></BaseHost> : null}
+          <OrdersWorkspace session={props.session} tabs={tabs} selected={currentTab} swipeEnabled={focused && !state.sheet}
+            onSelect={tab => { if (tab === 'roles' || tab === 'assignments') model.controller.selectTab(tab === 'roles' ? 0 : 1); }}>
+            {(tab, pagerGesture) => tab === 'roles' ?
+              <OrdersList {...listProps} active={focused && currentTab === tab} pagerGesture={pagerGesture}
+                rows={model.roles} rowKey={(row, index) => `${row.role.id}:${index}`}
+                renderRow={(row, index) => <BaseHost matchContents={{ vertical: true }} style={styles.listRow}><RoleRow row={row} index={index} model={model} /></BaseHost>}>
+                <BaseHost matchContents={{ vertical: true }} style={styles.listRow}><Column modifiers={[fillMaxWidth()]}>
+                  <Button onClick={() => model.controller.openEditor()} shape={rounded(20)} modifiers={[fillMaxWidth(), height(56), testID('admin-role-create')]}><Row verticalAlignment="center" horizontalArrangement={{ spacedBy: 8 }}><Icon name="add" color={colors.onPrimary} /><Text style={{ typography: 'labelLarge' }}>{model.t('adminNewRole')}</Text></Row></Button><Spacer modifiers={[height(10)]} />
+                </Column></BaseHost>
+              </OrdersList> :
+              <OrdersList {...listProps} active={focused && currentTab === tab} pagerGesture={pagerGesture}
+                rows={model.principals} rowKey={(row, index) => `${row.principal.role}:${row.principal.ref}:${index}`}
+                renderRow={(row, index) => <BaseHost matchContents={{ vertical: true }} style={styles.listRow}><AssignmentRow row={row} index={index} model={model} /></BaseHost>}>{null}</OrdersList>}
+          </OrdersWorkspace>
+        </>}
+    </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
+    {state.sheet ? <BaseHost style={styles.sheet}><RolesSheet key={state.sheet.id} model={model} /></BaseHost> : null}
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16, maxWidth: width - 32 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' },
+  listRow: { width: '100%', paddingHorizontal: 4, paddingBottom: 2 }, sheet: { position: 'absolute', width: '100%' },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, notice: { position: 'absolute', left: 16, right: 16 } });
