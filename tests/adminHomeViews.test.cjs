@@ -50,10 +50,29 @@ function render(platform, account, state = baseState, navigation = 'menu', isRou
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     '../shared/localization': localization, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './adminHomeModel': model, './adminHomeSymbols': symbols, './useAdminHome': { useAdminHome: () => ({ state, controller }) } };
+  const theme = mocks['../components/useBaseTheme'], baseHost = mocks['../components/BaseHost.android'];
+  const top = load('shared/navigation/RoleTopBar.android.tsx', {
+    ...mocks, '../../components/useBaseTheme': theme,
+  });
+  const header = load('shared/navigation/RoleHeader.android.tsx', {
+    ...mocks, '../../components/useBaseTheme': theme, '../../components/BaseHost.android': baseHost,
+    './RoleTopBar.android': top,
+  });
+  const adminHeader = load('admin/AdminTopBar.android.tsx', {
+    ...mocks, '../shared/navigation/RoleHeader.android': header, '../shared/navigation/RoleTopBar.android': top,
+  });
+  mocks['./AdminTopBar.android'] = adminHeader;
+  const expand = node => {
+    if (Array.isArray(node)) return node.map(expand);
+    if (!node || typeof node !== 'object') return node;
+    if ([adminHeader.AdminScreenHeader, header.RoleHeader, top.RoleTopBar].includes(node.type)) return expand(node.type(node.props));
+    return { ...node, props: { ...node.props, children: expand(node.props.children) } };
+  };
   const Screen = load(`admin/AdminHomeScreen.${platform}.tsx`, mocks).AdminHomeScreen;
-  return { tree: Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, isSessionCurrent: () => true, navigation: leading, profileAction,
-    footer: { type: 'ExistingDock', props: {} } }), calls };
+  return { tree: expand(Screen({ session: account, store: {}, hub: {}, openRoute: opener, isRouteAvailable, isSessionCurrent: () => true, navigation: leading, profileAction,
+    footer: { type: 'ExistingDock', props: {} } })), calls };
 }
+const homeRow = (node, type = 'Surface') => node.type === type && !!(node.props.onClick ?? node.props.onPress);
 const admin = session('admin', ['admin.access', 'party.supplier.read', 'production.map.manage']);
 const sales = session('sales_manager', ['sales.access', 'production.order.create', 'production.order.edit', 'production.map.edit',
   'production.map.read', 'catalog.item.create', 'party.customer.read', 'party.customer.manage']);
@@ -61,7 +80,7 @@ const account = session('customer', ['catalog.item.read', 'catalog.item.create',
 for (const platform of ['ios', 'android']) {
   const rowType = platform === 'ios' ? 'ListItem' : 'Surface';
   test(`${platform} home renders the four ordered summary shortcuts and reuses the supplied dock`, () => {
-    const { tree, calls } = render(platform, admin), rows = nodes(tree, node => node.type === rowType);
+    const { tree, calls } = render(platform, admin), rows = nodes(tree, node => homeRow(node, rowType));
     assert.equal(rows.length, 4); assert.equal(nodes(tree, node => node.type === 'ExistingDock').length, 1);
     assert.deepEqual(rows.map(row => nodes(row, n => (n.type === 'Text' || n.type === 'NativeText' || n.type === 'ComposeText') && typeof n.props.children === 'string')[0].props.children),
       ['Factory map', 'Quick orders', 'Open order', 'Work map']);
@@ -72,17 +91,17 @@ for (const platform of ['ios', 'android']) {
     const enabled = new Set([routes.appRoutes.profile, routes.appRoutes.adminProductionMapOrders]);
     const available = route => !!access.adminDestinationPath(admin, route, platform, enabled);
     const { tree, calls } = render(platform, admin, baseState, 'menu', available);
-    const rows = nodes(tree, node => node.type === rowType); assert.equal(rows.length, 1);
+    const rows = nodes(tree, node => homeRow(node, rowType)); assert.equal(rows.length, 1);
     assert.equal(nodes(rows[0], n => (n.type === 'Text' || n.type === 'NativeText' || n.type === 'ComposeText') && typeof n.props.children === 'string')[0].props.children, 'Work map');
     (rows[0].props.onPress ?? rows[0].props.onClick)(); assert.deepEqual(calls, [['open', routes.appRoutes.adminProductionMapOrders]]);
   });
   test(`${platform} omits unavailable destinations rather than opening placeholders`, () => {
     const { tree } = render(platform, admin, baseState, 'menu', route => route === routes.appRoutes.adminCalculateOrders);
-    const rows = nodes(tree, node => node.type === rowType); assert.equal(rows.length, 1);
+    const rows = nodes(tree, node => homeRow(node, rowType)); assert.equal(rows.length, 1);
     assert.equal(nodes(rows[0], n => (n.type === 'Text' || n.type === 'NativeText' || n.type === 'ComposeText') && typeof n.props.children === 'string')[0].props.children, 'Quick orders');
   });
   test(`${platform} action rows preserve sales icon omission and permitted action order`, () => {
-    const { tree, calls } = render(platform, sales), rows = nodes(tree, node => node.type === rowType);
+    const { tree, calls } = render(platform, sales), rows = nodes(tree, node => homeRow(node, rowType));
     const expected = model.adminHomeActions(sales, 'en'); assert.equal(rows.length, expected.length); assert.ok(rows.length > 0);
     rows.forEach((row, index) => {
       if (platform === 'ios') assert.equal(row.props.leading, undefined);
@@ -90,14 +109,14 @@ for (const platform of ['ios', 'android']) {
       assert.equal(nodes(row, n => (n.type === 'Text' || n.type === 'NativeText' || n.type === 'ComposeText') && typeof n.props.children === 'string')[0].props.children, expected[index].title);
     });
     (rows[0].props.onPress ?? rows[0].props.onClick)(); assert.deepEqual(calls, [['open', expected[0].routeName]]);
-    const other = render(platform, account).tree, otherRows = nodes(other, n => n.type === rowType);
+    const other = render(platform, account).tree, otherRows = nodes(other, n => homeRow(n, rowType));
     if (platform === 'ios') assert.ok(otherRows.every(row => row.props.leading?.type === 'SymbolView'));
     else assert.ok(otherRows.every(row => nodes(row, n => n.type === 'SymbolView').length === 2));
   });
   test(`${platform} home separates initial loading, error retry and pull refresh`, async () => {
     const loading = render(platform, admin, { ...baseState, loadingSummary: true, loadedSummary: false }).tree;
     assert.equal(nodes(loading, n => n.type === (platform === 'ios' ? 'ProgressView' : 'AdminLoadingIndicator')).length, 1);
-    assert.equal(nodes(loading, n => n.type === rowType).length, 0);
+    assert.equal(nodes(loading, n => homeRow(n, rowType)).length, 0);
     const failure = render(platform, admin, { ...baseState, loadedSummary: false, summaryError: new Error('offline') });
     const retry = nodes(failure.tree, n => platform === 'ios' ? n.type === 'Button' : n.type === 'TextButton')[0];
     (retry.props.onPress ?? retry.props.onClick)(); assert.deepEqual(failure.calls, ['refresh']);
@@ -113,14 +132,14 @@ for (const platform of ['ios', 'android']) {
     for (const icon of ['menu', 'back']) {
       const { tree, calls } = render(platform, admin, baseState, icon);
       const leading = platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft() :
-        nodes(tree, n => n.type === 'TopAppBar.NavigationIcon')[0].props.children;
+        nodes(tree, n => n.type === 'IconButton')[0];
       if (platform === 'ios') assert.equal(leading.props.icon, icon);
       else assert.deepEqual(nodes(leading, n => n.type === 'SymbolView')[0].props.name, { android: icon === 'back' ? 'arrow_back' : 'menu' });
       (platform === 'ios' ? leading.props.onPress : leading.props.onClick)(); assert.deepEqual(calls, ['navigation']);
     }
     const { tree } = render(platform, admin, baseState, null);
     assert.equal(platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft :
-      nodes(tree, n => n.type === 'TopAppBar.NavigationIcon')[0].props.children, platform === 'ios' ? undefined : null);
+      nodes(tree, n => n.type === 'IconButton')[0], undefined);
   });
 }
 test('Android Expo Go opens admin home without mounting the unavailable TopAppBar', () => {
@@ -128,10 +147,12 @@ test('Android Expo Go opens admin home without mounting the unavailable TopAppBa
   const { tree, calls } = render('android', admin, baseState, 'menu', () => true, profile, true);
   const header = nodes(tree, n => n.props.testID === 'admin-home-header-safe-area')[0];
   assert.equal(nodes(header, n => n.type === topBar || n.type === topBar.Title).length, 0);
+  assert.equal(nodes(header, n => n.type === 'Surface')[0].props.color, 'chrome');
+  assert.equal(nodes(header, n => n.type === 'Row')[0].props.modifiers.find(m => m.name === 'height').args[0], 60);
   assert.equal(nodes(header, n => n.type === 'ExistingProfile').length, 1);
   nodes(header, n => n.type === 'IconButton')[0].props.onClick();
   assert.deepEqual(calls, ['navigation']);
-  assert.equal(nodes(tree, n => n.props.testID === 'admin-home-body-frame')[0].props.allowMissingInsets, true);
+  assert.equal(nodes(tree, n => n.props.testID === 'admin-home-body-frame')[0].props.hasFooter, true);
 });
 
 test('each V2 home action icon has an explicit native symbol and unknown names fail', () => {
@@ -167,7 +188,7 @@ test('home hook connects the supplied session-scoped store and shared refresh hu
 // These dimensions determine touch areas and multiline layout, not just decoration.
 test('Android Home uses native clickable surfaces with V2 card geometry and typography', () => {
   const { tree } = render('android', admin);
-  const rows = nodes(tree, n => n.type === 'Surface');
+  const rows = nodes(tree, n => homeRow(n));
   const column = nodes(tree, n => n.type === 'Column' && n.props.verticalArrangement?.spacedBy === 2)[0];
   assert.deepEqual(column.props.verticalArrangement, { spacedBy: 2 });
   assert.deepEqual(column.props.modifiers.find(m => m.name === 'padding').args, [4, 0, 4, 0]);
@@ -185,10 +206,10 @@ test('Android Home uses native clickable surfaces with V2 card geometry and typo
     assert.equal(title.props.style.fontSize, 18.5); assert.equal(title.props.style.fontWeight, '700');
     assert.equal(title.props.maxLines, 2);
   }
-  const single = nodes(render('android', admin, baseState, 'menu', route => route === routes.appRoutes.adminProductionMapOrders).tree, n => n.type === 'Surface')[0];
+  const single = nodes(render('android', admin, baseState, 'menu', route => route === routes.appRoutes.adminProductionMapOrders).tree, n => homeRow(n))[0];
   // V2 standaloneListSlotForIndex returns top for a single row.
   assert.deepEqual(single.props.shape.props.cornerRadii, { topStart: 18, topEnd: 18, bottomStart: 6, bottomEnd: 6 });
-  const actions = nodes(render('android', sales).tree, n => n.type === 'Surface');
+  const actions = nodes(render('android', sales).tree, n => homeRow(n));
   for (const row of actions) {
     assert.equal(row.props.shadowElevation, 0);
     assert.deepEqual(nodes(row, n => n.type === 'Row')[0].props.modifiers.find(m => m.name === 'padding').args, [16, 15, 16, 15]);
@@ -197,7 +218,7 @@ test('Android Home uses native clickable surfaces with V2 card geometry and typo
 });
 test('Android initial failure exposes a native retry button with V2 shrink-wrap content padding', () => {
   const { tree, calls } = render('android', admin, { ...baseState, loadedSummary: false, summaryError: new Error('offline') });
-  assert.equal(nodes(tree, n => n.type === 'Surface').length, 0);
+  assert.equal(nodes(tree, n => homeRow(n)).length, 0);
   const retry = nodes(tree, n => n.type === 'TextButton')[0];
   assert.deepEqual(retry.props.contentPadding, { start: 12, top: 8, end: 12, bottom: 8 });
   assert.deepEqual(retry.props.modifiers[0].args, [{ minWidth: 0, minHeight: 0 }]);
@@ -221,7 +242,7 @@ for (const platform of ['ios', 'android']) {
     const profile = { type: 'RealProfileAction', props: {} };
     const { tree } = render(platform, admin, baseState, 'menu', () => true, profile);
     if (platform === 'ios') assert.equal(nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight(), profile);
-    else assert.equal(nodes(nodes(tree, n => n.type === 'TopAppBar.Actions')[0], n => n.type === 'RealProfileAction').length, 1);
+    else assert.equal(nodes(nodes(tree, n => n.props.testID === 'admin-home-header-safe-area')[0], n => n.type === 'RealProfileAction').length, 1);
     assert.equal(nodes(nodes(tree, n => n.type === 'AdminShellBodyFrame')[0], n => n.type === 'RealProfileAction').length, 0);
     const missing = render(platform, admin).tree;
     assert.equal(nodes(missing, n => n.type === 'RealProfileAction').length, 0);
@@ -229,14 +250,14 @@ for (const platform of ['ios', 'android']) {
 }
 test('Android Home reuses the source native toolbar, scoped text, expressive loading and side safe area', () => {
   const { tree } = render('android', admin, { ...baseState, loadingSummary: true, loadedSummary: false });
-  const header = nodes(tree, n => n.type === topBar)[0];
-  assert.deepEqual(header.props.modifiers.find(m => m.name === 'height').args, [60]);
-  assert.deepEqual(header.props.windowInsets, {});
-  assert.equal(header.props.colors.containerColor, 'chrome');
-  const title = nodes(nodes(header, n => n.type === 'TopAppBar.Title')[0], n => n.type === 'ComposeText')[0];
+  const header = nodes(tree, n => n.type === 'Surface' && n.props.color === 'chrome')[0];
+  const row = nodes(header, n => n.type === 'Row')[0];
+  assert.deepEqual(row.props.modifiers.find(m => m.name === 'height').args, [60]);
+  const title = nodes(header, n => n.type === 'ComposeText')[0];
   assert.equal(title.props.style.fontSize, 24); assert.equal(title.props.style.fontWeight, '800');
   const safe = nodes(tree, n => n.type === 'SafeAreaView')[0]; assert.deepEqual(safe.props.edges, ['left', 'right']);
-  assert.equal(nodes(safe, n => n.type === topBar).length, 1);
+  assert.equal(nodes(safe, n => n === header).length, 1);
+  assert.equal(nodes(safe, n => n.props.style?.height === 3).length, 1);
   const frame = nodes(tree, n => n.type === 'AdminShellBodyFrame')[0];
   assert.equal(nodes(frame, n => n.type === 'AdminLoadingIndicator').length, 1);
   assert.equal(nodes(frame, n => n.type === 'ActivityIndicator').length, 0);

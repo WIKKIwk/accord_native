@@ -1,10 +1,10 @@
+import { useBaseTheme } from '../components/useBaseTheme';
 import { ListItem } from '@expo/ui';
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
 import { Redirect } from 'expo-router';
 import { isValidElement, useEffect, type ReactNode } from 'react';
 import { ActivityIndicator, BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost';
 import { appRoutes } from '../shared/appRoutes';
 import { localizedGetter, productionText } from '../shared/localization';
@@ -12,6 +12,8 @@ import { OrderListItem } from '../shared/orders/OrderListItem';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
 import { AdminBottomBar } from './AdminBottomBar.android';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
+import { AdminShellProfileAction } from './AdminShellProfileAction';
 import { AdminWorkMapMove } from './AdminWorkMapMove';
 import { AdminWorkMapPendingRow } from './AdminWorkMapPendingRow';
 import { AdminWorkMapSequenceRow } from './AdminWorkMapSequenceRow';
@@ -23,11 +25,13 @@ import { adminWorkMapText } from './adminWorkMapText';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminWorkMapView } from './useAdminWorkMapView';
 function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
-  const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, colors = useMaterialColors(), insets = useSafeAreaInsets();
+  const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, { colors } = useBaseTheme(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), label = adminWorkMapText(locale), goBack = view.goBack;
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; }); return () => sub.remove(); }, [goBack]);
-  return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
-    <OrdersHeader search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)} onSearchChange={view.search} onBack={view.goBack} onProfile={view.onProfile} />
+  return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}>
+    <SafeAreaView edges={['left', 'right']}><OrdersHeader compact search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)}
+      onSearchChange={view.search} onBack={view.goBack} onProfile={view.onProfile} profileAction={<AdminShellProfileAction />} /></SafeAreaView>
+    <AdminShellBodyFrame hasFooter={footer !== null} testID="admin-work-map-body-frame">
     <BaseHost matchContents={{ vertical: true }}><AdminWorkMapModules {...view.controls} /></BaseHost>
     {view.controls.module === 'move' ? <AdminWorkMapMove {...view.move} /> : <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} onRefresh={view.refresh}
       onEndReached={() => { if (state.hasMore && !view.error) void controller.next(); }}
@@ -47,8 +51,9 @@ function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
       {view.closed?.map(row => <AdminWorkMapClosedRow key={row.id} row={row} />)}
       {state.hasMore && !view.error && <ListItem onPress={() => { void controller.next(); }}>{label.more}</ListItem>}
     </OrdersList>}
-    {view.controls.module !== 'audit' && view.controls.module !== 'move' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: insets.top + 80 }} />}
-    {footer === undefined ? <AdminBottomBar active="home" /> : footer}
+    {view.controls.module !== 'audit' && view.controls.module !== 'move' && view.loading && !state.loaded && <ActivityIndicator style={{ position: 'absolute', alignSelf: 'center', top: 60 }} />}
+    </AdminShellBodyFrame>
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>{footer === undefined ? <AdminBottomBar active="home" /> : footer}</View>
   </View>;
 }
 export function AdminWorkMapRoute({ footer }: { footer?: ReactNode } = {}) {

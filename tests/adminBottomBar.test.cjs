@@ -16,28 +16,31 @@ const dock = load('admin/adminDockModel.ts', { '../shared/appRoutes': routes, '.
 const strict = load('shared/camera/synchronousGuard.ts');
 const { AdminRootNavigation } = load('admin/adminRootNavigation.ts', { '../shared/camera/synchronousGuard': strict });
 const { StackRouter } = require('../node_modules/expo-router/build/react-navigation/routers/StackRouter.js');
-function fixture({ active = 'home', pathname = '/android-admin', focused = true, binding = true, stack } = {}) {
+function fixture({ active = 'home', pathname = '/android-admin', focused = true, binding = true, stack, chat = false, unread = 0 } = {}) {
   let current = true, activityEnabled = true;
   const calls = [], cleanups = [], frames = [], session = { token: 'token', profile: { role: 'admin', ref: 'owner' }, capabilities: ['admin.access', 'admin.activity.read', 'admin.users.read'] };
   const currentName = pathname.replace(/\/+$/, '').replace('/android-admin', '').replace(/^\//, '') || 'index';
   const names = stack ?? (currentName === 'index' ? ['index'] : ['index', currentName]);
   let state = { key: 'admin-stack', routeKeySeq: names.length, index: names.length - 1, type: 'stack',
-    routeNames: ['index', 'settings', 'additional-settings', 'item-groups', 'activity'], routes: names.map((name, i) => ({ name, key: `${name}-${i}` })) };
+    routeNames: ['index', 'settings', 'additional-settings', 'item-groups', 'activity', 'chat'], routes: names.map((name, i) => ({ name, key: `${name}-${i}` })) };
   const reducer = StackRouter({ initialRouteName: 'index' }), options = { routeParamList: {}, routeGetIdList: {} };
   const apply = (type, path) => { const name = path === '/android-admin' ? 'index' : path.split('/').at(-1);
     state = reducer.getStateForAction(state, { type, payload: { name } }, options).state; };
   const root = new AdminRootNavigation(callback => frames.push(callback));
   const shell = { session, isCurrent: () => current, activityBinding: binding ? {} : null,
-    destination: route => route === appRoutes.adminHome ? '/android-admin' : route === appRoutes.adminActivity && activityEnabled ? '/android-admin/activity' : null };
+    destination: route => route === appRoutes.adminHome ? '/android-admin' : route === appRoutes.adminActivity && activityEnabled ? '/android-admin/activity'
+      : route === appRoutes.chat && chat ? '/android-admin/chat' : null };
   const { AdminBottomBar } = load('admin/AdminBottomBar.android.tsx', {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
     react: { useMemo: fn => fn(), useRef: value => ({ current: value }), useSyncExternalStore: (_subscribe, get) => get(),
       useLayoutEffect: fn => { const cleanup = fn(); if (cleanup) cleanups.push(cleanup); } },
-    'expo-router': { useNavigation: () => ({ getState: () => state }), useIsFocused: () => focused, router: {
+    'expo-router': { useNavigation: path => { assert.equal(path, '/android-admin'); return { getState: () => state }; }, useIsFocused: () => focused, router: {
       dismissTo: path => { calls.push(['popTo', path]); apply('POP_TO', path); }, push: path => { calls.push(['push', path]); apply('PUSH', path); } } },
     'react-native': { Keyboard: { dismiss() {} } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 24 }) },
     '../shared/appRoutes': routes,
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => unread },
+    './useAdminShellLayout': { useAdminShellLayout: () => ({ dockBottomInset: 24 }) },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     '../shared/navigation/RoleBottomBar.android': { RoleBottomBar: 'RoleBottomBar' },
     './AdminShellContext': { useAdminShell: () => shell }, './adminDockModel': dock,
@@ -47,6 +50,17 @@ function fixture({ active = 'home', pathname = '/android-admin', focused = true,
     stack: () => state.routes.slice(0, state.index + 1).map(route => route.name), flush: () => frames.splice(0).forEach(fn => fn()),
     removeActivity: () => { activityEnabled = false; }, unmount: () => cleanups.forEach(fn => fn()) };
 }
+test('Admin uses the compact shared native dock and marks the allowed Chat destination unread', () => {
+  const home = fixture({ chat: true, unread: 2 });
+  assert.equal(home.tree.type, 'RoleBottomBar');
+  assert.equal(home.tree.props.compact, true);
+  assert.deepEqual(home.tree.props.items.at(-1), { id: 'shared-chat', label: 'Chat', icon: 'chat_bubble', testID: 'shared-chat', showBadge: true });
+  home.tree.props.onSelect('shared-chat'); home.flush();
+  assert.deepEqual(home.stack(), ['index', 'chat']);
+  const chat = fixture({ chat: true, pathname: '/android-admin/chat', active: 'chat' });
+  chat.tree.props.onSelect('admin-home'); chat.flush();
+  assert.deepEqual(chat.stack(), ['index']);
+});
 test('source Home dock returns from a child even when its active tab is still Home', () => {
   const child = fixture({ pathname: '/android-admin/item-groups', active: 'home' });
   child.tree.props.onSelect('admin-home'); assert.deepEqual(child.calls, []); child.flush();

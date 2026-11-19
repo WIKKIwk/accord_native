@@ -1,4 +1,5 @@
-import { Button, Column, IconButton, LinearProgressIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, TopAppBar, useNativeState } from '@expo/ui/jetpack-compose';
+import { Button, Column, IconButton, LinearProgressIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, useNativeState } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -72,10 +73,8 @@ export function AdminPushConfigScreen(props: AdminPushConfigScreenProps) {
   const model = useAdminPushConfig(props), { colors } = useBaseTheme();
   if (!model.current || model.state.invalidated) return <View style={styles.root} />;
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.root}>
-    <Column modifiers={[fillMaxSize()]}><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(56)]}>
-      <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[size(48, 48), semantics({ contentDescription: model.backLabel }), testID('push-config-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
-      <TopAppBar.Title><Text style={{ typography: 'titleLarge' }}>{model.t('title')}</Text></TopAppBar.Title>
-    </TopAppBar><Column modifiers={[fillMaxWidth(), weight(1)]} verticalArrangement={model.allowed ? undefined : 'center'} horizontalAlignment={model.allowed ? undefined : 'center'}>
+    <Column modifiers={[fillMaxSize()]}><AdminTopBar leading={<IconButton onClick={model.back} modifiers={[size(48, 48), semantics({ contentDescription: model.backLabel }), testID('push-config-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
+      title={<Text style={{ typography: 'titleLarge' }}>{model.t('title')}</Text>} /><Column modifiers={[fillMaxWidth(), weight(1)]} verticalArrangement={model.allowed ? undefined : 'center'} horizontalAlignment={model.allowed ? undefined : 'center'}>
       {model.allowed ? <Body model={model} /> : <Text>{model.t('admin_only')}</Text>}
     </Column></Column>
   </BaseHost></SafeAreaView>;

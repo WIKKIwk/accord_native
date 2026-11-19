@@ -1,5 +1,6 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
-import { BasicAlertDialog, Box, Button, Column, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TopAppBar } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
+import { BasicAlertDialog, Box, Button, Column, HorizontalDivider, IconButton, LoadingIndicator, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -65,11 +66,9 @@ export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
   if (!model.current() || !model.state.valid) return null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
-      <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-        <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
-        <TopAppBar.Title><Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.title}</Text></TopAppBar.Title>
-        <TopAppBar.Actions><RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
-      </TopAppBar><Spacer modifiers={[height(3)]} />
+      <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
+        title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}
+        actions={<RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView>} /><Spacer modifiers={[height(3)]} />
     </Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-items-body-frame" contentPadding="default"><View style={styles.content}>
       {model.state.loading ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>

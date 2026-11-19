@@ -22,19 +22,15 @@ function nodes(node, predicate) {
 }
 
 test('Android host can follow system colors while preserving text direction', () => {
-  const theme = { mode: 'dark', seed: '#445566', colors: { surface: '#123456' }, direction: 'rightToLeft' };
+  const config = { mode: 'dark', direction: 'rightToLeft' };
   const { BaseHost } = load('BaseHost.android.tsx', {
-    '@expo/ui/jetpack-compose': { Host: 'ComposeHost' }, './useBaseTheme': { useBaseTheme: () => theme },
+    '@expo/ui/jetpack-compose': { Host: 'ComposeHost' }, './useBaseThemeConfig': { useBaseThemeConfig: () => config },
   });
-  const system = BaseHost({ children: 'content', dynamicColors: true });
-  assert.equal(system.props.colorScheme, undefined);
+  const system = BaseHost({ children: 'content' });
+  assert.equal(system.props.colorScheme, 'dark');
   assert.equal(system.props.seedColor, undefined);
   assert.equal(system.props.colorOverrides, undefined);
   assert.equal(system.props.layoutDirection, 'rightToLeft');
-  const configured = BaseHost({ children: 'content' });
-  assert.equal(configured.props.colorScheme, 'dark');
-  assert.equal(configured.props.seedColor, theme.seed);
-  assert.equal(configured.props.colorOverrides, theme.colors);
 });
 
 for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezkachi', 'admin']) test(`${role} profile uses Android system colors`, () => {
@@ -57,13 +53,11 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezk
   const page = ProfileView({ session: { profile: { role } }, snapshot: { profile: {} }, editing: true, busy: false,
     onOpenEditor() {}, onCloseEditor() {}, onLogout() {}, onDailyWork() {} });
   assert.deepEqual(materialOptions, [{}]);
-  assert.equal(page.props.dynamicColors, true);
   const group = nodes(page, node => node.type === FieldGroup)[0];
   assert.deepEqual(group.props.style, { backgroundColor: 'system-background' });
   const secondary = nodes(page, node => node.type === 'Text' && node.props.children === 'Master')[0];
   assert.equal(secondary.props.textStyle.color, 'system-muted');
-  assert.equal(opened[0].props.dynamicColors, true);
   const settings = nodes(page, node => node.type === 'Button' && node.props.testID === 'profile-settings')[0];
   settings.props.onPress();
-  assert.equal(opened[1].props.dynamicColors, true);
+  assert.equal(opened[1].type, 'BaseHost');
 });

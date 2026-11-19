@@ -2,21 +2,26 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { load, deferred, tick } = require('./adminUsersSupport.cjs');
 const policy = load('admin/adminShellLayoutPolicy');
-function fixture(t, platform = 'android') {
+function fixture(t, platform = 'android', expoGo = false) {
   let cursor = 0, navCalls = 0, hasFooter = true, bottomDockHeight, sourceScope = null, dimensions = { width: 400, height: 800, scale: 2 }, safe = { top: 24, right: 0, bottom: 24, left: 0 };
   let value = { platform, width: 400, height: 800, viewPaddingBottom: 24, systemGestureInsetsBottom: 16, viewInsetsBottom: 0 }, reader = async () => value;
   const slots = [], effects = [], native = new Set(), keyboard = new Map(), foreground = new Set(), reads = [];
   const same = (a, b) => a && b && a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
   const memo = (create, deps) => { const index = cursor++, old = slots[index]; if (!old || !same(old.deps, deps)) slots[index] = { deps, value: create() }; return slots[index].value; };
   const effect = (create, deps) => { const index = cursor++, old = slots[index]; if (!old || !same(old.deps, deps)) effects.push(() => { old?.cleanup?.(); slots[index] = { kind: 'effect', deps, cleanup: create() }; }); };
-  const react = { useMemo: memo, useLayoutEffect: effect, useEffect: effect, useSyncExternalStore: (_subscribe, get) => get() };
+  const react = { useMemo: memo, useLayoutEffect: effect, useEffect: effect, useSyncExternalStore: (_subscribe, get) => get(),
+    useState: initialize => {
+      const index = cursor++;
+      if (!slots[index]) slots[index] = { value: initialize() };
+      return [slots[index].value, value => { slots[index].value = value; }];
+    } };
   const bridge = { readAdminGestureNavigation: async () => { navCalls++; return true; }, readAdminSystemInsets: async () => { reads.push('read'); return reader(); },
     subscribeAdminSystemInsets: callback => { native.add(callback); return () => native.delete(callback); } };
   const rn = { Platform: { OS: platform }, useWindowDimensions: () => dimensions,
     AppState: { addEventListener: (name, callback) => { assert.equal(name, 'change'); foreground.add(callback); return { remove: () => foreground.delete(callback) }; } },
-    Keyboard: { addListener: (name, callback) => { const listeners = keyboard.get(name) ?? new Set(); listeners.add(callback); keyboard.set(name, listeners); return { remove: () => listeners.delete(callback) }; } } };
+    Keyboard: { isVisible: () => false, addListener: (name, callback) => { const listeners = keyboard.get(name) ?? new Set(); listeners.add(callback); keyboard.set(name, listeners); return { remove: () => listeners.delete(callback) }; } } };
   const runtime = load('admin/adminShellLayoutRuntime', { 'react-native': rn, '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge });
-  const hook = load('admin/useAdminShellLayout', { react, 'react-native': rn, 'react-native-safe-area-context': { useSafeAreaInsets: () => safe },
+  const hook = load('admin/useAdminShellLayout', { react, expo: { isRunningInExpoGo: () => expoGo }, 'react-native': rn, 'react-native-safe-area-context': { useSafeAreaInsets: () => safe },
     './AdminShellSourceWindowLayoutContext': { useAdminShellSourceWindowLayout: () => sourceScope },
     '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge, './adminShellLayoutPolicy': policy, './adminShellLayoutRuntime': runtime });
   const render = () => { cursor = 0; effects.length = 0; const view = hook.useAdminShellLayout(hasFooter, bottomDockHeight); for (const commit of [...effects]) commit(); return view; };
@@ -25,6 +30,23 @@ function fixture(t, platform = 'android') {
   return { render, reads, native, keyboard, foreground, cleanup, navCalls: () => navCalls, metrics: next => { value = next; }, setReader: next => { reader = next; },
     dimensions: next => { dimensions = next; }, safe: next => { safe = next; }, scope: next => { sourceScope = next; }, footer: next => { hasFooter = next; }, dockHeight: next => { bottomDockHeight = next; } };
 }
+test('Expo Go uses activity safe area and keyboard for the visible frame, with no owned-window fallback', async t => {
+  const f = fixture(t, 'android', true);
+  f.metrics(null);
+  const preview = f.render();
+  assert.equal(preview.metrics, null);
+  assert.equal(preview.metricsReady, true);
+  assert.equal(preview.dockBottomInset, 24);
+  assert.equal(preview.bottomReserve, 84);
+  f.keyboard.get('keyboardDidShow').forEach(callback => callback());
+  assert.equal(f.render().bottomReserve, 0);
+  f.keyboard.get('keyboardDidHide').forEach(callback => callback());
+  assert.equal(f.render().bottomReserve, 84);
+  f.scope({ metrics: null, thinGestureBottom: null, safeInsets: null });
+  assert.equal(f.render().metricsReady, false);
+  assert.equal(f.render().dockBottomInset, null);
+  await tick();
+});
 test('original-window scope uses only its own metrics/insets and installs no Activity native, keyboard or navigation readers', async t => {
   const f = fixture(t), metrics = { platform: 'android', width: 300, height: 600, viewPaddingBottom: 7, systemGestureInsetsBottom: 9, viewInsetsBottom: 0 }, safeInsets = { top: 13, left: 17, right: 19 };
   f.scope({ metrics, thinGestureBottom: false, safeInsets }); const view = f.render(); await tick();

@@ -21,6 +21,7 @@ function render({ platform = 'android', allowed = true, current = true, canPop =
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
     '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open: () => calls.push('drawer') }) },
     './adminActivityBackLabel': { adminActivityBackLabel: () => 'Orqaga' },
+    './AdminShellProfileAction': { AdminShellProfileAction: 'AdminShellProfileAction' },
     './FactoryLocationsRoute': { FactoryLocationsRoute: 'FactoryLocationsRoute' },
     './AdminShellContext': { useAdminShell: () => shell },
   };

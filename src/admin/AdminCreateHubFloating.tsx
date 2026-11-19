@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type ColorValue } from 'react-native';
 import { scheduleOnRN } from 'react-native-worklets';
-import Animated, { interpolateColor, useAnimatedReaction, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedReaction, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { useBaseTheme } from '../components/useBaseTheme';
 import type { AdminCreateHubNativeProps } from './AdminCreateHubTypes';
 import type { AdminCreateHubAction, AdminCreateHubOverlay } from './adminCreateHubController';
@@ -12,7 +12,7 @@ import type { AdminCreateHubRenderSlotProps } from './adminSourceHubPlacementTyp
 export type AdminCreateHubRenderers = {
   action: (action: AdminCreateHubAction, onPress: () => void) => ReactNode;
   toggle: (label: string, onPress: () => void, children: ReactNode, testID: string) => ReactNode;
-  icon: (name: 'add' | 'close', color: string) => ReactNode;
+  icon: (name: 'add' | 'close', color: ColorValue) => ReactNode;
 };
 
 function Pill({ action, overlay, controller, spatial, effects, render }: {
@@ -49,9 +49,9 @@ function Overlay({ props, render }: { props: AdminCreateHubNativeProps; render: 
     (next, previous) => { if (next.close !== previous?.close || next.motion !== previous?.motion) scheduleOnRN(publishCloseLabel, next.close, next.motion); });
   const toggle = useAnimatedStyle(() => {
     const t = adminHubSpatial(motion.morph.get()), size = 80 - 24 * t;
-    return { width: size, height: size, borderRadius: 22 + 6 * Math.max(0, Math.min(1, t)), bottom: props.layout.toggleBottom! + 80 - size,
-      backgroundColor: interpolateColor(Math.max(0, Math.min(1, motion.morph.get())), [0, 1], [colors.primaryContainer, colors.primary], 'RGB', { gamma: 1 }) };
+    return { width: size, height: size, borderRadius: 22 + 6 * Math.max(0, Math.min(1, t)), bottom: props.layout.toggleBottom! + 80 - size };
   });
+  const openBackground = useAnimatedStyle(() => ({ opacity: Math.max(0, Math.min(1, motion.morph.get())) }));
   const plus = useAnimatedStyle(() => ({ opacity: 1 - Math.max(0, Math.min(1, motion.effects.get())) }));
   const close = useAnimatedStyle(() => ({ opacity: Math.max(0, Math.min(1, motion.effects.get())) }));
   const foreground = overlay.targetOpen ? colors.onPrimary : colors.onPrimaryContainer;
@@ -62,7 +62,8 @@ function Overlay({ props, render }: { props: AdminCreateHubNativeProps; render: 
       {overlay.actions.map(action => <Pill key={`${overlay.id}:${action.id}:${action.label}`} action={action} overlay={overlay} controller={props.controller}
         spatial={motion.spatial} effects={motion.effects} render={render.action} />)}
     </View>
-    <Animated.View style={[styles.toggle, styles.shadow, toggle]}>
+    <Animated.View style={[styles.toggle, styles.shadow, { backgroundColor: colors.primaryContainer }, toggle]}>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.primary }, openBackground]} />
       {render.toggle(closeLabel ? props.labels.close : props.labels.closed, () => props.controller.toggle(overlay.id, overlay.generation),
         <View style={styles.glyph}><Animated.View style={[StyleSheet.absoluteFill, plus]}>{render.icon('add', foreground)}</Animated.View><Animated.View style={[StyleSheet.absoluteFill, close]}>{render.icon('close', foreground)}</Animated.View></View>, 'admin-hub-toggle-button')}
     </Animated.View>
@@ -76,7 +77,7 @@ export function AdminCreateHubFloating({ render, slot = 'combined', primaryMarke
   if (!props.state.valid || props.layout.toggleBottom === null) return null;
   return <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { zIndex: 10000, direction: direction === 'rightToLeft' ? 'rtl' : 'ltr' }]}>
     {slot !== 'primary' && props.state.overlay ? <Overlay key={props.state.overlay.id} props={props} render={render} /> : slot !== 'overlay' && props.state.overlay === null && props.primary?.visible && props.primary.ready ? <View {...primaryMarker} collapsable={false} pointerEvents="box-none" testID="admin-create-hub-primary-marker"
-      style={[styles.toggle, props.primary.replacement ? undefined : [styles.closed, styles.shadow, { backgroundColor: colors.primaryContainer, borderColor: `${colors.outlineVariant.slice(0, 7)}40` }], { bottom: props.layout.toggleBottom }]}>
+      style={[styles.toggle, props.primary.replacement ? undefined : [styles.closed, styles.shadow, { backgroundColor: colors.primaryContainer, borderColor: colors.outlineVariant }], { bottom: props.layout.toggleBottom }]}>
       {props.primary.replacement ? props.primary.replacementValue as ReactNode : render.toggle(props.labels.trigger, () => props.controller.open(props.primary!.ticket), render.icon('add', colors.onPrimaryContainer), 'app-primary-navigation-button')}
     </View> : null}
   </View>;

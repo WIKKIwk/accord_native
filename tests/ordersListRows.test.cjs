@@ -45,6 +45,7 @@ function android() {
   };
   const { OrdersList } = load('OrdersList.android.tsx', {
     'react/jsx-runtime': jsx, react,
+    '../../components/BaseHost.android': { BaseHost: 'Host' }, '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', useMaterialColors: () => ({}) },
     'react-native': { RefreshControl: 'RefreshControl', View: 'View' },
     'react-native-gesture-handler': { GestureDetector: 'GestureDetector', useNativeGesture: config => config },

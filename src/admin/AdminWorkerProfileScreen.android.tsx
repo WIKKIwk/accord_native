@@ -1,5 +1,6 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
-import { Box, Button, CircularProgressIndicator, Column, HorizontalDivider, IconButton, RNHostView, Shape, Spacer, Surface, TopAppBar } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
+import { Box, Button, CircularProgressIndicator, Column, HorizontalDivider, IconButton, RNHostView, Shape, Spacer, Surface } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -31,11 +32,9 @@ export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
   const model = useAdminWorkerProfile(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets(); if (!model.current() || !model.state.valid) return null;
   return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
-      <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-        <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><RNHostView matchContents><SymbolView name={{ android: 'arrow_back' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton></TopAppBar.NavigationIcon>
-        <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</Text></TopAppBar.Title>
-        <TopAppBar.Actions><RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
-      </TopAppBar><Spacer modifiers={[height(3)]} />
+      <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><RNHostView matchContents><SymbolView name={{ android: 'arrow_back' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton>}
+        title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}
+        actions={<RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView>} /><Spacer modifiers={[height(3)]} />
     </Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-profile-body-frame">
       {model.state.phase === 'content' ? <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void model.reload(); }} tintColor={colors.primary} colors={[colors.primary]} />}>

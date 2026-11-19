@@ -1,4 +1,5 @@
-import { Box, CircularProgressIndicator, Column, IconButton, RNHostView, Row, Spacer, Surface, TextButton, TopAppBar } from '@expo/ui/jetpack-compose';
+import { Box, CircularProgressIndicator, Column, IconButton, RNHostView, Row, Spacer, Surface, TextButton } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -62,12 +63,10 @@ export function AdminQueuePolicyScreen(props: AdminQueuePolicyScreenProps) {
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   if (!model.current || model.state.invalidated) return <View style={styles.root} />;
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
-    <BaseHost matchContents={{ vertical: true }} style={styles.full}><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-      <TopAppBar.NavigationIcon><IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-queue-policy-back')]}>
-        <QueueIcon name={model.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} iconSize={24} /></IconButton></TopAppBar.NavigationIcon>
-      <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('queue.title')}</Text></TopAppBar.Title>
-      <TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents>{props.profileAction}</RNHostView> : null}</TopAppBar.Actions>
-    </TopAppBar></BaseHost>{props.topNotice}
+    <BaseHost matchContents={{ vertical: true }} style={styles.full}><AdminTopBar leading={<IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-queue-policy-back')]}>
+        <QueueIcon name={model.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} iconSize={24} /></IconButton>}
+      title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('queue.title')}</Text>}
+      actions={props.profileAction ? <RNHostView matchContents>{props.profileAction}</RNHostView> : null} /></BaseHost>{props.topNotice}
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-queue-policy-body-frame"><View style={[styles.root, { backgroundColor: colors.surfaceContainerHighest }]}>
       {model.state.loading && !model.state.data ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
         model.state.loadError != null && !model.state.data ? <View style={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(360, Math.max(280, width * .88)), maxWidth: '100%' }}><Column horizontalAlignment="center">

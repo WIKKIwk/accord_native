@@ -4,7 +4,7 @@ import { accessibilityHidden, background, buttonStyle, clipShape, disabled, font
 import { Stack } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useSyncExternalStore } from 'react';
-import { PlatformColor, Pressable, StyleSheet, Text as NativeText, View } from 'react-native';
+import { PlatformColor, Pressable, StyleSheet, Text as NativeText, View, type ColorValue } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { localeController } from '../shared/localization/runtime';
@@ -13,6 +13,7 @@ import type { AdminApparatus } from '../apparatusApi';
 import type { AdminFactoryLocation } from './factoryLocationModel';
 import { factoryLocationApparatusLabels, factoryLocationNoticeText, factoryLocationScreenText } from './factoryLocationScreenModel';
 import type { FactoryLocationScreenProps } from './factoryLocationScreenTypes';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { useFactoryLocationScreen } from './useFactoryLocationScreen';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -21,7 +22,7 @@ function LocationRow({ location, apparatus, disabled: locked, text, onEdit, onRe
   apparatus: readonly AdminApparatus[]; disabled: boolean; text: ReturnType<typeof factoryLocationScreenText>;
   onEdit: () => void; onRename: () => void; onActive: () => void }) {
   const theme = useBaseTheme(), names = factoryLocationApparatusLabels(location, apparatus), equipment = location.apparatus.length > 0;
-  const badge = (label: string, color: string) => <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }),
+  const badge = (label: string, color: ColorValue) => <Text modifiers={[font({ textStyle: 'caption', weight: 'medium' }),
     padding({ horizontal: 9, vertical: 4 }), background(color), clipShape('capsule')]}>{label}</Text>;
   return <HStack alignment="top" spacing={12}>
     <Button onPress={onEdit} modifiers={[buttonStyle('plain'), disabled(locked)]}>
@@ -47,14 +48,15 @@ export function FactoryLocationScreen(props: FactoryLocationScreenProps) {
   const text = factoryLocationScreenText(locale), { controller, navigation, footer } = props;
   const openEditor = (id: string | null) => { const ticket = controller.beginEditor(id); if (ticket) props.onOpenEditor(ticket); };
   const rename = (id: string) => { const ticket = controller.beginEditor(id); if (ticket) props.onOpenRename(ticket); };
+  const addButton = <Pressable accessibilityRole="button" accessibilityLabel={text.create} disabled={state.saving || state.status === 'forbidden'}
+    onPress={() => openEditor(null)} hitSlop={8} style={styles.add}>
+    <SymbolView name="mappin.and.ellipse" size={21} tintColor={PlatformColor('label')} />
+  </Pressable>;
   return <>
     <Stack.Screen options={{ headerShown: true, title: text.title,
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined,
-      headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel={text.create} disabled={state.saving || state.status === 'forbidden'}
-        onPress={() => openEditor(null)} hitSlop={8} style={styles.add}>
-        <SymbolView name="mappin.and.ellipse" size={21} tintColor={PlatformColor('label')} />
-      </Pressable> }} />
-    <View style={styles.screen}><BaseHost style={styles.content}>
+      headerRight: () => props.profileAction ? <View style={styles.actions}>{addButton}{props.profileAction}</View> : addButton }} />
+    <View style={styles.screen}><AdminShellBodyFrame hasFooter={footer != null} testID="admin-factory-locations-body-frame"><BaseHost style={styles.content}>
       {state.status === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         state.status === 'error' ? <VStack spacing={16}><Text>{text.loadError}</Text><Button label={text.retry} onPress={() => { void controller.load(); }} /></VStack> :
           state.status === 'ready' ? <List modifiers={[listStyle('plain'), refreshable(() => controller.load())]}>
@@ -64,7 +66,7 @@ export function FactoryLocationScreen(props: FactoryLocationScreenProps) {
                 onEdit={() => openEditor(location.id)} onRename={() => rename(location.id)} onActive={() => { void controller.setActive(location.id, !location.active); }} />)}
             </Section>}
           </List> : null}
-    </BaseHost>{footer}
+    </BaseHost></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{footer}</View>
       {state.notice ? <View pointerEvents="none" accessibilityRole="alert" style={[styles.notice, { backgroundColor: PlatformColor('secondarySystemBackground') }]}>
         <NativeText style={{ color: PlatformColor('label') }}>{factoryLocationNoticeText(state.notice, locale)}</NativeText>
       </View> : null}
@@ -72,4 +74,5 @@ export function FactoryLocationScreen(props: FactoryLocationScreenProps) {
   </>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, add: { width: 42, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   notice: { position: 'absolute', left: 16, right: 16, bottom: 16, borderRadius: 12, padding: 12 } });

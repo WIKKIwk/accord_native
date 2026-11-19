@@ -21,7 +21,7 @@ export function WorkerFab({ onSelect, onScan, showPaddons, bottomOffset = 80 }: 
   return <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
     {open ? <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} accessibilityLabel="Amallarni yopish" /> : null}
     {open ? <View style={[styles.actions, { bottom: bottomOffset + 88 }]}>
-      {actions.filter(action => action.id !== 'paddons' || showPaddons).map(action => <Host key={action.id} matchContents colorScheme="light" seedColor="#285140">
+      {actions.filter(action => action.id !== 'paddons' || showPaddons).map(action => <Host key={action.id} matchContents>
         <Button variant="filled" onPress={() => select(action.id)}>
           <Row alignment="center" spacing={12}>
             <RNHostView matchContents><SymbolView name={action.symbol} size={22} tintColor="#193c2c" /></RNHostView>
@@ -30,7 +30,7 @@ export function WorkerFab({ onSelect, onScan, showPaddons, bottomOffset = 80 }: 
         </Button>
       </Host>)}
     </View> : null}
-    <Host colorScheme="light" seedColor="#285140" style={[styles.fab, { bottom: bottomOffset }]}>
+    <Host style={[styles.fab, { bottom: bottomOffset }]}>
       <Button variant="filled" style={{ width: 80, height: 80, borderRadius: 24 }} onPress={() => setOpen(value => !value)}>
         <RNHostView matchContents><SymbolView name={{ ios: open ? 'xmark' : 'plus', android: open ? 'close' : 'add', web: open ? 'close' : 'add' }} size={32} tintColor="#fff" /></RNHostView>
       </Button>

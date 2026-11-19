@@ -54,7 +54,7 @@ function fixture(platform, { locale = 'uz', readOnly = false, system = false, pr
   const list = component('List'); list.ForEach = props => props.data.map((item, index) => props.children({ item, index }));
   const ui = new Proxy({ useNativeState: nativeState, Shape: { RoundedCorner: value => value }, List: list, InputChip: component('InputChip', ['Avatar', 'Label', 'TrailingIcon']),
     TopAppBar: component('TopAppBar', ['Title', 'NavigationIcon', 'Actions']), BasicTextField: component('BasicTextField', ['DecorationBox', 'InnerTextField', 'Placeholder']), OutlinedTextField: component('OutlinedTextField', ['Placeholder', 'LeadingIcon']) }, { get: (target, name) => target[name] ?? String(name) });
-  const mocks = { react: r.react, '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': ui,
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react: r.react, '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': ui,
     '@expo/ui/swift-ui/modifiers': new Proxy({ Animation: { easeOut: value => value } }, { get: (target, name) => target[name] ?? modifiers[name] }),
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'RN.ScrollView', Platform: { OS: platform, Version: 18 }, StyleSheet: { absoluteFill: { position: 'absolute' }, create: value => value },
@@ -78,7 +78,7 @@ for (const platform of ['android', 'ios']) {
     assert.deepEqual(f.avatars[0], { avatarUrl: '', fallbackText: 'LN', displayName: 'LN', size: 92, isCurrent: f.value.scopeCurrent, canInteract: f.value.interactive });
     assert.equal(nodes(tree, n => n.type === 'RealDock').length, 1); assert.ok(nodes(tree, n => n.type === 'View' && n.props.style?.height === 204).length);
     assert.ok(nodes(tree, n => n.type === 'View' && n.props.style?.position === 'absolute' && n.props.style?.bottom === 0).length);
-    if (platform === 'android') { const top = nodes(tree, n => n.type === 'TopAppBar')[0]; assert.ok(top.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 60)); assert.equal(nodes(tree, n => n.type === 'RealProfile').length, 1); }
+    if (platform === 'android') { const top = nodes(tree, n => n.type === 'AdminTopBar')[0]; assert.ok(top.props.title != null); assert.equal(nodes(tree, n => n.type === 'RealProfile').length, 1); }
     else { const stack = nodes(tree, n => n.type === 'Stack.Screen')[0]; assert.equal(stack.props.options.gestureEnabled, false); assert.equal(stack.props.options.headerRight(), f.props.profileAction); }
   });
   test(`${platform} parent blur retains mounted avatar preview read authority while hiding native overlays and denying new interactions`, () => {

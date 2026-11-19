@@ -32,7 +32,7 @@ function render(platform, changes = {}, hidden = new Set(['hidden']), nav = true
   const swift = new Proxy({}, { get: (_t, key) => String(key) });
   const native = { View: 'View', Text: 'NativeText', Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator', FlatList: 'FlatList',
     RefreshControl: 'RefreshControl', useWindowDimensions: () => ({ width: 390 }), PlatformColor: value => value, StyleSheet: { create: value => value } };
-  const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() }, '@expo/ui/swift-ui': swift,
+  const mocks = { './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, react: { useSyncExternalStore: (_subscribe, get) => get() }, '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/jetpack-compose': { Host: 'Host', IconButton: 'IconButton', RNHostView: 'RNHostView', Text: 'ComposeText', TextButton: 'TextButton', Column: 'Column', useMaterialColors: () => colors },
     'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
@@ -60,14 +60,14 @@ for (const platform of ['ios', 'android']) {
     const footer = nodes(tree, n => n.props?.pointerEvents === 'box-none')[0];
     assert.equal(footer.props.style.position, 'absolute');
     const screen = nodes(tree, n => n.type === 'Stack.Screen')[0];
-    const navigation = platform === 'ios' ? screen.props.options.headerLeft().props : nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation;
+    const navigation = platform === 'ios' ? screen.props.options.headerLeft().props : nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.navigation;
     assert.equal(navigation.icon, 'back'); navigation.onPress();
-    const clear = platform === 'ios' ? screen.props.options.headerRight() : nodes(tree, n => n.type === 'IconButton')[0];
+    const clear = platform === 'ios' ? screen.props.options.headerRight() : nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.actions;
     assert.equal(platform === 'ios' ? clear.props.accessibilityLabel : clear.props.modifiers.find(m => m.name === 'semantics').args[0].contentDescription, l10n.localizedGetter('clearTitle', 'en')); (clear.props.onPress ?? clear.props.onClick)();
     assert.deepEqual(calls, ['back', 'request-confirmation']);
     const noNav = render(platform, {}, new Set(), false).tree;
     assert.equal(platform === 'ios' ? nodes(noNav, n => n.type === 'Stack.Screen')[0].props.options.headerLeft :
-      nodes(noNav, n => n.type === 'RoleHeader')[0].props.navigation, undefined);
+      nodes(noNav, n => n.type === 'AdminScreenHeader')[0].props.navigation, platform === 'android' ? null : undefined);
   });
   test(`${platform} only initial loading/error with no visible rows replaces the list`, () => {
     const hiddenAll = new Set(['first', 'hidden', 'last']);
@@ -113,7 +113,7 @@ for (const platform of ['ios', 'android']) {
     for (const locale of ['uz', 'en', 'ru', 'ur']) {
       const { tree } = render(platform, {}, new Set(), true, locale);
       const label = platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.title :
-        nodes(tree, n => n.type === 'RoleHeader')[0].props.title;
+        nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.title;
       assert.equal(label, l10n.localizedGetter('adminActivityTitle', locale));
       const list = platform === 'android' ? nodes(tree, n => n.type === 'FlatList')[0] : null;
       const element = platform === 'ios' ? nodes(tree, n => typeof n.type === 'function' && n.type.name === 'ActivityRow')[0] :
@@ -140,6 +140,6 @@ test('Android Activity keeps V2 segment spacing, card padding and status dimensi
   assert.equal(nodes(badge, n => n.type === 'SymbolView')[0].props.size, 18);
   const value = nodes(row, n => n.props?.children === '10:30')[0];
   assert.equal(value.props.style[0].maxWidth, 140);
-  const clear = nodes(tree, n => n.type === 'IconButton')[0];
+  const clear = nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.actions;
   assert.deepEqual(clear.props.modifiers.find(m => m.name === 'size').args, [48, 48]);
 });

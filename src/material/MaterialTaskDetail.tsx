@@ -31,7 +31,7 @@ export function MaterialTaskDetail(props: MaterialTaskDetailProps) {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><View style={{ flex: 1 }}>
             <WorkerExpansion title={model.p(materialsExpandable ? 'worker.materials.attached' : 'worker.materials.attached.empty')}
               count={model.materials.loading ? '..' : model.materials.value.length ? String(model.materials.value.length) : ''}
-              expanded={materialsExpandable && model.materialsExpanded} onPress={materialsExpandable ? model.toggleMaterials : undefined} systemColors />
+              expanded={materialsExpandable && model.materialsExpanded} onPress={materialsExpandable ? model.toggleMaterials : undefined} />
           </View>{!materialsExpandable && model.canReceive && <View style={{ width: 106 }}>
             <WorkerSheetButton label={model.a('action.assign')} variant="text" onPress={model.receive} height={48} />
           </View>}</View>
@@ -45,7 +45,7 @@ export function MaterialTaskDetail(props: MaterialTaskDetailProps) {
           </>}
           <WorkerExpansion title={model.p(moldsExpandable ? 'worker.molds.attached' : 'worker.molds.attached.empty')}
             count={model.molds.loading ? '..' : model.molds.value.length ? String(model.molds.value.length) : ''}
-            expanded={moldsExpandable && model.moldsExpanded} onPress={moldsExpandable ? model.toggleMolds : undefined} systemColors />
+            expanded={moldsExpandable && model.moldsExpanded} onPress={moldsExpandable ? model.toggleMolds : undefined} />
           {moldsExpandable && model.moldsExpanded && <>
             {model.molds.loading && <ActivityIndicator color={colors.icon} />}
             {!!model.molds.error && <Text style={{ color: colors.error }}>{model.molds.error}</Text>}
@@ -62,7 +62,7 @@ export function MaterialTaskDetail(props: MaterialTaskDetailProps) {
         <WorkerOrderOverview session={props.session} orderId={props.row.id} code={model.code} title={model.title} imageId={model.imageId} summaryKind="information"
           detail={{ map: model.order.map, customer: model.customer, stages: [] }} />
         <View style={card}>
-          <WorkerExpansion title={model.p('worker.action.view_map')} count="" expanded={model.mapExpanded} onPress={model.toggleMap} systemColors />
+          <WorkerExpansion title={model.p('worker.action.view_map')} count="" expanded={model.mapExpanded} onPress={model.toggleMap} />
           <Text style={{ color: colors.muted }}>{model.mapProgress}</Text>
           {model.mapExpanded && <>
             {model.mapFacts.loading && <ActivityIndicator color={colors.icon} />}

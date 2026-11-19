@@ -1,4 +1,6 @@
-import { Column, Host, IconButton, RNHostView, Text as ComposeText, TextButton, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { useBaseTheme } from '../components/useBaseTheme';
+import { BaseHost } from '../components/BaseHost.android';
+import { Column, IconButton, RNHostView, Text as ComposeText, TextButton } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useSyncExternalStore } from 'react';
@@ -7,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
-import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { AdminScreenHeader } from './AdminTopBar.android';
 import { adminActivityScreenModel, type AdminActivityRow } from './adminActivityScreenModel';
 import type { AdminActivityScreenProps } from './adminActivityScreenTypes';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
@@ -16,7 +18,7 @@ import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 function ActivityRow({ row, first, last }: { row: AdminActivityRow; first: boolean; last: boolean }) {
-  const colors = useMaterialColors();
+  const colors = useBaseTheme().colors;
   return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surfaceContainerLowest}
     containerStyle={{ paddingHorizontal: 4, paddingTop: first ? 0 : 2, paddingBottom: 0 }}
     style={{ minHeight: 0, paddingHorizontal: 0, paddingVertical: 0,
@@ -33,19 +35,19 @@ function ActivityRow({ row, first, last }: { row: AdminActivityRow; first: boole
   </WorkerQueueCard>;
 }
 /** Unconnected content; the owning shell supplies scoped state and the real confirmation. */
-export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, onRefresh, onRequestClear }: AdminActivityScreenProps) {
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), colors = useMaterialColors(), insets = useSafeAreaInsets();
+export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, profileAction, onRefresh, onRequestClear }: AdminActivityScreenProps) {
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), colors = useBaseTheme().colors, insets = useSafeAreaInsets();
   const retryWidth = Math.min(360, Math.max(280, useWindowDimensions().width * 0.88));
   const { view, rows } = adminActivityScreenModel(snapshot, hiddenIds, locale);
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }]}>
-    <View style={styles.header}><View style={styles.headerTitle}><RoleHeader title={localizedGetter('adminActivityTitle', locale)} navigation={navigation ?? undefined} /></View>
-      <Host matchContents style={styles.clear}><IconButton onClick={onRequestClear}
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+    <AdminScreenHeader title={localizedGetter('adminActivityTitle', locale)} navigation={navigation} profileAction={profileAction}
+      actions={<IconButton onClick={onRequestClear}
         modifiers={[size(48, 48), semantics({ contentDescription: localizedGetter('clearTitle', locale) })]}>
         <RNHostView matchContents><SymbolView name={{ android: 'clear_all' }} size={24} tintColor={colors.onSurface} importantForAccessibility="no" /></RNHostView>
-      </IconButton></Host></View>
+      </IconButton>} />
     <AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-body-frame">
-    {view === 'loading' ? <View style={styles.center}><Host matchContents><AdminLoadingIndicator /></Host></View> :
-      view === 'error' ? <View style={styles.error}><Host matchContents={{ vertical: true }} style={{ width: retryWidth }}>
+    {view === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
+      view === 'error' ? <View style={styles.error}><BaseHost matchContents={{ vertical: true }} style={{ width: retryWidth }}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }}>
           <ComposeText color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{localizedGetter('serverDisconnectedRetry', locale)}</ComposeText>
           <TextButton onClick={() => { void onRefresh(); }} colors={{ contentColor: colors.primary }}
@@ -53,7 +55,7 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, o
             <ComposeText style={{ typography: 'bodyMedium', fontWeight: '600' }}>{localizedGetter('retry', locale)}</ComposeText>
           </TextButton>
         </Column>
-      </Host></View> :
+      </BaseHost></View> :
         view === 'empty' ? <View style={styles.center}><Text style={[styles.empty, { color: colors.onSurface }]}>{localizedGetter('adminNoActivity', locale)}</Text></View> :
           <FlatList data={rows} keyExtractor={(item, index) => `${item.id}:${index}`} style={styles.content}
             contentContainerStyle={{ paddingTop: 4 }}
@@ -62,8 +64,7 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, o
     </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{footer}</View>
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { flex: 1 }, clear: { width: 48, height: 48, marginEnd: 4 },
+const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, empty: { fontSize: 16, fontWeight: '500', lineHeight: 24 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, error: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 16 },
   row: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingStart: 16, paddingEnd: 12 },

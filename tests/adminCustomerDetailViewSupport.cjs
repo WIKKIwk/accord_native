@@ -77,7 +77,7 @@ function view(platform, value, r = runtime()) {
     TopAppBar: components('TopAppBar', { Title: 'TopAppBar.Title', NavigationIcon: 'TopAppBar.NavigationIcon', Actions: 'TopAppBar.Actions' }) }, { get: (target, name) => target[name] ?? String(name) });
   const swift = new Proxy({ useNativeState: nativeState, List: components('List', { ForEach: 'List.ForEach' }), LazyVStack: components('LazyVStack', { ForEach: 'LazyVStack.ForEach' }) }, { get: (target, name) => target[name] ?? String(name) });
   const transition = { duration: () => transition, easing: () => transition }, shared = hooks(r);
-  const mocks = { react: r.react, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': swift,
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react: r.react, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': new Proxy({ Animation: { easeOut: value => value, easeInOut: value => value } }, { get: (target, name) => target[name] ?? modifier[name] }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'react-native': { View: 'View', Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'RN.ScrollView', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute' } }, useWindowDimensions: () => ({ width: 390, height: 844 }) },

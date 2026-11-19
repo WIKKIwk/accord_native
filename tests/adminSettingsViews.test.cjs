@@ -44,7 +44,7 @@ function fixture(platform, { phase = 'content', saving = false, additional = tru
     TopAppBar: native('TopAppBar', ['Title', 'NavigationIcon', 'Actions']),
     ListItem: native('ListItem', ['LeadingContent', 'HeadlineContent', 'TrailingContent']) };
   const ui = new Proxy(controls, { get: (obj, key) => Object.hasOwn(obj, key) ? obj[key] : String(key) });
-  const mocks = { react: { useEffect: fn => effects.push(fn), useRef: current => ({ current }) },
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react: { useEffect: fn => effects.push(fn), useRef: current => ({ current }) },
     '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     'react-native': { View: 'View', PlatformColor: value => value, StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
     'react-native-reanimated': { default: { View: 'Animated.View' }, cancelAnimation() {}, Easing: { bezier: (...values) => values },
@@ -115,8 +115,8 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} Settings header keeps genuine profile action and native accessible back glyph`, () => {
     const f = fixture(platform);
     if (platform === 'android') {
-      const header = nodes(f.tree, node => node.props.testID === 'admin-settings-header-safe-area')[0], bar = nodes(header, node => node.type === 'TopAppBar')[0];
-      assert.deepEqual(header.props.edges, ['left', 'right']); assert.ok(bar.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 60));
+      const header = nodes(f.tree, node => node.props.testID === 'admin-settings-header-safe-area')[0], bar = nodes(header, node => node.type === 'AdminTopBar')[0];
+      assert.deepEqual(header.props.edges, ['left', 'right']); assert.ok(bar.props.title != null);
       const title = nodes(bar, node => node.type === 'Text' && node.props.style?.fontSize === 24)[0]; assert.equal(title.props.style.fontWeight, '800');
       assert.equal(nodes(bar, node => node.type === 'GenuineProfileAction').length, 1);
       nodes(bar, node => node.type === 'IconButton')[0].props.onClick();

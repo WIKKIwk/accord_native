@@ -1,5 +1,5 @@
 import { Fragment, useRef, useState, useLayoutEffect, type ComponentRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, type ColorValue } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import Svg, { Defs, Pattern, Path, Rect, Circle, Text as SvgText, Polygon } from 'react-native-svg';
 import { GestureHandlerRootView, GestureDetector, usePanGesture, usePinchGesture, useSimultaneousGestures, useTapGesture } from 'react-native-gesture-handler';
@@ -21,7 +21,7 @@ function Connection({ id, branch = '', owner, toCanvas, background }: {
     branch?: string;
     owner: BrigaderProductionMapModel;
     toCanvas: (x: number, y: number) => Point;
-    background?: string;
+    background?: ColorValue;
 }) { const last = useRef<Point | null>(null), gesture = usePanGesture({ enabled: !owner.args.readOnly && !owner.locked.has(id), runOnJS: true, minDistance: 0, maxPointers: 1, onActivate: event => { owner.startConnection(id, branch); last.current = toCanvas(event.absoluteX, event.absoluteY); owner.connectionPreview(last.current); }, onUpdate: event => { last.current = toCanvas(event.absoluteX, event.absoluteY); owner.connectionPreview(last.current); }, onDeactivate: event => { const point = last.current; last.current = null; if (event.canceled || !point)
         owner.cancelConnection();
     else

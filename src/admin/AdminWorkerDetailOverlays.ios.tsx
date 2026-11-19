@@ -15,7 +15,7 @@ function Confirmation({ overlay }: { overlay: AdminWorkerDetailOverlay }) {
   const { editor, id } = overlay, labels = editor.dialogText!, { colors } = useBaseTheme();
   return <Modal transparent visible animationType="fade" onRequestClose={() => editor.dismissDialog(id)}><View style={styles.modal}>
     <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill} onPress={() => editor.dismissDialog(id)} />
-    <View style={[styles.card, { backgroundColor: colors.surfaceContainerHigh, borderColor: `${colors.outlineVariant.slice(0, 7)}A6` }]}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
+    <View style={[styles.card, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant }]}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
       <VStack alignment="leading" spacing={0} modifiers={[padding({ leading: 24, top: 24, trailing: 24, bottom: 20 }), frame({ maxWidth: Infinity, alignment: 'leading' })]}>
         <Text modifiers={[font({ textStyle: 'title2' })]}>{labels.title}</Text><Text modifiers={[font({ textStyle: 'body' }), foregroundStyle('secondary'), padding({ top: 10 })]}>{labels.message}</Text>
         <HStack spacing={12} modifiers={[padding({ top: 22 }), frame({ maxWidth: Infinity })]}>

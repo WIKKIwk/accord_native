@@ -26,7 +26,7 @@ for (const mode of ['light', 'dark']) test(`Android ${mode} quantity fields reta
   const { render, field } = loadField({ surface: `${mode}-surface` }), changes = [];
   for (const label of ['Babina, kg', 'Metraj, metr', 'Og‘irlik, kg']) {
     const tree = render({ label, initialValue: '12,5', keyboardType: 'decimal-pad', onChangeText: value => changes.push(value) });
-    assert.equal(tree.props.dynamicColors, true);
+    assert.equal(tree.type, 'Host');
     const input = nodes(tree, node => node.type === field)[0];
     assert.deepEqual(input.props.value, { initial: '12,5' });
     assert.equal(input.props.keyboardOptions.keyboardType, 'decimal');

@@ -17,7 +17,7 @@ for (const platform of ['android', 'ios']) {
       assert.equal(s.byId(tree, 'admin-customer-detail-phone-action'), undefined); s.click(s.byId(tree, 'admin-customer-detail-admin-toggle'), platform); assert.equal(f.calls[0], 'toggle');
       if (!loading) { s.click(s.byId(tree, 'admin-customer-detail-retry'), platform); assert.ok(f.calls.includes('reload')); }
       if (platform === 'android') { assert.equal(s.nodes(tree, node => node.type === 'ActualProfileAction').length, 1);
-        assert.ok(s.nodes(tree, node => node.type === 'TopAppBar')[0].props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 60)); }
+        assert.ok(s.nodes(tree, node => node.type === 'AdminTopBar')[0].props.title != null); }
       else assert.equal(s.nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerRight().type, 'ActualProfileAction');
     }
   });

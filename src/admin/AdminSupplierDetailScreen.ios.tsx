@@ -55,7 +55,7 @@ function Controls({ model }: { model: AdminSupplierDetailScreenModel }) {
 }
 function Chip({ label, icon }: { label: string; icon: 'phone.fill' | 'shippingbox.fill' }) {
   const { colors } = useBaseTheme();
-  return <HStack spacing={6} modifiers={[padding({ horizontal: 10, vertical: 8 }), background(`${colors.surfaceContainerHighest.slice(0, 7)}B8`), cornerRadius(999)]}>
+  return <HStack spacing={6} modifiers={[padding({ horizontal: 10, vertical: 8 }), background(colors.surfaceContainerHighest), cornerRadius(999)]}>
     <Image systemName={icon} size={15} modifiers={[foregroundStyle('secondary')]} /><Text modifiers={[font({ textStyle: 'caption', weight: 'semibold' }), foregroundStyle('secondary'), lineLimit(1)]}>{label}</Text>
   </HStack>;
 }

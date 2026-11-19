@@ -1,5 +1,6 @@
 import { Box, Button, Checkbox, Column, FilledTonalIconButton, HorizontalPager, IconButton, LazyColumn, LinearProgressIndicator, ModalBottomSheet, OutlinedButton,
-  PullToRefreshBox, RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, TextButton, TopAppBar, useNativeState, type HorizontalPagerHandle, type ModalBottomSheetRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+  PullToRefreshBox, RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, TextButton, useNativeState, type HorizontalPagerHandle, type ModalBottomSheetRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, selectable, selectableGroup, semantics, size, testID, toggleable, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
@@ -129,10 +130,9 @@ export function AdminRolesScreen(props: AdminRolesScreenProps) {
     <LazyColumn.Items data={model.principals} keyExtractor={(row, index) => `${row.principal.role}:${row.principal.ref}:${index}`} estimatedItemSize={100}>{({ item, index }) => <AssignmentRow row={item} index={index} model={model} />}</LazyColumn.Items>
   </LazyColumn></PullToRefreshBox>;
   return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
-    <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-      <TopAppBar.NavigationIcon><IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label })]}><Icon name={props.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
-      <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{model.t('adminRolesTitle')}</Text></TopAppBar.Title><TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null}</TopAppBar.Actions>
-    </TopAppBar><Spacer modifiers={[height(3)]} /></Column></BaseHost></SafeAreaView>{props.topNotice}
+    <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}><AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label })]}><Icon name={props.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} /></IconButton>}
+      title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.t('adminRolesTitle')}</Text>}
+      actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} /></Column></BaseHost></SafeAreaView>{props.topNotice}
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-roles-body-frame"><BaseHost style={styles.screen}>
       {!state.data ? state.loading ? <Box contentAlignment="center" modifiers={[fillMaxSize()]}><AdminLoadingIndicator /></Box> : <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(24, 40, 24, 40)]}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth()]}><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center' }}>{model.t('serverDisconnectedRetry')}</Text>

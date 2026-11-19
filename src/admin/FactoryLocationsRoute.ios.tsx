@@ -1,4 +1,5 @@
-import { Host, Text as SwiftText } from '@expo/ui/swift-ui';
+import { BaseHost } from '../components/BaseHost.ios';
+import { Text as SwiftText } from '@expo/ui/swift-ui';
 import { font } from '@expo/ui/swift-ui/modifiers';
 import { useSyncExternalStore } from 'react';
 import { KeyboardAvoidingView, Modal, PlatformColor, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -25,7 +26,7 @@ export function FactoryLocationsRoute(props: FactoryLocationsRouteProps) {
       <KeyboardAvoidingView behavior="padding" style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => { if (!picker) presentation.cancel(dialog); }} />
         <View accessibilityViewIsModal style={styles.dialog}>
-          <Host matchContents={{ vertical: true }}><SwiftText modifiers={[font({ textStyle: 'title3', weight: 'semibold' })]}>{title}</SwiftText></Host>
+          <BaseHost matchContents={{ vertical: true }}><SwiftText modifiers={[font({ textStyle: 'title3', weight: 'semibold' })]}>{title}</SwiftText></BaseHost>
           <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: height * 0.65 }} contentContainerStyle={{ paddingTop: 16 }}>
             {dialog.kind === 'editor' ? <FactoryLocationEditorContent {...editor} /> : <FactoryLocationRenameContent {...editor} />}
           </ScrollView>

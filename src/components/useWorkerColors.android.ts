@@ -1,6 +1,6 @@
-import { useMaterialColors } from '@expo/ui/jetpack-compose';
+import { useBaseTheme } from './useBaseTheme';
 
 export function useWorkerColors() {
-  const colors = useMaterialColors();
-  return { error: '#b3261e', background: colors.surfaceContainerLow, surface: colors.surface, field: colors.surfaceContainerHighest, text: colors.onSurface, muted: colors.onSurfaceVariant, icon: colors.onSurfaceVariant, clear: colors.onSurfaceVariant };
+  const { colors } = useBaseTheme();
+  return { error: colors.error, background: colors.surfaceContainerLow, surface: colors.surface, field: colors.surfaceContainerHighest, text: colors.onSurface, muted: colors.onSurfaceVariant, icon: colors.onSurfaceVariant, clear: colors.onSurfaceVariant };
 }

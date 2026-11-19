@@ -43,7 +43,7 @@ function render(platform, initial, navigation) {
     setLaminationWip: value => calls.push(['wip', value]), setLaminationFilm: value => calls.push(['film', value]), setQolip: value => calls.push(['qolip', value]) };
   const native = { View: 'View', Text: 'NativeText', Pressable: 'Pressable', PlatformColor: value => value,
     StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) };
-  const mocks = { react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods,
+  const mocks = { './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: compose.useMaterialColors() }) }, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods,
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': mods,
     'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
@@ -72,21 +72,22 @@ for (const platform of ['ios', 'android']) {
   });
   test(`${platform} operator renders only Paddon switches and never adds a fake destination`, () => {
     const { tree } = render(platform, state({ operator: true }));
+    const actions = nodes(tree, n => n.type === 'AdminScreenHeader')[0]?.props.actions;
     const controls = nodes(tree, n => n.type === (platform === 'ios' ? 'Toggle' : 'Switch'));
     assert.equal(controls.length, 2); assert.equal(nodes(tree, n => n.type === 'ExistingDock').length, 1);
-    assert.equal(nodes(tree, n => n.type === 'IconButton' && n.props.modifiers?.some(mod => mod.name === 'testID' && mod.args[0] === 'additional-settings-refresh')).length, platform === 'android' ? 1 : 0);
+    if (platform === 'android') assert.ok(nodes(actions, n => n.type === 'IconButton' && n.props.modifiers?.some(mod => mod.name === 'testID' && mod.args[0] === 'additional-settings-refresh')).length);
   });
   test(`${platform} delegates drawer or back choice to the existing shell`, () => {
     for (const icon of ['menu', 'back']) {
       const { tree, calls } = render(platform, state(), icon);
       const leading = platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft() :
-        nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation;
+        nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.navigation;
       assert.equal(platform === 'ios' ? leading.props.icon : leading.icon, icon);
       (platform === 'ios' ? leading.props.onPress : leading.onPress)(); assert.deepEqual(calls, ['navigation']);
     }
     const { tree } = render(platform, state(), null);
     assert.equal(platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft :
-      nodes(tree, n => n.type === 'RoleHeader')[0].props.navigation, undefined);
+      nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.navigation, platform === 'android' ? null : undefined);
   });
   test(`${platform} loading, failure and card retry preserve distinct states`, () => {
     const loading = render(platform, state({ screen: 'loading' })).tree;

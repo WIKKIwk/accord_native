@@ -1,17 +1,19 @@
-import { Column, Host, useMaterialColors } from '@expo/ui/jetpack-compose';
+import { Column } from '@expo/ui/jetpack-compose';
 import { Children, cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RefreshControl, View, type FlatList } from 'react-native';
 import { GestureDetector, useNativeGesture } from 'react-native-gesture-handler';
 import Animated, { scrollTo, useAnimatedReaction, useAnimatedRef, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { OrderListItem } from './OrderListItem';
 import { WorkerOrderPalette } from '../../components/workerOrderPalette';
+import { BaseHost } from '../../components/BaseHost.android';
+import { useBaseTheme } from '../../components/useBaseTheme';
 import type { OrdersListProps } from './OrdersList.types';
 
 export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshing, setRefreshing] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
-  const colors = useMaterialColors();
+  const { colors } = useBaseTheme();
   const listRef = useAnimatedRef<FlatList<ReactNode | T>>();
   const scrollOffset = useSharedValue(0);
   const contentHeight = useSharedValue(0);
@@ -89,7 +91,7 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     return <View collapsable={false}>{isValidElement<{ imageActive: boolean }>(element) && element.type === OrderListItem
       ? cloneElement(element, { imageActive: element.props.imageActive && imagesReady })
       : passthrough?.(element) ? element
-      : <Host matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{element}</Column></Host>}</View>;
+      : <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column>{element}</Column></BaseHost>}</View>;
   }, [headerItems.length, dataRows, renderRow, imagesReady, passthrough]);
 
   return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList ref={listRef} style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset, minHeight: viewportHeight + Math.max(0, topInset - 48) }} data={data} keyExtractor={keyExtractor}

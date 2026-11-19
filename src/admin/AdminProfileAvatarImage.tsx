@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ColorValue } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 /** @v2 ImageFade */
 export function AdminProfileAvatarImage({ uri, cacheKey, width, height, radius, backgroundColor, isCurrent, onError, fallback }: {
-  uri: string | null; cacheKey: string; width: number; height: number; radius: number; backgroundColor?: string; isCurrent: () => boolean; onError: () => void; fallback: ReactNode;
+  uri: string | null; cacheKey: string; width: number; height: number; radius: number; backgroundColor?: ColorValue; isCurrent: () => boolean; onError: () => void; fallback: ReactNode;
 }) {
   const placeholder = useSharedValue(1), style = useAnimatedStyle(() => ({ opacity: placeholder.get() })), synchronous = useRef(false);
   useLayoutEffect(() => { synchronous.current = false; placeholder.set(1); }, [placeholder, uri, cacheKey]);

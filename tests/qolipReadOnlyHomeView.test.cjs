@@ -28,7 +28,7 @@ test('unrouted shell supplies real search, tabs and failed-read retries, with he
   const ui = { Host: component('Host', records), TextInput: component('TextInput', records), useNativeState: value => ({ get: () => value, set() {} }) };
   const native = Object.fromEntries(['ActivityIndicator', 'Pressable', 'ScrollView', 'Text', 'View'].map(name => [name, component(name, records)]));
   native.StyleSheet = { create: value => value };
-  const mocks = { '@expo/ui': ui, 'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 5 }) },
+  const mocks = { '../components/BaseHost': { BaseHost: 'Host' }, '@expo/ui': ui, 'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 5 }) },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surface: 'surface', onSurface: 'text', onSurfaceVariant: 'muted', secondaryContainer: 'selected', primary: 'primary' } }) },
     './QolipReadOnlyHomeGrid': { QolipReadOnlyHomeGrid: component('Grid', records) }, './QolipReadOnlyRetry': { QolipReadOnlyRetry: retryMock(records) },
     './useQolipHomeBlockRead': { useQolipHomeBlockRead: () => ({ invalid: false, locations: [], loading: false, error: false }) },

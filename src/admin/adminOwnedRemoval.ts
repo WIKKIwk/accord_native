@@ -21,7 +21,7 @@ export class AdminOwnedRootRemoval {
     if (this.checking) { this.clear(); return false; } this.checking = true;
     const allowed = isSynchronouslyTrue(this.isCurrent); this.checking = false; return allowed;
   }
-  dispatch(name: 'index' | 'users' | 'activity', navigation: AdminOwnedNavigationAdapter, binding: { routeKey: string; navigatorKey: string }): boolean {
+  dispatch(name: 'index' | 'users' | 'activity' | 'chat', navigation: AdminOwnedNavigationAdapter, binding: { routeKey: string; navigatorKey: string }): boolean {
     try {
       if (!this.current()) return false;
       const state = navigation.getState(); if (!stack(state) || state.key !== binding.navigatorKey || state.routes[state.index].key !== binding.routeKey) return false;

@@ -11,10 +11,11 @@ import type { AdminActivityPendingProps } from './adminActivityPendingTypes';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
-export function AdminActivityPending({ status, onRetry, navigation, footer }: AdminActivityPendingProps) {
+export function AdminActivityPending({ status, onRetry, navigation, footer, profileAction }: AdminActivityPendingProps) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   return <><Stack.Screen options={{ headerShown: true, title: localizedGetter('adminActivityTitle', locale),
-    headerLeft: () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> }} />
+    headerLeft: () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} />,
+    headerRight: profileAction ? () => profileAction : undefined }} />
     <View style={styles.screen}><AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-pending-body-frame"><BaseHost style={styles.content}>{status === 'loading'
       ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack>
       : <VStack spacing={16}><Text>{localizedGetter('serverDisconnectedRetry', locale)}</Text><Button label={localizedGetter('retry', locale)} onPress={onRetry}

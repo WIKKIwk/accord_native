@@ -1,17 +1,7 @@
-import { PlatformColor } from 'react-native';
-
-// UIKit resolves these colors for the current appearance and accessibility settings.
-const colors = {
-  error: PlatformColor('systemRed'),
-  background: PlatformColor('systemBackground'),
-  surface: PlatformColor('secondarySystemGroupedBackground'),
-  field: PlatformColor('tertiarySystemFill'),
-  text: PlatformColor('label'),
-  muted: PlatformColor('secondaryLabel'),
-  icon: PlatformColor('systemBlue'),
-  clear: PlatformColor('secondaryLabel'),
-};
+import { useBaseTheme } from './useBaseTheme';
 
 export function useWorkerColors() {
-  return colors;
+  const { colors } = useBaseTheme();
+  return { error: colors.error, background: colors.surface, surface: colors.surfaceContainer, field: colors.tertiaryContainer,
+    text: colors.onSurface, muted: colors.onSurfaceVariant, icon: colors.primary, clear: colors.onSurfaceVariant };
 }

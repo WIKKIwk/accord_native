@@ -8,7 +8,6 @@ import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useSharedValue, wi
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
-import { themeController } from '../shared/themeRuntime';
 import type { AdminUsersRow, AdminUsersScreenProps } from './AdminUsersScreenTypes';
 import { useAdminUsersScreen, type AdminUsersScreenModel } from './useAdminUsersScreen';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -88,7 +87,7 @@ function UserRow({ item, model }: { item: AdminUsersRow; model: AdminUsersScreen
   const motion = useAnimatedStyle(() => ({ height: (item.index > 0 ? 63 : 61) * factor.value, opacity: factor.value }));
   return <Animated.View style={[styles.rowClip, motion]} pointerEvents={item.exiting ? 'none' : 'auto'}>
     <Animated.View key={item.revision} entering={revisionReady ? FadeIn.duration(180) : undefined} exiting={FadeOut.duration(180)} style={{ paddingTop: item.index > 0 ? 2 : 0 }}>
-      <BaseHost style={styles.row}><Surface color={colors.surfaceContainerLowest} enabled={!item.exiting} shadowElevation={themeController.variant === 'white' ? 1 : 0}
+      <BaseHost style={styles.row}><Surface color={colors.surfaceContainerLowest} enabled={!item.exiting}
         shape={Shape.RoundedCorner({ cornerRadii: { topStart: item.index === 0 ? 18 : 6, topEnd: item.index === 0 ? 18 : 6,
           bottomStart: item.index > 0 && item.index === item.count - 1 ? 18 : 6, bottomEnd: item.index > 0 && item.index === item.count - 1 ? 18 : 6 } })}
         modifiers={[fillMaxWidth(), height(61), testID(`admin-user-${item.id}`)]} onClick={() => { void model.openUser(item.id); }}>

@@ -42,7 +42,7 @@ function render(platform, options = {}) {
   const props = { session: {}, witness: {}, isCurrent: () => true, showTopNotice() {}, navigation: { icon: 'back', label: 'Back', onPress: () => calls.push('back') },
     profileAction: { type: 'RealProfile', props: {} }, footer: { type: 'RealDock', props: {} }, topNotice: { type: 'RealTopNotice', props: {} } };
   const model = hook.useAdminRoles(props);
-  const mocks = { react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui/modifiers': modifiers,
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'react-native': { View: 'View', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },

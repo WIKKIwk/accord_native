@@ -6,7 +6,6 @@ import { useWelcomeTransition, type WelcomeCopy } from './useWelcomeTransition';
 
 export type WelcomeScreenProps = WelcomeCopy & {
   onLanguage: () => void;
-  onTheme: () => void;
   onStart: () => void;
 };
 

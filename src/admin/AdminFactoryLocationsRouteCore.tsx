@@ -8,6 +8,7 @@ import { useRoleDrawer } from '../shared/navigation/roleDrawerContext';
 import { adminActivityBackLabel } from './adminActivityBackLabel';
 import { FactoryLocationsRoute } from './FactoryLocationsRoute';
 import { useAdminShell } from './AdminShellContext';
+import { AdminShellProfileAction } from './AdminShellProfileAction';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
@@ -28,5 +29,5 @@ export function AdminFactoryLocationsRoute({ footer }: { footer?: ReactNode }) {
       else drawer.open();
     } };
   return <FactoryLocationsRoute session={shell.session} witness={shell.witness} isCurrent={shell.isCurrent}
-    navigation={navigation} footer={footer} />;
+    navigation={navigation} footer={footer} profileAction={<AdminShellProfileAction />} />;
 }

@@ -1,16 +1,16 @@
-import { Box, Column, IconButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, TopAppBar } from '@expo/ui/jetpack-compose';
-import { defaultMinSize, fillMaxWidth, height, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
-import { isRunningInExpoGo } from 'expo';
+import { Column, RNHostView, Row, Shape, Surface, TextButton } from '@expo/ui/jetpack-compose';
+import { defaultMinSize, fillMaxWidth, padding, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
+import { AdminScreenHeader } from './AdminTopBar.android';
 import { AdminText as ComposeText } from './AdminTypography.android';
 import { adminHomeActions, adminHomeShortcuts, adminHomeShowsActionIcons, adminHomeTitle, adminHomeViewState } from './adminHomeModel';
 import { adminHomeSymbol } from './adminHomeSymbols';
@@ -32,29 +32,10 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
   const rows = (view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [])
     .filter(row => props.isRouteAvailable(row.routeName));
   const showIcons = view === 'actions' && adminHomeShowsActionIcons(session);
-  const expoGo = isRunningInExpoGo();
-  const navigationButton = navigation ? <IconButton onClick={navigation.onPress}
-    modifiers={[semantics({ contentDescription: navigation.label }), testID(navigation.testID ?? 'admin-home-navigation')]}>
-    <RNHostView matchContents><SymbolView name={{ android: navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView>
-  </IconButton> : null;
-  const title = <ComposeText color={colors.onSurface} maxLines={1} overflow="ellipsis" style={{ fontSize: 24, fontWeight: '800' }}>{adminHomeTitle(session, locale)}</ComposeText>;
-  const profileAction = props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
-    <SafeAreaView edges={['left', 'right']} testID="admin-home-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
-      <Column modifiers={[fillMaxWidth()]}>
-        {expoGo ? <Row verticalAlignment="center" modifiers={[fillMaxWidth(), height(60), padding(4, 0, 4, 0)]}>
-          {navigationButton}
-          <Box modifiers={[weight(1), padding(navigationButton ? 0 : 12, 0, 4, 0)]}>{title}</Box>
-          {profileAction}
-        </Row> : <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-          <TopAppBar.NavigationIcon>{navigationButton}</TopAppBar.NavigationIcon>
-          <TopAppBar.Title>{title}</TopAppBar.Title>
-          <TopAppBar.Actions>{profileAction}</TopAppBar.Actions>
-        </TopAppBar>}
-        <Spacer modifiers={[height(3)]} />
-      </Column>
-    </BaseHost></SafeAreaView>
-    {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} allowMissingInsets={expoGo} testID="admin-home-body-frame">
+    <AdminScreenHeader title={adminHomeTitle(session, locale)} testID="admin-home-header-safe-area" profileAction={props.profileAction}
+      navigation={navigation ? { ...navigation, testID: navigation.testID ?? 'admin-home-navigation' } : null} />
+    {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
     {view === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
       view === 'error' ? <View style={styles.error}><BaseHost matchContents={{ vertical: true }} style={{ width: retryWidth, maxWidth: '100%' }}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }}>
@@ -91,6 +72,6 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, list: { flexGrow: 1, paddingTop: 4 },
-  fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' },
+  fullWidth: { width: '100%' },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, error: { flex: 1, alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 } });

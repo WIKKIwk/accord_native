@@ -7,7 +7,7 @@ export { WorkerSheetButton as WorkerOrderButton } from './WorkerSheetButton';
 
 export function WorkerOrderBlockingNotice({ message }: { message: string }) {
   const colors = useMaterialColors({});
-  return <BaseHost dynamicColors matchContents={{ vertical: true }} style={{ width: '100%' }}>
+  return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <Column modifiers={[fillMaxWidth(), clip({ type: 'roundedCorner', radius: 12 }), background(colors.surfaceContainerHighest), paddingAll(12)]}>
       <Text color={colors.onSurfaceVariant ?? colors.onSurface} style={{ typography: 'bodyMedium', fontWeight: '600' }}>{message}</Text>
     </Column>

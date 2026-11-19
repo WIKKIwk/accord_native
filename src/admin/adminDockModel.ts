@@ -1,10 +1,21 @@
 import type { Session } from '../auth';
 import { appRoutes, canOpenRoute, homeRoute } from '../shared/appRoutes';
 import { localizedGetter } from '../shared/localization';
+import type { AndroidSymbol } from 'expo-symbols';
 
-export type AdminDockTab = 'home' | 'user' | 'suppliers' | 'settings' | 'activity';
+export type AdminDockTab = 'home' | 'user' | 'suppliers' | 'settings' | 'activity' | 'chat';
 export type AdminDockDestination = { id: string; tab: AdminDockTab | null; label: string; routeName: string;
   materialIcon: string; selectedMaterialIcon: string; primary: boolean };
+export const adminDockChatDestination: AdminDockDestination = {
+  id: 'shared-chat', tab: 'chat', label: 'Chat', routeName: appRoutes.chat,
+  materialIcon: 'chat_bubble_outline_rounded', selectedMaterialIcon: 'chat_bubble_rounded', primary: false,
+};
+export function adminAndroidDockItems(destinations: readonly AdminDockDestination[], hasUnread: boolean) {
+  return destinations.map(item => {
+    const icon: AndroidSymbol = item.tab === 'home' ? 'home' : item.tab === 'user' ? 'person' : item.tab === 'chat' ? 'chat_bubble' : 'history';
+    return { id: item.id, label: item.label, icon, testID: item.id, showBadge: item.tab === 'chat' && hasUnread };
+  });
+}
 /** @v2 _visibleDestinations */
 export function adminDockDestinations(session: Session, locale: string, includePrimaryAction = false): AdminDockDestination[] {
   const get = (key: string) => localizedGetter(key, locale);

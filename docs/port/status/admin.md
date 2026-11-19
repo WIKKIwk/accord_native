@@ -1,7 +1,26 @@
 # admin
 
 Status: Admin port in progress; `port/admin` merged into `main`, common login entry connected on `main` (2026-11-17).
-Stopped at: welcome/login and restored-session routing now enter the existing guarded Admin layouts on both platforms. Full Root/Source containers, global CreateHub placement, actual feature sheet callers/results, Firebase configuration and remaining Admin parity are still Open.
+Stopped at: the shared native palette and Admin navigation work through the guarded Admin entry. Full Root/Source containers, global CreateHub placement, actual feature sheet callers/results, Firebase configuration and remaining Admin parity are still Open.
+
+## 2026-11-19 Shared device colors and Admin navigation
+
+V4 still had six selectable Android palettes at welcome and in profile settings. The preference was app-wide, while some hosts used the configured palette and others read the device. Android now resolves Material colors from the device without a seed or palette overrides. iOS resolves semantic system colors through UIKit. The app defaults to Auto and keeps one shared Light/Dark/Auto appearance preference. The old palette preference is ignored.
+
+Android Admin uses the shared Compose top bar and NavigationBar. The root iOS tabs and stack headers use the same system color source as the screen body. The attached Android Expo Go session opened Home, Activity, Work Map and Chat. Home, Activity and Work Map bodies were visible, and the Home bars resolved the same native color. Navigation back to Home worked. Both platform type checks, both Expo JavaScript exports and all 285 focused tests passed. The full suite reported 9,110 passes and 71 failures, each also reproduced at the parent revision. Expo lint reported the existing Closed History hook warning.
+
+The pinned V2 text gate still reports 554 missing and 537 extra iOS strings, 553 missing and 547 extra Android strings, six ambiguous tags and 560 inventoried surfaces. The symbol gate still reports the pre-existing Metalayzer tags and one existing Production Map tag. Full iOS device behavior, the 3D Factory Map, Quick Orders, Open Order and the global Create Hub provider remain open.
+
+### Surface audit
+
+| V2 surface and location | V4 file | iOS | Android | What differs |
+|---|---|---|---|---|
+| Shared colors and appearance in `core/theme/theme_controller.dart` | `useBaseThemeConfig.ts`, `useBaseTheme.android.ts`, `useBaseTheme.ios.ts` | UIKit semantic colors | Material device palette | V4 removes the six saved color presets per the requested device-color behavior. |
+| Header in `core/widgets/shell/app_shell.dart:99` | `RoleTopBar.android.tsx`, `AdminTopBar.android.tsx`, Admin stack layouts | UIKit stack header | Shared Compose surface and controls checked in Expo Go | UIKit determines its native bar geometry. |
+| Clipped content and dock reserve in `app_shell__AppShellState_methods_01.dart:231` | `AdminShellBodyFrame.tsx`, `useAdminShellLayout.ts` | Frame and reserve covered by tests | Frame visible in Expo Go with activity safe-area measurement | The owning app still supplies original-window metrics for its owned pages. |
+| Admin dock and common Chat in `admin_dock.dart:140`, `core/widgets/navigation/role_dock.dart:64` | `AdminBottomBar.android.tsx`, `AdminLayout.ios.tsx`, `AdminChatLayout.tsx` | NativeTabs and protected Chat routes | Shared NavigationBar and original route guards | Create Hub and its owned destinations still need their original providers. |
+| Home and Activity in `admin_home_screen.dart`, `admin_activity_screen.dart` | `AdminHomeScreen`, `AdminActivityScreen` | Native stack headers and profile action | Native headers and content checked in Expo Go | Full V2 copy and all destination parity remain open. |
+| Work Map order list and search | `AdminWorkMapRoute`, `OrdersHeader`, `OrdersList` | Shared search and clipped content | Shared search, frame and navigation checked in Expo Go | Dedicated visual checks on iOS remain open. |
 
 ## 2026-11-17: common welcome/login entry
 

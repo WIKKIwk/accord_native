@@ -1,4 +1,5 @@
-import { Column, IconButton, RNHostView, Row, Spacer, Surface, TopAppBar, Button } from '@expo/ui/jetpack-compose';
+import { Column, IconButton, RNHostView, Row, Spacer, Surface, Button } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
@@ -11,10 +12,8 @@ import type { AdminItemDetailReadModel } from './AdminItemDetailReadOwner';
 export function AdminItemDetailTopBar({ model, backLabel }: { model: AdminItemDetailReadModel; backLabel: string }) {
   const { colors } = useBaseTheme();
   return <SafeAreaView edges={['left', 'right']}><BaseHost style={{ width: '100%', height: 63 }}><Column modifiers={[fillMaxWidth()]}>
-    <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-      <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: backLabel }), testID('admin-item-detail-back')]}><ItemDetailIcon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
-      <TopAppBar.Title><Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('detail.item_title')}</Text></TopAppBar.Title>
-    </TopAppBar><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
+    <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: backLabel }), testID('admin-item-detail-back')]}><ItemDetailIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
+      title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('detail.item_title')}</Text>} /><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
   </Column></BaseHost></SafeAreaView>;
 }
 /** @v2 _ItemDetailHeader */

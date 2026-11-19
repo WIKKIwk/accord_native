@@ -91,7 +91,7 @@ function renderContent(editing, busy = false) {
   const editor = { text: label, stale: false, pickerOpen: busy, visibleSelected: editing ? [a] : [], setName: value => calls.push(['name', value]),
     openPicker: async () => { calls.push('picker'); }, remove: id => calls.push(['remove', id]), submit: () => calls.push('submit'), cancel: () => calls.push('cancel') };
   const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() },
-    '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    '../components/BaseHost': { BaseHost: 'Host' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) }, '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', StyleSheet: { create: value => value } },
     '../components/useWorkerColors': { useWorkerColors: () => ({ muted: 'muted', field: 'field', text: 'text' }) },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },

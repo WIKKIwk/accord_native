@@ -7,6 +7,7 @@ export type AdminActivityScreenProps = {
   hiddenIds: ReadonlySet<string>;
   navigation: { icon: 'back'; label: string; onPress: () => void; testID?: string } | null;
   footer?: ReactNode;
+  profileAction?: ReactNode;
   onRefresh: () => Promise<void>;
   /** Open the real localized confirmation; the host must recheck scope before hiding current IDs. */
   onRequestClear: () => void;

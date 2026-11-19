@@ -6,6 +6,7 @@ export type FactoryLocationScreenProps = {
   controller: FactoryLocationController;
   navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null;
   footer?: ReactNode;
+  profileAction?: ReactNode;
   onOpenEditor: (ticket: FactoryLocationTicket) => void;
   onOpenRename: (ticket: FactoryLocationTicket) => void;
 };

@@ -1,4 +1,4 @@
-import { Alert, Button, Host, List, ProgressView, Section, Text, Toggle } from '@expo/ui/swift-ui';
+import { Alert, Button, List, ProgressView, Section, Text, Toggle } from '@expo/ui/swift-ui';
 import { accessibilityIdentifier, disabled, labelStyle, listStyle } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
@@ -8,6 +8,7 @@ import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { localeController } from '../shared/localization/runtime';
 import { additionalSettingsCards, additionalSettingsNotice, additionalSettingsText, changeAdditionalSetting } from './additionalSettingsViewModel';
 import type { AdditionalSettingsScreenProps } from './additionalSettingsTypes';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { useAdditionalSettings } from './useAdditionalSettings';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -15,7 +16,7 @@ const currentLocale = () => localeController.locale;
 
 // The shared shell supplies the existing role drawer and appropriate dock; this screen does not invent navigation.
 // @v2 AdminAdditionalSettingsScreen
-export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice }: AdditionalSettingsScreenProps) {
+export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice, profileAction }: AdditionalSettingsScreenProps) {
   const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), { width, height } = useWindowDimensions();
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,14 +38,16 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
   };
   const refreshingDisabled = state.screen === 'content' && state.paddon.busy;
   const notice = state.notice ? additionalSettingsNotice(state.notice, locale) : null;
+  const refreshButton = <BaseHost matchContents><Button label={t.retry} systemImage="arrow.clockwise"
+    modifiers={[labelStyle('iconOnly'), disabled(refreshingDisabled), accessibilityIdentifier('additional-settings-refresh')]}
+    onPress={() => { if (current()) void controller.refresh(); }} /></BaseHost>;
   return <>
     <Stack.Screen options={{ headerShown: true, title: t.title,
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined,
-      headerRight: () => <Host matchContents><Button label={t.retry} systemImage="arrow.clockwise"
-        modifiers={[labelStyle('iconOnly'), disabled(refreshingDisabled), accessibilityIdentifier('additional-settings-refresh')]}
-        onPress={() => { if (current()) void controller.refresh(); }} /></Host> }} />
+      headerRight: () => profileAction ? <View style={styles.actions}>{refreshButton}{profileAction}</View> : refreshButton }} />
     <View style={styles.screen}>
       {topNotice}
+      <AdminShellBodyFrame hasFooter={footer != null} testID="admin-additional-settings-body-frame">
       <BaseHost style={styles.content}>
         <List modifiers={[listStyle('insetGrouped')]}>
           {state.screen === 'loading' ? <Section><ProgressView /></Section> : null}
@@ -60,11 +63,12 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
           {state.screen === 'content' && state.paddon.busy ? <Section><ProgressView /></Section> : null}
         </List>
       </BaseHost>
-      {footer}
+      </AdminShellBodyFrame>
+      <View pointerEvents="box-none" style={styles.footer}>{footer}</View>
       {notice ? <View pointerEvents="none" accessibilityRole="alert" style={[styles.notice, { backgroundColor: PlatformColor('secondarySystemBackground') }]}>
         <NativeText style={{ color: PlatformColor('label') }}>{notice}</NativeText>
       </View> : null}
-      {state.confirmFreeMovement ? <Host style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
+      {state.confirmFreeMovement ? <BaseHost style={{ position: 'absolute', top: 0, left: 0, width, height }} pointerEvents="none">
         <Alert title={t.confirmTitle} isPresented onIsPresentedChange={presented => { if (!presented) cancelConfirmation(); }}>
           <Alert.Trigger><Text> </Text></Alert.Trigger>
           <Alert.Message><Text>{t.confirmMessage}</Text></Alert.Message>
@@ -73,9 +77,10 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
             <Button label={t.yes} onPress={confirm} />
           </Alert.Actions>
         </Alert>
-      </Host> : null}
+      </BaseHost> : null}
     </View>
   </>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, headerButton: { minWidth: 38, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, actions: { flexDirection: 'row', alignItems: 'center' },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   notice: { position: 'absolute', left: 16, right: 16, bottom: 16, borderRadius: 12, padding: 12 } });

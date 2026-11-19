@@ -31,14 +31,15 @@ function ActivityRow({ row }: { row: AdminActivityRow }) {
   </HStack>;
 }
 /** Unconnected content; the owning shell supplies scoped state and the real confirmation. */
-export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, onRefresh, onRequestClear }: AdminActivityScreenProps) {
+export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, profileAction, onRefresh, onRequestClear }: AdminActivityScreenProps) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const { view, rows } = adminActivityScreenModel(snapshot, hiddenIds, locale);
+  const clearButton = <Pressable accessibilityRole="button" accessibilityLabel={localizedGetter('clearTitle', locale)}
+    onPress={onRequestClear} hitSlop={8} style={styles.clear}><SymbolView name="line.3.horizontal.decrease" size={22} tintColor={PlatformColor('label')} /></Pressable>;
   return <>
     <Stack.Screen options={{ headerShown: true, title: localizedGetter('adminActivityTitle', locale),
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined,
-      headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel={localizedGetter('clearTitle', locale)}
-        onPress={onRequestClear} hitSlop={8} style={styles.clear}><SymbolView name="line.3.horizontal.decrease" size={22} tintColor={PlatformColor('label')} /></Pressable> }} />
+      headerRight: () => profileAction ? <View style={styles.actions}>{clearButton}{profileAction}</View> : clearButton }} />
     <View style={styles.screen}><AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-body-frame"><BaseHost style={styles.content}>
       {view === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         view === 'error' ? <VStack spacing={16}><Text>{localizedGetter('serverDisconnectedRetry', locale)}</Text>
@@ -53,5 +54,6 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, o
   </>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, clear: { width: 42, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'center' },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   badge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' } });

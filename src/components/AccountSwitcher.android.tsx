@@ -7,7 +7,7 @@ import { useAccountSwitcher, type AccountSwitcherProps } from './useAccountSwitc
 /** @v2 AccountSwitcherSheet */
 export function AccountSwitcher(props: AccountSwitcherProps) {
   const model = useAccountSwitcher(useNativeState(''), props), colors = useMaterialColors({});
-  return <Host dynamicColors matchContents={{ vertical: true }} style={{ width: '100%' }}>
+  return <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <Column verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(16, 12, 16, 24)]}>
       {model.target ? <>
         <IconButton onClick={model.back} enabled={!model.busy}

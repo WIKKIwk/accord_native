@@ -1,4 +1,5 @@
-import { Button, Host, HStack, Image, List, Picker, ProgressView, Section, Spacer, TabView, Text, VStack } from '@expo/ui/swift-ui';
+import { BaseHost } from '../components/BaseHost.ios';
+import { Button, HStack, Image, List, Picker, ProgressView, Section, Spacer, TabView, Text, VStack } from '@expo/ui/swift-ui';
 import { buttonStyle, disabled, font, frame, onAppear, padding, pickerStyle, refreshable, tabViewStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { Stack } from 'expo-router';
 import { useMemo } from 'react';
@@ -6,6 +7,7 @@ import { KeyboardAvoidingView, Modal, PlatformColor, Pressable, ScrollView, Styl
 import { localizedGetter } from '../shared/localization';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { AdminCreateMenu } from './AdminCreateMenu.ios';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { ItemGroupsDialogContent } from './ItemGroupsDialogContent';
 import { ItemGroupsPickerSheet } from './ItemGroupsPickerSheet.ios';
 import { itemGroupsVisibleTree } from './itemGroupsModel';
@@ -23,15 +25,17 @@ export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
   const notice = state.notice && (!state.notice.success || !props.showTopNotice) ? <View pointerEvents="none" accessibilityRole="alert" style={[styles.notice, state.notice.success ? styles.success : styles.failure]}>
     <NativeText style={{ color: PlatformColor('label') }}>{t(state.notice.key, state.notice.values)}</NativeText></View> : null;
   return <View style={{ flex: 1 }}>
-    <Stack.Screen options={{ headerShown: true, title: t('item_group.title'), headerLeft: props.navigation ? () => <RoleHeaderButton {...props.navigation!} tintColor={PlatformColor('label')} /> : undefined }} />
+    <Stack.Screen options={{ headerShown: true, title: t('item_group.title'), headerLeft: props.navigation ? () => <RoleHeaderButton {...props.navigation!} tintColor={PlatformColor('label')} /> : undefined,
+      headerRight: props.profileAction ? () => props.profileAction : undefined }} />
     {props.topNotice}
-    <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-item-groups-body-frame">
+    <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}>
       <Picker label="" selection={state.tab} onSelectionChange={value => { if (value === 'tree' || value === 'items') controller.setTab(value); }}
         modifiers={[pickerStyle('segmented'), padding({ horizontal: 12, bottom: 4 })]}>
         <Text modifiers={[tag('tree')]}>{t('item_group.tree_tab')}</Text><Text modifiers={[tag('items')]}>{t('item_group.items_tab')}</Text>
       </Picker>
-    </Host>
-    <Host style={{ flex: 1 }}><TabView selection={state.tab} onSelectionChange={value => { if (value === 'tree' || value === 'items') controller.setTab(value); }}
+    </BaseHost>
+    <BaseHost style={{ flex: 1 }}><TabView selection={state.tab} onSelectionChange={value => { if (value === 'tree' || value === 'items') controller.setTab(value); }}
       modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), tabViewStyle({ type: 'page', indexDisplayMode: 'never' }), disabled(!model.focused || !!state.dialog)]}>
       <TabView.Tab value="tree">{state.treePhase === 'loading' ? <ProgressView /> : state.treePhase === 'error' ? <Text>{t('item_group.tree_load_failed')}</Text> :
         <List modifiers={[refreshable(() => controller.reload())]}>
@@ -64,8 +68,9 @@ export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
               {state.loadingMore ? <ProgressView /> : state.itemsError ? <Button label={t('item_group.load_more')} onPress={() => { void controller.loadItems(true); }} /> : state.hasMore ? <Text>{t('item_group.scroll_hint')}</Text> : null}
             </>}
         </List></TabView.Tab>
-    </TabView></Host>
-    {props.footer}
+    </TabView></BaseHost>
+    </AdminShellBodyFrame>
+    <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     <AdminCreateMenu actions={actions} isCurrent={model.current} openLabel={localizedGetter('adminCreateTitle', model.locale)} closeLabel={t('action.close')} visible={!state.dialog && model.focused} />
     {state.dialog ? <Modal visible={model.focused} transparent animationType="fade" onRequestClose={() => controller.closeDialog(state.dialog!.id)}>
       <KeyboardAvoidingView behavior="padding" style={styles.backdrop}>
@@ -81,6 +86,7 @@ export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
   </View>;
 }
 const styles = StyleSheet.create({ backdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, backgroundColor: 'rgba(0,0,0,0.32)' },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   dialog: { width: '100%', maxWidth: 440, alignSelf: 'center', borderRadius: 18, overflow: 'hidden', backgroundColor: PlatformColor('secondarySystemGroupedBackground') },
   notice: { position: 'absolute', left: 16, right: 16, top: 16, borderRadius: 12, padding: 14 },
   success: { backgroundColor: PlatformColor('secondarySystemBackground') }, failure: { top: undefined, bottom: 16, backgroundColor: PlatformColor('secondarySystemBackground') } });

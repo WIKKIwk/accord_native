@@ -715,17 +715,17 @@ export function canOpenRoute(session: Session | null, routeName: string | null):
 }
 
 // Add a single row when both platform screens for a V2 home become available.
-const homeTargets: Record<string, { ios?: Href; android?: Href | 'worker' }> = {
-  [appRoutes.brigaderHome]: { ios: '/ios-brigader' as Href, android: '/android-brigader' as Href },
+const homeTargets: Record<string, { ios?: `/${string}`; android?: `/${string}` | 'worker' }> = {
+  [appRoutes.brigaderHome]: { ios: '/ios-brigader', android: '/android-brigader' },
   [appRoutes.apparatusQueue]: { ios: '/ios-worker', android: 'worker' },
-  [appRoutes.adminHome]: { ios: '/ios-admin' as Href, android: '/android-admin' as Href },
-  [appRoutes.qolipHome]: { ios: '/ios-qolip' as Href, android: '/android-qolip' as Href },
-  [appRoutes.preparation]: { ios: '/ios-preparation' as Href, android: '/android-preparation' as Href },
-  [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi' as Href, android: '/android-boyoqchi' as Href },
-  [appRoutes.materialHome]: { ios: '/ios-material' as Href, android: '/android-material' as Href },
-  [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo' as Href, android: '/android-homashyo' as Href },
-  [appRoutes.metalayzer]: { ios: '/ios-metalayzer' as Href, android: '/android-metalayzer' as Href },
-  [appRoutes.rezkaSplit]: { ios: '/rezka-split' as Href, android: '/rezka-split' as Href },
+  [appRoutes.adminHome]: { ios: '/ios-admin', android: '/android-admin' },
+  [appRoutes.qolipHome]: { ios: '/ios-qolip', android: '/android-qolip' },
+  [appRoutes.preparation]: { ios: '/ios-preparation', android: '/android-preparation' },
+  [appRoutes.boyoqchiHome]: { ios: '/ios-boyoqchi', android: '/android-boyoqchi' },
+  [appRoutes.materialHome]: { ios: '/ios-material', android: '/android-material' },
+  [appRoutes.rawMaterialSplit]: { ios: '/ios-homashyo', android: '/android-homashyo' },
+  [appRoutes.metalayzer]: { ios: '/ios-metalayzer', android: '/android-metalayzer' },
+  [appRoutes.rezkaSplit]: { ios: '/rezka-split', android: '/rezka-split' },
 };
 
 export function homeTarget(session: Session, platform: string): Href | 'worker' | null {
@@ -733,12 +733,14 @@ export function homeTarget(session: Session, platform: string): Href | 'worker' 
   if (session.profile.role === 'brigader' && session.token === 'test-mode-token') return null;
   if (session.profile.role === 'rezka_master') {
     if (route !== appRoutes.apparatusQueue || !canOpenRoute(session, route)) return null;
-    return platform === 'ios' ? '/ios-rezka' as Href : platform === 'android' ? '/android-rezka' as Href : null;
+    if (platform === 'ios') return '/ios-rezka' as Href;
+    if (platform === 'android') return '/android-rezka' as Href;
+    return null;
   }
   if ((route === appRoutes.adminHome || route === appRoutes.boyoqchiHome || route === appRoutes.rezkaSplit) && !canOpenRoute(session, route)) return null;
   // Keep both protected roles' pre-integration fallback unchanged even with extra split capability.
   if (route === appRoutes.rezkaSplit && (session.profile.role === 'aparatchi' || session.profile.role === 'tayyorlov_masteri')) return null;
   if (route === appRoutes.qolipHome && session.profile.role !== 'qolipchi') return null;
-  const entry = homeTargets[route];
-  return platform === 'ios' ? entry?.ios ?? null : platform === 'android' ? entry?.android ?? null : null;
+  if (platform !== 'ios' && platform !== 'android') return null;
+  return (homeTargets[route]?.[platform] ?? null) as Href | 'worker' | null;
 }

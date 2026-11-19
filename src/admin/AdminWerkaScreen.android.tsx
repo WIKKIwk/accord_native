@@ -1,6 +1,7 @@
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
+import { AdminTopBar } from './AdminTopBar.android';
 import { Box, CircularProgressIndicator, Column, FilledTonalButton, FlowRow, IconButton, LoadingIndicator, RNHostView, Row, Shape,
-  SnackbarHost, Spacer, Surface, TextButton, TopAppBar, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+  SnackbarHost, Spacer, Surface, TextButton, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -143,11 +144,9 @@ export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
   if (!model.current() || state.phase === 'invalidated') return null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
-      <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-        <TopAppBar.NavigationIcon><IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-werka-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
-        <TopAppBar.Title><Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('profile.title')}</Text></TopAppBar.Title>
-        <TopAppBar.Actions><RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView></TopAppBar.Actions>
-      </TopAppBar>
+      <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-werka-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
+        title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('profile.title')}</Text>}
+        actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} />
       <Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-werka-body-frame">

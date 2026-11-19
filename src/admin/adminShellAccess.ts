@@ -25,6 +25,7 @@ export function adminDestinationPath(session: Session, route: string, platform: 
   if (route === appRoutes.adminProductionMapOrders) return `/${platform}-admin/work-map`;
   if (route === appRoutes.profile) return `/${platform}-admin/profile`;
   if (route === appRoutes.adminActivity) return `/${platform}-admin/activity`;
+  if (route === appRoutes.chat) return `/${platform}-admin/chat`;
   if (route === appRoutes.gscaleMode) return `/${platform}-gscale`;
   return null;
 }

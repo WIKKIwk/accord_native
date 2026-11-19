@@ -10,7 +10,7 @@ const NavigationBarItem = Object.assign(() => null, { Icon: 'NavigationBarItem.I
 const BadgedBox = Object.assign(() => null, { Badge: 'BadgedBox.Badge' });
 const palette = { onSecondaryContainer: 'selected', onSurface: 'surface', secondaryContainer: 'indicator',
   onSurfaceVariant: 'muted', surfaceContainerLow: 'background' };
-const mocks = { 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
+const mocks = { '../../components/BaseHost.android': { BaseHost: 'Host' }, '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: palette }) }, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
   NavigationBar: 'NavigationBar', NavigationBarItem, RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => palette },
   '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fillMaxWidth', testID: id => `testID:${id}` },
   react: { useEffect() {}, useRef: value => ({ current: value }) },

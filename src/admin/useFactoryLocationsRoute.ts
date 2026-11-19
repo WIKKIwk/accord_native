@@ -6,7 +6,7 @@ import { FactoryLocationPresentation } from './factoryLocationPresentation';
 import type { FactoryLocationScreenProps } from './factoryLocationScreenTypes';
 
 export type FactoryLocationsRouteProps = { session: Session; witness: SessionWitness; isCurrent: () => boolean;
-  navigation: FactoryLocationScreenProps['navigation']; footer?: ReactNode };
+  navigation: FactoryLocationScreenProps['navigation']; footer?: ReactNode; profileAction?: ReactNode };
 export function useFactoryLocationsRoute(props: FactoryLocationsRouteProps) {
   const { session, witness, isCurrent } = props;
   const owner = useMemo(() => {
@@ -27,7 +27,7 @@ export function useFactoryLocationsRoute(props: FactoryLocationsRouteProps) {
     const timer = setTimeout(() => owner.presentation.clearInvalidName(), 4000); return () => clearTimeout(timer);
   }, [owner, presentation.invalidName]);
   return { owner, presentation, apparatus: state.apparatus,
-    screen: { controller: owner.controller, navigation: props.navigation, footer: props.footer,
+    screen: { controller: owner.controller, navigation: props.navigation, footer: props.footer, profileAction: props.profileAction,
       onOpenEditor: (ticket => owner.presentation.open('editor', ticket)) as FactoryLocationScreenProps['onOpenEditor'],
       onOpenRename: (ticket => owner.presentation.open('rename', ticket)) as FactoryLocationScreenProps['onOpenRename'] } };
 }

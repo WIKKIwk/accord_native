@@ -10,8 +10,6 @@ import type { SavedAccount } from '../savedAccountStore';
 import { localizedGetter, localizedMethod } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { switchPinStore } from '../shared/switchPinRuntime';
-import type { AppThemeVariant } from '../shared/themeController';
-import { themeController } from '../shared/themeRuntime';
 import { savedAccountDisplayName, savedAccountSubtitle } from '../shared/accountEntryLogic';
 import { BaseHost as Host } from './BaseHost';
 import { WelcomeScreen } from './WelcomeScreen';
@@ -19,12 +17,6 @@ import { useBaseTheme } from './useBaseTheme';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const localeSnapshot = () => localeController.locale;
-const themes: { value: AppThemeVariant; label: string }[] = [
-  { value: 'kalmar', label: 'themeKalmarLabel' }, { value: 'classic', label: 'themeClassicLabel' },
-  { value: 'moss', label: 'themeMossLabel' }, { value: 'lavender', label: 'themeLavenderLabel' },
-  { value: 'bliss', label: 'themeBlissLabel' }, { value: 'white', label: 'themeWhiteLabel' },
-];
-
 // @v2 AppEntryScreen
 // @v2 AccountSwitcherSheet
 // @v2 WelcomeScreen
@@ -36,7 +28,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const [accounts, setAccounts] = useState<SavedAccount[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pinPresence, setPinPresence] = useState<Record<string, boolean>>({});
-  const [page, setPage] = useState<'welcome' | 'accounts' | 'login' | 'languages' | 'themes'>('welcome');
+  const [page, setPage] = useState<'welcome' | 'accounts' | 'login' | 'languages'>('welcome');
   const [headlineIndex, setHeadlineIndex] = useState(0);
   const [target, setTarget] = useState<SavedAccount | null>(null);
   const pin = useRef('');
@@ -74,10 +66,10 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
     setError('');
     if (target) { setTarget(null); pin.current = ''; pinField.set(''); }
     else if (page === 'login') { setHeadlineIndex(0); setPage(accounts?.length ? 'accounts' : 'welcome'); }
-    else if (page === 'languages' || page === 'themes') setPage('welcome');
+    else if (page === 'languages') setPage('welcome');
   };
   useEffect(() => {
-    if (Platform.OS !== 'android' || (page !== 'login' && !target && page !== 'languages' && page !== 'themes')) return;
+    if (Platform.OS !== 'android' || (page !== 'login' && !target && page !== 'languages')) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => { back(); return true; });
     return () => subscription.remove();
   });
@@ -117,11 +109,10 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
   const welcomeText = (key: string) => localizedGetter(key, welcomeLocale);
   const languageKey = ({ uz: 'uzbek', en: 'english', ru: 'russian' } as Record<string, string>)[locale.split('-')[0]] ?? 'uzbek';
   return <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.surfaceContainerLow }}>
-    {page === 'welcome' || page === 'languages' || page === 'themes' ? <WelcomeScreen
+    {page === 'welcome' || page === 'languages' ? <WelcomeScreen
       headline={welcomeText('welcomeToAccord')} languageLabel={welcomeText('languageTitle')}
       languageValue={explicitLocale ? locale.startsWith('ur') ? 'اردو (پاکستان)' : welcomeText(languageKey) : welcomeText('languageUnselected')}
-      themeLabel={welcomeText('themeTitle')} themeValue={welcomeText(themes.find(choice => choice.value === themeController.variant)!.label)}
-      startLabel={welcomeText('getStarted')} onStart={() => setPage('login')} onLanguage={() => setPage('languages')} onTheme={() => setPage('themes')} /> : null}
+      startLabel={welcomeText('getStarted')} onStart={() => setPage('login')} onLanguage={() => setPage('languages')} /> : null}
     {page === 'accounts' ? <Host style={{ flex: 1 }}><FieldGroup>
     <FieldGroup.Section title={text('accountSwitchTitle')}>
       {target ? <>
@@ -142,7 +133,7 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
       {error ? <Text textStyle={{ color: '#b3261e' }}>{error}</Text> : null}
     </FieldGroup.Section>
   </FieldGroup></Host> : null}
-  <BottomSheet isPresented={page === 'languages' || page === 'themes'} onDismiss={() => setPage('welcome')} snapPoints={['half', 'full']}>
+  <BottomSheet isPresented={page === 'languages'} onDismiss={() => setPage('welcome')} snapPoints={['half', 'full']}>
     <RNHostView matchContents={{ vertical: true }}>
     <Host style={{ width: '100%', height: 420 }}><FieldGroup>
     {page === 'languages' ? <FieldGroup.Section title={text('languageTitle')}>
@@ -150,12 +141,6 @@ export function AppEntry({ onLogin }: { onLogin: (session: Session) => void }) {
         { id: 'ru', label: text('russian') }, { id: 'ur', label: 'اردو (پاکستان)' }].map(choice =>
         <Button key={choice.id} label={`${choice.label}${locale.split('-')[0] === choice.id ? ` · ${text('accountCurrent')}` : ''}`}
           onPress={() => { void localeController.setLocale(choice.id); setPage('welcome'); }} />)}
-      <Button label={text('closeAction')} onPress={back} />
-    </FieldGroup.Section> : null}
-    {page === 'themes' ? <FieldGroup.Section title={text('themeTitle')}>
-      {themes.map(choice => <Button key={choice.value} label={`${text(choice.label)}${themeController.variant === choice.value ? ` · ${text('accountCurrent')}` : ''}`}
-        onPress={() => { void themeController.setVariant(choice.value); setPage('welcome'); }} />)}
-      <Button label={text('themeModeTitle')} onPress={() => { void themeController.setThemeMode(themeController.isDark ? 'light' : 'dark'); }} />
       <Button label={text('closeAction')} onPress={back} />
     </FieldGroup.Section> : null}
     </FieldGroup></Host>

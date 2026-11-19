@@ -1,6 +1,6 @@
 import { Button, Host, RNHostView, TextInput, useNativeState } from '@expo/ui';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, View, type ColorValue } from 'react-native';
 import type { Session } from '../auth';
 import { WorkerIconButton } from '../components/WorkerIconButton';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
@@ -24,7 +24,7 @@ type Props = { session: Session; draft: ReturnedPaintDraft; close: () => void; o
   save: (items: ReturnedPaintItem[]) => Promise<void> };
 function Field({ label, placeholder, initial = '', decimal = false, autoFocus = false, paintField = false, disabled = false, outlineColor, isLocked, onChange }: {
   label: string; placeholder?: string; initial?: string; decimal?: boolean; autoFocus?: boolean; paintField?: boolean; disabled?: boolean;
-  outlineColor?: string; isLocked?: () => boolean; onChange: (value: string) => void;
+  outlineColor?: ColorValue; isLocked?: () => boolean; onChange: (value: string) => void;
 }) {
   const colors = useWorkerColors(), native = useNativeState(initial), last = useRef(initial), t = useBoyoqchiText();
   const [focused, setFocused] = useState(false);

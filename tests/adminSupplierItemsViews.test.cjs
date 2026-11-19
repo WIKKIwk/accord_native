@@ -16,7 +16,7 @@ function setup(platform, mode = 'add', patch = {}) {
   const component = (name, slots = {}) => Object.assign(function Native(props) { return { type: name, props }; }, slots);
   const compose = new Proxy({ Shape: { RoundedCorner: value => value }, TopAppBar: component('TopAppBar', { NavigationIcon: 'TopAppBar.NavigationIcon', Title: 'TopAppBar.Title', Actions: 'TopAppBar.Actions' }) }, { get: (target, name) => target[name] ?? String(name) });
   const swift = new Proxy({}, { get: (_target, name) => String(name) }), transition = { duration: () => transition, easing: () => transition };
-  const view = s.compile(path.resolve(__dirname, `../src/admin/AdminSupplierItemsScreen.${platform}.tsx`), {
+  const view = s.compile(path.resolve(__dirname, `../src/admin/AdminSupplierItemsScreen.${platform}.tsx`), { './AdminTopBar.android': require('./support/adminChrome.cjs'),
     react: runtime.react, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'react-native': { View: 'View', ScrollView: 'RN.ScrollView', Modal: 'Modal', Pressable: 'Pressable', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute' } }, useWindowDimensions: () => ({ width: 390, height: 844 }) },

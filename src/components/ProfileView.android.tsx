@@ -45,7 +45,7 @@ export function ProfileView(props: ProfileViewProps) {
     ]);
   }, [locale, onLogout, settingsCurrent]);
   useLayoutEffect(() => {
-    const content = <Host dynamicColors style={{ flex: 1 }}><ProfileEditor {...props} /></Host>;
+    const content = <Host style={{ flex: 1 }}><ProfileEditor {...props} /></Host>;
     if (editing) {
       const options = { dismissible: true, heightFraction: 0.72, onDismiss: onCloseEditor };
       if (editorSheet.isOpen()) editorSheet.update(content, options);
@@ -56,16 +56,16 @@ export function ProfileView(props: ProfileViewProps) {
     }
     if (settingsBlocked && settingsSheet.isOpen()) { disconnectPending.current = false; if (settingsDisabled === true) settingsSheet.update(null); settingsSheet.close(); }
     if (!settingsBlocked && settingsSheet.isOpen()) {
-      settingsSheet.update(<Host dynamicColors style={{ flex: 1 }}>
+      settingsSheet.update(<Host style={{ flex: 1 }}>
         <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} isCurrent={props.isCurrent} />
       </Host>, { dismissible: true, onDismiss: settingsDismissed });
     }
   }, [editing, busy, props, session, onCloseEditor, requestDisconnect, settingsDismissed, editorSheet, settingsSheet, settingsBlocked, settingsDisabled]);
-  const openSettings = () => { if (!settingsAllowed.current || !settingsCurrent()) return; settingsSheet.open(<Host dynamicColors style={{ flex: 1 }}>
+  const openSettings = () => { if (!settingsAllowed.current || !settingsCurrent()) return; settingsSheet.open(<Host style={{ flex: 1 }}>
     <ProfileSettings session={session} onClose={settingsSheet.close} onLogout={requestDisconnect} isCurrent={props.isCurrent} />
   </Host>, { dismissible: true, onDismiss: settingsDismissed }); };
   const details = profileDisplay(snapshot);
-  return <Host dynamicColors style={{ flex: 1 }}>
+  return <Host style={{ flex: 1 }}>
     <PullToRefreshBox isRefreshing={props.refreshing} onRefresh={() => { void props.onRefresh(); }}><FieldGroup
       style={{ backgroundColor: colors.surfaceContainerLow }}>
       <FieldGroup.Section title={localizedGetter('profileTitle', locale)}>

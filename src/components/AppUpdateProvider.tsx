@@ -47,9 +47,9 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
           appUpdateCoordinator.error ? <Text style={{ color: theme.colors.onSurface }}>{appUpdateCoordinator.error}</Text> :
             latest ? <Text style={{ color: theme.colors.onSurface }}>{t('appUpdateCurrent')}</Text> :
               result?.updateAvailable ? <Text style={{ color: theme.colors.onSurface }}>{Platform.OS === 'android' ? unavailable : t('appUpdateUnsupported')}</Text> : null}
-        {appUpdateCoordinator.error ? <Pressable accessibilityRole="button" onPress={() => { void appUpdateCoordinator.refresh(); }}><Text style={[styles.action, { color: theme.colors.primary ?? theme.seed }]}>{t('retry')}</Text></Pressable> : null}
-        {appUpdateCoordinator.ready ? <Pressable accessibilityRole="button" onPress={() => { void appUpdateCoordinator.installReady().catch(() => Alert.alert(t('appUpdateDownloadFailed'))); }}><Text style={[styles.action, { color: theme.colors.primary ?? theme.seed }]}>{t('appUpdateAction')}</Text></Pressable> : null}
-        {!appUpdateCoordinator.ready?.update.mandatory ? <Pressable accessibilityRole="button" onPress={close}><Text style={[styles.action, { color: theme.colors.primary ?? theme.seed }]}>{t('closeAction')}</Text></Pressable> : null}
+        {appUpdateCoordinator.error ? <Pressable accessibilityRole="button" onPress={() => { void appUpdateCoordinator.refresh(); }}><Text style={[styles.action, { color: theme.colors.primary }]}>{t('retry')}</Text></Pressable> : null}
+        {appUpdateCoordinator.ready ? <Pressable accessibilityRole="button" onPress={() => { void appUpdateCoordinator.installReady().catch(() => Alert.alert(t('appUpdateDownloadFailed'))); }}><Text style={[styles.action, { color: theme.colors.primary }]}>{t('appUpdateAction')}</Text></Pressable> : null}
+        {!appUpdateCoordinator.ready?.update.mandatory ? <Pressable accessibilityRole="button" onPress={close}><Text style={[styles.action, { color: theme.colors.primary }]}>{t('closeAction')}</Text></Pressable> : null}
       </View></View>
     </Modal>
   </UpdateContext.Provider>;

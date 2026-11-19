@@ -58,7 +58,7 @@ export function AdminAdditionalSettingsRoute({ footer }: { footer?: ReactNode })
   if (!shell.isCurrent()) return <View style={{ flex: 1 }} />;
   if (!admitted) return <Redirect href="/" />;
   return <AdditionalSettingsRoute session={shell.session} witness={shell.witness} isCurrent={shell.isCurrent}
-    navigation={navigation} topNotice={notice.topNotice} footer={footer} />;
+    navigation={navigation} profileAction={<AdminShellProfileAction />} topNotice={notice.topNotice} footer={footer} />;
 }
 
 export function AdminSettingsRoute({ footer }: { footer?: ReactNode }) {
@@ -100,5 +100,5 @@ export function AdminItemGroupsRoute({ footer }: { footer?: ReactNode }) {
   if (!shell.isCurrent()) return <View style={{ flex: 1 }} />;
   if (!admitted) return <Redirect href="/" />;
   return <ItemGroupsRoute session={shell.session} witness={shell.witness} isCurrent={shell.isCurrent}
-    navigation={navigation} topNotice={notice.topNotice} showTopNotice={notice.showTopNotice} footer={footer} />;
+    navigation={navigation} profileAction={<AdminShellProfileAction />} topNotice={notice.topNotice} showTopNotice={notice.showTopNotice} footer={footer} />;
 }

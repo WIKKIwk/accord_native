@@ -41,7 +41,7 @@ export function WorkerOrderSheet({ children, onClose, dismissible = false, preve
   if (listContext) content = <listContext.Provider value={null}>{content}</listContext.Provider>;
 
   return <Host style={{ position: 'absolute', width }} pointerEvents="none" colorScheme={theme.mode}
-    seedColor={theme.colors.primary ?? theme.seed} layoutDirection={theme.direction}>
+    layoutDirection={theme.direction}>
     {/* Each keyed instance presents once; a late native true echo must not reopen a closing sheet. */}
     <BottomSheet isPresented={presented} onIsPresentedChange={value => { if (!value) close(); }} onDismiss={dismiss} fitToContents={fitContent && !measured}>
       <Group modifiers={[

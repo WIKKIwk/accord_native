@@ -75,7 +75,7 @@ test('content reuses native field and buttons with focus, labels and cancel-befo
   const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() },
     '@expo/ui': { Host: 'Host', TextInput: 'TextInput', useNativeState: value => ({ value }) },
     'react-native': { View: 'View', Text: 'Text', StyleSheet: { create: value => value } },
-    '../components/useWorkerColors': { useWorkerColors: () => ({ muted: 'muted' }) },
+    '../components/BaseHost': { BaseHost: 'Host' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { onSurfaceVariant: 'muted' } }) },
     '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './useFactoryLocationRename': { useFactoryLocationRename: () => state } };

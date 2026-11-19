@@ -11,16 +11,13 @@ export function WelcomeScreen(props: WelcomeScreenProps) {
   const { colors, direction } = useBaseTheme();
   return <WelcomeLayout content={props}>{(copy, opacity) => <>
     <View style={styles.list}>
-      {[
-        { id: 'welcome-language', label: copy.languageLabel, value: copy.languageValue, onPress: props.onLanguage },
-        { id: 'welcome-theme', label: copy.themeLabel, value: copy.themeValue, onPress: props.onTheme },
-      ].map((item, index) => <WorkerQueueCard key={item.id} backgroundColor={colors.surface} first={index === 0} last={index === 1} onPress={item.onPress}>
-        <View testID={item.id} style={[styles.row, { flexDirection: direction === 'rightToLeft' ? 'row-reverse' : 'row' }]}>
-          <Animated.Text style={[styles.label, { color: colors.onSurface, opacity }]}>{item.label}</Animated.Text>
-          <Animated.Text style={[styles.value, { color: colors.onSurfaceVariant, opacity, textAlign: direction === 'rightToLeft' ? 'left' : 'right' }]}>{item.value}</Animated.Text>
+      <WorkerQueueCard backgroundColor={colors.surface} first last onPress={props.onLanguage}>
+        <View testID="welcome-language" style={[styles.row, { flexDirection: direction === 'rightToLeft' ? 'row-reverse' : 'row' }]}>
+          <Animated.Text style={[styles.label, { color: colors.onSurface, opacity }]}>{copy.languageLabel}</Animated.Text>
+          <Animated.Text style={[styles.value, { color: colors.onSurfaceVariant, opacity, textAlign: direction === 'rightToLeft' ? 'left' : 'right' }]}>{copy.languageValue}</Animated.Text>
           <RNText style={[styles.chevron, { color: colors.onSurfaceVariant }]}>{direction === 'rightToLeft' ? '‹' : '›'}</RNText>
         </View>
-      </WorkerQueueCard>)}
+      </WorkerQueueCard>
     </View>
     <Animated.View style={{ paddingTop: 28, opacity }}>
       <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>

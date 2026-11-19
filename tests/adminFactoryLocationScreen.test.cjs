@@ -64,7 +64,7 @@ function render(platform, changes = {}, ticket = { owner: Symbol('ticket') }) {
     ActivityIndicator: 'ActivityIndicator', PlatformColor: color => color, StyleSheet: { create: value => value } };
   const colors = { surface: 'surface', surfaceContainerLow: 'low', surfaceContainerLowest: 'card', surfaceContainerHighest: 'high',
     primary: 'primary', primaryContainer: 'primaryContainer', errorContainer: 'error', onErrorContainer: 'onError', onSurface: 'text', onSurfaceVariant: 'variant' };
-  const mocks = { react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose/modifiers': mods,
+  const mocks = { './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose/modifiers': mods,
     '@expo/ui/jetpack-compose': { DropdownMenu, DropdownMenuItem, IconButton: 'IconButton', RNHostView: 'RNHostView', SnackbarHost: 'SnackbarHost',
       Text: 'ComposeText', useMaterialColors: () => colors }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
@@ -83,8 +83,8 @@ for (const platform of ['ios', 'android']) {
     for (const status of ['loading', 'error', 'ready']) {
       const r = render(platform, { status, locations: [] });
       const header = platform === 'ios' ? nodes(r.tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight() :
-        nodes(r.tree, n => n.type === 'Pressable' && n.props.accessibilityLabel === model.factoryLocationScreenText('en').create)[0];
-      assert.equal(header.props.disabled, false); header.props.onPress(); assert.deepEqual(r.calls, [['begin', null], ['edit', r.ticket]]);
+        nodes(r.tree, n => n.type === 'AdminScreenHeader')[0].props.actions;
+      assert.equal(platform === 'ios' ? header.props.disabled : !header.props.enabled, false); (header.props.onPress ?? header.props.onClick)(); assert.deepEqual(r.calls, [['begin', null], ['edit', r.ticket]]);
       assert.equal(nodes(r.tree, n => n.type === 'ExistingDock').length, 1);
       if (status === 'loading') assert.equal(nodes(r.tree, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length, 1);
       if (status === 'error') {
@@ -96,12 +96,12 @@ for (const platform of ['ios', 'android']) {
     }
     for (const changes of [{ saving: true }, { status: 'forbidden' }]) {
       const r = render(platform, changes), header = platform === 'ios' ? nodes(r.tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight() :
-        nodes(r.tree, n => n.type === 'Pressable' && n.props.accessibilityLabel === model.factoryLocationScreenText('en').create)[0];
-      assert.equal(header.props.disabled, true);
+        nodes(r.tree, n => n.type === 'AdminScreenHeader')[0].props.actions;
+      assert.equal(platform === 'ios' ? header.props.disabled : !header.props.enabled, true);
     }
     const noTicket = render(platform, {}, null), header = platform === 'ios' ? nodes(noTicket.tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight() :
-      nodes(noTicket.tree, n => n.type === 'Pressable' && n.props.accessibilityLabel === model.factoryLocationScreenText('en').create)[0];
-    header.props.onPress(); assert.deepEqual(noTicket.calls, [['begin', null]]);
+      nodes(noTicket.tree, n => n.type === 'AdminScreenHeader')[0].props.actions;
+    (header.props.onPress ?? header.props.onClick)(); assert.deepEqual(noTicket.calls, [['begin', null]]);
   });
   test(`${platform} delegates row edit, rename and active change without a duplicate navigation`, () => {
     const r = render(platform), originalFrame = global.requestAnimationFrame; global.requestAnimationFrame = callback => { callback(); return 1; };

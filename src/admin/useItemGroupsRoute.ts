@@ -7,7 +7,7 @@ import { adminText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { itemGroupsMerge, itemGroupsTree } from './itemGroupsModel';
 export type ItemGroupsRouteProps = { session: Session; witness: SessionWitness; isCurrent: () => boolean;
-  navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null; footer?: ReactNode; topNotice?: ReactNode;
+  navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null; footer?: ReactNode; topNotice?: ReactNode; profileAction?: ReactNode;
   showTopNotice?: (message: string, tone: 'success' | 'error') => void };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener), currentLocale = () => localeController.locale;
 export function useItemGroupsRoute({ session, witness, isCurrent, showTopNotice }: ItemGroupsRouteProps) {

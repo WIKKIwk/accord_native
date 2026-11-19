@@ -16,7 +16,7 @@ function setup(family, platform) {
     detail: { avatar_url: '', phone: '', level: '' }, current: () => true, scopeCurrent: () => true, interactive: () => true, mode: { management: false }, overlays: { sheets: [] },
     title: 'Title', readOnly: true, system: true, preparation: false, warehouseEnabled: false, cards: [{ title: 'Card', rows: [] }],
     a: key => key, t: key => key, u: key => key, back() {}, reload() {}, notice: null };
-  const mocks = { react: r.react, '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifier,
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react: r.react, '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifier,
     '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifier, 'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'react-native': { View: 'View', ScrollView: 'RN.ScrollView', RefreshControl: 'RefreshControl', Modal: 'Modal', Pressable: 'Pressable', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
     'react-native-reanimated': { default: { View: 'Animated.View' }, View: 'Animated.View', LinearTransition: transition, Easing: { cubic: 'cubic', out: value => value, inOut: value => value },
@@ -31,7 +31,7 @@ function setup(family, platform) {
   const screen = compile(`Admin${family}Screen.${platform}.tsx`, mocks), props = { footer: { type: 'GenuineDock', props: {} }, profileAction: { type: 'GenuineProfile', props: {} }, backLabel: 'Back', renderAvatar: () => ({ type: 'OwnedAvatar', props: {} }) };
   const expandFrame = node => {
     if (Array.isArray(node)) return node.map(expandFrame); if (!node || typeof node !== 'object') return node;
-    if (node.type === actualFrame.AdminShellBodyFrame) return expandFrame(node.type(node.props));
+    if ([actualFrame.AdminShellBodyFrame, mocks['./AdminTopBar.android'].AdminTopBar].includes(node.type)) return expandFrame(node.type(node.props));
     return { ...node, props: { ...node.props, children: expandFrame(node.props?.children) } };
   };
   return { props, model, set: next => { facts = next; }, get hookReads() { return hookReads; },
@@ -51,7 +51,7 @@ for (const [family, id] of Object.entries(families)) for (const platform of ['an
     if (platform === 'android') {
       const header = nodes(p.tree, node => node.props.testID === 'admin-header-safe-area')[0];
       assert.equal(header.type, 'SafeAreaView'); assert.deepEqual(header.props.edges, ['left', 'right']);
-      assert.equal(nodes(header, node => node.props.windowInsets != null && Object.keys(node.props.windowInsets).length === 0).length, 1);
+      assert.equal(nodes(header, node => node.type === 'AdminTopBar').length, 1);
       assert.equal(nodes(header, node => node.props.testID === frameID).length, 0);
     } else assert.equal(nodes(p.tree, node => node.props.testID === 'admin-header-safe-area').length, 0);
     assert.equal(p.inside.backgroundColor, colors.surfaceContainerLow); assert.equal(p.inside.borderTopLeftRadius, 18); assert.equal(p.inside.borderTopRightRadius, 18); assert.equal(p.inside.borderBottomLeftRadius, 18); assert.equal(p.inside.borderBottomRightRadius, 18); assert.equal(p.inside.overflow, 'hidden');
@@ -85,13 +85,13 @@ for (const [family, id] of Object.entries(families)) for (const platform of ['an
 }
 
 test('Expo Go Home remains interactive without native measurements, except inside a source window', () => {
-  const facts = { metrics: null, thinGestureBottom: false, sourceWindow: false };
+  const facts = { metrics: null, thinGestureBottom: false, sourceWindow: false, metricsReady: true };
   const { AdminShellBodyFrame } = frameModule(colors, () => facts);
-  const body = () => nodes(AdminShellBodyFrame({ hasFooter: true, testID: 'preview', allowMissingInsets: true, children: 'Home' }),
+  const body = () => nodes(AdminShellBodyFrame({ hasFooter: true, testID: 'preview', children: 'Home' }),
     node => node.props.testID === 'preview')[0];
   assert.equal(body().props.pointerEvents, 'auto');
   assert.equal(flattenStyle(body().props.style).opacity, 1);
-  facts.sourceWindow = true;
+  facts.sourceWindow = true; facts.metricsReady = false;
   assert.equal(body().props.pointerEvents, 'none');
 });
 

@@ -3,16 +3,19 @@ import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { appRoutes, homeRoute } from '../shared/appRoutes';
+import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { localeController } from '../shared/localization/runtime';
-import { RoleBottomBar, type RoleNavigationItem } from '../shared/navigation/RoleBottomBar.android';
+import { RoleBottomBar } from '../shared/navigation/RoleBottomBar.android';
 import { useAdminShell } from './AdminShellContext';
-import { adminDockDestinations, adminDockSelection, type AdminDockTab } from './adminDockModel';
+import { adminAndroidDockItems, adminDockChatDestination, adminDockDestinations, adminDockSelection, type AdminDockTab } from './adminDockModel';
 import { adminRootNavigation, type AdminRootNavigationContext } from './adminRootNavigation';
+import { useAdminShellLayout } from './useAdminShellLayout';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 export function AdminBottomBar({ active }: { active: AdminDockTab | null }) {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), insets = useSafeAreaInsets();
-  const navigation = useNavigation(), focused = useIsFocused(), focus = useRef(focused), mounted = useRef(false);
+  const layout = useAdminShellLayout(true), unread = useChatUnreadCount(shell.session);
+  const navigation = useNavigation('/android-admin'), focused = useIsFocused(), focus = useRef(focused), mounted = useRef(false);
   useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useLayoutEffect(() => { focus.current = focused; return () => { focus.current = false; }; }, [focused]);
   const context = useMemo<AdminRootNavigationContext>(() => {
@@ -25,10 +28,8 @@ export function AdminBottomBar({ active }: { active: AdminDockTab | null }) {
       currentPath: () => paths().at(-1) ?? null, containsPath: path => paths().includes(path), unfocus: () => Keyboard.dismiss(),
       popTo: path => router.dismissTo(path as Href), push: path => router.push(path as Href) };
   }, [navigation, shell]);
-  const destinations = adminDockDestinations(shell.session, locale).filter(item => !item.primary &&
+  const destinations = [...adminDockDestinations(shell.session, locale), adminDockChatDestination].filter(item => !item.primary &&
     !!shell.destination(item.routeName, 'android') && (item.routeName !== appRoutes.adminActivity || !!shell.activityBinding));
-  const items: RoleNavigationItem[] = destinations.map(item => ({ id: item.id, label: item.label,
-    icon: item.tab === 'home' ? 'home' : item.tab === 'user' ? 'person' : 'history' }));
   const select = (id: string) => {
     if (!mounted.current || !focus.current || !shell.isCurrent()) return;
     const destination = destinations.find(item => item.id === id);
@@ -39,5 +40,6 @@ export function AdminBottomBar({ active }: { active: AdminDockTab | null }) {
       adminDockSelection(destination, active, context.currentPath() === homePath ? home : null, home) !== 'replaceRoot') return;
     adminRootNavigation.schedule(destination.routeName, context);
   };
-  return <RoleBottomBar active={destinations.find(item => item.tab === active)?.id ?? ''} items={items} onSelect={select} bottomInset={insets.bottom} />;
+  return <RoleBottomBar compact active={destinations.find(item => item.tab === active)?.id ?? ''}
+    items={adminAndroidDockItems(destinations, unread > 0)} onSelect={select} bottomInset={layout.dockBottomInset ?? insets.bottom} />;
 }

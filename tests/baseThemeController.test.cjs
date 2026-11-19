@@ -15,33 +15,31 @@ const storage = initial => {
     setItem: async (key, value) => { writes++; values.set(key, value); }, removeItem: async key => values.delete(key) };
 };
 
-// V2 defaults are retained; Auto is a user-requested V4 addition.
-test('theme preferences load with V2 defaults for unknown values', async () => {
+test('appearance defaults to the system and ignores previously saved palettes', async () => {
   const store = storage({ app_theme_mode: 'dark', app_theme_variant: 'moss' });
   const controller = new ThemeController(store); let notifications = 0;
   controller.addListener(() => notifications++);
   await controller.load();
-  assert.equal(controller.themeMode, 'dark'); assert.equal(controller.isDark, true);
-  assert.equal(controller.variant, 'moss'); assert.equal(notifications, 1);
+  assert.equal(controller.themeMode, 'dark'); assert.equal(notifications, 1);
+  assert.equal(controller.variant, undefined);
   store.values.set('app_theme_mode', 'unknown'); store.values.set('app_theme_variant', 'unknown');
   await controller.load();
-  assert.equal(controller.themeMode, 'light'); assert.equal(controller.variant, 'classic');
+  assert.equal(controller.themeMode, 'system');
 });
 
 test('theme changes notify before persistence and skip unchanged choices', async () => {
   const store = storage({}), controller = new ThemeController(store), changes = [];
-  const unsubscribe = controller.addListener(() => changes.push([controller.themeMode, controller.variant, store.writes]));
-  await controller.setThemeMode('dark'); await controller.setVariant('lavender');
-  await controller.setThemeMode('dark'); await controller.setVariant('lavender');
-  assert.deepEqual(changes, [['dark', 'classic', 0], ['dark', 'lavender', 1]]);
-  assert.equal(store.values.get('app_theme_mode'), 'dark'); assert.equal(store.values.get('app_theme_variant'), 'lavender');
-  assert.equal(store.writes, 2);
+  const unsubscribe = controller.addListener(() => changes.push([controller.themeMode, store.writes]));
+  await controller.setThemeMode('dark'); await controller.setThemeMode('dark');
+  await controller.setThemeMode('light');
+  assert.deepEqual(changes, [['dark', 0], ['light', 1]]);
+  assert.equal(store.values.get('app_theme_mode'), 'light'); assert.equal(store.writes, 2);
   unsubscribe(); await controller.setThemeMode('system');
-  assert.equal(controller.isDark, false); assert.equal(store.values.get('app_theme_mode'), 'system');
+  assert.equal(store.values.get('app_theme_mode'), 'system');
   assert.equal(changes.length, 2);
 });
 
-test('Auto survives a restart and preserves the selected palette', async () => {
+test('Auto survives a restart with an old palette preference on disk', async () => {
   const store = storage({ app_theme_mode: 'dark', app_theme_variant: 'moss' });
   const controller = new ThemeController(store);
   await controller.load();
@@ -49,7 +47,7 @@ test('Auto survives a restart and preserves the selected palette', async () => {
   const restored = new ThemeController(store);
   await restored.load();
   assert.equal(restored.themeMode, 'system');
-  assert.equal(restored.variant, 'moss');
+  assert.equal(restored.variant, undefined);
   assert.equal(store.values.get('app_theme_mode'), 'system');
   const writes = store.writes;
   await restored.setThemeMode('system');

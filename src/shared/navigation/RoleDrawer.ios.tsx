@@ -1,12 +1,14 @@
-import { Column, Host, ListItem, Text } from '@expo/ui';
+import { Column, ListItem, Text } from '@expo/ui';
 import { Button, ScrollView, Spacer } from '@expo/ui/swift-ui';
 import { background as swiftBackground, buttonBorderShape, buttonStyle, controlSize, disabled, font, frame, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useState, type ReactNode } from 'react';
-import { Platform, PlatformColor, StyleSheet, useColorScheme, useWindowDimensions, View } from 'react-native';
+import { Platform, PlatformColor, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Drawer, useDrawerProgress } from 'react-native-drawer-layout';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BaseHost } from '../../components/BaseHost.ios';
+import { useBaseTheme } from '../../components/useBaseTheme';
 import { selectRoleDrawerItem, type RoleDrawerProps } from './roleDrawerModel';
 import { RoleDrawerContext } from './roleDrawerContext';
 
@@ -25,9 +27,9 @@ function DrawerScreen({ children }: { children: ReactNode }) {
 
 export function RoleDrawer(props: RoleDrawerProps & { swipeEnabled?: boolean }) {
   const { visible, onOpen, onClose, title, items, active, footerAction, closeAccessibilityLabel, children, swipeEnabled = true } = props;
-  const dark = useColorScheme() === 'dark';
-  const background = PlatformColor('systemBackground');
-  const foreground = PlatformColor('label');
+  const { colors, mode } = useBaseTheme();
+  const background = colors.surface, foreground = colors.onSurface;
+  const fadeColor = mode === 'dark' ? '#000000' : '#FFFFFF';
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [headingHeight, setHeadingHeight] = useState(48);
@@ -39,7 +41,7 @@ export function RoleDrawer(props: RoleDrawerProps & { swipeEnabled?: boolean }) 
       overlayStyle={{ backgroundColor: 'transparent' }} overlayAccessibilityLabel={closeAccessibilityLabel}
       renderDrawerContent={() => <View style={[styles.drawer, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 12) }]}>
         <View style={styles.menuBody}>
-          <Host style={styles.items} ignoreSafeArea="all">
+          <BaseHost style={styles.items} ignoreSafeArea="all">
             <ScrollView><Column spacing={2} style={{ width: '100%', paddingTop: headingHeight }}>
               {items.map(item => <ListItem key={item.id} testID={`role-drawer-${item.id}`}
                 onPress={() => selectRoleDrawerItem(item, props)} supportingText={item.supportingText}
@@ -48,25 +50,25 @@ export function RoleDrawer(props: RoleDrawerProps & { swipeEnabled?: boolean }) 
                 <Text modifiers={item.id === active ? [font({ textStyle: 'body', weight: 'semibold' })] : undefined}>{item.label}</Text>
               </ListItem>)}
             </Column></ScrollView>
-          </Host>
+          </BaseHost>
           <View pointerEvents="none" style={styles.headingOverlay} onLayout={event => setHeadingHeight(event.nativeEvent.layout.height)}>
-            <Host pointerEvents="none" style={StyleSheet.absoluteFill} ignoreSafeArea="all">
+            <BaseHost pointerEvents="none" style={StyleSheet.absoluteFill} ignoreSafeArea="all">
               <Spacer modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity }), swiftBackground({
                 type: 'linearGradient',
-                colors: dark ? ['#000000F2', '#00000099', '#00000000'] : ['#FFFFFFF2', '#FFFFFF99', '#FFFFFF00'],
+                colors: [`${fadeColor}F2`, `${fadeColor}99`, `${fadeColor}00`],
                 startPoint: { x: 0.5, y: 0 }, endPoint: { x: 0.5, y: 1 },
               })]} />
-            </Host>
-            <View style={styles.heading}><Host matchContents={{ vertical: true }} style={styles.headingHost}>
+            </BaseHost>
+            <View style={styles.heading}><BaseHost matchContents={{ vertical: true }} style={styles.headingHost}>
               <Text modifiers={[font({ textStyle: 'title2', weight: 'semibold' })]}>{title}</Text>
-            </Host></View>
+            </BaseHost></View>
           </View>
         </View>
-        {footerAction && <View style={styles.footer}><Host matchContents>
+        {footerAction && <View style={styles.footer}><BaseHost matchContents>
           <Button label={footerAction.label} systemImage={footerSymbol} onPress={() => selectRoleDrawerItem(footerAction, props)}
             modifiers={[disabled(!!footerAction.disabled), buttonStyle(Number(Platform.Version) >= 26 ? 'glassProminent' : 'borderedProminent'),
               ...(footerAction.destructive ? [tint(PlatformColor('systemRed'))] : []), buttonBorderShape('capsule'), controlSize('large')]} />
-        </Host></View>}
+        </BaseHost></View>}
       </View>}>
       <DrawerScreen>{children}</DrawerScreen>
     </Drawer>

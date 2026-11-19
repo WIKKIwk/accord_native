@@ -67,7 +67,9 @@ for (const platform of ['android', 'ios']) test(`${platform} native route preser
   const model = { state, controller, t, locale: 'en', roots: [], displayGroups: [], current, focused: true };
   let cursor = 0, effects = []; const memos = [];
   const react = { useMemo: create => { const index = cursor++; return memos[index] ??= create(); }, useRef: value => ({ current: value }), useEffect: callback => effects.push(callback) };
-  const mocks = { react, 'react-native': { ...rn, FlatList: 'FlatList', RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', Pressable: 'Pressable', Modal: 'Modal', KeyboardAvoidingView: 'KeyboardAvoidingView',
+  const mocks = { '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {}, mode: 'light' }) },
+    './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' },
+    react, 'react-native': { ...rn, FlatList: 'FlatList', RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', Pressable: 'Pressable', Modal: 'Modal', KeyboardAvoidingView: 'KeyboardAvoidingView',
     PlatformColor: value => value, useWindowDimensions: () => ({ height: 800, width: 400 }) },
     '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifier,
     '@expo/ui/community/pager-view': { __esModule: true, default: 'Pager' },
@@ -156,7 +158,9 @@ test('actual hook dispatches each source success once per captured owner, preser
 });
 for (const platform of ['android', 'ios']) test(`${platform} native route uses the genuine global success host and retains the legacy fallback`, () => {
   const f = noticeFixture(); let model = f.render(); const topNotice = { type: 'OriginalTopNotice', props: {} }, snackbars = [];
-  const mocks = { react: { useMemo: create => create(), useRef: () => ({ current: { setPage() {}, showSnackbar: message => snackbars.push(message) } }), useEffect: callback => callback() },
+  const mocks = { '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {}, mode: 'light' }) },
+    './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' },
+    react: { useMemo: create => create(), useRef: () => ({ current: { setPage() {}, showSnackbar: message => snackbars.push(message) } }), useEffect: callback => callback() },
     'react-native': { ...rn, RefreshControl: 'RefreshControl', ScrollView: 'ScrollView', PlatformColor: value => value, useWindowDimensions: () => ({ height: 800, width: 400 }) },
     '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifier, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifier,
     '@expo/ui/community/pager-view': { __esModule: true, default: 'Pager' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },

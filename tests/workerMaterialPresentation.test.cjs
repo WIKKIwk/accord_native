@@ -95,23 +95,19 @@ function text(tree) {
 }
 
 for (const mode of ['light', 'dark']) test(`android: ${mode} order material headers and expanded lists use system colors`, () => {
-  const configured = Object.fromEntries(Object.keys(colors).map(name => [name, `configured-${name}`]));
   const system = Object.fromEntries(Object.keys(colors).map(name => [name, `system-${mode}-${name}`]));
-  const Header = nativeComponent('WorkerExpansion', 'android', configured, system);
+  const Header = nativeComponent('WorkerExpansion', 'android', system, system);
   let presses = 0;
-  const header = Header({ title: 'Hali qabul qilinmagan homashyolar', count: '2 ta', expanded: true, onPress: () => presses++, systemColors: true });
-  assert.equal(header.props.dynamicColors, true);
+  const header = Header({ title: 'Hali qabul qilinmagan homashyolar', count: '2 ta', expanded: true, onPress: () => presses++ });
   assert.deepEqual(nodes(header, 'Text').map(node => node.props.color), [system.onSurface, system.onSurfaceVariant]);
   assert.equal(nodes(header, 'Icon')[0].props.tint, system.onSurfaceVariant);
   nodes(header, 'TextButton')[0].props.onClick(); assert.equal(presses, 1);
   const otherHeader = Header({ title: 'Qoliplar', count: '1 ta', expanded: false, onPress() {} });
-  assert.equal(otherHeader.props.dynamicColors, false);
-  assert.deepEqual(nodes(otherHeader, 'Text').map(node => node.props.color), [configured.onSurface, configured.onSurfaceVariant]);
+  assert.deepEqual(nodes(otherHeader, 'Text').map(node => node.props.color), [system.onSurface, system.onSurfaceVariant]);
 
-  const List = nativeComponent('WorkerMaterialList', 'android', configured, system), opened = [];
+  const List = nativeComponent('WorkerMaterialList', 'android', system, system), opened = [];
   const pending = { ...row, barcode: 'R2', stock_status: 'ready', received_qty: 0 };
   const list = List({ rows: [row, pending], scanned: [], orderId: '0337', onLongPress: material => opened.push(material) });
-  assert.equal(list.props.dynamicColors, true);
   const backgroundOf = node => node.props.modifiers.find(mod => mod.kind === 'background').args[0];
   const balance = nodes(list, 'Column').find(node => node.props.modifiers?.some(mod => mod.kind === 'background'));
   assert.equal(backgroundOf(balance), system.secondaryContainer);

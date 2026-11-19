@@ -76,6 +76,7 @@ for (const platform of ['android', 'ios']) test(`${platform} worker FAB exposes 
 test('shared navigation fills only the selected Google icon and keeps all destinations clickable', () => {
   const calls = [], item = Object.assign(function NavigationItem() {}, { Icon: 'ItemIcon', Label: 'ItemLabel' });
   const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+    '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui/jetpack-compose': { Host: 'Host', Icon: 'Icon', NavigationBar: 'NavigationBar', NavigationBarItem: item,
       RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => ({ onSecondaryContainer: 'selected', onSurfaceVariant: 'outline' }) },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}), testID: value => value },
@@ -103,6 +104,7 @@ test('shared navigation fills only the selected Google icon and keeps all destin
 
 test('navigation can stay mounted in place behind the keyboard without changing the default', () => {
   const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+    '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
     react: { useEffect() {}, useRef: value => ({ current: value }) },
@@ -122,7 +124,8 @@ test('the dock behind the keyboard ignores Compose height inflated by the IME', 
     const refs = [], shared = [], effects = [], listeners = {};
     let refIndex = 0, sharedIndex = 0, keyboard = startOpen ? { height: 286.9 } : undefined;
     const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
-      '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
+      '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
+    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
       '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
       react: { useEffect: fn => effects.push(fn), useRef: value => refs[refIndex++] ??= { current: value } },
       'react-native': { View: 'View', Keyboard: { metrics: () => keyboard, addListener: (name, fn) => {

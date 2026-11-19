@@ -105,7 +105,7 @@ function nativeFixture(platform = 'android', options = {}) {
     './useAdminShellLayout': { useAdminShellLayout() { throw Error('No legacy Activity layout'); } } });
   const sourceContext = compile('AdminSourceSceneScaffoldContext.tsx', { './AdminRootRouterContext': rootContext, './AdminTopNoticeProvider': noticeProvider, './AdminSourceSceneScaffoldOwner': scene });
   const shellContext = compile('AdminShellSourceWindowLayoutContext.tsx'), inline = compile('AdminShellInlineSafeArea.tsx', { './AdminShellSourceWindowLayoutContext': shellContext });
-  const shellHook = compile('useAdminShellLayout.ts', { './AdminShellSourceWindowLayoutContext': shellContext, './adminShellLayoutPolicy': shellPolicy,
+  const shellHook = compile('useAdminShellLayout.ts', { expo: { isRunningInExpoGo: () => false }, './AdminShellSourceWindowLayoutContext': shellContext, './adminShellLayoutPolicy': shellPolicy,
     './adminShellLayoutRuntime': { AdminShellLayoutController: class { constructor() { throw Error('No Activity controller'); } } }, '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': { subscribeAdminSystemInsets() { throw Error('No Activity metrics'); } } });
   const frame = compile('AdminShellBodyFrame.tsx', { './useAdminShellLayout': shellHook, './adminShellLayoutPolicy': shellPolicy });
   const bodyLayout = source.load('admin/adminItemCreateNativeLayout', { './adminSupplierScaffoldLayout': source.load('admin/adminSupplierScaffoldLayout') });

@@ -106,7 +106,7 @@ for (const platform of ['android', 'ios']) test(`${platform} native profile repr
   const calls = [], model = { state: { valid: true, phase: 'content' }, current: () => true, title: 'Source title', retryLabel: 'Source reload', cards: presentation.adminWorkerProfileCards(data(), [], 'uz'), back: () => calls.push('back'), reload: async () => { calls.push('reload'); } };
   const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) }), ui = new Proxy({ Shape: { RoundedCorner: value => value }, TopAppBar: Object.assign('TopAppBar', {}), List: 'List' }, { get: (target, name) => target[name] ?? String(name) });
   ui.TopAppBar = Object.assign(({ children }) => children, { NavigationIcon: 'NavigationIcon', Title: 'Title', Actions: 'Actions' });
-  const module = compile(path.resolve(__dirname, `../src/admin/AdminWorkerProfileScreen.${platform}.tsx`), {
+  const module = compile(path.resolve(__dirname, `../src/admin/AdminWorkerProfileScreen.${platform}.tsx`), { './AdminTopBar.android': require('./support/adminChrome.cjs'),
     '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'react-native': { View: 'View', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24 }) }, [`../components/BaseHost.${platform}`]: { BaseHost: 'BaseHost' },

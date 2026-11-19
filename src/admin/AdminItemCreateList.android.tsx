@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
-import { themeController } from '../shared/themeRuntime';
 import type { SupplierItem } from '../shared/catalogApi';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminText as Text } from './AdminTypography.android';
@@ -40,7 +39,7 @@ function ItemRow({ model, item, index }: { model: AdminItemCreateScreenModel; it
   const canSelect = model.owner.canSelect && !list.moving, canOpen = selectionMode && model.owner.canSelect || model.owner.needsItemDetail;
   const radius = Shape.RoundedCorner({ cornerRadii: { topStart: index === 0 ? 18 : 6, topEnd: index === 0 ? 18 : 6,
     bottomStart: index > 0 && index === list.items.length - 1 ? 18 : 6, bottomEnd: index > 0 && index === list.items.length - 1 ? 18 : 6 } });
-  return <BaseHost style={styles.row}><Surface color={selected ? colors.secondaryContainer : colors.surfaceContainerLowest} shape={radius} shadowElevation={themeController.variant === 'white' ? 1 : 0}
+  return <BaseHost style={styles.row}><Surface color={selected ? colors.secondaryContainer : colors.surfaceContainerLowest} shape={radius}
     modifiers={[fillMaxWidth(), height(61), testID(`admin-item-row-${index}`), ...(canOpen || canSelect ? [combinedClickable({ onClick: canOpen ? () => model.openItem(item) : undefined, onLongClick: canSelect ? () => model.toggleItem(item) : undefined })] : [])]}>
     <Row verticalAlignment="center" modifiers={[fillMaxSize(), padding(14, 8, 10, 8)]}>
       <Surface onClick={canSelect ? () => model.toggleItem(item) : undefined} selected={selected} color={selected ? colors.primary : colors.secondaryContainer} shape={itemCreateRounded(8)} modifiers={[size(30, 30), semantics({ contentDescription: row.title }), testID(`admin-item-select-${item.code}`)]}>

@@ -1,12 +1,14 @@
+import { useBaseTheme } from '../components/useBaseTheme';
 import { BasicAlertDialog, Button, Card, CircularProgressIndicator, Column, IconButton, RNHostView, LinearProgressIndicator, Row, Shape, SnackbarHost, Spacer, Surface, Switch,
-  Text, TextButton, useMaterialColors, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+  Text, TextButton, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height as nativeHeight, padding, semantics, size, testID, toggleable, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost as Host } from '../components/BaseHost.android';
-import { RoleHeader } from '../shared/navigation/RoleHeader.android';
+import { AdminScreenHeader } from './AdminTopBar.android';
+import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { localeController } from '../shared/localization/runtime';
 import { additionalSettingsCards, additionalSettingsNotice, additionalSettingsText, changeAdditionalSetting } from './additionalSettingsViewModel';
 import type { AdditionalSettingsScreenProps } from './additionalSettingsTypes';
@@ -19,9 +21,9 @@ const withAlpha = (rgba: string, alpha: number) => `${rgba.slice(0, 7)}${Math.ro
 
 // The shared shell supplies the existing role drawer and appropriate dock; this screen does not invent navigation.
 // @v2 AdminAdditionalSettingsScreen
-export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice }: AdditionalSettingsScreenProps) {
+export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice, profileAction }: AdditionalSettingsScreenProps) {
   const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), colors = useMaterialColors();
+  const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), colors = useBaseTheme().colors;
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), snackbar = useRef<SnackbarHostRef>(null);
   useEffect(() => {
     if (state.notice) void snackbar.current?.showSnackbar({ message: additionalSettingsNotice(state.notice, locale), duration: 'short' });
@@ -30,15 +32,14 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
     if (id === 'appUpdate' || id === 'lamination' || id === 'qolip') controller.retryCard(id);
   };
   const refreshingDisabled = state.screen === 'content' && state.paddon.busy;
-  return <View style={[styles.screen, { backgroundColor: colors.surface }]}>
-    <View style={[styles.header, { paddingTop: insets.top }]}>
-      <View style={styles.headerTitle}><RoleHeader title={t.title} navigation={navigation ?? undefined} /></View>
-      <Host matchContents><IconButton enabled={!refreshingDisabled} modifiers={[size(48, 48), semantics({ contentDescription: t.retry }), testID('additional-settings-refresh')]}
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+    <AdminScreenHeader title={t.title} navigation={navigation} profileAction={profileAction}
+      actions={<IconButton enabled={!refreshingDisabled} modifiers={[size(48, 48), semantics({ contentDescription: t.retry }), testID('additional-settings-refresh')]}
         onClick={() => { if (current()) void controller.refresh(); }}><RNHostView matchContents>
         <SymbolView name={{ android: 'refresh' }} size={24} tintColor={colors.onSurface} />
-      </RNHostView></IconButton></Host>
-    </View>
+      </RNHostView></IconButton>} />
     {topNotice}
+    <AdminShellBodyFrame hasFooter={footer != null} testID="admin-additional-settings-body-frame">
     <Host style={styles.content}>
       <Column modifiers={[fillMaxWidth(), verticalScroll(), padding(12, 12, 12, 144)]}>
         {state.screen === 'loading' ? <CircularProgressIndicator /> : null}
@@ -59,7 +60,8 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
         {state.screen === 'content' && state.paddon.busy ? <LinearProgressIndicator modifiers={[fillMaxWidth()]} /> : null}
       </Column>
     </Host>
-    {footer ?? <View style={{ height: insets.bottom }} />}
+    </AdminShellBodyFrame>
+    <View pointerEvents="box-none" style={styles.footer}>{footer}</View>
     <View pointerEvents="none" style={[styles.snackbar, { bottom: insets.bottom + 16 }]}><Host matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></Host></View>
     {state.confirmFreeMovement ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, width, height }}>
       <Host style={{ width, height }}><BasicAlertDialog properties={{ usePlatformDefaultWidth: false }}
@@ -89,6 +91,6 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
     </View> : null}
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { flex: 1 },
+const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   snackbar: { position: 'absolute', left: 16, right: 16, bottom: 16 } });

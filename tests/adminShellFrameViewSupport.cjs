@@ -23,7 +23,7 @@ function frameModule(colors = { surfaceContainerLow: '#dddddd' }, facts = () => 
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, './adminShellLayoutPolicy': policy,
     './useAdminShellLayout': { useAdminShellLayout: hasFooter => {
-      const state = facts(); return { ...policy.adminShellFrameLayout(state.metrics, hasFooter, state.thinGestureBottom), metricsReady: state.metrics !== null, sourceWindow: state.sourceWindow, safeInsets: state.safeInsets };
+      const state = facts(); return { ...policy.adminShellFrameLayout(state.metrics, hasFooter, state.thinGestureBottom), metricsReady: state.metricsReady ?? state.metrics !== null, sourceWindow: state.sourceWindow, safeInsets: state.safeInsets };
     } },
   });
 }

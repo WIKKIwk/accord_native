@@ -23,7 +23,7 @@ function nodes(node, predicate) {
 
 function setup(role, mode = 'light', settingsOpen = false) {
   const system = { surfaceContainerLow: `device-${mode}-surface`, onSurfaceVariant: `device-${mode}-muted` };
-  const appTheme = { mode, seed: '#ff0000', colors: { surfaceContainerLow: 'app-surface', onSurfaceVariant: 'app-muted' }, direction: 'leftToRight' };
+  const appTheme = { mode, direction: 'leftToRight' };
   const effects = [], materialOptions = [], editorOpened = [], settingsOpened = [], settingsUpdated = [];
   const editorSheet = { isOpen: () => false, open: content => editorOpened.push(content), close() {}, update() {} };
   const settingsSheet = { isOpen: () => settingsOpen, open: content => settingsOpened.push(content),
@@ -32,7 +32,7 @@ function setup(role, mode = 'light', settingsOpen = false) {
   const react = { useCallback: fn => fn, useLayoutEffect: fn => effects.push(fn), useRef: value => ({ current: value }),
     useState: value => [typeof value === 'function' ? value() : value, () => {}], useSyncExternalStore: (_subscribe, get) => get() };
   const { BaseHost } = load('BaseHost.android.tsx', {
-    '@expo/ui/jetpack-compose': { Host: 'NativeHost' }, './useBaseTheme': { useBaseTheme: () => appTheme },
+    '@expo/ui/jetpack-compose': { Host: 'NativeHost' }, './useBaseThemeConfig': { useBaseThemeConfig: () => appTheme },
   });
   const FieldGroup = Object.assign(() => {}, { Section: 'Section' });
   const { ProfileView } = load('ProfileView.android.tsx', {
@@ -56,10 +56,9 @@ function setup(role, mode = 'light', settingsOpen = false) {
   };
   const verifySystemHost = element => {
     assert.equal(element.type, BaseHost);
-    assert.equal(element.props.dynamicColors, true);
     const native = BaseHost(element.props);
     assert.equal(native.type, 'NativeHost');
-    assert.equal(native.props.colorScheme, undefined);
+    assert.equal(native.props.colorScheme, mode);
     assert.equal(native.props.seedColor, undefined);
     assert.equal(native.props.colorOverrides, undefined);
     assert.equal(native.props.layoutDirection, 'leftToRight');

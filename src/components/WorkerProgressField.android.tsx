@@ -7,7 +7,7 @@ type Props = { label: string; onChangeText: (value: string) => void; keyboardTyp
 export function WorkerProgressField({ label, onChangeText, keyboardType, initialValue = '', multiline = false }: Props) {
   const value = useNativeState(initialValue);
   const colors = useMaterialColors({});
-  return <BaseHost dynamicColors matchContents={{ vertical: true }} style={{ width: '100%' }}>
+  return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}>
     <OutlinedTextField value={value} onValueChange={onChangeText} singleLine={!multiline}
       keyboardOptions={{ keyboardType: keyboardType === 'decimal-pad' ? 'decimal' : 'text', autoCorrectEnabled: false }}
       shape={Shape.RoundedCorner({ cornerRadii: { topStart: 12, topEnd: 12, bottomStart: 12, bottomEnd: 12 } })}

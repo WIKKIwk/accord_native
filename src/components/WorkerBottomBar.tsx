@@ -14,7 +14,7 @@ export function WorkerBottomBar({ active, onSelect }: Props) {
     {destinations.map(item => {
       const selected = active === item.id;
       const color = selected ? '#285140' : '#63726b';
-      return <Host key={item.id} colorScheme="light" seedColor="#285140" style={styles.item}>
+      return <Host key={item.id} style={styles.item}>
         <Button variant="text" style={{ width: '100%', height: 64 }} onPress={() => onSelect(item.id)}>
           <Column alignment="center" spacing={3}>
             <RNHostView matchContents><SymbolView name={item.symbol} size={24} tintColor={color} /></RNHostView>

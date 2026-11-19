@@ -45,7 +45,7 @@ export function WorkerDrawer({ visible, onClose, onSelect, displayName, canTrans
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Menyuni yopish" />
         <Animated.View style={[styles.drawer, { paddingTop: inset.top + 12, paddingBottom: Math.max(inset.bottom, 14), transform: [{ translateX: slide }] }]}>
           <Text style={styles.title}>Bo‘limlar</Text>
-          <Host colorScheme="light" seedColor="#466251" matchContents={{ vertical: true }} style={styles.items}>
+          <Host matchContents={{ vertical: true }} style={styles.items}>
             <Column spacing={2}>
               {destinations.filter(item => item.id !== 'transfer' || canTransfer).map(item => (
                 <ListItem
@@ -59,7 +59,7 @@ export function WorkerDrawer({ visible, onClose, onSelect, displayName, canTrans
             </Column>
           </Host>
           <View style={styles.spacer} />
-          <Host colorScheme="light" seedColor="#466251" matchContents={{ vertical: true }} style={styles.logout}>
+          <Host matchContents={{ vertical: true }} style={styles.logout}>
             <Button label="Chiqish" variant="filled" onPress={() => select('logout')} />
           </Host>
         </Animated.View>

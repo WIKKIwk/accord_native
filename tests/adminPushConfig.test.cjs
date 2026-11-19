@@ -228,7 +228,7 @@ function viewFixture(platform, { busy = false, configured = true, allowed = true
     backLabel: 'Back', t: key => key, errorKey: model.adminPushConfigErrorKey, changeJson: value => calls.push(['json', value]),
     back: () => calls.push('back'), pick: () => calls.push('pick'), save: () => calls.push('save'), check: () => calls.push('check'), test: () => calls.push('test'),
     reload: () => calls.push('reload'), applyDevice: () => calls.push('apply'), pickMobile: platform => calls.push(['mobile', platform]) };
-  const View = loader({ react: { useEffect() {}, useRef: current => ({ current }) }, 'react/jsx-runtime': jsx,
+  const View = loader({ './AdminTopBar.android': require('./support/adminChrome.cjs'), react: { useEffect() {}, useRef: current => ({ current }) }, 'react/jsx-runtime': jsx,
     'react-native': { View: 'View', Text: 'NativeText', StyleSheet: { create: value => value } }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/ui/jetpack-compose': controls, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': controls, '@expo/ui/swift-ui/modifiers': modifiers,
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },

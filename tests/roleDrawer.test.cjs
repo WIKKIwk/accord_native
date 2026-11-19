@@ -99,6 +99,8 @@ function nativeDrawerHarness(platform, visible = true) {
     'react-native-reanimated': { default: { View: 'AnimatedView' }, useAnimatedStyle: () => ({}) },
     'react-native-gesture-handler': { GestureHandlerRootView: 'GestureRoot' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 20, bottom: 12 }) },
+    '../../components/BaseHost.android': { BaseHost: 'Host' }, '../../components/BaseHost.ios': { BaseHost: 'Host' },
+    '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surface: { semantic: ['systemBackground'] } } }) },
     './roleDrawerContext': { RoleDrawerContext: { Provider: 'DrawerContext' } },
   });
   return { render: overrides => api.RoleDrawer({ ...props, ...overrides }), calls, effects, removals };

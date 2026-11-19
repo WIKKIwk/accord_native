@@ -2,9 +2,11 @@ import { Redirect, usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useCallback, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { isSessionWitnessCurrent, logout, sessionWitnessVersion, subscribeSessionWitness } from '../auth';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { appRoutes } from '../shared/appRoutes';
+import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminDrawer } from './AdminDrawer';
@@ -14,18 +16,27 @@ import { adminShellMayEnter } from './adminShellAccess';
 import { useAdminShellSession } from './useAdminShellSession';
 import { AdminOwnedNavigationProvider } from './AdminOwnedNavigationContext';
 import { AdminShellNoticeProvider } from './AdminShellNoticeProvider';
+import { adminDockChatDestination } from './adminDockModel';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 function AdminTabs() {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
+  const { colors } = useBaseTheme();
+  const unread = useChatUnreadCount(shell.session);
   const pathname = usePathname(), ownedDock = pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/');
   const showActivity = !!shell.activityBinding && !!shell.destination(appRoutes.adminActivity, 'ios');
-  return <NativeTabs hidden={ownedDock}>
+  const showChat = !!shell.destination(appRoutes.chat, 'ios');
+  return <NativeTabs hidden={ownedDock} backgroundColor={colors.surfaceContainerHigh}
+    tintColor={colors.primary} iconColor={{ default: colors.onSurfaceVariant, selected: colors.primary }}
+    labelStyle={{ default: { color: colors.onSurfaceVariant }, selected: { color: colors.primary } }} disableTransparentOnScrollEdge>
     <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
       <NativeTabs.Trigger.Label>{localizedGetter('adminHomeNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="activity" hidden={!showActivity}><NativeTabs.Trigger.Icon sf={{ default: 'clock.arrow.circlepath', selected: 'clock.arrow.circlepath' }} />
       <NativeTabs.Trigger.Label>{localizedGetter('adminActivityNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
+    <NativeTabs.Trigger name="chat" hidden={!showChat}><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
+      <NativeTabs.Trigger.Label>{adminDockChatDestination.label}</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger.Badge hidden={unread <= 0}>{''}</NativeTabs.Trigger.Badge></NativeTabs.Trigger>
   </NativeTabs>;
 }
 function AdminSessionGate() {

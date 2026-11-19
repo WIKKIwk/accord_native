@@ -24,7 +24,7 @@ export function OrdersWorkspace({ tabs: tabsInput, selected, onSelect, loading, 
     <View style={styles.tabBar}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
         {tabs.map(tab => <View key={tab.id} style={[styles.tab, selected === tab.id && styles.selected]}>
-          <Host matchContents colorScheme="light" seedColor="#294e3e">
+          <Host matchContents>
             <Button variant="text" onPress={() => onSelect(tab.id)} testID={`worker-tab-${tab.id}`}>
               <Text textStyle={{ fontFamily, fontSize: 14, fontWeight: fontFamily ? undefined : selected === tab.id ? '700' : '500', color: selected === tab.id ? '#294e3e' : '#525f58' }}>{tab.name}</Text>
             </Button>

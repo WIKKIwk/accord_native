@@ -12,6 +12,7 @@ import { adminActivityBackLabel } from './adminActivityBackLabel';
 import type { AdminActivityBinding } from './adminActivityBinding';
 import { AdminActivityController } from './adminActivityController';
 import { useAdminShell } from './AdminShellContext';
+import { AdminShellProfileAction } from './AdminShellProfileAction';
 
 type Shell = ReturnType<typeof useAdminShell>;
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
@@ -53,10 +54,11 @@ function BoundActivity({ shell, binding, footer }: { shell: Shell; binding: Admi
     ], { cancelable: true, onDismiss: () => { void controller.resolveClear(serial, false); } });
   };
   const navigation = { icon: 'back' as const, label: adminActivityBackLabel(locale), onPress: goBack };
+  const profileAction = <AdminShellProfileAction />;
   if (state.invalidated) return <View style={{ flex: 1 }} />;
   if (state.hiddenState !== 'ready') return <AdminActivityPending status={state.hiddenState} onRetry={() => { void controller.reload(); }}
-    navigation={navigation} footer={footer} />;
-  return <AdminActivityScreen snapshot={state.activity} hiddenIds={state.hiddenIds} navigation={navigation} footer={footer}
+    navigation={navigation} footer={footer} profileAction={profileAction} />;
+  return <AdminActivityScreen snapshot={state.activity} hiddenIds={state.hiddenIds} navigation={navigation} footer={footer} profileAction={profileAction}
     onRefresh={() => controller.reload()} onRequestClear={requestClear} />;
 }
 /** No fallback storage: direct entry is denied until the real safe binding is supplied. */

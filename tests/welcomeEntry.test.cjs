@@ -77,7 +77,7 @@ function transitionHarness() {
     reduce: value => reduceMotionChanged(value), unmount: () => react.unmount(), removed: () => removed };
 }
 const copy = language => ({ headline: `${language}:welcome`, languageLabel: `${language}:language`, languageValue: `${language}:unselected`,
-  themeLabel: `${language}:theme`, themeValue: `${language}:classic`, startLabel: `${language}:start` });
+  startLabel: `${language}:start` });
 
 test('welcome replaces every translated label only after the old text has faded out', () => {
   const h = transitionHarness(), uz = copy('uz'), en = copy('en');
@@ -122,11 +122,10 @@ test('reduced motion switches text immediately and stops an animation already in
   assert.equal(h.started.length, 1); h.unmount();
 });
 
-test('welcome cycles all labels, opens the original sheets and pins an explicit language', async t => {
+test('welcome cycles all labels, opens language selection and pins an explicit language', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const react = hooks();
   const locale = { locale: 'uz', hasExplicitSelection: false, setLocale: async value => { locale.locale = value; locale.hasExplicitSelection = true; } };
-  const theme = { variant: 'classic', setVariant: async value => { theme.variant = value; } };
   const ui = { BottomSheet: 'BottomSheet', RNHostView: 'RNHostView', Button: 'Button', FieldGroup: Object.assign(() => {}, { Section: 'Section' }),
     ListItem: 'ListItem', Text: 'Text', TextInput: 'TextInput', useNativeState: value => ({ value, set() {} }) };
   const { AppEntry } = load('components/AppEntry.tsx', {
@@ -137,7 +136,7 @@ test('welcome cycles all labels, opens the original sheets and pins an explicit 
     '../savedAccountRuntime': { initializeSavedAccounts: async () => ({ accountsForEndpoint: () => [], activeAccountId: null }) },
     '../shared/localization': { localizedGetter: (key, lang) => `${lang}:${key}` },
     '../shared/localization/runtime': { localeController: locale }, '../shared/switchPinRuntime': { switchPinStore: {} },
-    '../shared/themeRuntime': { themeController: theme }, '../shared/accountEntryLogic': {}, './BaseHost': { BaseHost: 'Host' },
+    '../shared/accountEntryLogic': {}, './BaseHost': { BaseHost: 'Host' },
     './WelcomeScreen': { WelcomeScreen: 'WelcomeScreen' }, './useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
   });
   const render = () => react.render(() => AppEntry({ onLogin() {} }));
@@ -164,11 +163,6 @@ test('welcome cycles all labels, opens the original sheets and pins an explicit 
   assert.equal(welcome().props.languageValue, 'en:english');
   t.mock.timers.tick(30000);
   assert.equal(welcome().props.headline, 'en:welcomeToAccord');
-  welcome().props.onTheme(); tree = render();
-  const themeSheet = nodes(tree, node => node.type === 'BottomSheet')[0];
-  assert.equal(themeSheet.props.children.type, 'RNHostView');
-  assert.equal(nodes(themeSheet, node => node.type === 'Button').length, 8);
-  nodes(tree, node => node.type === 'Button' && node.props.label.startsWith('en:themeMossLabel'))[0].props.onPress();
-  assert.equal(theme.variant, 'moss'); assert.equal(welcome().props.themeValue, 'en:themeMossLabel');
+  assert.equal(welcome().props.onTheme, undefined);
   react.unmount();
 });

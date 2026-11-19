@@ -1,5 +1,6 @@
-import { Button, CircularProgressIndicator, Column, IconButton, ListItem, RNHostView, Row, Shape, SnackbarHost, Spacer, TextButton, TopAppBar,
+import { Button, CircularProgressIndicator, Column, IconButton, ListItem, RNHostView, Row, Shape, SnackbarHost, Spacer, TextButton,
   useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { combinedClickable, defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -62,11 +63,9 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
     label={a(`settings.${adminSettingsFieldLabels[name]}`)} change={value => model.change(name, value)} />;
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-settings-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
-      <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-        <TopAppBar.NavigationIcon>{model.navigation ? <IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-settings-back')]}><RNHostView matchContents><SymbolView name={{ android: model.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton> : null}</TopAppBar.NavigationIcon>
-        <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{t('adminSettingsTitle')}</Text></TopAppBar.Title>
-        <TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null}</TopAppBar.Actions>
-      </TopAppBar><Spacer modifiers={[height(3)]} />
+      <AdminTopBar leading={model.navigation ? <IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-settings-back')]}><RNHostView matchContents><SymbolView name={{ android: model.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton> : null}
+        title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{t('adminSettingsTitle')}</Text>}
+        actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} />
     </Column></BaseHost></SafeAreaView>
     {props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}>
       {state.phase === 'error' ? <View style={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(width * .88, 280), 360), maxWidth: '100%' }}>

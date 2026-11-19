@@ -80,7 +80,7 @@ for (const platform of ['ios', 'android']) test(`${platform} hidden-state pendin
   const swift = new Proxy({}, { get: (_target, key) => String(key) });
   const mocks = { react: { useSyncExternalStore: (_subscribe, get) => get() }, '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers,
-    '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Text: 'ComposeText', TextButton: 'TextButton', useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurfaceVariant: 'text', primary: 'primary' }) },
+    './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerLow: 'bg', onSurfaceVariant: 'text', primary: 'primary' } }) }, '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Text: 'ComposeText', TextButton: 'TextButton', useMaterialColors: () => ({ surfaceContainerLow: 'bg', onSurfaceVariant: 'text', primary: 'primary' }) },
     'react-native': { View: 'View', Text: 'NativeText', ActivityIndicator: 'ActivityIndicator', useWindowDimensions: () => ({ width: 390 }), PlatformColor: value => value, StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 12 }) }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },

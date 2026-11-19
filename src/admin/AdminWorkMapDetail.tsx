@@ -1,8 +1,9 @@
-import { Button, Column, Host, ListItem } from '@expo/ui';
+import { Button, Column, ListItem } from '@expo/ui';
 import { useSyncExternalStore } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Session } from '../auth';
-import { useWorkerColors } from '../components/useWorkerColors';
+import { BaseHost } from '../components/BaseHost';
+import { useBaseTheme } from '../components/useBaseTheme';
 import { WorkerIconButton } from '../components/WorkerIconButton';
 import { adminText, extensionText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
@@ -24,7 +25,7 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const localeNow = () => localeController.locale;
 export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket, close }: { session: Session; isCurrent: () => boolean;
   controller: AdminWorkMapController; row: AdminWorkMapRow; ticket: AdminWorkMapDetailTicket; close: () => void }) {
-  const colors = useWorkerColors(), locale = useSyncExternalStore(subscribeLocale, localeNow, localeNow);
+  const colors = useBaseTheme().colors, locale = useSyncExternalStore(subscribeLocale, localeNow, localeNow);
   const detail = useAdminWorkMapDetail(session, isCurrent, controller, ticket, close);
   const showSummary = ticket.kind === 'order' && (session.profile.role === 'admin' || session.profile.role === 'brigader');
   const summary = useAdminWorkMapSummary(session, isCurrent, controller, ticket, showSummary && detail.valid && detail.value?.kind === 'order' ? detail.value : false);
@@ -42,19 +43,19 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
     ? adminWorkMapComboPresentation(value.map.combo, value.map.products, locale) : null;
   const metadata = adminWorkMapMetadataRows(value?.kind === 'order' ? value.metadata : null, session.profile.role, ticket.kind,
     { admin: key => adminText(key, locale), loading: localizedGetter('loading', locale) });
-  return <View style={[styles.screen, { backgroundColor: colors.field }]}><ScrollView contentContainerStyle={[styles.content, ticket.kind === 'order' && styles.openedContent]}>
-    {header ? <View><Text style={{ color: colors.text }}>{productionText('worker.order.code', locale)}</Text>
-      <Text style={[styles.title, { color: colors.text }]}>{header.code}</Text>
-      <Text style={[styles.title, { color: colors.text }]}>{header.label}</Text></View>
-      : <Text style={[styles.title, styles.pendingTitle, { color: colors.text }]}>{pending?.title ?? [row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
+  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHighest }]}><ScrollView contentContainerStyle={[styles.content, ticket.kind === 'order' && styles.openedContent]}>
+    {header ? <View><Text style={{ color: colors.onSurface }}>{productionText('worker.order.code', locale)}</Text>
+      <Text style={[styles.title, { color: colors.onSurface }]}>{header.code}</Text>
+      <Text style={[styles.title, { color: colors.onSurface }]}>{header.label}</Text></View>
+      : <Text style={[styles.title, styles.pendingTitle, { color: colors.onSurface }]}>{pending?.title ?? [row.code || row.id, title || row.title].filter(Boolean).join(' • ')}</Text>}
     {value?.kind === 'order' && (value.orderControl === 'frozen' || value.orderControl === 'freeze_requested') &&
       <AdminWorkMapControlNotice text={productionText(value.orderControl === 'frozen' ? 'worker.freeze.active' : 'worker.freeze.requested', locale)} />}
-    {showSummary && value?.kind === 'order' && value.qolipInRework && <View testID="admin-qolip-rework-notice" style={[styles.notice, { backgroundColor: colors.field }]}>
-      <Text style={[styles.noticeText, { color: colors.muted }]}>{extensionText('qolipReworkText', 'order_unavailable', locale)}</Text></View>}
+    {showSummary && value?.kind === 'order' && value.qolipInRework && <View testID="admin-qolip-rework-notice" style={[styles.notice, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <Text style={[styles.noticeText, { color: colors.onSurfaceVariant }]}>{extensionText('qolipReworkText', 'order_unavailable', locale)}</Text></View>}
     {detail.loading && <ActivityIndicator />}
-    {detail.error && <><Text accessibilityRole="alert" style={{ color: colors.text }}>{detail.error}</Text>
-      <Host matchContents={{ vertical: true }}><Button label={localizedGetter('retry', locale)} onPress={detail.retry} /></Host></>}
-    {(metadata.length > 0 || data) && <Host matchContents={{ vertical: true }}><Column>
+    {detail.error && <><Text accessibilityRole="alert" style={{ color: colors.onSurface }}>{detail.error}</Text>
+      <BaseHost matchContents={{ vertical: true }}><Button label={localizedGetter('retry', locale)} onPress={detail.retry} /></BaseHost></>}
+    {(metadata.length > 0 || data) && <BaseHost matchContents={{ vertical: true }}><Column>
       {!header && !pending && !!customer && <ListItem supportingText={customer}>{localizedGetter('customerLabel', locale)}</ListItem>}
       {metadata.length > 0 && <AdminWorkMapMetadata rows={metadata} />}
       {combo && <AdminWorkMapCombo key={value?.kind === 'order' ? value.map.id : undefined} model={combo} />}
@@ -64,7 +65,7 @@ export function AdminWorkMapDetail({ session, isCurrent, controller, row, ticket
         {typeof length === 'number' && Number.isFinite(length) && <ListItem supportingText={`${length} m`}>{productionText('worker.summary.length', locale)}</ListItem>}
         {typeof width === 'number' && Number.isFinite(width) && <ListItem supportingText={`${width} mm`}>{productionText('worker.summary.material_width', locale)}</ListItem>}
       </>}
-    </Column></Host>}
+    </Column></BaseHost>}
   </ScrollView><View style={styles.openedClose}><WorkerIconButton icon="close" label={productionText('worker.action.close', locale)} tonal={ticket.kind === 'order'} onPress={close} /></View></View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { padding: 16, gap: 12 }, openedContent: { paddingTop: 56 },

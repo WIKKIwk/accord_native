@@ -8,5 +8,6 @@ export type AdditionalSettingsScreenProps = {
   isCurrent: () => boolean;
   navigation: { icon: 'menu' | 'back'; label: string; onPress: () => void; testID?: string } | null;
   footer?: ReactNode;
+  profileAction?: ReactNode;
   topNotice?: ReactNode;
 };

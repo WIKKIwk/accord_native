@@ -1,4 +1,5 @@
-import { Button, Column, IconButton, RNHostView, Spacer, TopAppBar, useNativeState } from '@expo/ui/jetpack-compose';
+import { Button, Column, IconButton, RNHostView, Spacer, useNativeState } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,11 +19,9 @@ export function AdminPartyCreateScreen(props: AdminPartyCreateProps & { footer: 
   const field = { shape: userCreateRounded(18), colors: { focusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest, unfocusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest, focusedIndicatorColor: colors.primary, unfocusedIndicatorColor: colors.outlineVariant } };
   if (!model.current()) return null;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.surfaceContainerHigh }}>
-    <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }}>
-      <TopAppBar.NavigationIcon><IconButton onClick={props.onBack} modifiers={[semantics({ contentDescription: props.backLabel }), testID("admin-party-create-back")]}><UserCreateIcon name="arrow_back" color={colors.onSurface} /></IconButton></TopAppBar.NavigationIcon>
-      <TopAppBar.Title><AdminText style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</AdminText></TopAppBar.Title>
-      <TopAppBar.Actions><RNHostView matchContents><AdminProfileAction {...props} onProfile={props.onProfile} /></RNHostView></TopAppBar.Actions>
-    </TopAppBar></BaseHost>
+    <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><AdminTopBar leading={<IconButton onClick={props.onBack} modifiers={[semantics({ contentDescription: props.backLabel }), testID("admin-party-create-back")]}><UserCreateIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
+      title={<AdminText style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</AdminText>}
+      actions={<RNHostView matchContents><AdminProfileAction {...props} onProfile={props.onProfile} /></RNHostView>} /></BaseHost>
     <AdminShellBodyFrame hasFooter testID="admin-party-create-body-frame"><ScrollView keyboardShouldPersistTaps="handled"><BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column modifiers={[fillMaxWidth(), padding(12, 12, 12, 0)]}>
       <AdminOutlinedTextField {...field} value={name} onValueChange={model.changeName} modifiers={[fillMaxWidth(), testID('admin-party-create-name')]}><AdminOutlinedTextField.Label><AdminText>{model.nameLabel}</AdminText></AdminOutlinedTextField.Label></AdminOutlinedTextField>
       <Spacer modifiers={[height(12)]} />

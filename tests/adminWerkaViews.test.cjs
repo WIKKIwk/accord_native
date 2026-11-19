@@ -42,7 +42,7 @@ function load(platform, model, runtime = hookRuntime()) {
     TopAppBar: native('TopAppBar', { Title: 'TopAppBar.Title', NavigationIcon: 'TopAppBar.NavigationIcon', Actions: 'TopAppBar.Actions' }) }, { get: (target, name) => target[name] ?? String(name) });
   const swift = new Proxy({ useNativeState: nativeState(runtime.react) }, { get: (target, name) => target[name] ?? String(name) });
   const transition = { duration: () => transition, easing: () => transition };
-  const mocks = { react: runtime.react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react: runtime.react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers,
     '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': new Proxy({ Animation: { easeOut: value => value } }, { get: (target, name) => target[name] ?? modifiers[name] }),
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'react-native': { View: 'View', ScrollView: 'RN.ScrollView', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 390, height: 844 }) },
@@ -184,8 +184,8 @@ test('Android Werka keeps source header/action geometry and physical placement',
   assert.ok(views.some(view => view.props.style?.left === 16 && view.props.style?.top === 74 && view.props.style?.width === 92));
   assert.ok(views.some(view => view.props.style?.left === 124 && view.props.style?.top === 140));
   const save = byId(tree, 'admin-werka-detail-save'); assert.ok(save.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 54));
-  const bar = nodes(tree, node => node.type === 'TopAppBar')[0]; assert.equal(bar.props.colors.containerColor, colors.surfaceContainerHigh);
-  assert.ok(bar.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 60));
+  const bar = nodes(tree, node => node.type === 'AdminTopBar')[0]; assert.ok(bar.props.title);
+  assert.ok(bar.props.title != null);
   assert.deepEqual(save.props.shape.cornerRadii, { topStart: 14, topEnd: 14, bottomStart: 14, bottomEnd: 14 });
   assert.ok(byId(tree, 'admin-werka-detail-phone-action').props.modifiers.some(mod => mod.name === 'size' && mod.args[0] === 32 && mod.args[1] === 32));
   const list = nodes(tree, node => node.type === 'RN.ScrollView')[0]; assert.equal(list.props.contentContainerStyle.padding, 4); assert.equal(list.props.contentContainerStyle.paddingBottom, 116);

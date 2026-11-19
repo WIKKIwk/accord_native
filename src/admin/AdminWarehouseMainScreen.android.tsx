@@ -9,7 +9,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { localizedGetter } from '../shared/localization';
-import { themeController } from '../shared/themeRuntime';
 import { AdminCreateMenu } from './AdminCreateMenu.android';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -97,7 +96,7 @@ function WarehouseFilter({ model }: { model: AdminWarehouseMainModel }) {
 }
 function SummaryRow({ row, index, count, model }: { row: AdminWarehouseMainRow; index: number; count: number; model: AdminWarehouseMainModel }) {
   const { colors } = useBaseTheme(), icon: IconName = row.icon === 'item' ? 'inventory_2' : row.icon === 'qolip' ? 'grid_view' : row.icon === 'reservation' ? 'lock_outline' : 'category';
-  return <BaseHost style={{ height: 61, width: '100%' }}><Surface onClick={() => model.openRow(row)} color={colors.surfaceContainerLowest} shadowElevation={themeController.variant === 'white' ? 1 : 0}
+  return <BaseHost style={{ height: 61, width: '100%' }}><Surface onClick={() => model.openRow(row)} color={colors.surfaceContainerLowest}
     shape={Shape.RoundedCorner({ cornerRadii: { topStart: index === 0 ? 18 : 6, topEnd: index === 0 ? 18 : 6, bottomStart: index > 0 && index === count - 1 ? 18 : 6, bottomEnd: index > 0 && index === count - 1 ? 18 : 6 } })}
     modifiers={[fillMaxWidth(), height(61), testID(`warehouse-row-${row.id}`)]}>
     <Row verticalAlignment="center" modifiers={[fillMaxSize(), padding(14, 8, 10, 8)]}>

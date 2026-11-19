@@ -3,8 +3,9 @@ import { useMemo, useState, useSyncExternalStore } from 'react';
 import { Keyboard, Platform } from 'react-native';
 import { appRoutes, canOpenRoute, homeRoute } from '../shared/appRoutes';
 import { isSynchronouslyTrue } from '../shared/camera/synchronousGuard';
+import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { localeController } from '../shared/localization/runtime';
-import { adminDockDestinations, adminDockSelection, type AdminDockTab } from './adminDockModel';
+import { adminDockChatDestination, adminDockDestinations, adminDockSelection, type AdminDockTab } from './adminDockModel';
 import { adminRootNavigation, type AdminRootNavigationContext } from './adminRootNavigation';
 import { useAdminOwnedNavigation } from './AdminOwnedNavigationContext';
 import { useAdminShell } from './AdminShellContext';
@@ -14,6 +15,7 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 export function useAdminOwnedDock(props: AdminOwnedDockProps) {
   const shell = useAdminShell(), owned = useAdminOwnedNavigation(), navigation = useNavigation(), route = useRoute(), platform = Platform.OS;
   const locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale);
+  const unread = useChatUnreadCount(shell.session);
   const { isCurrent, canInteract } = props;
   const rootPath = owned.rootPath ?? `/${platform}-admin`;
   const [binding] = useState(() => ({ routeKey: route.key, navigatorKey: navigation.getState()?.key ?? '' }));
@@ -24,15 +26,15 @@ export function useAdminOwnedDock(props: AdminOwnedDockProps) {
     return { isCurrent: current, destination: name => name === appRoutes.adminSuppliers ? owned.ready() && canOpenRoute(shell.session, name) ? `${rootPath}/users` : null :
       name === appRoutes.adminActivity && !shell.activityBinding ? null : shell.destination(name, platform),
       currentPath: () => paths().at(-1) ?? null, containsPath: path => paths().includes(path), unfocus: () => Keyboard.dismiss(),
-      popTo: path => { if (!current()) return; const name = path === rootPath ? 'index' : path.endsWith('/users') ? 'users' : path.endsWith('/activity') ? 'activity' : null;
+      popTo: path => { if (!current()) return; const name = path === rootPath ? 'index' : path.endsWith('/users') ? 'users' : path.endsWith('/activity') ? 'activity' : path.endsWith('/chat') ? 'chat' : null;
         if (name) owned.owner.rootRemoval.dispatch(name, navigation, binding); },
       push: path => { if (current()) router.push(path as Href); } };
   }, [navigation, platform, isCurrent, canInteract, owned, binding, shell, rootPath]);
-  const destinations = adminDockDestinations(shell.session, locale).filter(item => !item.primary && !!context.destination(item.routeName));
+  const destinations = [...adminDockDestinations(shell.session, locale), adminDockChatDestination].filter(item => !item.primary && !!context.destination(item.routeName));
   const select = (id: string) => {
     if (!context.isCurrent()) return; const destination = destinations.find(item => item.id === id); if (!destination) return;
     const home = homeRoute(shell.session);
     if (adminDockSelection(destination, props.active, context.currentPath() === context.destination(home) ? home : null, home) === 'replaceRoot') adminRootNavigation.schedule(destination.routeName, context);
   };
-  return { destinations, select, active: destinations.find(item => item.tab === props.active)?.id ?? '' };
+  return { destinations, select, active: destinations.find(item => item.tab === props.active)?.id ?? '', showChatBadge: unread > 0 };
 }

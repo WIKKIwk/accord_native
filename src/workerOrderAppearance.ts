@@ -31,7 +31,7 @@ function blend(base: string, accent: string, opacity: number): string {
   return `#${channel(1)}${channel(3)}${channel(5)}`;
 }
 
-export function orderCardAppearance(tone: OrderCardTone, surface: string, dark: boolean) {
+export function orderCardAppearance(tone: OrderCardTone, surface: string | undefined, dark: boolean) {
   if (tone === 'print_preflight') return {
     gradient: 'linear-gradient(to bottom right, #7E86A8 0%, #E5BFC4 52%, #F4FAFC 100%)',
     gradientColors: ['#7E86A8', '#E5BFC4', '#F4FAFC'],
@@ -44,5 +44,8 @@ export function orderCardAppearance(tone: OrderCardTone, surface: string, dark: 
   if (tone === 'history_partial') return { color: '#FFECB3', text: '#6D4C00', secondary: '#8A6A00' };
   if (tone === 'history_completed') return { color: '#C8E6C9', text: '#18361B', secondary: '#3F6042' };
   const accent = accents[tone];
-  return accent ? { color: blend(surface, accent, dark ? 0.30 : 0.16) } : {};
+  if (!accent) return {};
+  const opacity = dark ? 0.30 : 0.16;
+  if (surface) return { color: blend(surface, accent, opacity) };
+  return { overlay: `${accent}${Math.round(opacity * 255).toString(16).padStart(2, '0')}` };
 }

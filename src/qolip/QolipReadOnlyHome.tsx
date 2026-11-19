@@ -1,8 +1,9 @@
-import { Host, TextInput, useNativeState } from '@expo/ui';
+import { TextInput, useNativeState } from '@expo/ui';
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { BaseHost } from '../components/BaseHost';
 import { QolipReadOnlyHomeGrid } from './QolipReadOnlyHomeGrid';
 import { QolipReadOnlyRetry } from './QolipReadOnlyRetry';
 import type { QolipOwnedHomeBlock } from './qolipReadOnlyHomeOwnerState';
@@ -14,11 +15,11 @@ import { useQolipText } from './useQolipText';
 import type { Session } from '../auth';
 
 function Search({ value, change }: { value: string; change: (text: string) => void }) {
-  const state = useNativeState(value), theme = useBaseTheme(), { text } = useQolipText();
+  const state = useNativeState(value), { text } = useQolipText();
   useEffect(() => { if (state.get() !== value) state.set(value); }, [state, value]);
-  return <Host matchContents={{ vertical: true }}><TextInput value={state} onChangeText={change} placeholder={text('home.search')}
-    autoCapitalize="none" autoCorrect={false} returnKeyType="search" textStyle={{ color: theme.colors.onSurface, fontSize: 15 }}
-    style={{ width: '100%', paddingHorizontal: 16 }} /></Host>;
+  return <BaseHost matchContents={{ vertical: true }}><TextInput value={state} onChangeText={change} placeholder={text('home.search')}
+    autoCapitalize="none" autoCorrect={false} returnKeyType="search" textStyle={{ fontSize: 15 }}
+    style={{ width: '100%', paddingHorizontal: 16 }} /></BaseHost>;
 }
 function BlockBody({ block, boundary, counts, retry }: { block: QolipOwnedHomeBlock; boundary: QolipHomeReadBoundary;
   counts: Readonly<Record<string, number>>; retry: (blockName: string) => void }) {

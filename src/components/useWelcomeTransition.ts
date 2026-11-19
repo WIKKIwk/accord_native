@@ -5,14 +5,11 @@ export type WelcomeCopy = {
   headline: string;
   languageLabel: string;
   languageValue: string;
-  themeLabel: string;
-  themeValue: string;
   startLabel: string;
 };
 
-export function useWelcomeTransition({ headline, languageLabel, languageValue, themeLabel, themeValue, startLabel }: WelcomeCopy) {
-  const next = useMemo(() => ({ headline, languageLabel, languageValue, themeLabel, themeValue, startLabel }),
-    [headline, languageLabel, languageValue, themeLabel, themeValue, startLabel]);
+export function useWelcomeTransition({ headline, languageLabel, languageValue, startLabel }: WelcomeCopy) {
+  const next = useMemo(() => ({ headline, languageLabel, languageValue, startLabel }), [headline, languageLabel, languageValue, startLabel]);
   const [copy, setCopy] = useState(next);
   const shown = useRef(next);
   const [opacity] = useState(() => new Animated.Value(1));

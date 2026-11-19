@@ -63,9 +63,9 @@ function fixture(platform, options = {}) {
   const TopAppBar = Object.assign(props => jsx.jsx('TopAppBar', props), { NavigationIcon: 'NavigationIcon', Title: 'Title' });
   const modifiers = new Proxy({}, { get: (target, type) => (...args) => ({ type, args }) }), shape = { RoundedCorner: value => ({ type: 'rounded', value }) }, ui = new Proxy({ Shape: shape, TopAppBar }, { get: (target, key) => key in target ? target[key] : String(key) });
   const theme = () => ({ colors, mode: 'light', seed: '#3344CC', direction: options.direction ?? 'ltr' });
-  const baseAndroid = options.actualBaseHost ? compile('../components/BaseHost.android.tsx', { 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': ui, './useBaseTheme': { useBaseTheme: theme } }) : { BaseHost: 'BaseHost' };
+  const baseAndroid = options.actualBaseHost ? compile('../components/BaseHost.android.tsx', { 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': ui, './useBaseThemeConfig': { useBaseThemeConfig: theme } }) : { BaseHost: 'BaseHost' };
   const profileGuard = s.load('shared/profileSessionGuard');
-  const loaded = new Map(), mocks = { react, 'react/jsx-runtime': jsx,
+  const loaded = new Map(), mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react, 'react/jsx-runtime': jsx,
     'react-native': { Image: 'NativeImage', View: 'View', ScrollView: 'ScrollView', StyleSheet: { create: value => value, absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } }, useWindowDimensions: () => ({ width: 400, height: 800 }) },
     'react-native-reanimated': { __esModule: true, default: { View: 'Animated.View' }, Easing: { linear: 'linear' }, useSharedValue: value => react.useRef({ value, set(next) { this.value = next; } }).current, useAnimatedStyle: create => create(), withTiming: (value, config) => { calls.push(['fade', value, config]); return value; } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, '@expo/ui/jetpack-compose': ui, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': ui, '@expo/ui/swift-ui/modifiers': modifiers,

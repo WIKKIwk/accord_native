@@ -20,7 +20,7 @@ for (const platform of ['ios', 'android']) for (const mode of ['light', 'dark'])
   const colors = { surfaceContainerLowest: '#ffffff', onSurface: 'on', onSurfaceVariant: 'muted', secondaryContainer: 'cover',
     onSecondaryContainer: 'cover-text', primaryContainer: 'badge', onPrimaryContainer: 'badge-text' };
   const Component = load(`admin/AdminWorkMapSequenceRow.${platform}.tsx`, {
-    '@expo/ui': { ListItem: 'ListItem', Text: 'NativeText' }, '@expo/ui/swift-ui': { Background, Rectangle: 'Rectangle' },
+    '@expo/ui': { ListItem: 'ListItem', Text: 'NativeText' }, '@expo/ui/swift-ui': { Background, Rectangle: 'Rectangle', ZStack: 'ZStack' },
     '@expo/ui/swift-ui/modifiers': { accessibilityHidden: value => ({ hidden: value }), foregroundStyle: value => ({ foreground: value }),
       font: value => ({ font: value }), lineLimit: value => ({ lines: value }), truncationMode: value => ({ truncation: value }) },
     'react-native': { StyleSheet: { create: x => x }, Text: 'RNText', View: 'View' }, 'expo-symbols': { SymbolView: 'SymbolView' },
@@ -39,7 +39,8 @@ for (const platform of ['ios', 'android']) for (const mode of ['light', 'dark'])
     assert.equal(row.props.backgroundColor, appearance.orderCardAppearance('paused', colors.surfaceContainerLowest, mode === 'dark').color); }
   else { const background = tree.find(value => value.type === 'Rectangle');
     assert.equal(row.props.children.props.children, '17 • Film'); assert.equal(row.props.supportingText.props.children, 'Ana');
-    assert.equal(background.props.modifiers[0].foreground, appearance.orderCardAppearance('paused', colors.surfaceContainerLowest, mode === 'dark').color); }
+    assert.equal(background.props.modifiers[0].foreground, colors.surfaceContainerLowest);
+    assert.equal(tree.filter(value => value.type === 'Rectangle')[1].props.modifiers[0].foreground, appearance.orderCardAppearance('paused', undefined, mode === 'dark').overlay); }
   const gradientTree = nodes(Component({ headline: '17 • Film', supportingText: '', position: 13, tone: 'print_preflight', onPress: () => {} }));
   if (platform === 'ios') assert.equal(gradientTree.find(value => value.type === 'Rectangle').props.modifiers[0].foreground.type, 'linearGradient');
   else assert.equal(gradientTree.find(value => value.type === 'Card').props.backgroundImage, appearance.orderCardAppearance('print_preflight', colors.surfaceContainerLowest, mode === 'dark').gradient);

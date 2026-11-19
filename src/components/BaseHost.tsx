@@ -7,5 +7,5 @@ export type BaseHostProps = { children: ReactNode; style?: StyleProp<ViewStyle>;
 
 export function BaseHost(props: BaseHostProps) {
   const theme = useBaseTheme();
-  return <Host {...props} colorScheme={theme.mode} seedColor={theme.colors.primary ?? theme.seed} layoutDirection={theme.direction} />;
+  return <Host {...props} colorScheme={theme.mode} layoutDirection={theme.direction} />;
 }

@@ -9,7 +9,7 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props, key) => ({ type, props, k
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id === './AdminDrawerPresentationContext' ? { useAdminDrawerPresentation: () => null } : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   return mod.exports;
@@ -159,9 +159,11 @@ function layout(platform, value, active = true, os = platform, pathname = '/ios-
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: os }, View: 'View' },
     '../auth': { isSessionWitnessCurrent: () => active, logout: async () => {}, sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../shared/appRoutes': routes,
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: 'chrome', primary: 'tint', onSurfaceVariant: 'muted' } }) },
+    '../shared/chat/useChatUnreadCount': { useChatUnreadCount: () => 2 }, './adminDockModel': { adminDockChatDestination: { label: 'Chat' } },
     '../shared/localization': { localizedGetter: key => key }, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './AdminDrawer': { AdminDrawer: 'AdminDrawer' }, './AdminTypography.android': { AdminTypographyProvider: 'AdminTypographyProvider' }, './AdminTestTokenNotice': { AdminTestTokenNotice: 'AdminTestTokenNotice' },
-    './AdminShellContext': { AdminShellProvider: 'AdminShellProvider', useAdminShell: () => ({ activityBinding: null, destination: () => null }) }, './AdminOwnedNavigationContext': { AdminOwnedNavigationProvider: 'AdminOwnedNavigationProvider' },
+    './AdminShellContext': { AdminShellProvider: 'AdminShellProvider', useAdminShell: () => ({ activityBinding: null, destination: route => route === r.chat && value?.profile.role === 'admin' ? '/ios-admin/chat' : null }) }, './AdminOwnedNavigationContext': { AdminOwnedNavigationProvider: 'AdminOwnedNavigationProvider' },
     './adminShellAccess': access, './useAdminShellSession': { useAdminShellSession: () => admission } };
   const outer = load(`admin/AdminLayout.${platform}.tsx`, mocks).AdminLayout();
   const gate = platform === 'android' ? outer.props.children : outer;
@@ -175,7 +177,8 @@ test('iOS native Home/Activity roots stay stable while genuine pushed Users/owne
     assert.ok(owner); assert.equal(owner.props.providers, undefined, 'no dummy source-primary provider is injected');
     const tabsOwner = find(tree, node => typeof node.type === 'function' && node.type.name === 'AdminTabs'), tabs = tabsOwner.type();
     assert.equal(tabs.props.hidden, pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/'));
-    assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', 'activity']); assert.equal(tabs.props.activityEnabled, undefined);
+    assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', 'activity', 'chat']);
+    assert.equal(tabs.props.backgroundColor, 'chrome'); assert.equal(tabs.props.children[2].props.hidden, false);
   }
 });
 for (const platform of ['ios', 'android']) {

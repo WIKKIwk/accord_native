@@ -143,7 +143,7 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
   let detail = { valid: true, loading: false, value: { kind: 'order', customer: 'Canonical', metadata: { createdAtUnix: null, creator: null },
     map: { title: 'Hydrated', customer_name: 'Old', order_kg: 12, combo: null, products: [] } } };
   const retry = () => {}, close = () => {};
-  const View = load('admin/AdminWorkMapDetail.tsx', {
+  const View = load('admin/AdminWorkMapDetail.tsx', { '../components/BaseHost': { BaseHost: 'Host' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui': { Button: 'Button', Column: 'Column', Host: 'Host', ListItem: 'ListItem' },
     react: { useSyncExternalStore: (_s, snapshot) => snapshot() },
     'react-native': { ActivityIndicator: 'ActivityIndicator', ScrollView: 'ScrollView', StyleSheet: { create: x => x }, Text: 'Text', View: 'View' },
@@ -224,7 +224,7 @@ test('basic detail view delegates lifecycle/retry and displays the canonical hyd
 
 for (const platform of ['ios', 'android']) test(`${platform} control notice renders passive native error colors and text`, () => {
   const Component = load(`admin/AdminWorkMapControlNotice.${platform}.tsx`, {
-    '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ errorContainer: 'error-bg', onErrorContainer: 'error-fg' }) },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { errorContainer: 'error-bg', onErrorContainer: 'error-fg' } }) },
     'react-native': { PlatformColor: value => value, StyleSheet: { create: x => x }, Text: 'Text', View: 'View' },
   }).AdminWorkMapControlNotice;
   const row = Component({ text: 'Frozen' });

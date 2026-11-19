@@ -8,8 +8,6 @@ import type { Session } from '../auth';
 import { useNativeSheet } from '../nativeSheet';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
-import type { AppThemeVariant } from '../shared/themeController';
-import { themeController } from '../shared/themeRuntime';
 import { useAppSettings } from './AppSettings';
 import { usePinSetup } from './usePinSetup.android';
 import { useSwitchPinSetup } from './useSwitchPinSetup.android';
@@ -19,8 +17,6 @@ import { useAppUpdate } from './AppUpdateProvider';
 type Props = { session: Session; onClose: () => void; onLogout: () => void; isCurrent?: () => boolean };
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
-const subscribeTheme = (listener: () => void) => themeController.addListener(listener);
-const currentVariant = () => themeController.variant;
 const appearanceChoices: { id: AppearancePreference; label: string }[] = [
   { id: 'system', label: 'Auto' }, { id: 'light', label: 'Yorug‘' }, { id: 'dark', label: 'Qorong‘i' },
 ];
@@ -29,7 +25,6 @@ const appearanceChoices: { id: AppearancePreference; label: string }[] = [
 // @v2 _ProfileSelectionSheet
 export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const variant = useSyncExternalStore(subscribeTheme, currentVariant, currentVariant);
   const t = (key: string) => localizedGetter(key, locale);
   const colors = useMaterialColors();
   const { appearance, setAppearance } = useAppSettings();
@@ -43,11 +38,6 @@ export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props
   const languages = [
     { id: 'uz', label: t('uzbek') }, { id: 'en', label: t('english') },
     { id: 'ru', label: t('russian') }, { id: 'ur-PK', label: 'اردو (پاکستان)' },
-  ];
-  const themes: { id: AppThemeVariant; label: string }[] = [
-    { id: 'kalmar', label: t('themeKalmarLabel') }, { id: 'classic', label: t('themeClassicLabel') },
-    { id: 'moss', label: t('themeMossLabel') }, { id: 'lavender', label: t('themeLavenderLabel') },
-    { id: 'bliss', label: t('themeBlissLabel') }, { id: 'white', label: t('themeWhiteLabel') },
   ];
   const cardModifiers = [fillMaxWidth(), clip({ type: 'roundedCorner', radius: 20 }), background(colors.surfaceContainerLow)];
   const rowPadding = { start: 16, end: 16, top: 12, bottom: 12 };
@@ -83,7 +73,7 @@ export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props
 
   const chooseLanguage = () => {
     if (!current()) return;
-    selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('languageTitle')}</Text>
       <Text color={colors.onSurfaceVariant}>{t('languageBody')}</Text>
       {languages.map(choice => <TextButton key={choice.id} onClick={() => {
@@ -96,7 +86,7 @@ export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props
 
   const chooseAppearance = () => {
     if (!current()) return;
-    selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
+    selectionSheet.open(<Host style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
       <Text style={{ typography: 'titleLarge' }}>{t('themeModeTitle')}</Text>
       {appearanceChoices.map(choice => <TextButton key={choice.id} onClick={() => {
         if (!current()) return;
@@ -105,19 +95,6 @@ export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props
       }} contentPadding={rowPadding} modifiers={[fillMaxWidth(), testID(`profile-appearance-${choice.id}`)]}>
         <Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{appearance === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row>
       </TextButton>)}
-    </Column></Host>, { dismissible: true });
-  };
-
-  const chooseTheme = () => {
-    if (!current()) return;
-    selectionSheet.open(<Host dynamicColors style={{ flex: 1 }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[verticalScroll(), padding(12, 12, 12, 24)]}>
-      <Text style={{ typography: 'titleLarge' }}>{t('themeTitle')}</Text>
-      <Text color={colors.onSurfaceVariant}>{t('themeBody')}</Text>
-      {themes.map(choice => <TextButton key={choice.id} onClick={() => {
-        if (!current()) return;
-        selectionSheet.close();
-        void themeController.setVariant(choice.id).catch(() => { if (current()) Alert.alert('Saqlab bo‘lmadi'); });
-      }} contentPadding={rowPadding} modifiers={[fillMaxWidth()]}><Row modifiers={[fillMaxWidth()]}><Text>{choice.label}{variant === choice.id ? ` · ${t('accountCurrent')}` : ''}</Text></Row></TextButton>)}
     </Column></Host>, { dismissible: true });
   };
 
@@ -148,8 +125,6 @@ export function ProfileSettings({ session, onClose, onLogout, isCurrent }: Props
       {preferenceRow(t('languageTitle'), t('languageBody'), languages.find(choice => choice.id.split('-')[0] === locale.split('-')[0])?.label ?? '', chooseLanguage, 'profile-language')}
       {divider()}
       {preferenceRow(t('themeModeTitle'), t('themeModeBody'), appearanceChoices.find(choice => choice.id === appearance)?.label ?? '', chooseAppearance, 'profile-appearance')}
-      {divider()}
-      {preferenceRow(t('themeTitle'), t('themeBody'), themes.find(choice => choice.id === variant)?.label ?? '', chooseTheme, 'profile-theme')}
     </Column>
     {sectionTitle(t('securityTitle'))}
     <Column modifiers={cardModifiers}>

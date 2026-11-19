@@ -10,7 +10,7 @@ export function WorkerMaterialList({ rows, scanned, orderId, onLongPress, showBa
   const secondaryText = colors.onSurfaceVariant ?? colors.onSurface;
   const amount = (value: number, unit: string) => `${new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(value)} ${unit}`;
   const balances = showBalances ? rawMaterialBalances(rows) : [];
-  return <BaseHost dynamicColors matchContents={{ vertical: true }} style={{ width: '100%' }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
+  return <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column verticalArrangement={{ spacedBy: 8 }} modifiers={[fillMaxWidth()]}>
     {!!balances.length && <Column verticalArrangement={{ spacedBy: 6 }} modifiers={[fillMaxWidth(), clip({ type: 'roundedCorner', radius: 12 }), background(colors.secondaryContainer), paddingAll(12)]}>
       <Text color={colors.onSecondaryContainer} style={{ typography: 'titleSmall', fontWeight: '600' }}>{p('worker.material.balance')}</Text>
       {balances.map(balance => <Text key={balance.uom} color={colors.onSecondaryContainer} style={{ typography: 'bodySmall', fontWeight: '500' }}>{p('worker.material.balance.summary', { received: amount(balance.received, balance.uom), used: amount(balance.consumed, balance.uom), remaining: amount(balance.remaining, balance.uom) })}</Text>)}

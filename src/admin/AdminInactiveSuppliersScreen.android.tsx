@@ -1,4 +1,5 @@
-import { Button, Column, IconButton, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, TopAppBar } from '@expo/ui/jetpack-compose';
+import { Button, Column, IconButton, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TextButton } from '@expo/ui/jetpack-compose';
+import { AdminTopBar } from './AdminTopBar.android';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -76,13 +77,11 @@ export function AdminInactiveSuppliersScreen(props: AdminInactiveSuppliersScreen
   if (!model.current || state.phase === 'invalidated') return null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-inactive-suppliers-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
-      <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-        <TopAppBar.NavigationIcon><IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label }), testID('admin-inactive-suppliers-back')]}>
+      <AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label }), testID('admin-inactive-suppliers-back')]}>
           <RNHostView matchContents><SymbolView name={{ android: props.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView>
-        </IconButton></TopAppBar.NavigationIcon>
-        <TopAppBar.Title><Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('users.inactive_title')}</Text></TopAppBar.Title>
-        <TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null}</TopAppBar.Actions>
-      </TopAppBar><Spacer modifiers={[height(3)]} />
+        </IconButton>}
+        title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('users.inactive_title')}</Text>}
+        actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} />
     </Column></BaseHost></SafeAreaView>
     {props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-inactive-suppliers-body-frame" contentPadding="default">
       {state.phase === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :

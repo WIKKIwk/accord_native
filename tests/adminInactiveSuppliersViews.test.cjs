@@ -39,7 +39,7 @@ function render(platform, patch = {}, options = {}) {
     } };
   if (options.current !== undefined) model.current = options.current;
   const colors = { surface: 'surface', surfaceContainerHigh: 'chrome', surfaceContainerLow: 'body', outlineVariant: 'border', outline: 'outline', onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary' };
-  const mocks = { react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native,
+  const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native,
     '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui/modifiers': modifiers,
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Text: 'NativeText', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Platform: { Version: options.iosVersion ?? '26.0' }, useWindowDimensions: () => ({ width: 390 }), StyleSheet: { create: value => value } },

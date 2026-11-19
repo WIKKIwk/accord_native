@@ -1,11 +1,9 @@
-import { Host } from '@expo/ui/jetpack-compose';
-import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
-import { useBaseTheme } from './useBaseTheme';
+import { Host, type HostProps } from '@expo/ui/jetpack-compose';
+import { useBaseThemeConfig } from './useBaseThemeConfig';
 
-type Props = { children: ReactNode; style?: StyleProp<ViewStyle>; matchContents?: boolean | { vertical?: boolean; horizontal?: boolean }; dynamicColors?: boolean };
-export function BaseHost({ dynamicColors = false, ...props }: Props) {
-  const theme = useBaseTheme();
-  return <Host {...props} colorScheme={dynamicColors ? undefined : theme.mode} seedColor={dynamicColors ? undefined : theme.seed}
-    colorOverrides={dynamicColors ? undefined : theme.colors} layoutDirection={theme.direction} />;
+type Props = Omit<HostProps, 'colorScheme' | 'seedColor' | 'colorOverrides' | 'layoutDirection'>;
+
+export function BaseHost(props: Props) {
+  const { mode, direction } = useBaseThemeConfig();
+  return <Host {...props} colorScheme={mode} layoutDirection={direction} />;
 }

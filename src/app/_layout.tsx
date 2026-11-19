@@ -19,7 +19,7 @@ function AppNavigation() {
   }, [background]);
   const nativeTheme = theme.mode === 'dark' ? DarkTheme : DefaultTheme;
   return <ThemeProvider value={{ ...nativeTheme, colors: { ...nativeTheme.colors, background, card: theme.colors.surface ?? background,
-    primary: theme.colors.primary ?? theme.seed, text: theme.colors.onSurface ?? nativeTheme.colors.text,
+    primary: theme.colors.primary ?? nativeTheme.colors.primary, text: theme.colors.onSurface ?? nativeTheme.colors.text,
     border: theme.colors.outlineVariant ?? nativeTheme.colors.border } }}><View style={{ flex: 1, direction: theme.direction === 'rightToLeft' ? 'rtl' : 'ltr' }}>
     <StatusBar style="auto" /><Stack screenOptions={{ headerShown: false, contentStyle: Platform.OS === 'android' ? { backgroundColor: background } : undefined }}>
     <Stack.Screen name="sheet/[id]" options={{

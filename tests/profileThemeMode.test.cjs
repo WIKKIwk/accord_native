@@ -36,7 +36,6 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezk
     '../nativeSheet': { useNativeSheet: () => ({ open: sheet => sheets.push(sheet), close: () => { closed++; } }) },
     '../shared/localization': { localizedGetter: key => key },
     '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } },
-    '../shared/themeRuntime': { themeController: { variant: 'classic', addListener() {} } },
     './AppSettings': { useAppSettings: () => ({ appearance, setAppearance: async value => { selected.push(value); appearance = value; } }) },
     './usePinSetup.android': { usePinSetup: () => ({ mode: null, busy: false, security }) },
     './useSwitchPinSetup.android': { useSwitchPinSetup: () => ({ stage: null, busy: false, hasPin: false }) },
@@ -47,7 +46,6 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezk
   const opener = findId(render(), 'profile-appearance');
   assert.deepEqual(nodes(opener, node => node.type === 'Text').map(node => node.props.children), ['themeModeTitle', 'themeModeBody', 'Auto']);
   opener.props.onClick();
-  assert.equal(sheets[0].props.dynamicColors, true);
   const options = ['system', 'light', 'dark'].map(id => findId(sheets[0], `profile-appearance-${id}`));
   assert.equal(options.filter(Boolean).length, 3);
   assert.deepEqual(nodes(options[0], node => node.type === 'Text')[0].props.children, ['Auto', ' · accountCurrent']);
@@ -55,10 +53,8 @@ for (const role of ['tayyorlov_masteri', 'aparatchi', 'boyoqchi', 'homashyo_rezk
   assert.deepEqual(selected, ['system', 'light', 'dark']);
   assert.equal(closed, 3);
   assert.deepEqual(nodes(findId(render(), 'profile-appearance'), node => node.type === 'Text').map(node => node.props.children), ['themeModeTitle', 'themeModeBody', 'Qorong‘i']);
-  for (const id of ['profile-language', 'profile-theme']) {
-    findId(render(), id).props.onClick();
-    assert.equal(sheets.at(-1).props.dynamicColors, true);
-  }
+  assert.ok(findId(render(), 'profile-language'));
+  assert.equal(findId(render(), 'profile-theme'), undefined);
 });
 
 test('iOS profile offers Auto in the appearance picker and forwards system', async () => {
@@ -96,21 +92,30 @@ test('Auto removes the native override and resolves both device themes; manual m
     '../shared/basePreferences': { initializeBasePreferences: async () => {} },
     '../shared/themeRuntime': { themeController: controller },
   });
-  const { useBaseTheme } = load('components/useBaseTheme.ts', {
+  const config = load('components/useBaseThemeConfig.ts', {
     react: hooks, 'react-native': { useColorScheme: () => deviceMode },
     '../shared/themeRuntime': { themeController: controller },
     '../shared/localization/runtime': { localeController: { locale: 'uz', isUrdu: false, addListener() {} } },
+  });
+  const nativePalettes = { light: { surface: 'native-light' }, dark: { surface: 'native-dark' } };
+  const { useBaseTheme } = load('components/useBaseTheme.android.ts', {
+    './useBaseThemeConfig': config,
+    '@expo/ui/jetpack-compose': { useMaterialColors: options => {
+      assert.deepEqual(Object.keys(options), ['colorScheme']);
+      return nativePalettes[options.colorScheme];
+    } },
   });
   const render = () => {
     const tree = AppSettingsProvider({ children: null });
     effects.splice(0).forEach(effect => effect());
     return tree.props.value;
   };
+  await render().setAppearance('dark'); render();
   await render().setAppearance('system'); render();
   assert.equal(nativeModes.at(-1), 'auto');
-  assert.equal(useBaseTheme().mode, 'light');
+  assert.equal(useBaseTheme().colors, nativePalettes.light);
   deviceMode = 'dark';
-  assert.equal(useBaseTheme().mode, 'dark');
+  assert.equal(useBaseTheme().colors, nativePalettes.dark);
   assert.equal(controller.themeMode, 'system');
   assert.equal(saved.get('app_theme_mode'), 'system');
   await render().setAppearance('light'); render();

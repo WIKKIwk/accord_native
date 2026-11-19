@@ -10,17 +10,15 @@ interface AdminShellBodyFrameProps {
   hasFooter: boolean;
   testID: string;
   contentPadding?: 'default' | 'none';
-  allowMissingInsets?: boolean;
 }
 
 /** @v2 AppShell
  * The dock reserve belongs outside the clipped body. Keeping children mounted
  * while native viewport facts arrive preserves their original owned reads.
  */
-export function AdminShellBodyFrame({ children, hasFooter, testID, contentPadding = 'none', allowMissingInsets = false }: AdminShellBodyFrameProps) {
+export function AdminShellBodyFrame({ children, hasFooter, testID, contentPadding = 'none' }: AdminShellBodyFrameProps) {
   const layout = useAdminShellLayout(hasFooter), { colors } = useBaseTheme();
-  // Expo Go lacks the app's native inset reader. Its Home scroll view handles the footer clearance.
-  const visible = layout.metricsReady || (allowMissingInsets && !layout.sourceWindow);
+  const visible = layout.metricsReady;
   const body =
     <View testID={`${testID}-reserve`} style={[styles.reserve, { marginHorizontal: layout.horizontalInset, marginBottom: layout.bottomReserve ?? undefined }]}>
       <View testID={testID} pointerEvents={visible ? 'auto' : 'none'} accessibilityElementsHidden={!visible}

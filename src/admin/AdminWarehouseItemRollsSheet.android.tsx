@@ -5,7 +5,6 @@ import { FlatList, ScrollView, StyleSheet, View, useWindowDimensions } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
-import { themeController } from '../shared/themeRuntime';
 import { adminWarehouseMainDetailValue } from './AdminWarehouseMainRows';
 import type { AdminWarehouseItemRollRow } from './adminWarehouseItemRollsModel';
 import type { AdminWarehouseItemRollsProviderModel } from './useAdminWarehouseItemRollsProvider';
@@ -15,7 +14,7 @@ import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
 function RowCard({ row, model }: { row: AdminWarehouseItemRollRow; model: AdminWarehouseItemRollsProviderModel }) {
   const { colors } = useBaseTheme();
-  return <BaseHost style={{ width: '100%', height: 61 }}><Surface onClick={() => model.showDetails(row.roll)} color={colors.surfaceContainerLowest} shadowElevation={themeController.variant === 'white' ? 1 : 0}
+  return <BaseHost style={{ width: '100%', height: 61 }}><Surface onClick={() => model.showDetails(row.roll)} color={colors.surfaceContainerLowest}
     shape={Shape.RoundedCorner({ cornerRadii: { topStart: row.index === 0 ? 18 : 6, topEnd: row.index === 0 ? 18 : 6, bottomStart: row.index > 0 && row.index === row.count - 1 ? 18 : 6, bottomEnd: row.index > 0 && row.index === row.count - 1 ? 18 : 6 } })}
     modifiers={[fillMaxWidth(), height(61), testID(`warehouse-item-roll-${row.key}`)]}>
     <Row verticalAlignment="center" modifiers={[fillMaxSize(), padding(14, 8, 10, 8)]}>
