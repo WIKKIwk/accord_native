@@ -1,4 +1,4 @@
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { BasicAlertDialog, Button, Card, CircularProgressIndicator, Column, IconButton, RNHostView, LinearProgressIndicator, Row, Shape, SnackbarHost, Spacer, Surface, Switch,
   Text, TextButton, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height as nativeHeight, padding, semantics, size, testID, toggleable, verticalScroll, weight, width as nativeWidth } from '@expo/ui/jetpack-compose/modifiers';
@@ -23,7 +23,7 @@ const withAlpha = (rgba: string, alpha: number) => `${rgba.slice(0, 7)}${Math.ro
 // @v2 AdminAdditionalSettingsScreen
 export function AdditionalSettingsScreen({ session, witness, isCurrent, navigation, footer, topNotice, profileAction }: AdditionalSettingsScreenProps) {
   const { state, controller, isCurrent: current } = useAdditionalSettings(session, witness, isCurrent), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), colors = useBaseTheme().colors;
+  const t = additionalSettingsText(locale), cards = additionalSettingsCards(state, locale), { colors, chromeBackground } = useAdminShellTheme();
   const { width, height } = useWindowDimensions(), insets = useSafeAreaInsets(), snackbar = useRef<SnackbarHostRef>(null);
   useEffect(() => {
     if (state.notice) void snackbar.current?.showSnackbar({ message: additionalSettingsNotice(state.notice, locale), duration: 'short' });
@@ -32,7 +32,7 @@ export function AdditionalSettingsScreen({ session, witness, isCurrent, navigati
     if (id === 'appUpdate' || id === 'lamination' || id === 'qolip') controller.retryCard(id);
   };
   const refreshingDisabled = state.screen === 'content' && state.paddon.busy;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <AdminScreenHeader title={t.title} navigation={navigation} profileAction={profileAction}
       actions={<IconButton enabled={!refreshingDisabled} modifiers={[size(48, 48), semantics({ contentDescription: t.retry }), testID('additional-settings-refresh')]}
         onClick={() => { if (current()) void controller.refresh(); }}><RNHostView matchContents>

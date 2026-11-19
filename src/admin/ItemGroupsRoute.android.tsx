@@ -1,4 +1,5 @@
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { BaseHost } from '../components/BaseHost.android';
 import { BasicAlertDialog, CircularProgressIndicator, FilterChip, LinearProgressIndicator, RNHostView, Row, Shape, SnackbarHost, Surface, Text as ComposeText, TextButton, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { combinedClickable, fillMaxWidth, height, padding, weight } from '@expo/ui/jetpack-compose/modifiers';
@@ -39,7 +40,7 @@ function TreeRow({ node, model, depth = 0 }: { node: ItemGroupsTreeNode; model: 
 }
 /** @v2 AdminItemGroupCreateScreen */
 export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
-  const model = useItemGroupsRoute(props), { state, controller, t, roots, displayGroups, focused, current } = model, colors = useBaseTheme().colors, insets = useSafeAreaInsets();
+  const model = useItemGroupsRoute(props), { state, controller, t, roots, displayGroups, focused, current } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   const pager = useRef<PagerViewRef>(null);
   useEffect(() => { if (focused && current()) pager.current?.setPage(state.tab === 'tree' ? 0 : 1); }, [focused, current, state.tab]);
   const snackbar = useRef<SnackbarHostRef>(null), { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
@@ -78,7 +79,7 @@ export function ItemGroupsRoute(props: ItemGroupsRouteProps) {
     </View>)}
     {state.loadingMore ? <View style={{ padding: 14, alignItems: 'center' }}><Loading /></View> : state.itemsError ? <View style={{ padding: 12 }}><WorkerSheetButton variant="outlined" label={t('item_group.load_more')} onPress={() => { void controller.loadItems(true); }} /></View> : state.hasMore ? <Text style={[styles.description, { padding: 12, color: colors.onSurfaceVariant }]}>{t('item_group.scroll_hint')}</Text> : null}
   </View>;
-  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }}>
+  return <View style={{ flex: 1, backgroundColor: chromeBackground, paddingTop: insets.top }}>
     <AdminScreenHeader title={t('item_group.title')} navigation={props.navigation} profileAction={props.profileAction} />
     {props.topNotice}
     {state.notice?.success && !props.showTopNotice ? <View pointerEvents="none" accessibilityRole="alert" style={{ backgroundColor: '#E6F4EA', paddingHorizontal: 16, paddingVertical: 12 }}><Text style={{ color: '#173A24', fontSize: 14 }}>{t(state.notice.key, state.notice.values)}</Text></View> : null}

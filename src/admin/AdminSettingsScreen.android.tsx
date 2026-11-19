@@ -9,6 +9,7 @@ import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, wi
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { appRoutes } from '../shared/appRoutes';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -53,7 +54,7 @@ function SettingsField({ label, value, fillVersion, change, name }: { label: str
 
 /** @v2 AdminSettingsScreen */
 export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
-  const model = useAdminSettings(props), { state, current, t, a, p } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
+  const model = useAdminSettings(props), { state, current, t, a, p } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null), notice = t('settingsSaved');
   useEffect(() => { if (state.notice !== null && state.notice !== shown.current && current) {
     shown.current = state.notice; void snackbar.current?.showSnackbar({ message: notice, duration: 'short' });
@@ -61,7 +62,7 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
   if (!model.current || state.phase === 'invalidated') return <View style={styles.root} />;
   const field = (name: AdminSettingsField) => <SettingsField key={name} name={name} value={state.fields[name]} fillVersion={state.fillVersion}
     label={a(`settings.${adminSettingsFieldLabels[name]}`)} change={value => model.change(name, value)} />;
-  return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+  return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-settings-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={model.navigation ? <IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-settings-back')]}><RNHostView matchContents><SymbolView name={{ android: model.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton> : null}
         title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{t('adminSettingsTitle')}</Text>}

@@ -43,11 +43,11 @@ test('owned dock only offers allowed destinations and keeps an unavailable prima
   const f = fixture(); f.shell.activityBinding = null; assert.deepEqual(f.render().destinations.map(item => item.id), ['admin-home', 'admin-user']);
   f.ready(false); assert.deepEqual(f.render().destinations.map(item => item.id), ['admin-home']); f.runtime.unmount();
 });
-function nativeDock(platform, { inset = 15, keyboard = 0 } = {}) {
+function nativeDock(platform, { inset = 15, keyboard = 0, role = 'admin' } = {}) {
   const r = s.runtime(), calls = [], model = { active: 'admin-user', select: value => calls.push(value), destinations: dock.adminDockDestinations({ token: 'real', profile: { role: 'admin', ref: 'A' }, capabilities: ['admin.access', 'party.supplier.read', 'admin.activity.read'] }, 'uz').filter(item => !item.primary) };
   const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) });
   const component = (name, slots = {}) => Object.assign(function Native(props) { return { type: name, props }; }, slots);
-  const colors = { surfaceContainerLow: '#eee', surfaceContainerHigh: '#ccc', onSecondaryContainer: '#222', onSurface: '#111', onSurfaceVariant: '#666', secondaryContainer: '#ddd' };
+  const colors = { surface: '#fff', surfaceContainerLow: '#eee', surfaceContainerHigh: '#ccc', onSecondaryContainer: '#222', onSurface: '#111', onSurfaceVariant: '#666', secondaryContainer: '#ddd' };
   const native = { NavigationBarItem: component('NavigationBarItem', { Icon: 'NavigationBarItem.Icon', Label: 'NavigationBarItem.Label' }), useMaterialColors: () => colors };
   const ui = new Proxy(native, { get: (value, name) => value[name] ?? String(name) });
   const keyboardListeners = new Map(), shared = value => { let current = value; return { get: () => current, set: next => { current = next; } }; };
@@ -56,6 +56,7 @@ function nativeDock(platform, { inset = 15, keyboard = 0 } = {}) {
     'react-native-reanimated': { __esModule: true, default: { View: 'Animated.View' }, useSharedValue: value => r.react.useMemo(() => shared(value), []), useAnimatedStyle: callback => callback() },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors, mode: 'dark', direction: 'rightToLeft' }) }, './AdminTypography.android': { AdminText: 'Text' },
     '../components/BaseHost.ios': { BaseHost: 'Host' }, './adminDockModel': dock,
+    './AdminShellContext': { useOptionalAdminShell: () => ({ session: { profile: { role } } }) },
     './useAdminOwnedDock': { useAdminOwnedDock: () => model }, './useAdminShellLayout': { useAdminShellLayout: () => ({ dockBottomInset: inset }) } };
   if (platform === 'android') {
     const sharedMocks = { ...mocks, '../../components/BaseHost.android': mocks['../components/BaseHost.android'],
@@ -73,7 +74,7 @@ test('Android owned dock uses the shared Compose NavigationBar with the measured
   const bar = nodes(tree, node => node.type === 'NavigationBar')[0];
   assert.equal(tree.props.style[1].height, 75);
   assert.equal(bar.props.modifiers.find(mod => mod.name === 'height').args[0], 75);
-  assert.equal(bar.props.containerColor, '#ccc');
+  assert.equal(bar.props.containerColor, '#eee');
   assert.equal(tabs.length, 3); assert.deepEqual(tabs.map(item => item.props.selected), [false, true, false]);
   tabs[0].props.onClick(); assert.deepEqual(f.calls, ['admin-home']); assert.equal(nodes(tree, node => node.type === 'Icon' && node.props.source === 'filled/person_fill.xml').length, 1);
   f.keyboardListeners.get('keyboardDidShow')({ endCoordinates: { height: 300 } }); const hidden = f.render(); assert.equal(hidden.props.style[1].height, 0); assert.equal(hidden.props.style[1].transform[0].translateY, 225);
@@ -82,8 +83,14 @@ test('Android owned dock uses the shared Compose NavigationBar with the measured
 test('iOS owned dock preserves native buttons/selected semantics and measured source inset while UIKit system tabs are hidden', () => {
   const f = nativeDock('ios'), tree = f.render(); assert.equal(tree.type, 'Host'); assert.equal(tree.props.ignoreSafeArea, 'keyboard');
   const row = nodes(tree, node => node.type === 'HStack')[0]; assert.equal(row.props.modifiers.find(mod => mod.name === 'padding').args[0].bottom, 15);
-  assert.equal(row.props.modifiers.find(mod => mod.name === 'background').args[0], '#ccc');
+  assert.equal(row.props.modifiers.find(mod => mod.name === 'background').args[0], '#fff');
   assert.equal(row.props.modifiers.find(mod => mod.name === 'frame').args[0].minHeight, 60); const buttons = nodes(tree, node => node.type === 'Button'); assert.equal(buttons.length, 3);
   assert.ok(buttons[1].props.modifiers.some(mod => mod.name === 'accessibilityAddTraits' && mod.args[0].includes('isSelected'))); buttons[2].props.onPress(); assert.deepEqual(f.calls, ['admin-activity']);
   f.r.unmount(); const unresolved = nativeDock('ios', { inset: null }); assert.equal(unresolved.render(), null); unresolved.r.unmount();
+});
+test('the shared compact dock accepts the existing Brigader background', () => {
+  const f = nativeDock('android', { role: 'brigader' });
+  const bar = nodes(f.render(), node => node.type === 'NavigationBar')[0];
+  assert.equal(bar.props.containerColor, '#ccc');
+  f.r.unmount();
 });

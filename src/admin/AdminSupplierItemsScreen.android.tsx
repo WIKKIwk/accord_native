@@ -8,6 +8,7 @@ import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminText as Text } from './AdminTypography.android';
 import type { AdminSupplierItemsPageProps, AdminSupplierItemsScreenProps } from './AdminSupplierItemsScreenTypes';
 import { useAdminSupplierItems, useAdminSupplierItemsConfirmation, type AdminSupplierItemsScreenModel } from './useAdminSupplierItems';
@@ -62,9 +63,9 @@ export function SupplierItemConfirmation({ model }: { model: AdminSupplierItemsS
   </BasicAlertDialog></BaseHost>;
 }
 export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
-  const model = useAdminSupplierItems(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets();
+  const model = useAdminSupplierItems(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   if (!model.current() || !model.state.valid) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
         title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}

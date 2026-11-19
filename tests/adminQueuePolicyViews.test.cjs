@@ -1,8 +1,10 @@
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), Module = require('node:module'), test = require('node:test'), ts = require('typescript');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function load(file, mocks) {
   const filename = path.resolve(__dirname, '../src/admin', file), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = name => name === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, name) ? mocks[name] : name.startsWith('.') ? {} : require(name);
+  mod.require = name => name === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, name) ? mocks[name] :
+    name === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : name.startsWith('.') ? {} : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); return mod.exports;
 }
 function nodes(value, predicate) { if (!value || typeof value !== 'object') return []; if (Array.isArray(value)) return value.flatMap(child => nodes(child, predicate)); return [...(predicate(value) ? [value] : []), ...nodes(value.props?.children, predicate)]; }

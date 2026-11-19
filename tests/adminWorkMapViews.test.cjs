@@ -1,3 +1,4 @@
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -8,7 +9,8 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props, key) => ({ type, props, k
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   return mod.exports;

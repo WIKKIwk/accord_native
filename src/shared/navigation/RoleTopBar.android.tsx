@@ -7,7 +7,7 @@ export function RoleTopBar({ title, leading, actions, compact = false }: {
   title: ReactNode; leading?: ReactNode; actions?: ReactNode; compact?: boolean;
 }) {
   const { colors } = useBaseTheme();
-  return <Surface color={compact ? colors.surfaceContainerHigh : 'transparent'} contentColor={colors.onSurface}
+  return <Surface color="transparent" contentColor={colors.onSurface}
     tonalElevation={0} modifiers={[fillMaxWidth()]}>
     <Row verticalAlignment="center" modifiers={[
       fillMaxWidth(),

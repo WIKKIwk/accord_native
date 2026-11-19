@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
@@ -22,7 +22,7 @@ const currentLocale = () => localeController.locale;
 export function AdminHomeScreen(props: AdminHomeScreenProps) {
   const { session, navigation, footer } = props, { state, controller } = useAdminHome(props);
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), view = adminHomeViewState(session, state);
-  const { colors } = useBaseTheme(), insets = useSafeAreaInsets(), [refreshing, setRefreshing] = useState(false), mounted = useRef(true);
+  const { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), [refreshing, setRefreshing] = useState(false), mounted = useRef(true);
   const retryWidth = Math.min(360, Math.max(280, useWindowDimensions().width * 0.88));
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const refresh = async () => {
@@ -32,7 +32,7 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
   const rows = (view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [])
     .filter(row => props.isRouteAvailable(row.routeName));
   const showIcons = view === 'actions' && adminHomeShowsActionIcons(session);
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <AdminScreenHeader title={adminHomeTitle(session, locale)} testID="admin-home-header-safe-area" profileAction={props.profileAction}
       navigation={navigation ? { ...navigation, testID: navigation.testID ?? 'admin-home-navigation' } : null} />
     {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">

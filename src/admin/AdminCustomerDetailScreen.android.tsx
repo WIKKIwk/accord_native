@@ -9,6 +9,7 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, w
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminText as Text } from './AdminTypography.android';
 import { CustomerControls, CustomerIcon, CustomerInfoChip, CustomerPrompt, roundedCustomer } from './AdminCustomerDetailNative.android';
 import { CustomerSheetStack } from './AdminCustomerDetailSheets.android';
@@ -46,15 +47,15 @@ function Detail({ model, props }: { model: AdminCustomerDetailScreenModel; props
 }
 // @v2 AdminCustomerDetailScreen: the source card remains visible and usable while loading or after a read error.
 export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps) {
-  const model = useAdminCustomerDetail(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
+  const model = useAdminCustomerDetail(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<unknown>(null);
   useEffect(() => { if (state.notice && state.notice !== shown.current && model.current()) { shown.current = state.notice; void snackbar.current?.showSnackbar({ message: model.notice!, duration: 'short' }); } }, [state.notice, model]);
   if (!model.current() || !state.valid || state.removed) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
-    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: chromeBackground }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-customer-detail-back')]}><CustomerIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
         title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} /><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
+        actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-customer-detail-body-frame"><ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} testID="admin-customer-detail-scroll">
       <Detail model={model} props={props} />

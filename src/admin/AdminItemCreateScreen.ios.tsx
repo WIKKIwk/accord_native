@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { useAdminCreateHubScaffoldLayout } from './AdminCreateHubProvider';
 import { AdminItemCreateHeader } from './AdminItemCreateHeader.ios';
 import { AdminItemCreateList } from './AdminItemCreateList.ios';
@@ -17,11 +17,11 @@ import type { AdminTopNoticeScaffoldBinding } from './useAdminTopNoticeScaffold'
 
 function OwnedScreen({ scaffold, footerPlacement, ...props }: AdminItemCreateScreenAssemblyProps & Readonly<{ scaffold: AdminTopNoticeScaffoldBinding; footerPlacement: 'screen' | 'source' }>) {
   const sourceLayout = useAdminCreateHubScaffoldLayout();
-  const { colors } = useBaseTheme(), insets = useAdminShellInlineSafeArea(), model = useAdminItemCreate(props);
+  const { chromeBackground } = useAdminShellTheme(), insets = useAdminShellInlineSafeArea(), model = useAdminItemCreate(props);
   useAdminItemCreateNoticePresentation(model, scaffold.messenger, props.fixedSnackBars);
   if (!model.current() || !model.state.form.valid || !model.state.list.valid) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]} testID="admin-item-create-screen">
-    <Stack.Screen options={{ headerStyle: { backgroundColor: colors.surfaceContainerHigh }, contentStyle: { backgroundColor: colors.surfaceContainerHigh } }} />
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]} testID="admin-item-create-screen">
+    <Stack.Screen options={{ headerStyle: { backgroundColor: chromeBackground }, contentStyle: { backgroundColor: chromeBackground } }} />
     <AdminItemCreateHeader model={model} props={props} /><View style={styles.headerBottom} />
     <AdminTopNoticeHost scaffold={scaffold} inlineInsets={insets.inlineInsets} dismissLabel={props.topNoticeDismissLabel} />
     <AdminItemCreateScaffold>{bottomPadding => <AdminItemCreateList model={model} bottomPadding={bottomPadding} />}</AdminItemCreateScaffold>

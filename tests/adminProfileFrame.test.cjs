@@ -22,7 +22,7 @@ test('Profile uses the shared Android header with its standard title and native 
   const calls = [], tree = s.expand(header.AdminProfileHeader({ title: 'Profil', backLabel: 'Back', onBack: () => calls.push('back') }));
   const bar = s.nodes(tree, node => node.type === 'AdminScreenHeader')[0];
   assert.equal(tree.props.style.paddingTop, 24);
-  assert.equal(tree.props.style.backgroundColor, colors.surfaceContainerHigh);
+  assert.equal(tree.props.style.backgroundColor, colors.surfaceContainerLow);
   assert.equal(bar.props.standardTitle, true);
   assert.equal(bar.props.title, 'Profil');
   assert.equal(bar.props.navigation.icon, 'back');

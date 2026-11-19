@@ -8,6 +8,7 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, w
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { AdminCreateMenu } from './AdminCreateMenu.android';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
@@ -156,13 +157,13 @@ function Details({ model, renderActionSurface }: { model: AdminWarehouseMainMode
 }
 /** @v2 AdminWarehousesScreen */
 export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
-  const model = useAdminWarehouseMain(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width: viewportWidth } = useWindowDimensions(), pager = useRef<PagerViewRef>(null), { interactive, state } = model;
+  const model = useAdminWarehouseMain(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width: viewportWidth } = useWindowDimensions(), pager = useRef<PagerViewRef>(null), { interactive, state } = model;
   useEffect(() => { if (interactive()) pager.current?.setPage(state.pageTab === 'products' ? 0 : 1); }, [state.pageTab, interactive]);
   if (!model.valid) return null;
   const bottomPadding = insets.bottom + model.bottomPaddingOffset, tabs = model.scope === 'werka' ? [] : [
     { value: 'products', label: model.scope === 'material' ? model.a('warehouse.tabs_warehouses') : 'Mahsulotlar' }, { value: 'settings', label: model.scope === 'material' ? model.a('warehouse.tabs_states') : 'Sozlamalar' }];
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
-    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ backgroundColor: colors.surfaceContainerHigh }}><SearchHeader model={model} props={props} /></View></SafeAreaView>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ backgroundColor: chromeBackground }}><SearchHeader model={model} props={props} /></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-warehouse-main-body-frame">
     {model.summaryScreen === 'loading' ? <View style={styles.center}><BaseHost matchContents><WarehouseLoadingIndicator /></BaseHost></View> : model.summaryScreen === 'error' ? <ScrollView style={styles.body} contentContainerStyle={styles.retry}>
       <BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(viewportWidth * .88, 280), 360), maxWidth: '100%' }}><Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}>

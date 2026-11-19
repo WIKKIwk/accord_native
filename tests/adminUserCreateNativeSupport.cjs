@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module'), ts = require('typescript');
 const { frameModule } = require('./adminShellFrameViewSupport.cjs');
 const { l10n, model: source, role } = require('./adminUserCreateSupport.cjs');
@@ -49,7 +50,8 @@ function fixture(platform, kind = 'customer', locale = 'uz', { hide = async () =
     './adminUserCreateModel': source, './useAdminUserCreate': { useAdminUserCreate: () => { hookReads++; return model; } }, './useAdminPresentationWindow': presentationHook, './adminPresentationWindowTicket': ticket };
   function compile(name) {
     if (cache.has(name)) return cache.get(name); const filename = path.resolve(__dirname, '../src/admin', `${name}.tsx`), mod = new Module(filename, module); cache.set(name, mod.exports); mod.filename = filename; mod.paths = module.paths;
-    mod.require = id => Object.hasOwn(base, id) ? base[id] : id.startsWith('./AdminUserCreate') ? compile(id.slice(2)) : require(id);
+    mod.require = id => Object.hasOwn(base, id) ? base[id] :
+      id === './useAdminShellTheme' ? adminShellThemeFixture(base, filename) : id.startsWith('./AdminUserCreate') ? compile(id.slice(2)) : require(id);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); cache.set(name, mod.exports); return mod.exports;
   }
   function expand(node) { if (Array.isArray(node)) return node.map(expand); if (!node || typeof node !== 'object') return node; if (typeof node.type === 'function') return expand(node.type(node.props));

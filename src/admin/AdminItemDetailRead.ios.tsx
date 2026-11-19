@@ -3,7 +3,7 @@ import { buttonStyle, font, foregroundStyle, frame, multilineTextAlignment, padd
 import { isValidElement } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminItemDetailBody } from './AdminItemDetailBody.ios';
 import { AdminItemDetailTopBar } from './AdminItemDetailHeader.ios';
@@ -13,9 +13,9 @@ import type { AdminItemDetailNativeHeaderRenderer, AdminItemDetailReadProps } fr
 export function AdminItemDetailRead(props: AdminItemDetailReadProps & Readonly<{ renderNativeHeader: AdminItemDetailNativeHeaderRenderer }>) {
   if (!props.pageIdentity || typeof props.pageIdentity !== 'object' || !isValidElement(props.footer) ||
     [props.isCurrent, props.canInteract, props.onBack, props.presentations?.render, props.presentations?.onActions, props.renderNativeHeader].some(value => typeof value !== 'function')) throw TypeError('Item detail requires its original real page, visible native header and presentation providers');
-  const model = useAdminItemDetailRead(props), { colors } = useBaseTheme();
+  const model = useAdminItemDetailRead(props), { chromeBackground } = useAdminShellTheme();
   if (!model.current() || model.state.phase === 'invalidated') return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminItemDetailTopBar model={model} backLabel={props.backLabel} renderNativeHeader={props.renderNativeHeader} />
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]}><AdminItemDetailTopBar model={model} backLabel={props.backLabel} renderNativeHeader={props.renderNativeHeader} />
     <AdminShellBodyFrame hasFooter testID="admin-item-detail-body-frame"><View style={styles.screen}>
       {model.state.phase === 'loading' ? <View style={styles.center}><BaseHost matchContents><ProgressView /></BaseHost></View>
         : model.state.phase === 'error' ? <ScrollView style={styles.screen} contentContainerStyle={styles.errorList}><BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><VStack spacing={16} modifiers={[frame({ maxWidth: Infinity }), padding({ horizontal: 24, vertical: 40 })]}>

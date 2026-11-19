@@ -2,7 +2,6 @@ import { Redirect, usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useCallback, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
-import { useBaseTheme } from '../components/useBaseTheme';
 import { isSessionWitnessCurrent, logout, sessionWitnessVersion, subscribeSessionWitness } from '../auth';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
 import { appRoutes } from '../shared/appRoutes';
@@ -22,14 +21,11 @@ const subscribeLocale = (listener: () => void) => localeController.addListener(l
 const currentLocale = () => localeController.locale;
 function AdminTabs() {
   const shell = useAdminShell(), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const { colors } = useBaseTheme();
   const unread = useChatUnreadCount(shell.session);
   const pathname = usePathname(), ownedDock = pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/');
   const showActivity = !!shell.activityBinding && !!shell.destination(appRoutes.adminActivity, 'ios');
   const showChat = !!shell.destination(appRoutes.chat, 'ios');
-  return <NativeTabs hidden={ownedDock} backgroundColor={colors.surfaceContainerHigh}
-    tintColor={colors.primary} iconColor={{ default: colors.onSurfaceVariant, selected: colors.primary }}
-    labelStyle={{ default: { color: colors.onSurfaceVariant }, selected: { color: colors.primary } }} disableTransparentOnScrollEdge>
+  return <NativeTabs hidden={ownedDock}>
     <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
       <NativeTabs.Trigger.Label>{localizedGetter('adminHomeNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="activity" hidden={!showActivity}><NativeTabs.Trigger.Icon sf={{ default: 'clock.arrow.circlepath', selected: 'clock.arrow.circlepath' }} />

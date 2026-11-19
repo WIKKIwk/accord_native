@@ -9,10 +9,10 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsx
 const NavigationBarItem = Object.assign(() => null, { Icon: 'NavigationBarItem.Icon', Label: 'NavigationBarItem.Label' });
 const BadgedBox = Object.assign(() => null, { Badge: 'BadgedBox.Badge' });
 const palette = { onSecondaryContainer: 'selected', onSurface: 'surface', secondaryContainer: 'indicator',
-  onSurfaceVariant: 'muted', surfaceContainerLow: 'background' };
+  onSurfaceVariant: 'muted', surfaceContainerLow: 'background', surfaceContainerHigh: 'raised-background' };
 const mocks = { '../../components/BaseHost.android': { BaseHost: 'Host' }, '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: palette }) }, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
   NavigationBar: 'NavigationBar', NavigationBarItem, RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => palette },
-  '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fillMaxWidth', testID: id => `testID:${id}` },
+  '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fillMaxWidth', height: value => ({ height: value }), testID: id => `testID:${id}` },
   react: { useEffect() {}, useRef: value => ({ current: value }) },
   'react-native-reanimated': { default: { View: 'Animated.View' }, __esModule: true,
     useSharedValue: value => ({ get: () => value, set: next => { value = next; } }), useAnimatedStyle: fn => fn() },
@@ -32,6 +32,16 @@ function renderedItem(Bar, item, active, select = () => {}) {
   const itemElement = nav.props.children[0];
   return { bar, surface, nav, item: itemElement.type(itemElement.props) };
 }
+test('compact and regular Android navigation use the same device background', () => {
+  for (const compact of [false, true]) {
+    const bar = newBar({ active: 'home', items: [], onSelect() {}, compact });
+    const surface = bar.props.children;
+    const nav = surface.props.children.props.children;
+    assert.equal(surface.props.style[1].backgroundColor, palette.surfaceContainerLow);
+    assert.equal(nav.props.containerColor, palette.surfaceContainerLow);
+  }
+});
+
 test('no badge keeps existing selected/unselected icons, labels, styles and interaction', () => {
   for (const [item, selectedSource, unselectedSource] of [
     [{ id: 'home', label: 'Asosiy', icon: 'home', testID: 'home' },

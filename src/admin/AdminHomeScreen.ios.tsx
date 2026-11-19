@@ -6,7 +6,7 @@ import { SymbolView } from 'expo-symbols';
 import { useSyncExternalStore } from 'react';
 import { PlatformColor, StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
@@ -21,7 +21,7 @@ const currentLocale = () => localeController.locale;
 export function AdminHomeScreen(props: AdminHomeScreenProps) {
   const { session, navigation, footer } = props, { state, controller } = useAdminHome(props);
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), view = adminHomeViewState(session, state);
-  const { colors } = useBaseTheme();
+  const { chromeBackground } = useAdminShellTheme();
   const rows = (view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [])
     .filter(row => props.isRouteAvailable(row.routeName));
   const showIcons = view === 'actions' && adminHomeShowsActionIcons(session);
@@ -29,7 +29,7 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
     <Stack.Screen options={{ headerShown: true, title: adminHomeTitle(session, locale),
       headerRight: props.profileAction ? () => props.profileAction : undefined,
       headerLeft: navigation ? () => <RoleHeaderButton {...navigation} tintColor={PlatformColor('label')} /> : undefined }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
       {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
       <BaseHost style={styles.content}>
         {view === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView modifiers={[accessibilityLabel('Loading')]} /></VStack> :

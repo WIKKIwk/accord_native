@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { PreparationNotice } from '../preparation/PreparationNotice';
 import type { AdminWorkerDetailScreenProps } from './AdminWorkerDetailTypes';
 import { WorkerMaterialResponsibilities, WorkerWarehouseEditor } from './AdminWorkerDetailEditors.ios';
@@ -84,12 +85,12 @@ function Activity({ model }: { model: AdminWorkerDetailScreenModel }) {
 }
 /** @v2 AdminWorkerDetailScreen */
 export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
-  const model = useAdminWorkerDetail(props), { state, a } = model, { colors } = useBaseTheme();
+  const model = useAdminWorkerDetail(props), { state, a } = model, { colors, chromeBackground } = useAdminShellTheme();
   if (!model.scopeCurrent()) return null;
   const action = (label: string, press: () => void, id: string) => <Button label={label} onPress={press} modifiers={[buttonStyle('bordered'), controlSize('large'), frame({ maxWidth: Infinity, minHeight: 54 }), padding({ top: 12 }), accessibilityIdentifier(id)]} />;
   return <><Stack.Screen options={{ headerShown: true, title: a('profile.title'), headerBackVisible: false, gestureEnabled: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={() => { model.back(); }} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel)]} /></BaseHost> }} />
-    <View style={[styles.root, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><BaseHost style={styles.body}><ScrollView><VStack spacing={0} modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}>
+    <View style={[styles.root, { backgroundColor: chromeBackground }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><BaseHost style={styles.body}><ScrollView><VStack spacing={0} modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}>
       <Profile model={model} props={props} />
       {model.preparation ? <VStack modifiers={[padding({ all: 16 }), frame({ maxWidth: Infinity }), background(colors.surface), cornerRadius(18), padding({ top: 12 })]}><WorkerMaterialResponsibilities model={model} /></VStack> : null}
       {!model.system ? <VStack modifiers={[padding({ all: 14 }), frame({ maxWidth: Infinity }), background(colors.surface), cornerRadius(18), padding({ top: 12 })]}><Activity model={model} /></VStack> : null}

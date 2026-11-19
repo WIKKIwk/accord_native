@@ -4,7 +4,7 @@ import { isValidElement } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminText as Text } from './AdminTypography.android';
@@ -17,9 +17,9 @@ import type { AdminItemDetailReadProps } from './AdminItemDetailReadTypes';
 export function AdminItemDetailRead(props: AdminItemDetailReadProps) {
   if (!props.pageIdentity || typeof props.pageIdentity !== 'object' || !isValidElement(props.footer) ||
     [props.isCurrent, props.canInteract, props.onBack, props.presentations?.render, props.presentations?.onActions].some(value => typeof value !== 'function')) throw TypeError('Item detail requires its original real page and presentation providers');
-  const model = useAdminItemDetailRead(props), { colors } = useBaseTheme(), { width } = useWindowDimensions();
+  const model = useAdminItemDetailRead(props), { colors, chromeBackground } = useAdminShellTheme(), { width } = useWindowDimensions();
   if (!model.current() || model.state.phase === 'invalidated') return null;
-  return <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
+  return <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor: chromeBackground }]}>
     <AdminItemDetailTopBar model={model} backLabel={props.backLabel} />
     <AdminShellBodyFrame hasFooter testID="admin-item-detail-body-frame"><View style={styles.screen}>
       {model.state.phase === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View>

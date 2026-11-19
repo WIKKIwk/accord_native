@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { PreparationNotice } from '../preparation/PreparationNotice';
 import { uiText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
@@ -115,13 +116,13 @@ function Detail({ model, props }: { model: AdminWerkaScreenModel; props: AdminWe
 
 // @v2 AdminWerkaScreen, _AdminWerkaDetailCard and _WerkaAdminPanel; native SwiftUI controls.
 export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
-  const model = useAdminWerka(props), { state } = model, { colors } = useBaseTheme();
+  const model = useAdminWerka(props), { state } = model, { chromeBackground } = useAdminShellTheme();
   if (!model.current() || state.phase === 'invalidated') return null;
   return <><Stack.Screen options={{ headerShown: true, title: model.a('profile.title'), headerBackVisible: false, gestureEnabled: false,
     headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back}
       modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-werka-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-werka-body-frame"><BaseHost style={styles.body}>
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-werka-body-frame"><BaseHost style={styles.body}>
       {state.phase === 'loading' ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         state.phase === 'error' ? <ScrollView><VStack spacing={16} modifiers={[padding({ leading: 20, trailing: 20, top: 4, bottom: 24 }), frame({ maxWidth: Infinity })]}>
           <Text modifiers={[foregroundStyle('secondary'), multilineTextAlignment('center')]}>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[accessibilityIdentifier('admin-werka-retry')]} />

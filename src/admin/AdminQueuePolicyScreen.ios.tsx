@@ -4,19 +4,19 @@ import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.ios';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import type { AdminQueuePolicyScreenProps } from './AdminQueuePolicyTypes';
 import { useAdminQueuePolicy } from './useAdminQueuePolicy';
 
 /** @v2 AdminQueuePolicyScreen */
 export function AdminQueuePolicyScreen(props: AdminQueuePolicyScreenProps) {
-  const model = useAdminQueuePolicy(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets();
+  const model = useAdminQueuePolicy(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   if (!model.current || model.state.invalidated) return <View style={styles.root} />;
   return <><Stack.Screen options={{ headerShown: true, title: model.a('queue.title'), headerBackVisible: false,
     headerRight: props.profileAction ? () => props.profileAction : undefined,
     headerLeft: () => <BaseHost matchContents><Button onPress={model.navigation.onPress} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(model.navigation.label)]}><Image systemName={model.navigation.icon === 'back' ? 'chevron.left' : 'line.3.horizontal'} size={20} /></Button></BaseHost> }} />
-    <View style={[styles.root, { backgroundColor: colors.surfaceContainerHigh }]}>{props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-queue-policy-body-frame"><BaseHost style={styles.root}>
+    <View style={[styles.root, { backgroundColor: chromeBackground }]}>{props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-queue-policy-body-frame"><BaseHost style={styles.root}>
       {model.state.loading && !model.state.data ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> :
         model.state.loadError != null && !model.state.data ? <VStack spacing={16} modifiers={[padding({ horizontal: 24, top: 40 }), frame({ maxWidth: Infinity })]}>
           <Text>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={model.reload} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ minHeight: 54 }), accessibilityIdentifier('admin-queue-policy-retry')]} />

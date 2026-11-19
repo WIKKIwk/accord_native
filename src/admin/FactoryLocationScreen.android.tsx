@@ -1,4 +1,5 @@
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { DropdownMenu, DropdownMenuItem, IconButton, RNHostView, SnackbarHost, Text as ComposeText, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
@@ -51,14 +52,14 @@ function LocationRow({ location, apparatus, disabled, text, onEdit, onRename, on
 }
 export function FactoryLocationScreen(props: FactoryLocationScreenProps) {
   const state = useFactoryLocationScreen(props), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
-  const text = factoryLocationScreenText(locale), { controller, navigation, footer } = props, colors = useBaseTheme().colors, insets = useSafeAreaInsets();
+  const text = factoryLocationScreenText(locale), { controller, navigation, footer } = props, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   const snackbar = useRef<SnackbarHostRef>(null), mounted = useRef(true), [refreshing, setRefreshing] = useState(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { if (state.notice) void snackbar.current?.showSnackbar({ message: factoryLocationNoticeText(state.notice, locale), duration: 'short' }); }, [state.notice, locale]);
   const refresh = async () => { setRefreshing(true); try { await controller.load(); } finally { if (mounted.current) setRefreshing(false); } };
   const openEditor = (id: string | null) => { const ticket = controller.beginEditor(id); if (ticket) props.onOpenEditor(ticket); };
   const rename = (id: string) => { const ticket = controller.beginEditor(id); if (ticket) props.onOpenRename(ticket); };
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <AdminScreenHeader title={text.title} navigation={navigation} profileAction={props.profileAction}
       actions={<IconButton enabled={!state.saving && state.status !== 'forbidden'} onClick={() => openEditor(null)}
         modifiers={[size(48, 48), semantics({ contentDescription: text.create })]}>

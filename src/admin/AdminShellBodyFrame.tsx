@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useBaseTheme } from '../components/useBaseTheme';
-import { useOptionalAdminShell } from './AdminShellContext';
 import { adminShellDefaultContentPadding } from './adminShellLayoutPolicy';
 import { useAdminShellLayout } from './useAdminShellLayout';
+import { useAdminShellTheme } from './useAdminShellTheme';
 
 interface AdminShellBodyFrameProps {
   children: ReactNode;
@@ -18,10 +17,9 @@ interface AdminShellBodyFrameProps {
  * while native viewport facts arrive preserves their original owned reads.
  */
 export function AdminShellBodyFrame({ children, hasFooter, testID, contentPadding = 'none' }: AdminShellBodyFrameProps) {
-  const layout = useAdminShellLayout(hasFooter), { colors } = useBaseTheme();
+  const layout = useAdminShellLayout(hasFooter), { framed, bodyBackground } = useAdminShellTheme();
   const visible = layout.metricsReady;
-  const framed = useOptionalAdminShell()?.session.profile.role === 'brigader';
-  const surface = { backgroundColor: colors.surfaceContainerLow };
+  const surface = { backgroundColor: bodyBackground };
   const safeAreaStyle = [styles.reserve, visible && !framed && surface];
   const corners = framed ? {
     borderTopLeftRadius: layout.topRadius, borderTopRightRadius: layout.topRadius,

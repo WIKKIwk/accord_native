@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module'), ts = require('typescript');
@@ -54,7 +55,8 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
   const loadingFile = path.resolve(__dirname, '../src/admin/AdminLoadingIndicator.android.tsx'), loadingModule = new Module(loadingFile, module); loadingModule.filename = loadingFile; loadingModule.paths = module.paths; loadingModule.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
   loadingModule._compile(ts.transpileModule(fs.readFileSync(loadingFile, 'utf8'), { fileName: loadingFile, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, loadingFile);
   mocks['./AdminLoadingIndicator.android'] = loadingModule.exports;
-  const filename = path.resolve(__dirname, `../src/admin/AdminWarehouseMainScreen.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths; mod.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
+  const filename = path.resolve(__dirname, `../src/admin/AdminWarehouseMainScreen.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths; mod.require = name => Object.hasOwn(mocks, name) ? mocks[name] :
+    name === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   const props = { scope, backLabel: 'Back', footer: { type: 'RealDock', props: {} }, session: {}, witness: {} };
   return { calls, row, model, props, render: () => render(mod.exports.AdminWarehouseMainScreen(props)) };

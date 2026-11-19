@@ -5,7 +5,7 @@ import { accessibilityIdentifier, accessibilityLabel, buttonStyle, foregroundSty
 import { StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { ProfileScreen } from '../components/ProfileScreen';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -13,11 +13,11 @@ import type { AdminOwnedRouteContentProps } from './AdminOwnedRouteContentTypes'
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener), getLocale = () => localeController.locale;
 export function AdminOwnedProfileContent(props: AdminOwnedRouteContentProps) {
-  const locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale), { colors } = useBaseTheme();
+  const locale = useSyncExternalStore(subscribeLocale, getLocale, getLocale), { colors, chromeBackground } = useAdminShellTheme();
   return <><Stack.Screen options={{ headerShown: true, title: localizedGetter('profileTitle', locale), headerBackVisible: false,
-    headerStyle: { backgroundColor: colors.surfaceContainerHigh }, headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={() => { if (props.canInteract()) props.onBack(false); }}
+    headerStyle: { backgroundColor: chromeBackground }, headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={() => { if (props.canInteract()) props.onBack(false); }}
       modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), foregroundStyle(colors.onSurface), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-profile-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-profile-body-frame"><ProfileScreen session={props.session} isCurrent={props.isCurrent} onLogout={props.onLogout}
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-profile-body-frame"><ProfileScreen session={props.session} isCurrent={props.isCurrent} onLogout={props.onLogout}
       showDirectLogout={false} settingsDisabled={props.session.profile.role !== 'brigader'} /></AdminShellBodyFrame>
       <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     </View>

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { OrdersList } from '../shared/orders/OrdersList.android';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -59,15 +60,15 @@ function QueuePolicyTile({ row, index, count, a }: { row: Model['rows'][number];
 
 /** @v2 AdminQueuePolicyScreen */
 export function AdminQueuePolicyScreen(props: AdminQueuePolicyScreenProps) {
-  const model = useAdminQueuePolicy(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets(), width = useWindowDimensions().width;
+  const model = useAdminQueuePolicy(props), { colors, chromeBackground, framed } = useAdminShellTheme(), insets = useSafeAreaInsets(), width = useWindowDimensions().width;
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   if (!model.current || model.state.invalidated) return <View style={styles.root} />;
-  return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+  return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <BaseHost matchContents={{ vertical: true }} style={styles.full}><AdminTopBar leading={<IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-queue-policy-back')]}>
         <QueueIcon name={model.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} iconSize={24} /></IconButton>}
       title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('queue.title')}</Text>}
       actions={props.profileAction ? <RNHostView matchContents>{props.profileAction}</RNHostView> : null} /></BaseHost>{props.topNotice}
-    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-queue-policy-body-frame"><View style={[styles.root, { backgroundColor: colors.surfaceContainerHighest }]}>
+    <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-queue-policy-body-frame"><View style={[styles.root, framed && { backgroundColor: colors.surfaceContainerHighest }]}>
       {model.state.loading && !model.state.data ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
         model.state.loadError != null && !model.state.data ? <View style={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(360, Math.max(280, width * .88)), maxWidth: '100%' }}><Column horizontalAlignment="center">
           <Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center', lineHeight: 21.6 }}>{model.t('serverDisconnectedRetry')}</Text><Spacer modifiers={[height(16)]} />

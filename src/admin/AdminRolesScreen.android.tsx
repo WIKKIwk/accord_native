@@ -8,6 +8,7 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminOutlinedTextField as OutlinedTextField } from './AdminTextFields.android';
@@ -117,7 +118,7 @@ function RolesSheet({ model }: { model: AdminRolesScreenModel }) {
 
 /** @v2 AdminRolesScreen */
 export function AdminRolesScreen(props: AdminRolesScreenProps) {
-  const model = useAdminRoles(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
+  const model = useAdminRoles(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
   const pager = useRef<HorizontalPagerHandle>(null), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
   useEffect(() => { void pager.current?.animateScrollToPage(state.tab); }, [state.tab]);
   useEffect(() => { if (model.snackbar && shown.current !== model.snackbar.serial && model.current) { shown.current = model.snackbar.serial; void snackbar.current?.showSnackbar({ message: model.snackbar.message, duration: 'short' }); } }, [model]);
@@ -129,7 +130,7 @@ export function AdminRolesScreen(props: AdminRolesScreenProps) {
   const assignmentPage = <PullToRefreshBox isRefreshing={state.refreshing} onRefresh={() => { void model.controller.reload(); }} modifiers={[fillMaxSize()]}><LazyColumn contentPadding={{ start: 4, end: 4, top: 4, bottom: insets.bottom + 136 }} verticalArrangement={{ spacedBy: 2 }} modifiers={[fillMaxSize()]}>
     <LazyColumn.Items data={model.principals} keyExtractor={(row, index) => `${row.principal.role}:${row.principal.ref}:${index}`} estimatedItemSize={100}>{({ item, index }) => <AssignmentRow row={item} index={index} model={model} />}</LazyColumn.Items>
   </LazyColumn></PullToRefreshBox>;
-  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}><AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label })]}><Icon name={props.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} /></IconButton>}
       title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.t('adminRolesTitle')}</Text>}
       actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} /></Column></BaseHost></SafeAreaView>{props.topNotice}

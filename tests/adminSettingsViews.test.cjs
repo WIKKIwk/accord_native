@@ -1,3 +1,4 @@
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -9,7 +10,8 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsx
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); return mod.exports;
 }
 const model = load('admin/adminSettingsController.ts', { './dartJsonString': load('admin/dartJsonString.ts') });
@@ -31,7 +33,8 @@ function text(node) {
   if (Array.isArray(node)) return node.map(text).join(' ');
   return node && typeof node === 'object' ? [text(node.props?.children), text(node.props?.header), text(node.props?.footer)].filter(Boolean).join(' ') : '';
 }
-function fixture(platform, { phase = 'content', saving = false, additional = true, push = true, locale = 'uz', current = true, mode = 'light', nativeMetrics = metrics() } = {}) {
+function fixture(platform, { phase = 'content', saving = false, additional = true, push = true, locale = 'uz', current = true, mode = 'light',
+  nativeMetrics = metrics(platform === 'ios' ? { platform, width: 1024, height: 1366 } : { platform }) } = {}) {
   const calls = [], effects = [];
   const state = { phase, fields: Object.fromEntries(model.adminSettingsFieldNames.map(key => [key, `value-${key}`])), fillVersion: 1, saving, changed: false, notice: null };
   const value = { state, current, additional, push, navigation: { icon: 'back', label: 'Back', onPress: () => calls.push('back') },
@@ -102,7 +105,7 @@ for (const platform of ['ios', 'android']) {
     for (const phase of ['content', 'loading', 'error']) {
       const f = fixture(platform, { phase }), body = nodes(f.tree, node => node.props.testID === 'admin-settings-body-frame')[0], reserve = nodes(f.tree, node => node.props.testID === 'admin-settings-body-frame-reserve')[0];
       assert.equal(flattenStyle(reserve.props.style).marginHorizontal, undefined); assert.equal(flattenStyle(reserve.props.style).marginBottom, 92);
-      assert.equal(flattenStyle(body.props.style).backgroundColor, 'low');
+      assert.equal(flattenStyle(body.props.style).backgroundColor, platform === 'ios' ? 'bg' : 'low');
       const content = nodes(body, node => flattenStyle(node.props.style).paddingStart === 12 && flattenStyle(node.props.style).paddingEnd === 14)[0]; assert.ok(content);
       assert.equal(text(body).includes('real-dock'), false); assert.equal(text(f.tree).includes('real-dock'), true);
       const safe = nodes(f.tree, node => node.props.testID === 'admin-settings-body-frame-safe-area')[0]; assert.equal(safe.type, 'SafeAreaView'); assert.deepEqual(safe.props.edges, ['left', 'right']);

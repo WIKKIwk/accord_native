@@ -8,6 +8,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminText as Text } from './AdminTypography.android';
 import { AdminBasicTextField as BasicTextField } from './AdminTextFields.android';
 import type { AdminWorkerDetailScreenProps } from './AdminWorkerDetailTypes';
@@ -70,16 +71,16 @@ function Activity({ model }: { model: AdminWorkerDetailScreenModel }) {
 }
 /** @v2 AdminWorkerDetailScreen */
 export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
-  const model = useAdminWorkerDetail(props), { state, detail, a } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
+  const model = useAdminWorkerDetail(props), { state, detail, a } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
   const noticeSerial = state.notice?.serial, notice = model.notice;
   useEffect(() => { if (model.current() && notice && noticeSerial !== shown.current) { shown.current = noticeSerial ?? null; void snackbar.current?.showSnackbar({ message: notice, duration: 'short' }); } }, [model, notice, noticeSerial]);
   if (!model.scopeCurrent()) return null;
   const chatAction = props.renderChatAction?.(model.scopeCurrent, model.interactive);
   const action = (label: string, click: () => void, id: string) => <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><OutlinedButton onClick={click} colors={{ contentColor: colors.onSurface }} shape={workerDetailShape(14)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 54 }), testID(id)]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{label}</Text></OutlinedButton></BaseHost>;
-  return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+  return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost style={styles.header}><Column><AdminTopBar leading={<IconButton onClick={() => { model.back(); }} modifiers={[size(48, 48), semantics({ contentDescription: props.backLabel })]}><WorkerDetailIcon name="arrow_back" color={colors.onSurfaceVariant} /></IconButton>}
       title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{a('profile.title')}</Text>}
-      actions={<RNHostView matchContents><View style={styles.headerAction}>{props.profileAction}</View></RNHostView>} /><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} /></Column></BaseHost></SafeAreaView>
+      actions={<RNHostView matchContents><View style={styles.headerAction}>{props.profileAction}</View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} /></Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={colors.surface} shadowElevation={2} shape={workerDetailCardShape()} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), animateContentSize()]}>
         <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>

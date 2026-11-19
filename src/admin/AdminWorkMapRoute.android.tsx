@@ -1,4 +1,4 @@
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { ListItem } from '@expo/ui';
 import { Redirect } from 'expo-router';
 import { isValidElement, useEffect, type ReactNode } from 'react';
@@ -25,10 +25,10 @@ import { adminWorkMapText } from './adminWorkMapText';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminWorkMapView } from './useAdminWorkMapView';
 function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
-  const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, { colors } = useBaseTheme(), insets = useSafeAreaInsets();
+  const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, { chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), label = adminWorkMapText(locale), goBack = view.goBack;
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; }); return () => sub.remove(); }, [goBack]);
-  return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}>
+  return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: chromeBackground }}>
     <SafeAreaView edges={['left', 'right']}><OrdersHeader compact search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)}
       onSearchChange={view.search} onBack={view.goBack} onProfile={view.onProfile} profileAction={<AdminShellProfileAction />} /></SafeAreaView>
     <AdminShellBodyFrame hasFooter={footer !== null} testID="admin-work-map-body-frame">

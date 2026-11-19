@@ -2,13 +2,13 @@ import { Badge, BadgedBox, Icon, NavigationBar, NavigationBarItem, RNHostView, T
 import { fillMaxWidth, height, testID } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView, type AndroidSymbol } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
-import { Keyboard, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Keyboard, StyleSheet, View, type ColorValue, type ImageSourcePropType } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
 
 export type RoleNavigationItem = { id: string; label: string; icon: AndroidSymbol; testID?: string; showBadge?: boolean };
-type Props = { active: string; items: readonly RoleNavigationItem[]; onSelect: (id: string) => void; bottomInset?: number; avoidKeyboard?: boolean; compact?: boolean };
+type Props = { active: string; items: readonly RoleNavigationItem[]; onSelect: (id: string) => void; bottomInset?: number; avoidKeyboard?: boolean; compact?: boolean; backgroundColor?: ColorValue };
 const navigationIcons: Partial<Record<AndroidSymbol, { outlined: ImageSourcePropType; filled: ImageSourcePropType }>> = {
   home: { outlined: require('../../../assets/icons/navigation/outlined/home.xml'), filled: require('../../../assets/icons/navigation/filled/home_fill.xml') },
   chat_bubble: { outlined: require('../../../assets/icons/navigation/outlined/chat_bubble.xml'), filled: require('../../../assets/icons/navigation/filled/chat_bubble_fill.xml') },
@@ -34,9 +34,9 @@ function NavItem({ item, active, onSelect }: { item: RoleNavigationItem; active:
   </NavigationBarItem>;
 }
 
-export function RoleBottomBar({ active, items, onSelect, bottomInset = 0, avoidKeyboard = true, compact = false }: Props) {
+export function RoleBottomBar({ active, items, onSelect, bottomInset = 0, avoidKeyboard = true, compact = false, backgroundColor }: Props) {
   const { colors } = useBaseTheme();
-  const backgroundColor = compact ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
+  const surface = backgroundColor ?? colors.surfaceContainerLow;
   const initialHeight = (compact ? 60 : 80) + bottomInset;
   const keyboardHeight = useSharedValue(Keyboard.metrics()?.height ?? 0);
   const barHeight = useSharedValue(initialHeight);
@@ -65,9 +65,9 @@ export function RoleBottomBar({ active, items, onSelect, bottomInset = 0, avoidK
       if (!open) closedHeight.current = height;
       if (avoidKeyboard || !open) barHeight.set(height);
     }}
-      style={[styles.bar, { backgroundColor, paddingBottom: compact ? 0 : bottomInset }]}>
+      style={[styles.bar, { backgroundColor: surface, paddingBottom: compact ? 0 : bottomInset }]}>
       <BaseHost matchContents={{ vertical: true }} style={styles.navHost}>
-        <NavigationBar containerColor={backgroundColor} tonalElevation={0}
+        <NavigationBar containerColor={surface} tonalElevation={0}
           modifiers={[fillMaxWidth(), ...(compact ? [height(initialHeight)] : [])]}>
           {items.map(item => <NavItem key={item.id} item={item} active={active} onSelect={onSelect} />)}
         </NavigationBar>

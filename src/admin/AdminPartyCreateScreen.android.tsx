@@ -4,7 +4,7 @@ import { defaultMinSize, fillMaxWidth, height, padding, semantics, testID } from
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminProfileAction } from './AdminProfileAction.android';
 import { AdminText } from './AdminTypography.android';
 import { AdminOutlinedTextField } from './AdminTextFields.android';
@@ -15,10 +15,10 @@ import type { ReactNode } from 'react';
 
 /** @v2 AdminPartyCreateScaffold */
 export function AdminPartyCreateScreen(props: AdminPartyCreateProps & { footer: ReactNode }) {
-  const model = useAdminPartyCreate(props), name = useNativeState(''), phone = useNativeState(''), { colors, mode } = useBaseTheme();
+  const model = useAdminPartyCreate(props), name = useNativeState(''), phone = useNativeState(''), { colors, mode, chromeBackground } = useAdminShellTheme();
   const field = { shape: userCreateRounded(18), colors: { focusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest, unfocusedContainerColor: mode === 'light' ? colors.surfaceBright : colors.surfaceContainerHighest, focusedIndicatorColor: colors.primary, unfocusedIndicatorColor: colors.outlineVariant } };
   if (!model.current()) return null;
-  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.surfaceContainerHigh }}>
+  return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: chromeBackground }}>
     <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><AdminTopBar leading={<IconButton onClick={props.onBack} modifiers={[semantics({ contentDescription: props.backLabel }), testID("admin-party-create-back")]}><UserCreateIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
       title={<AdminText style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</AdminText>}
       actions={<RNHostView matchContents><AdminProfileAction {...props} onProfile={props.onProfile} /></RNHostView>} /></BaseHost>

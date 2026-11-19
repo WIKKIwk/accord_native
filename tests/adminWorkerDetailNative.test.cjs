@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs');
@@ -65,7 +66,8 @@ function fixture(platform, { locale = 'uz', readOnly = false, system = false, pr
   function compile(relative) {
     if (compiled.has(relative)) return compiled.get(relative);
     const filename = path.resolve(__dirname, '../src', relative), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-    mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('./AdminWorkerDetail') ? compile(`admin/${id.slice(2)}.tsx`) : require(id);
+    mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] :
+      id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : id.startsWith('./AdminWorkerDetail') ? compile(`admin/${id.slice(2)}.tsx`) : require(id);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); compiled.set(relative, mod.exports); return mod.exports;
   }
   const screen = compile(`admin/AdminWorkerDetailScreen.${platform}.tsx`), props = { backLabel: 'Back', profileAction: { type: 'RealProfile', props: {} }, footer: { type: 'RealDock', props: {} },
@@ -147,7 +149,7 @@ test('Android source material loading uses expressive48 glyph in64 host; profile
   const tree = f.render(), glyph = nodes(tree, n => n.type === 'LoadingIndicator')[0]; assert.ok(glyph.props.modifiers.some(mod => mod.name === 'size' && mod.args[0] === 48));
   assert.ok(nodes(tree, n => n.type === 'Box' && n.props.modifiers?.some(mod => mod.name === 'size' && mod.args[0] === 64)).length);
   assert.ok(nodes(tree, n => n.type === 'CircularProgressIndicator' && n.props.modifiers?.some(mod => mod.name === 'size' && mod.args[0] === 18)).length);
-  assert.ok(nodes(tree, n => n.type === 'Surface' && n.props.color === colors.surfaceContainerHigh && n.props.modifiers?.some(mod => mod.name === 'height' && mod.args[0] === 3)).length);
+  assert.ok(nodes(tree, n => n.type === 'Surface' && n.props.color === colors.surfaceContainerLow && n.props.modifiers?.some(mod => mod.name === 'height' && mod.args[0] === 3)).length);
 });
 test('iOS independent editors nest second sheet within first presented content in original overlay order', () => {
   const f = fixture('ios', { overlays: [{ mode: 'warehouse', id: 3 }, { mode: 'material', id: 4 }] }), tree = f.render(), sheets = nodes(tree, n => n.type === 'BottomSheet');

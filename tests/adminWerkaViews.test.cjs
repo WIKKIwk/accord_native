@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -54,7 +55,8 @@ function load(platform, model, runtime = hookRuntime()) {
     '../shared/localization': l10n, '../shared/localization/runtime': { localeController: { locale: 'uz' } }, './dartJsonString': strings,
     './useAdminWerka': { useAdminWerka: () => model } };
   const filename = path.resolve(__dirname, `../src/admin/AdminWerkaScreen.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return { ...mod.exports, runtime };
 }

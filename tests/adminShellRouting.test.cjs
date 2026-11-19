@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -9,7 +10,9 @@ const jsx = { Fragment: 'Fragment', jsx: (type, props, key) => ({ type, props, k
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id === './AdminDrawerPresentationContext' ? { useAdminDrawerPresentation: () => null } : id.startsWith('.') ? {} : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) :
+    id === './AdminDrawerPresentationContext' ? { useAdminDrawerPresentation: () => null } : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   return mod.exports;
@@ -178,7 +181,8 @@ test('iOS native Home/Activity roots stay stable while genuine pushed Users/owne
     const tabsOwner = find(tree, node => typeof node.type === 'function' && node.type.name === 'AdminTabs'), tabs = tabsOwner.type();
     assert.equal(tabs.props.hidden, pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/'));
     assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', 'activity', 'chat']);
-    assert.equal(tabs.props.backgroundColor, 'chrome'); assert.equal(tabs.props.children[2].props.hidden, false);
+    assert.equal(tabs.props.backgroundColor, undefined); assert.equal(tabs.props.tintColor, undefined);
+    assert.equal(tabs.props.children[2].props.hidden, false);
   }
 });
 for (const platform of ['ios', 'android']) {

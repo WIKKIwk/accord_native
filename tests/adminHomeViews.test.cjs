@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -14,7 +15,8 @@ function nodes(node, predicate) {
 function load(file, mocks = {}) {
   const filename = path.resolve(__dirname, '../src', file), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : id.startsWith('.') ? {} : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : id.startsWith('.') ? {} : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   return mod.exports;
@@ -43,7 +45,7 @@ function render(platform, account, state = baseState, navigation = 'menu', isRou
       onSurfaceVariant: 'secondary', primary: 'primary' }) }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     expo: { isRunningInExpoGo: () => expoGo }, 'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/BaseHost.android': { BaseHost: 'BaseHost' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: 'chrome', surfaceContainerLow: 'bg', surfaceContainerLowest: 'card',
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surface: 'ios-bg', surfaceContainerHigh: 'old-chrome', surfaceContainerLow: 'bg', surfaceContainerLowest: 'card',
       onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary' } }) },
     './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, './AdminTypography.android': { AdminText: 'ComposeText' },
     './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
@@ -147,7 +149,8 @@ test('Android Expo Go opens admin home without mounting the unavailable TopAppBa
   const { tree, calls } = render('android', admin, baseState, 'menu', () => true, profile, true);
   const header = nodes(tree, n => n.props.testID === 'admin-home-header-safe-area')[0];
   assert.equal(nodes(header, n => n.type === topBar || n.type === topBar.Title).length, 0);
-  assert.equal(nodes(header, n => n.type === 'Surface')[0].props.color, 'chrome');
+  assert.equal(header.props.style.backgroundColor, 'bg');
+  assert.equal(nodes(header, n => n.type === 'Surface')[0].props.color, 'transparent');
   assert.equal(nodes(header, n => n.type === 'Row')[0].props.modifiers.find(m => m.name === 'height').args[0], 60);
   assert.equal(nodes(header, n => n.type === 'ExistingProfile').length, 1);
   nodes(header, n => n.type === 'IconButton')[0].props.onClick();
@@ -250,7 +253,7 @@ for (const platform of ['ios', 'android']) {
 }
 test('Android Home reuses the source native toolbar, scoped text, expressive loading and side safe area', () => {
   const { tree } = render('android', admin, { ...baseState, loadingSummary: true, loadedSummary: false });
-  const header = nodes(tree, n => n.type === 'Surface' && n.props.color === 'chrome')[0];
+  const header = nodes(tree, n => n.type === 'Surface' && n.props.color === 'transparent')[0];
   const row = nodes(header, n => n.type === 'Row')[0];
   assert.deepEqual(row.props.modifiers.find(m => m.name === 'height').args, [60]);
   const title = nodes(header, n => n.type === 'ComposeText')[0];

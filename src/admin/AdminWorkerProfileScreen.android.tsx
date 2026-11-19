@@ -7,6 +7,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminText as Text } from './AdminTypography.android';
 import type { AdminWorkerProfileScreenProps } from './AdminWorkerProfileScreenTypes';
 import type { AdminWorkerProfileCard } from './adminWorkerProfilePresentation';
@@ -29,8 +30,8 @@ export function WorkerProfileInfoCard({ card }: { card: AdminWorkerProfileCard }
 }
 /** @v2 AdminWorkerProfileDetailScreen */
 export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
-  const model = useAdminWorkerProfile(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets(); if (!model.current() || !model.state.valid) return null;
-  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+  const model = useAdminWorkerProfile(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(); if (!model.current() || !model.state.valid) return null;
+  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><RNHostView matchContents><SymbolView name={{ android: 'arrow_back' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton>}
         title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}

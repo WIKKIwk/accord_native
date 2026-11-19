@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -51,7 +52,8 @@ function render(platform, patch = {}, options = {}) {
     './useAdminInactiveSuppliers': { useAdminInactiveSuppliers: () => model } };
   const filename = path.resolve(__dirname, `../src/admin/AdminInactiveSuppliersScreen.${platform}.tsx`), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   const footer = { type: 'RealDock', props: {} }, profile = { type: 'RealProfile', props: {} };
   const props = { session: {}, witness: {}, isCurrent: () => true, navigation: { icon: 'back', label: 'Back', onPress: () => calls.push('back') }, profileAction: profile, footer };

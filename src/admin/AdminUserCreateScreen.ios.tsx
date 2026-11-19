@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { AdminProfileAction } from './AdminProfileAction.ios';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -65,8 +66,8 @@ function Form({ model }: { model: AdminUserCreateScreenModel }) {
 }
 /** @v2 AdminUserCreateScreen */
 export function AdminUserCreateScreen(props: AdminUserCreateScreenProps) {
-  const model = useAdminUserCreate(props), { colors } = useBaseTheme(); if (!model.current() || !model.state.valid) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><Stack.Screen options={{ title: model.a('user.create_title'), headerShown: true, headerLargeTitle: false, headerShadowVisible: false, headerBackVisible: false,
+  const model = useAdminUserCreate(props), { colors, chromeBackground } = useAdminShellTheme(); if (!model.current() || !model.state.valid) return null;
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]}><Stack.Screen options={{ title: model.a('user.create_title'), headerShown: true, headerLargeTitle: false, headerShadowVisible: false, headerBackVisible: false,
     headerLeft: () => <RoleHeaderButton icon="back" label={props.backLabel} onPress={model.back} tintColor={colors.onSurface} />, headerRight: () => <AdminProfileAction session={props.session} witness={props.witness} isCurrent={model.current} canInteract={model.interactive} onProfile={props.onProfile} /> }} />
     {model.notice ? <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><VStack alignment="leading" modifiers={[frame({ maxWidth: Infinity, alignment: 'leading' }), padding({ horizontal: 16, vertical: 12 }), background(model.state.notice?.tone === 'error' ? '#FCE8E6' : '#E6F4EA')]}><Text modifiers={[font({ textStyle: 'body' }), foregroundStyle(model.state.notice?.tone === 'error' ? '#5F1412' : '#173A24')]}>{model.notice}</Text></VStack></BaseHost> : null}
     <AdminShellBodyFrame hasFooter={model.footer != null} testID="admin-user-create-body-frame"><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>

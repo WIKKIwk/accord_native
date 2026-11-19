@@ -6,7 +6,7 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { appRoutes } from '../shared/appRoutes';
 import { localizedGetter, productionText } from '../shared/localization';
 import { OrderListItem } from '../shared/orders/OrderListItem';
@@ -27,10 +27,10 @@ import { useAdminWorkMapView } from './useAdminWorkMapView';
 
 function BoundWorkMap({ footer }: { footer?: ReactNode }) {
   const view = useAdminWorkMapView(), { shell, locale, state, controller } = view, insets = useSafeAreaInsets();
-  const { colors } = useBaseTheme();
+  const { chromeBackground } = useAdminShellTheme();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), label = adminWorkMapText(locale);
   return <><Stack.Screen options={{ headerShown: false }} />
-    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}>
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: chromeBackground }}>
       <OrdersHeader search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)} onSearchChange={view.search}
         onBack={view.goBack} onProfile={view.onProfile} profileAction={<AdminShellProfileAction />} />
       <AdminShellBodyFrame hasFooter={footer != null} testID="admin-work-map-body-frame">

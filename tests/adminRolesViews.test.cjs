@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -50,7 +51,8 @@ function render(platform, options = {}) {
     './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' },
     './AdminTypography.android': { AdminText: 'Text' }, './AdminTextFields.android': { AdminOutlinedTextField: compound('OutlinedTextField', ['Label']) }, './useAdminRoles': { useAdminRoles: () => model } };
   const filename = path.resolve(__dirname, `../src/admin/AdminRolesScreen.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = name => Object.hasOwn(mocks, name) ? mocks[name] : require(name);
+  mod.require = name => Object.hasOwn(mocks, name) ? mocks[name] :
+    name === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
   return { tree: expand(mod.exports.AdminRolesScreen(props)), calls, model, state, data };
 }

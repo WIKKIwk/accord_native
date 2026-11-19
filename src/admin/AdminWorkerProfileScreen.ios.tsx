@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import type { AdminWorkerProfileScreenProps } from './AdminWorkerProfileScreenTypes';
 import type { AdminWorkerProfileCard } from './adminWorkerProfilePresentation';
 import { useAdminWorkerProfile } from './useAdminWorkerProfile';
@@ -20,10 +21,10 @@ export function WorkerProfileInfoCard({ card }: { card: AdminWorkerProfileCard }
 }
 /** @v2 AdminWorkerProfileDetailScreen */
 export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
-  const model = useAdminWorkerProfile(props), { colors } = useBaseTheme(); if (!model.current() || !model.state.valid) return null;
+  const model = useAdminWorkerProfile(props), { chromeBackground } = useAdminShellTheme(); if (!model.current() || !model.state.valid) return null;
   return <><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel)]}><Image systemName="chevron.left" size={20} /></Button></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-profile-body-frame"><BaseHost style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-profile-body-frame"><BaseHost style={styles.screen}>
       {model.state.phase === 'content' ? <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), padding({ top: 8 }), refreshable(model.reload)]}>
         {model.cards.map((card, index) => <WorkerProfileInfoCard key={index} card={card} />)}<Spacer modifiers={[frame({ height: 116 }), listRowBackground('clear'), listRowSeparator('hidden'), listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 })]} />
       </List> : <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>

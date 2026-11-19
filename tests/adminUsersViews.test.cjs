@@ -1,4 +1,5 @@
 /* global __dirname */
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -9,7 +10,8 @@ const { model: users, l10n } = require('./adminUsersSupport.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
 function load(file, mocks) {
   const filename = path.resolve(__dirname, '../src/admin', file), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
+  mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return mod.exports;
 }
@@ -158,7 +160,7 @@ for (const platform of ['android', 'ios']) test(`${platform} Users fills the Adm
   assert.equal(nodes(frame, node => node.type === 'ExistingDock').length, 0); assert.equal(nodes(tree, node => node.props.testID === 'admin-users-body-frame-safe-area')[0].props.edges.join(), 'left,right');
   if (platform === 'android') {
     assert.equal(nodes(tree, node => node.props.testID === 'admin-users-header-safe-area')[0].props.edges.join(), 'left,right');
-    assert.equal(tree.props.style[1].backgroundColor, colors.surfaceContainerHigh);
+    assert.equal(tree.props.style[1].backgroundColor, colors.surfaceContainerLow);
   }
 });
 test('Android Users full/pagination loading uses the actual expressive source64 host and48 glyph', () => {

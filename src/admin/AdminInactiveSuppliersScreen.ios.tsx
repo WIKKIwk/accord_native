@@ -6,6 +6,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import type { AdminInactiveSupplier } from './adminInactiveSuppliersApi';
 import type { AdminInactiveSuppliersScreenProps } from './AdminInactiveSuppliersTypes';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -59,14 +60,14 @@ function SupplierList({ model }: { model: Model }) {
 
 /** @v2 AdminInactiveSuppliersScreen */
 export function AdminInactiveSuppliersScreen(props: AdminInactiveSuppliersScreenProps) {
-  const model = useAdminInactiveSuppliers(props), { state } = model, { colors } = useBaseTheme();
+  const model = useAdminInactiveSuppliers(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme();
   if (!model.current || state.phase === 'invalidated') return null;
   return <><Stack.Screen options={{ headerShown: true, title: model.a('users.inactive_title'), headerBackVisible: false,
     headerRight: props.profileAction ? () => props.profileAction : undefined,
     headerLeft: () => <BaseHost matchContents><Button onPress={props.navigation.onPress} modifiers={[buttonStyle('plain'), accessibilityLabel(props.navigation.label), frame({ minWidth: 44, minHeight: 44 })]}>
       <Image systemName={props.navigation.icon === 'back' ? 'chevron.left' : 'line.3.horizontal'} size={20} />
     </Button></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
       {props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-inactive-suppliers-body-frame" contentPadding="default">
         {state.phase === 'loading' ? <BaseHost style={styles.content}><VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack></BaseHost> :
           state.phase === 'error' ? <BaseHost style={styles.content}><VStack spacing={16} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>

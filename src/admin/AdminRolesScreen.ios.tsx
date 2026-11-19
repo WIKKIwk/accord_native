@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.ios';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { PreparationNotice } from '../preparation/PreparationNotice';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import type { AdminRolesScreenProps } from './AdminRolesTypes';
@@ -78,7 +78,7 @@ function RolesSheet({ model }: { model: AdminRolesScreenModel }) {
 
 /** @v2 AdminRolesScreen */
 export function AdminRolesScreen(props: AdminRolesScreenProps) {
-  const model = useAdminRoles(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(); if (!model.current) return null;
+  const model = useAdminRoles(props), { state } = model, { chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(); if (!model.current) return null;
   const roleList = <List modifiers={[listStyle('plain'), scrollContentBackground('hidden'), refreshable(() => model.controller.reload())]}>
     <Button label={model.t('adminNewRole')} systemImage="plus" onPress={() => model.controller.openEditor()} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ maxWidth: Infinity, minHeight: 56 }), listRowSeparator('hidden'), accessibilityIdentifier('admin-role-create')]} />
     {model.roles.map((row, index) => <RoleRow key={`${row.role.id}:${index}`} row={row} model={model} />)}<Spacer modifiers={[frame({ height: insets.bottom + 136 }), listRowBackground('clear'), listRowSeparator('hidden')]} />
@@ -89,7 +89,7 @@ export function AdminRolesScreen(props: AdminRolesScreenProps) {
   </List>;
   return <><Stack.Screen options={{ headerShown: true, title: model.t('adminRolesTitle'), headerBackVisible: false, headerRight: props.profileAction ? () => props.profileAction : undefined,
     headerLeft: () => <BaseHost matchContents><Button onPress={props.navigation.onPress} modifiers={[buttonStyle('plain'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.navigation.label)]}><Image systemName={props.navigation.icon === 'back' ? 'chevron.left' : 'line.3.horizontal'} size={20} /></Button></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>{props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-roles-body-frame"><BaseHost style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}>{props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-roles-body-frame"><BaseHost style={styles.screen}>
       {!state.data ? state.loading ? <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><ProgressView /></VStack> : <VStack spacing={16} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>
         <Text>{model.t('serverDisconnectedRetry')}</Text><Button label={model.t('retry')} onPress={() => { void model.controller.reload(); }} modifiers={[buttonStyle('borderedProminent'), controlSize('large'), frame({ minHeight: 44 })]} />
       </VStack> : <VStack spacing={0} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}>

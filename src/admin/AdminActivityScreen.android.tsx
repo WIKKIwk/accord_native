@@ -1,4 +1,5 @@
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { BaseHost } from '../components/BaseHost.android';
 import { Column, IconButton, RNHostView, Text as ComposeText, TextButton } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
@@ -36,10 +37,10 @@ function ActivityRow({ row, first, last }: { row: AdminActivityRow; first: boole
 }
 /** Unconnected content; the owning shell supplies scoped state and the real confirmation. */
 export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, profileAction, onRefresh, onRequestClear }: AdminActivityScreenProps) {
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), colors = useBaseTheme().colors, insets = useSafeAreaInsets();
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   const retryWidth = Math.min(360, Math.max(280, useWindowDimensions().width * 0.88));
   const { view, rows } = adminActivityScreenModel(snapshot, hiddenIds, locale);
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <AdminScreenHeader title={localizedGetter('adminActivityTitle', locale)} navigation={navigation} profileAction={profileAction}
       actions={<IconButton onClick={onRequestClear}
         modifiers={[size(48, 48), semantics({ contentDescription: localizedGetter('clearTitle', locale) })]}>

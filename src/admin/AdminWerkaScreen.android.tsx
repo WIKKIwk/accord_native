@@ -10,6 +10,7 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, w
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminText as Text } from './AdminTypography.android';
 import { AdminBasicTextField as BasicTextField } from './AdminTextFields.android';
 import { uiText } from '../shared/localization';
@@ -136,18 +137,18 @@ function Detail({ model, props }: { model: AdminWerkaScreenModel; props: AdminWe
 
 // @v2 AdminWerkaScreen, _AdminWerkaDetailCard and _WerkaAdminPanel.
 export function AdminWerkaScreen(props: AdminWerkaScreenProps) {
-  const model = useAdminWerka(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
+  const model = useAdminWerka(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
   useEffect(() => { if (state.copiedNotice !== null && state.copiedNotice !== shown.current && model.current()) {
     shown.current = state.copiedNotice; void snackbar.current?.showSnackbar({ message: model.a('profile.code_copied'), duration: 'short' });
   } }, [state.copiedNotice, model]);
   if (!model.current() || state.phase === 'invalidated') return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
-    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: chromeBackground }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-werka-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
         title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('profile.title')}</Text>}
         actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} />
-      <Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
+      <Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-werka-body-frame">
     {state.phase === 'loading' ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>

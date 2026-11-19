@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { BaseHost } from '../components/BaseHost.ios';
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { AdminProfileAction } from './AdminProfileAction.ios';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -12,9 +12,9 @@ import { useAdminPartyCreate, type AdminPartyCreateProps } from './useAdminParty
 
 /** @v2 AdminPartyCreateScaffold */
 export function AdminPartyCreateScreen(props: AdminPartyCreateProps & { footer: ReactNode }) {
-  const model = useAdminPartyCreate(props), name = useNativeState(''), phone = useNativeState(''), { colors } = useBaseTheme();
+  const model = useAdminPartyCreate(props), name = useNativeState(''), phone = useNativeState(''), { colors, chromeBackground } = useAdminShellTheme();
   if (!model.current()) return null;
-  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerHigh }}><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false,
+  return <View style={{ flex: 1, backgroundColor: chromeBackground }}><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false,
     headerLeft: () => <RoleHeaderButton icon="back" label={props.backLabel} onPress={props.onBack} tintColor={colors.onSurface} />,
     headerRight: () => <AdminProfileAction {...props} onProfile={props.onProfile} /> }} />
     <AdminShellBodyFrame hasFooter testID="admin-party-create-body-frame"><ScrollView keyboardShouldPersistTaps="handled"><BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><VStack alignment="leading" spacing={12} modifiers={[frame({ maxWidth: Infinity }), padding({ horizontal: 12, top: 12 })]}>

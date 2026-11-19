@@ -8,6 +8,7 @@ import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useSharedValue, wi
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import type { AdminUsersRow, AdminUsersScreenProps } from './AdminUsersScreenTypes';
 import { useAdminUsersScreen, type AdminUsersScreenModel } from './useAdminUsersScreen';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -106,7 +107,7 @@ function UserRow({ item, model }: { item: AdminUsersRow; model: AdminUsersScreen
 }
 // @v2 AdminSuppliersScreen, AdminCatalogSearchField and AdminSupplierListRow (current 052 role choices).
 export function AdminUsersScreen(props: AdminUsersScreenProps) {
-  const model = useAdminUsersScreen(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), window = useWindowDimensions();
+  const model = useAdminUsersScreen(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), window = useWindowDimensions();
   const list = useRef<FlatList<AdminUsersRow>>(null), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
   const metrics = useRef({ viewport: 0, content: 0, offset: 0 });
   useEffect(() => { list.current?.scrollToOffset({ offset: 0, animated: false }); }, [state.scrollResetSerial, model.identity]);
@@ -120,7 +121,7 @@ export function AdminUsersScreen(props: AdminUsersScreenProps) {
   const scrolled = ({ layoutMeasurement, contentOffset, contentSize }: NativeScrollEvent) => {
     metrics.current = { viewport: layoutMeasurement.height, content: contentSize.height, offset: contentOffset.y }; sendMetrics();
   };
-  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }]}>
+  return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-users-header-safe-area"><SearchHeader model={model} props={props} /></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-users-body-frame"><View style={styles.content}>
     {!model.salesManager ? <RoleFilter model={model} /> : null}

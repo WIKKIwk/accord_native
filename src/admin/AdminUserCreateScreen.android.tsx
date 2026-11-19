@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminProfileAction } from './AdminProfileAction.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -81,12 +82,12 @@ function Form({ model }: { model: AdminUserCreateScreenModel }) {
 export type AdminUserCreateAndroidScreenProps = AdminUserCreateScreenProps & { windowObserver: AdminPresentationWindowObserver };
 export function AdminUserCreateScreen(props: AdminUserCreateAndroidScreenProps) {
   if (!props.windowObserver || ['arm', 'waitForDetach', 'cancelPending', 'cancel'].some(key => typeof props.windowObserver[key as keyof AdminPresentationWindowObserver] !== 'function')) throw TypeError('Admin creation requires its genuine native window observer');
-  const model = useAdminUserCreate(props), { colors } = useBaseTheme(), insets = useSafeAreaInsets(); if (!model.current() || !model.state.valid) return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  const model = useAdminUserCreate(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(); if (!model.current() || !model.state.valid) return null;
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-user-create-back')]}><UserCreateIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
         title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }} maxLines={1}>{model.a('user.create_title')}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profile}><AdminProfileAction session={props.session} witness={props.witness} isCurrent={model.current} canInteract={model.interactive} onProfile={props.onProfile} /></View></RNHostView>} /><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
+        actions={<RNHostView matchContents><View style={styles.profile}><AdminProfileAction session={props.session} witness={props.witness} isCurrent={model.current} canInteract={model.interactive} onProfile={props.onProfile} /></View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></SafeAreaView>
     {model.notice ? <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={model.state.notice?.tone === 'error' ? '#FCE8E6' : '#E6F4EA'} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), padding(16, 12, 16, 12)]}><Text color={model.state.notice?.tone === 'error' ? '#5F1412' : '#173A24'} style={{ typography: 'bodyMedium' }}>{model.notice}</Text></Column></Surface></BaseHost></SafeAreaView> : null}
     <AdminShellBodyFrame hasFooter={model.footer != null} testID="admin-user-create-body-frame"><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>

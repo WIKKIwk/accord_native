@@ -7,6 +7,8 @@ Stopped at: the shared native palette and Admin navigation work through the guar
 
 The user requested that V4 Admin drop the V2-style outer frame. Admin content now fills the safe width with square page corners. The header and dock sit above and below the body, with the existing dock reserve and keyboard behavior. The shared wrapper still supports the rounded Brigader layout. Android Expo Go confirmed the Admin Home body had zero side margin and zero corner radius. Both platform type checks and 231 focused tests passed.
 
+Admin now uses the Worker page background for its header, content, and Android navigation bar. The compact bar uses the same default color as the regular bar. iOS system tabs use the same native appearance as Worker. Android Expo Go confirmed one background on Home, Activity, and Work Map. Both platform type checks and 614 focused tests passed.
+
 ## 2026-11-19 Shared device colors and Admin navigation
 
 V4 still had six selectable Android palettes at welcome and in profile settings. The preference was app-wide, while some hosts used the configured palette and others read the device. Android now resolves Material colors from the device without a seed or palette overrides. iOS resolves semantic system colors through UIKit. The app defaults to Auto and keeps one shared Light/Dark/Auto appearance preference. The old palette preference is ignored.

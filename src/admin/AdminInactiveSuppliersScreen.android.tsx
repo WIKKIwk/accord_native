@@ -7,6 +7,7 @@ import { FlatList, RefreshControl, StyleSheet, Text as NativeText, useWindowDime
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminText as Text, useAdminFontsReady } from './AdminTypography.android';
@@ -73,9 +74,9 @@ function SupplierList({ model }: { model: Model }) {
 
 /** @v2 AdminInactiveSuppliersScreen */
 export function AdminInactiveSuppliersScreen(props: AdminInactiveSuppliersScreenProps) {
-  const model = useAdminInactiveSuppliers(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
+  const model = useAdminInactiveSuppliers(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
   if (!model.current || state.phase === 'invalidated') return null;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-inactive-suppliers-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label }), testID('admin-inactive-suppliers-back')]}>
           <RNHostView matchContents><SymbolView name={{ android: props.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView>

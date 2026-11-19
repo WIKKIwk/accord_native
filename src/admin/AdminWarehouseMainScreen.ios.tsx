@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SearchBarCommands } from 'react-native-screens';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { AdminCreateMenu } from './AdminCreateMenu.ios';
@@ -91,7 +92,7 @@ function Details({ model, renderActionSurface }: { model: AdminWarehouseMainMode
 }
 /** @v2 AdminWarehousesScreen */
 export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
-  const model = useAdminWarehouseMain(props), search = useRef<SearchBarCommands>(null), cancelled = useRef<{ current: () => boolean; text: string } | null>(null), lastTyped = useRef<{ current: () => boolean; text: string } | null>(null), insets = useSafeAreaInsets(), { colors } = useBaseTheme();
+  const model = useAdminWarehouseMain(props), search = useRef<SearchBarCommands>(null), cancelled = useRef<{ current: () => boolean; text: string } | null>(null), lastTyped = useRef<{ current: () => boolean; text: string } | null>(null), insets = useSafeAreaInsets(), { chromeBackground } = useAdminShellTheme();
   const { presentation } = model, fillVersion = presentation.fillVersion, fillText = presentation.fillText, accountCurrent = model.current;
   useEffect(() => { if (accountCurrent()) { cancelled.current = null; lastTyped.current = null; search.current?.setText(fillText); } }, [fillVersion, fillText, accountCurrent]);
   useEffect(() => { if (!presentation.searchFocused) search.current?.blur(); }, [presentation.searchFocused]);
@@ -109,7 +110,7 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
   if (!model.valid) return null;
   const bottomPadding = insets.bottom + model.bottomPaddingOffset, tabs = model.scope === 'werka' ? [] : [
     { value: 'products', label: model.scope === 'material' ? model.a('warehouse.tabs_warehouses') : 'Mahsulotlar' }, { value: 'settings', label: model.scope === 'material' ? model.a('warehouse.tabs_states') : 'Sozlamalar' }];
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
     <Stack.Screen options={{ headerShown: true, title: '', headerLargeTitle: false, headerShadowVisible: false, headerBackVisible: false,
       headerLeft: presentation.searchFocused ? undefined : () => <RoleHeaderButton icon="back" label={props.backLabel} onPress={model.back} tintColor={PlatformColor('label')} />,
       headerRight: presentation.searchFocused ? undefined : model.profile,

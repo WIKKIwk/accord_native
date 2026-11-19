@@ -10,6 +10,7 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, w
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminText as Text } from './AdminTypography.android';
 import { AdminBasicTextField as BasicTextField } from './AdminTextFields.android';
 import { uiText } from '../shared/localization';
@@ -117,7 +118,7 @@ export function SupplierRemoveConfirmation({ model }: { model: AdminSupplierDeta
 }
 // @v2 AdminSupplierDetailScreen, _AdminSupplierDetailCard and _AdminSupplierPanel.
 export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps) {
-  const model = useAdminSupplierDetail(props), { state } = model, { colors } = useBaseTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
+  const model = useAdminSupplierDetail(props), { state } = model, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width } = useWindowDimensions();
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<unknown>(null);
   useEffect(() => { if (state.notice && state.notice !== shown.current && model.current()) { shown.current = state.notice; void snackbar.current?.showSnackbar({ message: model.notice!, duration: 'short' }); } }, [state.notice, model]);
   if (!model.current() || state.phase === 'invalidated' || state.phase === 'removed') return null;
@@ -129,11 +130,11 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
           <TextButton onClick={model.reload} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
             modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('admin-supplier-detail-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton></Column>
       </BaseHost></ScrollView> : <ScrollView style={styles.body} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><Detail model={model} props={props} /></ScrollView>;
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}>
-    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: colors.surfaceContainerHigh }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: chromeBackground }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-supplier-detail-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
         title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('profile.title')}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} /><Surface color={colors.surfaceContainerHigh} modifiers={[fillMaxWidth(), height(3)]} />
+        actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
     </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame">
     {props.bodySafeAreaBottom === undefined ? body : <View testID="admin-supplier-detail-inner-safe-area" pointerEvents={props.bodySafeAreaBottom === null ? 'none' : 'auto'}

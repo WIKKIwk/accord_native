@@ -59,7 +59,7 @@ export function AdminPushConfigScreen(props: AdminPushConfigScreenProps) {
   if (!model.current || model.state.invalidated) return <View style={styles.root} />;
   return <><Stack.Screen options={{ headerShown: true, title: model.t('title'), headerBackVisible: false,
     headerLeft: () => <RoleHeaderButton icon="back" label={model.backLabel} onPress={model.back} tintColor={colors.onSurface} /> }} />
-    <View style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}><BaseHost style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.surface }]}><BaseHost style={styles.root}>
       {model.allowed ? <Body model={model} /> : <VStack modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity })]}><Text>{model.t('admin_only')}</Text></VStack>}
     </BaseHost></View>
   </>;

@@ -1,4 +1,4 @@
-import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { BaseHost } from '../components/BaseHost.android';
 import { Column, Text as ComposeText, TextButton } from '@expo/ui/jetpack-compose';
 import { defaultMinSize } from '@expo/ui/jetpack-compose/modifiers';
@@ -14,9 +14,9 @@ import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
 export function AdminActivityPending({ status, onRetry, navigation, footer, profileAction }: AdminActivityPendingProps) {
-  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), colors = useBaseTheme().colors, insets = useSafeAreaInsets();
+  const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
   const retryWidth = Math.min(360, Math.max(280, useWindowDimensions().width * 0.88));
-  return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
+  return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <AdminScreenHeader title={localizedGetter('adminActivityTitle', locale)} navigation={navigation} profileAction={profileAction} />
     <AdminShellBodyFrame hasFooter={footer != null} testID="admin-activity-pending-body-frame">
     {status === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> : <View style={styles.error}>

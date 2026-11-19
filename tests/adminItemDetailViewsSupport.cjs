@@ -1,8 +1,10 @@
+const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module'), ts = require('typescript');
 const s = require('./adminItemDetailDecisionSupport.cjs'), combos = require('./adminItemDetailComboSupport.cjs');
 function compile(name, mocks) {
   const filename = path.resolve(__dirname, '../src/admin', name), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] : require(id); mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); return mod.exports;
+  mod.require = id => Object.hasOwn(mocks, id) ? mocks[id] :
+    id === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : require(id); mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); return mod.exports;
 }
 const date = s.load('dailyWork', { './apparatusApi': {}, './workerProgressModel': {}, './workerProgressApi': {}, './workerControlsApi': {} });
 const presentation = compile('AdminItemDetailReadPresentation.ts', { '../dailyWork': date, './adminItemDetailModel': s.model, './dartJsonString': s.strings });
@@ -79,7 +81,8 @@ function fixture(platform, options = {}) {
     '../dailyWork': date, './adminItemDetailModel': s.model, './dartJsonString': s.strings,
   };
   function moduleFor(name) { if (loaded.has(name)) return loaded.get(name); const filename = path.resolve(__dirname, '../src/admin', name), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
-    mod.require = value => Object.hasOwn(mocks, value) ? mocks[value] : value.startsWith('./AdminItemDetail') ? moduleFor(value.slice(2) + (fs.existsSync(path.resolve(__dirname, '../src/admin', value.slice(2) + '.tsx')) ? '.tsx' : '.ts')) : require(value);
+    mod.require = value => Object.hasOwn(mocks, value) ? mocks[value] :
+      value === './useAdminShellTheme' ? adminShellThemeFixture(mocks, filename) : value.startsWith('./AdminItemDetail') ? moduleFor(value.slice(2) + (fs.existsSync(path.resolve(__dirname, '../src/admin', value.slice(2) + '.tsx')) ? '.tsx' : '.ts')) : require(value);
     mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename); loaded.set(name, mod.exports); return mod.exports;
   }
   const ownerModule = moduleFor('AdminItemDetailReadOwner.ts'), read = moduleFor(`AdminItemDetailRead.${platform}.tsx`).AdminItemDetailRead;

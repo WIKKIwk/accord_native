@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { useAdminShellTheme } from './useAdminShellTheme';
 import { PreparationNotice } from '../preparation/PreparationNotice';
 import { CustomerControls, CustomerInfoChip, CustomerPrompt } from './AdminCustomerDetailNative.ios';
 import { CustomerSheetStack } from './AdminCustomerDetailSheets.ios';
@@ -41,11 +42,11 @@ function Detail({ model, props }: { model: AdminCustomerDetailScreenModel; props
 }
 // @v2 AdminCustomerDetailScreen, including its always-visible fallback profile and independent native sheets.
 export function AdminCustomerDetailScreen(props: AdminCustomerDetailScreenProps) {
-  const model = useAdminCustomerDetail(props), { state } = model, { colors } = useBaseTheme();
+  const model = useAdminCustomerDetail(props), { state } = model, { chromeBackground } = useAdminShellTheme();
   if (!model.current() || !state.valid || state.removed) return null;
   return <><Stack.Screen options={{ headerShown: true, title: model.title, headerBackVisible: false, gestureEnabled: false, headerRight: () => props.profileAction,
     headerLeft: () => <BaseHost matchContents><Button label={props.backLabel} systemImage="chevron.left" onPress={model.back} modifiers={[buttonStyle('plain'), labelStyle('iconOnly'), frame({ minWidth: 44, minHeight: 44 }), accessibilityLabel(props.backLabel), accessibilityIdentifier('admin-customer-detail-back')]} /></BaseHost> }} />
-    <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-customer-detail-body-frame"><BaseHost style={styles.body}>
+    <View style={[styles.screen, { backgroundColor: chromeBackground }]}><AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-customer-detail-body-frame"><BaseHost style={styles.body}>
       <ScrollView modifiers={[accessibilityIdentifier('admin-customer-detail-scroll')]}><VStack spacing={0} modifiers={[padding({ leading: 4, trailing: 4, top: 4, bottom: 116 }), frame({ maxWidth: Infinity })]}>
         <Detail model={model} props={props} />
         {model.mode.management ? <RNHostView matchContents={{ vertical: true }}><View style={styles.subordinate}>{props.renderApparatusCard(model.apparatus)}</View></RNHostView> : null}
