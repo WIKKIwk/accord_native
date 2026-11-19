@@ -149,6 +149,47 @@ test('Android Admin opens the existing warehouse screen with its V2 capabilities
   admitted = false; assert.equal(warehouses().type, 'Redirect');
 });
 
+test('Android Factory Map uses the original guarded Admin frame and the existing map flow', () => {
+  const component = { type: 'FactoryMapContent', props: {} }, drawerActions = [];
+  let shortcut = { title: 'Zavod kartasi' }, focused = true, current = true;
+  const frame = load('admin/AdminHomeShortcutRoute.android.tsx', {
+    'expo-router': { Redirect: 'Redirect' }, 'react-native': { View: 'View', StyleSheet: { create: value => value } },
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24 }) },
+    '../shared/localization': { localizedGetter: () => 'Sections' }, '../shared/navigation/roleDrawerContext': { useRoleDrawer: () => ({ open: () => drawerActions.push('open') }) },
+    './useAdminShellTheme': { useAdminShellTheme: () => ({ chromeBackground: 'native' }) },
+    './useAdminHomeShortcutRoute': { useAdminHomeShortcutRoute: route => {
+      assert.equal(route, r.adminFactoryMap);
+      return { shortcut, current, canInteract: () => focused, locale: 'uz' };
+    } },
+    './AdminBottomBar.android': { AdminBottomBar: 'AdminBottomBar' },
+    './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'BodyFrame' },
+    './AdminShellProfileAction': { AdminShellProfileAction: 'AdminProfileAction' }, './AdminShellNoticeProvider': { useAdminShellNotice: () => ({ topNotice: null }) },
+  }).AdminHomeShortcutRoute;
+  const props = { route: r.adminFactoryMap, drawer: true, children: component };
+  const tree = frame(props);
+  const [header, , body, footer] = tree.props.children;
+  assert.equal(header.type, 'AdminScreenHeader');
+  assert.equal(header.props.navigation.icon, 'menu'); assert.equal(header.props.title, 'Zavod kartasi');
+  assert.equal(body.type, 'BodyFrame'); assert.equal(body.props.children, component);
+  assert.equal(footer.props.children.type, 'AdminBottomBar'); assert.equal(footer.props.children.props.active, 'home');
+  header.props.navigation.onPress(); focused = false; header.props.navigation.onPress();
+  assert.deepEqual(drawerActions, ['open']);
+  shortcut = undefined; assert.equal(frame(props).type, 'Redirect');
+  current = false; assert.equal(frame(props), null);
+
+  const route = load('app/android-admin/factory-map.tsx', {
+    '../../shared/appRoutes': routes, 'react-native': { View: 'View' },
+    '../../admin/AdminHomeShortcutRoute': { AdminHomeShortcutRoute: 'Shortcut' },
+    '../../admin/AdminLoadingIndicator.android': { AdminLoadingIndicator: 'Loading' },
+    '../../components/BaseHost.android': { BaseHost: 'Host' },
+    '../../brigader/BrigaderFactoryMapContent': { BrigaderFactoryMapContent: 'FactoryMapContent' },
+  }).default;
+  const screen = route();
+  assert.equal(screen.props.route, r.adminFactoryMap);
+  assert.equal(screen.props.children.type, 'FactoryMapContent');
+  assert.equal(screen.props.children.props.embedded, true);
+});
+
 test('session hook captures once and rejects stale loads, inactive and unauthorized sessions', async () => {
   async function run(result, { reset = false, unmount = false, active = true } = {}) {
     const updates = []; let effect, resetHook, resolve, unregistered = false, unobserved = false;

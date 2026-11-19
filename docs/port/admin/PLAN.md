@@ -92,8 +92,10 @@ Warehouses checkpoint: 310 focused tests, both platform type checks, changed-fil
 | Attach, machine, order and unlink surfaces | Existing factory presentation owner, resizable sheets, and canonical apparatus mutation guards |
 | Live and stock updates | Existing FactoryMapBindings, FactoryMapLive and FactoryMapStock under the original account lifetime |
 
-- [ ] Connect Factory Map to the Android Admin home shortcut under the original route permission and session.
+- [x] Connect Factory Map to the Android Admin home shortcut under the original route permission and session.
 - [ ] Verify model mounting, bind/unbind and live order sheets on a device with a test account.
+
+Factory Map checkpoint: 76 focused route and role tests, both platform type checks, changed-file lint and the iOS export passed. The existing map flow supplies Admin's renderer, lifecycle and sheets. The remaining Factory Map item requires a device with the app connected to a test account.
 
 ## Decisions
 
@@ -738,3 +740,4 @@ Warehouses checkpoint: 310 focused tests, both platform type checks, changed-fil
 - Activity list and retry typography (`src/admin/AdminActivityScreen.android.tsx`).
 - Roles and Assignments tabs and list hosts (`src/admin/AdminRolesScreen.android.tsx`).
 - Warehouses drawer route, list and both sets of tabs (`src/app/android-admin/warehouses.tsx`, `src/admin/AdminWarehouseMainScreen.android.tsx`).
+- Factory Map route and its role shell (`src/app/android-admin/factory-map.tsx`, `src/admin/AdminHomeShortcutRoute.android.tsx`).

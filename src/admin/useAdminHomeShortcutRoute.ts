@@ -21,8 +21,9 @@ export function useAdminHomeShortcutRoute(route: PendingShortcut) {
     ? adminHomeShortcuts(shell.session, locale).find(item => item.routeName === route)
     : undefined;
 
+  const canInteract = () => navigation.isFocused() && !!shell.destination(route, Platform.OS);
   const goBack = () => {
-    if (!navigation.isFocused() || !shell.destination(route, Platform.OS)) return;
+    if (!canInteract()) return;
     if (router.canGoBack()) {
       router.back();
       return;
@@ -31,5 +32,5 @@ export function useAdminHomeShortcutRoute(route: PendingShortcut) {
     if (home) router.replace(home as Href);
   };
 
-  return { current: shell.isCurrent(), shortcut, backLabel: adminActivityBackLabel(locale), goBack };
+  return { current: shell.isCurrent(), shortcut, backLabel: adminActivityBackLabel(locale), goBack, locale, canInteract };
 }
