@@ -10,7 +10,7 @@ import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
 import type { OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, scrollEnabled, scrollResetKey, headerFollowsContent, keyboardShouldPersistTaps }: OrdersListProps<T>) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, scrollEnabled, scrollResetKey, headerFollowsContent, userScrollPagination, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshPending, setRefreshPending] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -55,21 +55,27 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     setRefreshPending(true);
     try { await onRefresh(); } finally { setRefreshPending(false); }
   }, [onRefresh]);
-  const onScroll = useAnimatedScrollHandler<{ previous?: number; dragging?: boolean; momentum?: boolean }>({
+  const onScroll = useAnimatedScrollHandler<{ previous?: number; dragging?: boolean; momentum?: boolean; userScroll?: boolean; paged?: boolean }>({
     onBeginDrag: (event, context) => {
       const maxScroll = Math.max(0, event.contentSize.height - event.layoutMeasurement.height);
       context.previous = Math.max(0, Math.min(maxScroll, event.contentOffset.y));
       context.dragging = true;
+      context.userScroll = true;
+      context.paged = false;
     },
     onEndDrag: (_event, context) => { context.dragging = false; },
     onMomentumBegin: (_event, context) => { context.momentum = true; },
-    onMomentumEnd: (_event, context) => { context.momentum = false; },
+    onMomentumEnd: (_event, context) => { context.momentum = false; context.userScroll = false; },
     onScroll: (event, context) => {
       const maxScroll = Math.max(0, event.contentSize.height - event.layoutMeasurement.height);
       const current = Math.max(0, Math.min(maxScroll, event.contentOffset.y));
       const previous = context.previous ?? current;
       context.previous = current;
       scrollOffset.set(current);
+      if (active && userScrollPagination && context.userScroll && !context.paged && (context.dragging || context.momentum) && current !== previous && maxScroll - current < userScrollPagination.distance) {
+        context.paged = true;
+        scheduleOnRN(userScrollPagination.loadMore);
+      }
       if (active && onScrollMetrics) scheduleOnRN(onScrollMetrics, { offset: current, viewportHeight: event.layoutMeasurement.height, contentHeight: event.contentSize.height });
       if (active && headerFollowsContent) {
         headerOffset.set(Math.min(current, headerHeight.get()));

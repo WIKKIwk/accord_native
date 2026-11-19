@@ -46,6 +46,7 @@ export function useAdminWorkMapView() {
       name: adminWorkMapMoveIsUnassigned(selection) ? productionText('worker.queue.filter.unselected', locale) : dartTrim(selection.name),
       selected: adminWorkMapMoveSame(selection, ticket.selected) }));
     sheet.open(<AdminWorkMapMovePicker title={productionText('worker.queue.select_apparatus', locale)} rows={rows}
+      closeLabel={localizedGetter('closeAction', locale)} onClose={sheet.close}
       onChoose={selection => { workspace.move.choose(ticket, selection); sheet.close(); }} />, { compact: true, dismissible: true });
   };
   const controls = { module: workspaceState.module, catalog: workspaceState.catalog, selected: workspaceState.selected, expanded: filterExpanded,
@@ -63,6 +64,9 @@ export function useAdminWorkMapView() {
     : workspaceState.module === 'closed' ? state.loaded && !loading && !state.closed.length ? adminText('production.closed_empty', locale) : ''
     : workspaceState.module === 'orders' && state.loaded && !loading && !state.rows.length ? adminText(state.query ? 'production.search_empty' : 'production.open_empty', locale) : '';
   const pair = workspaceState.move, label = adminWorkMapText(locale), retryLabel = localizedGetter('retry', locale);
+  const next = (module: AdminWorkMapModule) => {
+    if (shell.isCurrent() && workspace.getSnapshot().module === module) return controller.next();
+  };
   const move: AdminWorkMapMoveProps = { loading: workspaceState.catalogLoading, error: workspaceState.catalogError,
     empty: workspaceState.catalogLoaded && (!pair.top || !pair.bottom) ? adminText('production.move.no_equipment', locale) : '', retryLabel,
     onRetry: () => workspace.reload(), panes: !pair.top || !pair.bottom ? [] : (['top', 'bottom'] as const).map(id => {
@@ -73,5 +77,5 @@ export function useAdminWorkMapView() {
         empty: adminWorkMapMoveIsUnassigned(apparatus) ? 'Tanlanmagan zakaz yo‘q' : `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
         onRefresh: () => controller.reload(), onMore: () => controller.next(), onPick: () => openMovePicker(id) };
     }) };
-  return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), query, goBack, onProfile, search, open };
+  return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), next, query, goBack, onProfile, search, open };
 }

@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -193,8 +194,12 @@ for (const platform of ['ios', 'android']) test(`${platform} passive Move panes 
   const component = load(`admin/AdminWorkMapMove.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}/modifiers`]: modifiers, 'expo-symbols': { SymbolView: 'SymbolView' },
-    react: { isValidElement: value => !!value && typeof value === 'object' && !!value.type }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View' },
+    react: { isValidElement: value => !!value && typeof value === 'object' && !!value.type }, 'react-native': { ActivityIndicator: 'ActivityIndicator', View: 'View', Text: 'NativeText', StyleSheet: { create: value => value } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, '../components/BaseHost': { BaseHost: 'BaseHost' },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
+    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' },
+    '../components/WorkerQueueConnectionProgress': { WorkerQueueConnectionProgress: 'WorkerProgress' },
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' },
     '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminWorkMapMoveRow': { AdminWorkMapMoveRow: 'MoveRow' }, './AdminWorkMapMoveEmpty': { AdminWorkMapMoveEmpty: 'MoveEmpty' },
     './AdminWorkMapMoveSplit': { AdminWorkMapMoveSplit: 'Split' }, './AdminWorkMapMoveHeader': { AdminWorkMapMoveHeader: 'Header' } }).AdminWorkMapMove;
   const pane = { id: 'top', name: 'Pechat A', rows: [{ id: 'o', position: '1', code: '1', title: 'Film', supporting: 'P' }],
@@ -205,23 +210,31 @@ for (const platform of ['ios', 'android']) test(`${platform} passive Move panes 
   const split = nodes(tree).find(row => row.type === 'Split'); assert.equal(split.props.topHeader.props.pane, pane); assert.equal(split.props.bottomHeader.props.pane, bottom);
   const wrapped = split.props.topBody, rendered = wrapped.type(wrapped.props), all = nodes(rendered);
   const list = all.find(row => row.type === 'OrdersList'); await list.props.onRefresh();
-  assert.equal(all.find(row => row.type === 'MoveRow').props.row, pane.rows[0]); assert.equal(all.find(row => row.type === 'MoveRow').props.onPress, undefined);
-  if (platform === 'android') { assert.equal(list.props.passthrough({ type: 'MoveRow' }), true); assert.equal(list.props.passthrough({ type: 'Other' }), false); }
+  const moveRow = platform === 'android' ? list.props.renderRow(list.props.rows[0], 0) : all.find(row => row.type === 'MoveRow');
+  assert.equal(moveRow.props.row, pane.rows[0]); assert.equal(moveRow.props.onPress, undefined);
   split.props.topHeader.props.pane.onPick();
-  all.find(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem') && (platform === 'ios' ? row.props.label === 'more' : row.props.children === 'more')).props.onPress(); await tick();
+  if (platform === 'android') {
+    assert.equal(list.props.rowKey(pane.rows[0]), 'o');
+    assert.equal(list.props.userScrollPagination.distance, 400); list.props.userScrollPagination.loadMore();
+  } else all.find(row => row.type === 'Button' && row.props.label === 'more').props.onPress();
+  await tick();
   assert.deepEqual(calls, ['refresh', 'pick', 'more']); assert.equal(all.some(row => row.props.onLongPress || row.props.onMove || row.props.onToggleSelect), false);
   const emptyPane = { ...pane, rows: [], loaded: true, loading: true, error: 'failed', hasMore: false }, emptyBody = wrapped.type({ pane: emptyPane }), emptyTree = nodes(emptyBody);
   assert.equal(emptyTree.find(row => row.type === 'MoveEmpty').props.text, 'empty'); assert.equal(emptyTree.some(row => row.type === 'OrdersList'), false);
-  const error = emptyTree.find(row => row.type === (platform === 'ios' ? 'HStack' : 'ListItem'));
-  if (platform === 'ios') assert.ok(error.props.children.some(value => value?.type === 'NativeText' && value.props.children === 'failed'));
-  else assert.equal(error.props.children.props.children, 'failed');
+  const error = emptyTree.find(row => platform === 'ios' ? row.type === 'HStack' : row.props.testID === 'admin-move-top-retry');
+  assert.ok(error.props.children.some(value => value?.type === 'NativeText' && value.props.children === 'failed'));
   assert.equal(error.props.onPress, undefined);
-  const retry = platform === 'ios' ? error.props.children.find(value => value?.type === 'Button') : error.props.trailing; if (platform === 'ios') { assert.equal(retry.type, 'Button'); retry.props.onPress(); }
-  else { assert.equal(retry.type, 'IconButton'); assert.ok(retry.props.modifiers.some(value => value.key === 'semantics' && value.value.contentDescription === 'retry')); retry.props.onClick(); }
+  const retry = error.props.children.find(value => value?.type === (platform === 'ios' ? 'Button' : 'WorkerIconButton'));
+  if (platform === 'android') assert.equal(retry.props.label, 'retry');
+  retry.props.onPress();
   await tick(); assert.deepEqual(calls, ['refresh', 'pick', 'more', 'refresh']);
-  const retained = nodes(wrapped.type({ pane: { ...pane, error: 'failed', loaded: true, loading: false } }));
-  assert.ok(retained.some(row => row.type === 'OrdersList')); assert.ok(retained.some(row => row.type === 'MoveRow'));
-  assert.equal(retained.some(row => row.type === (platform === 'ios' ? 'Button' : 'ListItem') && (platform === 'ios' ? row.props.label === 'more' : row.props.children === 'more')), false);
+  const retained = nodes(wrapped.type({ pane: { ...pane, error: 'failed', loaded: true, loading: false } })), retainedList = retained.find(row => row.type === 'OrdersList');
+  assert.ok(retainedList);
+  if (platform === 'android') assert.equal(retainedList.props.userScrollPagination, undefined);
+  else {
+    assert.ok(retained.some(row => row.type === 'MoveRow'));
+    assert.equal(retained.some(row => row.type === 'Button' && row.props.label === 'more'), false);
+  }
   const unloaded = nodes(wrapped.type({ pane: { ...pane, rows: [], loaded: false, loading: true } }));
   assert.equal(unloaded.some(row => row.type === 'MoveEmpty' || row.type === 'OrdersList'), false);
 });
@@ -249,10 +262,10 @@ test('Move empty state centers the exact existing source text without a fake act
   assert.equal(tree.props.children.props.children, 'Tanlanmagan zakaz yo‘q'); assert.equal(tree.props.onPress, undefined);
 });
 
-for (const platform of ['ios', 'android']) test(`${platform} Move picker renders source order, selected state and exact choice callbacks`, () => {
-  const native = { Text: 'NativeText', VStack: 'VStack', Column: 'Column' }, calls = [];
-  const View = load(`admin/AdminWorkMapMovePicker.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
-    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
+test('iOS Move picker retains source order, selected state and exact choice callbacks', () => {
+  const native = { Text: 'NativeText', VStack: 'VStack' }, calls = [];
+  const View = load('admin/AdminWorkMapMovePicker.ios.tsx', { '@expo/ui': { ListItem: 'ListItem' },
+    '@expo/ui/swift-ui': native,
     '@expo/ui/swift-ui/modifiers': { font: x => x, background: x => ({ background: x }), accessibilityAddTraits: x => ({ traits: x }) },
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { primaryContainer: 'selected' } }) },
   }).AdminWorkMapMovePicker;
@@ -261,7 +274,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Move picker renders
   const tree = nodes(View({ title: 'Select', rows, onChoose: value => calls.push(value) }));
   assert.deepEqual(tree.filter(node => node.type === 'ListItem').map(node => node.props.children), ['Tanlanmagan', 'Pechat A']);
   const selected = tree.find(node => node.props.testID === 'admin-move-picker-apparatus:a'); selected.props.onPress();
-  assert.deepEqual(calls, [a]); assert.ok(platform === 'ios' ? selected.props.modifiers.some(x => x.background === 'selected') : selected.props.colors.containerColor === 'selected');
+  assert.deepEqual(calls, [a]); assert.ok(selected.props.modifiers.some(x => x.background === 'selected'));
 });
 test('disposing active Move cannot trigger another window read through a subscriber', async () => {
   let sends = 0, attempted = false; const move = new Move({ isCurrent: () => true, read: async () => { sends++; return page(); } });

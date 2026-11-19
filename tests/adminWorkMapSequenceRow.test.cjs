@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -15,33 +16,51 @@ function load(file, mocks = {}) {
 }
 const appearance = load('workerOrderAppearance.ts');
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
-for (const platform of ['ios', 'android']) for (const mode of ['light', 'dark']) test(`${platform} ${mode} Sequence row shows rank, local cover and passive detail callback`, () => {
-  const Background = Object.assign('Background', { Content: 'Background.Content' });
+for (const mode of ['light', 'dark']) {
   const colors = { surfaceContainerLowest: '#ffffff', onSurface: 'on', onSurfaceVariant: 'muted', secondaryContainer: 'cover',
     onSecondaryContainer: 'cover-text', primaryContainer: 'badge', onPrimaryContainer: 'badge-text' };
-  const Component = load(`admin/AdminWorkMapSequenceRow.${platform}.tsx`, {
-    '@expo/ui': { ListItem: 'ListItem', Text: 'NativeText' }, '@expo/ui/swift-ui': { Background, Rectangle: 'Rectangle', ZStack: 'ZStack' },
-    '@expo/ui/swift-ui/modifiers': { accessibilityHidden: value => ({ hidden: value }), foregroundStyle: value => ({ foreground: value }),
-      font: value => ({ font: value }), lineLimit: value => ({ lines: value }), truncationMode: value => ({ truncation: value }) },
-    'react-native': { StyleSheet: { create: x => x }, Text: 'RNText', View: 'View' }, 'expo-symbols': { SymbolView: 'SymbolView' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ mode, colors }) }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'Card' },
-    '../workerOrderAppearance': appearance,
-  }).AdminWorkMapSequenceRow;
-  let calls = 0; const tree = nodes(Component({ headline: '17 • Film', supportingText: 'Ana', position: 13, tone: 'paused', first: true, last: false, onPress: () => calls++ }));
-  const row = tree.find(value => value.type === (platform === 'ios' ? 'ListItem' : 'Card')); assert.ok(row); row.props.onPress(); assert.equal(calls, 1);
-  const content = platform === 'ios' ? nodes(row.props.leading) : tree;
-  const cover = content.find(value => value.type === 'SymbolView'); assert.deepEqual(cover.props.name, platform === 'ios' ? { ios: 'function' } : { android: 'calculate' });
-  assert.equal(content.find(value => value.type === 'RNText' && value.props.children === 13).props.children, 13);
-  assert.equal(tree.some(value => value.type === 'Image' || value.type === 'Thumbnail'), false);
-  if (platform === 'android') { assert.equal(row.props.first, true); assert.equal(row.props.last, false);
-    assert.ok(tree.some(value => value.type === 'RNText' && value.props.children === '17 • Film'));
-    assert.ok(tree.some(value => value.type === 'RNText' && value.props.children === 'Ana'));
-    assert.equal(row.props.backgroundColor, appearance.orderCardAppearance('paused', colors.surfaceContainerLowest, mode === 'dark').color); }
-  else { const background = tree.find(value => value.type === 'Rectangle');
+  test(`iOS ${mode} Sequence row retains its own local cover, rank and detail callback`, () => {
+    const Background = Object.assign('Background', { Content: 'Background.Content' });
+    const Component = load('admin/AdminWorkMapSequenceRow.ios.tsx', {
+      '@expo/ui': { ListItem: 'ListItem', Text: 'NativeText' }, '@expo/ui/swift-ui': { Background, Rectangle: 'Rectangle', ZStack: 'ZStack' },
+      '@expo/ui/swift-ui/modifiers': { accessibilityHidden: value => ({ hidden: value }), foregroundStyle: value => ({ foreground: value }),
+        font: value => ({ font: value }), lineLimit: value => ({ lines: value }), truncationMode: value => ({ truncation: value }) },
+      'react-native': { StyleSheet: { create: x => x }, Text: 'RNText', View: 'View' }, 'expo-symbols': { SymbolView: 'SymbolView' },
+      '../components/useBaseTheme': { useBaseTheme: () => ({ mode, colors }) }, '../workerOrderAppearance': appearance,
+    }).AdminWorkMapSequenceRow;
+    let calls = 0;
+    const tree = nodes(Component({ headline: '17 • Film', supportingText: 'Ana', position: 13, tone: 'paused', onPress: () => calls++ }));
+    const row = tree.find(value => value.type === 'ListItem'); row.props.onPress(); assert.equal(calls, 1);
+    const leading = nodes(row.props.leading);
+    assert.deepEqual(leading.find(value => value.type === 'SymbolView').props.name, { ios: 'function' });
+    assert.ok(leading.some(value => value.type === 'RNText' && value.props.children === 13));
     assert.equal(row.props.children.props.children, '17 • Film'); assert.equal(row.props.supportingText.props.children, 'Ana');
-    assert.equal(background.props.modifiers[0].foreground, colors.surfaceContainerLowest);
-    assert.equal(tree.filter(value => value.type === 'Rectangle')[1].props.modifiers[0].foreground, appearance.orderCardAppearance('paused', undefined, mode === 'dark').overlay); }
-  const gradientTree = nodes(Component({ headline: '17 • Film', supportingText: '', position: 13, tone: 'print_preflight', onPress: () => {} }));
-  if (platform === 'ios') assert.equal(gradientTree.find(value => value.type === 'Rectangle').props.modifiers[0].foreground.type, 'linearGradient');
-  else assert.equal(gradientTree.find(value => value.type === 'Card').props.backgroundImage, appearance.orderCardAppearance('print_preflight', colors.surfaceContainerLowest, mode === 'dark').gradient);
-});
+    const rects = tree.filter(value => value.type === 'Rectangle');
+    assert.equal(rects[0].props.modifiers[0].foreground, colors.surfaceContainerLowest);
+    assert.equal(rects[1].props.modifiers[0].foreground, appearance.orderCardAppearance('paused', undefined, mode === 'dark').overlay);
+    const preflight = nodes(Component({ headline: '17 • Film', supportingText: '', position: 13, tone: 'print_preflight', onPress() {} }));
+    assert.equal(preflight.find(value => value.type === 'Rectangle').props.modifiers[0].foreground.type, 'linearGradient');
+  });
+
+  test(`Android ${mode} Sequence adornment shares the Worker card, image, color and detail callback`, () => {
+    const Component = load('shared/orders/OrderListItem.android.tsx', {
+      react: { useContext: () => colors }, 'react-native': { StyleSheet: { create: x => x }, Text: 'RNText', View: 'View', useColorScheme: () => mode },
+      '../../workerOrderAppearance': appearance, '../../components/workerOrderPalette': {},
+      '../../components/WorkerOrderThumbnail': { WorkerOrderThumbnail: 'WorkerThumbnail' },
+      '../../components/WorkerQueueCard.android': { WorkerQueueCard: 'Card' },
+    }).OrderListItem;
+    const rank = { type: 'Rank', props: { position: 13 } }, session = {}, calls = [];
+    const props = { session, orderId: 'order', imageId: 'image', imageActive: true, headline: '17 • Film', supportingText: 'Ana',
+      leadingAdornment: rank, cardTone: 'paused', first: true, last: false, onPress: () => calls.push('open') };
+    const row = Component(props), tree = nodes(row);
+    assert.equal(row.type, 'Card'); assert.equal(row.props.first, true); assert.equal(row.props.last, false); row.props.onPress();
+    const image = tree.find(node => node.type === 'WorkerThumbnail');
+    assert.equal(image.props.session, session); assert.equal(image.props.imageId, 'image'); assert.equal(image.props.active, true);
+    assert.equal(tree.find(node => node.type === 'Rank'), rank);
+    assert.deepEqual(tree.filter(node => node.type === 'RNText').map(node => node.props.children), ['17 • Film', 'Ana']);
+    assert.deepEqual(calls, ['open']);
+    assert.equal(row.props.backgroundColor, appearance.orderCardAppearance('paused', colors.surfaceContainerLowest, mode === 'dark').color);
+    assert.equal(Component({ ...props, cardTone: 'print_preflight', leadingAdornment: undefined }).props.backgroundImage,
+      appearance.orderCardAppearance('print_preflight', colors.surfaceContainerLowest, mode === 'dark').gradient);
+  });
+}

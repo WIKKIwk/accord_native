@@ -7,4 +7,4 @@ export type AdminWorkMapMoveProps = { loading: boolean; error: string | null; em
   panes: readonly AdminWorkMapMovePane[]; onRetry: () => Promise<void> };
 
 export type AdminWorkMapMovePickerProps = { title: string; rows: readonly { selection: AdminWorkMapMoveSelection; key: string; name: string; selected: boolean }[];
-  onChoose: (selection: AdminWorkMapMoveSelection) => void };
+  onChoose: (selection: AdminWorkMapMoveSelection) => void; closeLabel: string; onClose: () => void };

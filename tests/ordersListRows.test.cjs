@@ -125,6 +125,25 @@ test('Android scroll metrics preserve the native geometry and are scoped to the 
   } finally { x.restore(); }
 });
 
+test('Android Work Map pagination runs once per actual drag below the source distance', () => {
+  const x = android(), calls = [], context = {};
+  const event = y => ({ contentSize: { height: 1000 }, layoutMeasurement: { height: 400 }, contentOffset: { y } });
+  const props = { ...common, headerOffset: { get: () => 0, set() {} }, children: null,
+    userScrollPagination: { distance: 400, loadMore: () => calls.push('page') } };
+  try {
+    const { onScroll, onBeginDrag, onEndDrag, onMomentumBegin, onMomentumEnd } = x.render(props).props.onScroll;
+    onScroll(event(201), context); assert.deepEqual(calls, []);
+    onBeginDrag(event(0), context); onScroll(event(200), context); assert.deepEqual(calls, []);
+    onScroll(event(201), context); onScroll(event(210), context);
+    onEndDrag(event(210), context); onMomentumBegin(event(210), context); onScroll(event(220), context); onMomentumEnd(event(220), context);
+    assert.deepEqual(calls, ['page']);
+    const inactive = x.render({ ...props, active: false }).props.onScroll, inactiveContext = {};
+    inactive.onBeginDrag(event(0), inactiveContext); inactive.onScroll(event(202), inactiveContext); assert.deepEqual(calls, ['page']);
+    onBeginDrag(event(220), context); onScroll(event(222), context);
+    assert.deepEqual(calls, ['page', 'page']);
+  } finally { x.restore(); }
+});
+
 test('iOS passes raw rows to native List.ForEach and renders only a requested item with fresh actions', () => {
   function List() {}
   List.ForEach = 'ForEach';

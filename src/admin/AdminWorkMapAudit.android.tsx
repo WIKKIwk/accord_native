@@ -1,33 +1,57 @@
-import { ListItem } from '@expo/ui';
-import { Card, Column, IconButton, RNHostView, Row, Text, useMaterialColors } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import type { PanGesture } from 'react-native-gesture-handler';
+import { useSharedValue } from 'react-native-reanimated';
+import { BaseHost } from '../components/BaseHost.android';
+import { useBaseTheme } from '../components/useBaseTheme';
+import { WorkerIconButton } from '../components/WorkerIconButton';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
+import { OrdersList } from '../shared/orders/OrdersList';
+import type { OrdersListProps } from '../shared/orders/OrdersList.types';
 import { AdminWorkMapAuditCounts } from './AdminWorkMapAuditCounts';
 import type { AdminWorkMapAuditProps } from './adminWorkMapAuditTypes';
 
-export function AdminWorkMapAudit({ model, onRefresh }: AdminWorkMapAuditProps) {
-  const colors = useMaterialColors();
-  return <Column modifiers={[fillMaxWidth(), padding(8, 8, 8, 8)]} verticalArrangement={{ spacedBy: 8 }}>
-    <Card colors={{ containerColor: colors.surfaceContainerLowest }} modifiers={[fillMaxWidth()]}>
-      <Column modifiers={[padding(16, 16, 16, 16)]} verticalArrangement={{ spacedBy: 12 }}>
-        <Row modifiers={[fillMaxWidth()]} horizontalArrangement={{ spacedBy: 12 }} verticalAlignment="top">
-          <RNHostView matchContents><SymbolView name={{ android: model.clean ? 'verified' : 'warning_amber' }} importantForAccessibility="no" size={30} tintColor={model.clean ? colors.primary : colors.error} /></RNHostView>
-          <Column modifiers={[weight(1)]} verticalArrangement={{ spacedBy: 4 }}><Text style={{ typography: 'titleMedium', fontWeight: '800' }}>{model.title}</Text>
-            <Text style={{ typography: 'bodySmall' }} color={colors.onSurfaceVariant}>{model.description}</Text></Column>
-          <IconButton onClick={model.canRefresh ? () => { void onRefresh(); } : undefined} enabled={model.canRefresh}
-            modifiers={[testID('admin-work-map-audit-refresh'), semantics({ contentDescription: model.refreshLabel })]}>
-            <RNHostView matchContents>{model.loading ? <ActivityIndicator /> : <SymbolView name={{ android: 'refresh' }} size={24} importantForAccessibility="no" />}</RNHostView>
-          </IconButton>
-        </Row>
-        {!!model.counts.length && <AdminWorkMapAuditCounts counts={model.counts} />}
-        {model.error != null && <Text color={colors.error}>{model.error}</Text>}
-      </Column>
-    </Card>
-    {model.violations.map(row => <Card key={row.key} colors={{ containerColor: colors.surfaceContainerLowest }} modifiers={[fillMaxWidth()]}><ListItem supportingText={row.subtitle}
-      leading={<RNHostView matchContents><SymbolView name={{ android: 'error_outline' }} importantForAccessibility="no" size={24} tintColor={colors.error} /></RNHostView>}><Text style={{ fontWeight: '700' }}>{row.title}</Text></ListItem></Card>)}
-    {model.successTitle != null && <Card colors={{ containerColor: colors.surfaceContainerLowest }} modifiers={[fillMaxWidth()]}><ListItem supportingText={model.successDescription ?? undefined}
-      leading={<RNHostView matchContents><SymbolView name={{ android: 'check_circle_outline' }} importantForAccessibility="no" size={24} tintColor={colors.primary} /></RNHostView>}><Text>{model.successTitle}</Text></ListItem></Card>}
-    {model.initialProgress && <RNHostView matchContents><ActivityIndicator /></RNHostView>}
-  </Column>;
+const passthrough = () => true;
+
+export function AdminWorkMapAudit({ model, onRefresh, active = true, pagerGesture, topInset = 0, userScrollPagination }: AdminWorkMapAuditProps & {
+  active?: boolean; pagerGesture?: PanGesture; topInset?: number; userScrollPagination?: OrdersListProps['userScrollPagination'];
+}) {
+  const { colors } = useBaseTheme(), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const statusColor = model.clean ? colors.primary : colors.error;
+  const row = (title: string, subtitle: string, success: boolean, first: boolean, last: boolean) =>
+    <WorkerQueueCard first={first} last={last} backgroundColor={colors.surfaceContainerLowest}>
+      <SymbolView name={{ android: success ? 'check_circle_outline' : 'error_outline' }} importantForAccessibility="no" size={24} tintColor={success ? colors.primary : colors.error} />
+      <View style={styles.text}><Text style={[styles.title, { color: colors.onSurface }]}>{title}</Text>
+        {!!subtitle && <Text style={{ color: colors.onSurfaceVariant }}>{subtitle}</Text>}
+      </View>
+    </WorkerQueueCard>;
+  return <OrdersList active={active} pagerGesture={pagerGesture} topInset={topInset} headerOffset={headerOffset} headerHeight={headerHeight}
+    passthrough={passthrough} onRefresh={onRefresh} rows={model.violations} rowKey={finding => finding.key}
+    userScrollPagination={userScrollPagination} renderRow={(finding, index) => row(finding.title, finding.subtitle, false,
+      index === 0, index === model.violations.length - 1 && model.successTitle == null)}
+    footer={<>
+      {model.successTitle != null && row(model.successTitle, model.successDescription ?? '', true, !model.violations.length, true)}
+      {model.initialProgress && <ActivityIndicator style={styles.progress} />}
+    </>}>
+    <WorkerQueueCard first last backgroundColor={colors.surfaceContainerLowest}>
+      <View style={styles.report}>
+        <View style={styles.heading}>
+          <SymbolView name={{ android: model.clean ? 'verified' : 'warning_amber' }} importantForAccessibility="no" size={30} tintColor={statusColor} />
+          <View style={styles.text}><Text style={[styles.title, { color: colors.onSurface }]}>{model.title}</Text>
+            <Text style={{ color: colors.onSurfaceVariant }}>{model.description}</Text></View>
+          <View testID="admin-work-map-audit-refresh">
+            {model.loading ? <ActivityIndicator /> : model.canRefresh ?
+              <WorkerIconButton icon="refresh" label={model.refreshLabel} onPress={() => { void onRefresh(); }} /> : null}
+          </View>
+        </View>
+        {!!model.counts.length && <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><AdminWorkMapAuditCounts counts={model.counts} /></BaseHost>}
+        {model.error != null && <Text style={{ color: colors.error }}>{model.error}</Text>}
+      </View>
+    </WorkerQueueCard>
+  </OrdersList>;
 }
+
+const styles = StyleSheet.create({
+  report: { flex: 1, padding: 8, gap: 12 }, heading: { flexDirection: 'row', alignItems: 'flex-start' },
+  text: { flex: 1, marginStart: 12, gap: 4 }, title: { fontSize: 16, fontWeight: '700' }, progress: { padding: 8 },
+});

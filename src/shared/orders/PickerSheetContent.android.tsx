@@ -9,10 +9,10 @@ import { WorkerIconButton } from '../../components/WorkerIconButton.android';
 import { WorkerQueueCard } from '../../components/WorkerQueueCard.android';
 import { OrdersList } from './OrdersList';
 
-type PickerItem = { key: string; title: string; subtitle?: string; select: () => void };
+type PickerItem = { key: string; title: string; subtitle?: string; selected?: boolean; select: () => void };
 type Props = {
-  title: string; hint: string; closeLabel: string; emptyLabel: string;
-  items: readonly PickerItem[]; onClose: () => void; onSearch: (query: string) => void;
+  title: string; hint?: string; closeLabel: string; emptyLabel?: string; searchEnabled?: boolean;
+  items: readonly PickerItem[]; onClose: () => void; onSearch?: (query: string) => void;
   query?: string; loading?: boolean; error?: string; retryLabel?: string; onRetry?: () => void;
   hasMore?: boolean; onLoadMore?: () => void; photoLabel?: string; onPhoto?: () => void;
   photoLoading?: boolean; photoError?: string;autoFocus?:boolean;headerAction?:ReactElement;
@@ -20,7 +20,7 @@ type Props = {
 const passthrough = () => true;
 
 /** Picker rows use the same segmented cards as the order and material lists. */
-export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items, onClose, onSearch,
+export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, searchEnabled = true, items, onClose, onSearch,
   query, loading = false, error, retryLabel, onRetry, hasMore = false, onLoadMore,
   photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction }: Props) {
   const colors = useMaterialColors(), input = useNativeState(query ?? '');
@@ -34,7 +34,7 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items,
       <Text style={[styles.title, { color: colors.onSurface }]}>{title}</Text>
       {headerAction}<WorkerIconButton icon="close" label={closeLabel} onPress={onClose} />
     </View>
-    <View style={[styles.search, { backgroundColor: colors.surfaceContainerHighest, borderColor: colors.outlineVariant }]}>
+    {searchEnabled ? <View style={[styles.search, { backgroundColor: colors.surfaceContainerHighest, borderColor: colors.outlineVariant }]}>
       <SymbolView name={{ android: 'search' }} size={24} tintColor={colors.onSurfaceVariant} />
       <Host matchContents={{ vertical: true }} style={styles.searchInput}>
         <TextInput autoFocus={autoFocus} value={input} onChangeText={onSearch} placeholder={hint} accessibilityLabel={hint}
@@ -44,23 +44,23 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, items,
       {onPhoto && <Pressable accessibilityRole="button" accessibilityLabel={photoLabel} disabled={photoLoading} onPress={onPhoto} hitSlop={8}>
         <SymbolView name={{ android: 'qr_code_scanner' }} size={22} tintColor={colors.onSurfaceVariant} />
       </Pressable>}
-    </View>
+    </View> : null}
     {photoLoading ? <ActivityIndicator /> : null}
     {photoError ? <Text style={[styles.message, { color: colors.onSurfaceVariant }]}>{photoError}</Text> : null}
     <OrdersList<PickerItem> active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0}
       rows={items} rowKey={item => item.key} passthrough={passthrough} keyboardShouldPersistTaps="handled" onEndReached={loadMore}
-      renderRow={(item, index) => <WorkerQueueCard backgroundColor={colors.surfaceContainerHighest}
-        first={index === 0} last={index === items.length - 1} onPress={item.select}>
+      renderRow={(item, index) => <WorkerQueueCard backgroundColor={item.selected ? colors.primaryContainer : colors.surfaceContainerHighest}
+        selected={item.selected} first={index === 0} last={index === items.length - 1} onPress={item.select}>
         <View style={styles.row}>
-          <Text style={[styles.rowTitle, { color: colors.onSurface }]}>{item.title}</Text>
-          {item.subtitle ? <Text style={[styles.rowSubtitle, { color: colors.onSurfaceVariant }]}>{item.subtitle}</Text> : null}
+          <Text style={[styles.rowTitle, { color: item.selected ? colors.onPrimaryContainer : colors.onSurface }]}>{item.title}</Text>
+          {item.subtitle ? <Text style={[styles.rowSubtitle, { color: item.selected ? colors.onPrimaryContainer : colors.onSurfaceVariant }]}>{item.subtitle}</Text> : null}
         </View>
       </WorkerQueueCard>}
       footer={<>{loading ? <ActivityIndicator style={styles.progress} /> : null}
         {error ? <View style={styles.error}><Text style={{ color: colors.onSurfaceVariant }}>{error}</Text>
           {onRetry && retryLabel ? <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retry}>
             <Text style={{ color: colors.primary }}>{retryLabel}</Text></Pressable> : null}</View> : null}</>}>
-      {!items.length && !loading && !error ? <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>{emptyLabel}</Text> : null}
+      {emptyLabel != null && !items.length && !loading && !error ? <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>{emptyLabel}</Text> : null}
     </OrdersList>
   </GestureHandlerRootView>;
 }

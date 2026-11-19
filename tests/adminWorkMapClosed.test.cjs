@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -104,11 +105,13 @@ for (const platform of ['ios', 'android']) test(`${platform} native Closed row p
   const modifiers = new Proxy({}, { get: (_target, key) => value => ({ key, value }) });
   const View = load(`admin/AdminWorkMapClosedRow.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: { HStack: 'HStack', VStack: 'VStack', Spacer: 'Spacer', Text: 'NativeText', RNHostView: 'RNHostView' },
-    '@expo/ui/swift-ui/modifiers': modifiers, 'react-native': { PlatformColor: value => value }, './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank' } }).AdminWorkMapClosedRow;
-  const row = closed.adminWorkMapClosedRows([order()])[0], tree = View({ row }); assert.equal(tree.type, platform === 'ios' ? 'HStack' : 'ListItem');
-  if (platform === 'android') assert.equal(tree.props.supportingText, 'C • Yopdi: Ana'); else assert.ok(nodes(tree).some(value => value.type === 'NativeText' && value.props.children === 'C • Yopdi: Ana'));
+    '@expo/ui/swift-ui/modifiers': modifiers, 'react-native': { PlatformColor: value => value, View: 'View', Text: 'NativeText', StyleSheet: { create: value => value } },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank' } }).AdminWorkMapClosedRow;
+  const row = closed.adminWorkMapClosedRows([order()])[0], tree = View({ row }); assert.equal(tree.type, platform === 'ios' ? 'HStack' : 'WorkerQueueCard');
+  assert.ok(nodes(tree).some(value => value.type === 'NativeText' && value.props.children === 'C • Yopdi: Ana'));
   assert.equal(tree.props.onPress, undefined); assert.equal(tree.props.onLongPress, undefined);
-  const badge = platform === 'ios' ? nodes(tree).find(value => value.type === 'Rank') : tree.props.leading.props.children;
-  assert.equal(badge.type, 'Rank'); assert.equal(badge.props.position, '1'); assert.equal(badge.props.onPress, undefined);
+  const badge = nodes(tree).find(value => value.type === 'Rank');
+  assert.equal(badge.props.position, '1'); assert.equal(badge.props.onPress, undefined);
   assert.equal(nodes(tree).find(value => value.type === 'NativeText').props.children, '42 • Film');
 });

@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -156,39 +157,56 @@ test('count labels follow the source UrduAwareText after localized label and num
   }
 });
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
-for (const platform of ['ios', 'android']) test(`${platform} native Audit content renders counters/findings and only read-only refresh`, async () => {
+test('iOS native Audit keeps its counters, read-only findings and refresh controls', async () => {
   let refreshed = 0;
-  const native = { Button: 'Button', HStack: 'HStack', Image: 'Image', ProgressView: 'ProgressView', Spacer: 'Spacer', Text: 'NativeText', VStack: 'VStack',
-    Card: 'Card', Column: 'Column', IconButton: 'IconButton', RNHostView: 'RNHostView', Row: 'Row',
-    useMaterialColors: () => ({ error: '#f00', primary: '#00f', onSurfaceVariant: '#888', surfaceContainerLowest: '#fff' }) };
+  const native = { Button: 'Button', HStack: 'HStack', Image: 'Image', ProgressView: 'ProgressView', Spacer: 'Spacer', Text: 'NativeText', VStack: 'VStack', RNHostView: 'RNHostView' };
   const modifiers = new Proxy({}, { get: (_target, key) => value => ({ key, value }) });
-  const View = load(`admin/AdminWorkMapAudit.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem' },
-    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
-    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}/modifiers`]: modifiers,
-    'react-native': { PlatformColor: value => value, ActivityIndicator: 'ActivityIndicator' }, 'expo-symbols': { SymbolView: 'SymbolView' },
-    './AdminWorkMapAuditCounts': { AdminWorkMapAuditCounts: 'Counts' } }).AdminWorkMapAudit;
+  const View = load('admin/AdminWorkMapAudit.ios.tsx', { '@expo/ui': { ListItem: 'ListItem' },
+    '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
+    'react-native': { PlatformColor: value => value }, './AdminWorkMapAuditCounts': { AdminWorkMapAuditCounts: 'Counts' } }).AdminWorkMapAudit;
   const model = present(report([finding(0)]), null, false, 'uz'), onRefresh = async () => { refreshed++; };
-  const rendered = nodes(View({ model, onRefresh })), buttons = rendered.filter(row => row.type === (platform === 'ios' ? 'Button' : 'IconButton')); assert.equal(buttons.length, 1);
-  if (platform === 'ios') {
-    assert.ok(buttons[0].props.modifiers.some(modifier => modifier.key === 'accessibilityLabel' && modifier.value === model.refreshLabel)); buttons[0].props.onPress();
-  } else {
-    buttons[0].props.onClick(); assert.ok(buttons[0].props.modifiers.some(modifier => modifier.key === 'testID' && modifier.value === 'admin-work-map-audit-refresh'));
-    assert.ok(buttons[0].props.modifiers.some(modifier => modifier.key === 'semantics' && modifier.value.contentDescription === model.refreshLabel));
-  }
+  const rendered = nodes(View({ model, onRefresh })), button = rendered.find(row => row.type === 'Button');
+  assert.ok(button.props.modifiers.some(modifier => modifier.key === 'accessibilityLabel' && modifier.value === model.refreshLabel)); button.props.onPress();
   await tick(); assert.equal(refreshed, 1);
   assert.deepEqual(rendered.find(row => row.type === 'Counts').props.counts, model.counts);
   assert.equal(rendered.filter(row => row.type === 'ListItem').length, 1); assert.equal(rendered.find(row => row.type === 'ListItem').props.onPress, undefined);
-  const loading = nodes(View({ model: present(null, null, true, 'uz'), onRefresh })), disabled = loading.find(row => row.type === (platform === 'ios' ? 'Button' : 'IconButton'));
-  assert.equal(platform === 'ios' ? disabled.props.onPress : disabled.props.onClick, undefined);
-  if (platform === 'android') assert.equal(disabled.props.enabled, false);
-  else assert.ok(disabled.props.modifiers.some(modifier => modifier.key === 'disabled' && modifier.value === true));
-  assert.ok(loading.some(row => row.type === 'ProgressView' || row.type === 'ActivityIndicator'));
-  assert.equal(loading.some(row => row.type === 'Counts'), false);
+  const loading = nodes(View({ model: present(null, null, true, 'uz'), onRefresh })), disabled = loading.find(row => row.type === 'Button');
+  assert.equal(disabled.props.onPress, undefined); assert.ok(disabled.props.modifiers.some(modifier => modifier.key === 'disabled' && modifier.value === true));
+  assert.ok(loading.some(row => row.type === 'ProgressView')); assert.equal(loading.some(row => row.type === 'Counts'), false);
   const emptyError = nodes(View({ model: present(null, '', false, 'uz'), onRefresh }));
   assert.ok(emptyError.some(row => row.type === 'NativeText' && row.props.children === ''));
-  assert.equal(emptyError.some(row => row.type === 'ProgressView' || row.type === 'ActivityIndicator'), false);
+  assert.equal(emptyError.some(row => row.type === 'ProgressView'), false);
   const clean = nodes(View({ model: present(report([], { ok: true }), null, false, 'uz'), onRefresh }));
   assert.equal(clean.find(row => row.type === 'ListItem').props.supportingText, 'production.audit_success_description');
+});
+
+test('Android Audit uses keyed findings and Worker cards, preserving counters and read-only refresh', async () => {
+  let refreshed = 0;
+  const View = load('admin/AdminWorkMapAudit.android.tsx', {
+    'react-native': { View: 'View', Text: 'NativeText', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value } },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) }, 'expo-symbols': { SymbolView: 'SymbolView' },
+    '../components/BaseHost.android': { BaseHost: 'Host' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
+    '../components/WorkerIconButton': { WorkerIconButton: 'WorkerIconButton' },
+    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
+    './AdminWorkMapAuditCounts': { AdminWorkMapAuditCounts: 'Counts' },
+  }).AdminWorkMapAudit;
+  const model = present(report([finding(0)]), null, false, 'uz'), onRefresh = async () => { refreshed++; };
+  const list = View({ model, onRefresh, topInset: 48, pagerGesture: 'pager' }), header = nodes(list.props.children);
+  assert.equal(list.type, 'OrdersList'); assert.equal(list.props.topInset, 48); assert.equal(list.props.pagerGesture, 'pager');
+  assert.equal(list.props.rows, model.violations); assert.equal(list.props.rowKey(model.violations[0]), '0');
+  const refresh = header.find(row => row.type === 'WorkerIconButton');
+  assert.equal(refresh.props.icon, 'refresh'); assert.equal(refresh.props.label, model.refreshLabel); refresh.props.onPress();
+  await tick(); assert.equal(refreshed, 1);
+  assert.deepEqual(header.find(row => row.type === 'Counts').props.counts, model.counts);
+  const findingRow = list.props.renderRow(model.violations[0], 0);
+  assert.equal(findingRow.type, 'WorkerQueueCard'); assert.equal(findingRow.props.onPress, undefined);
+  assert.ok(nodes(findingRow).some(row => row.type === 'NativeText' && row.props.children === model.violations[0].title));
+  const loading = View({ model: present(null, null, true, 'uz'), onRefresh }), loadingHeader = nodes(loading.props.children);
+  assert.ok(loadingHeader.some(row => row.type === 'ActivityIndicator')); assert.equal(loadingHeader.some(row => row.type === 'WorkerIconButton' || row.type === 'Counts'), false);
+  const error = View({ model: present(null, '', false, 'uz'), onRefresh });
+  assert.ok(nodes(error.props.children).some(row => row.type === 'NativeText' && row.props.children === ''));
+  const clean = View({ model: present(report([], { ok: true }), null, false, 'uz'), onRefresh });
+  assert.ok(nodes(clean.props.footer).some(row => row.type === 'NativeText' && row.props.children === 'production.audit_success_description'));
 });
 
 for (const platform of ['ios', 'android']) test(`${platform} Audit counts use four ordered, passive, wrapping source icons`, () => {

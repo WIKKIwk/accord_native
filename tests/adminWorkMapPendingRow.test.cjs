@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -24,7 +25,7 @@ test('pending list title always preserves raw code, separator and title without 
   assert.equal(present({ ...row, kg: 1e-7 }, 'en').supporting, ' · 1e-7 kg · Chala buyurtma');
 });
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
-for (const platform of ['ios', 'android']) for (const mode of ['light', 'dark']) test(`${platform} ${mode} pending row keeps source tint, passive cover and info callback`, () => {
+for (const platform of ['ios', 'android']) for (const mode of ['light', 'dark']) test(`${platform} ${mode} pending row uses its platform palette and keeps the passive cover and info callback`, () => {
   const calls = [], native = { Image: 'Image', Text: 'NativeText' };
   const View = load(`admin/AdminWorkMapPendingRow.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem', Text: 'NativeText' },
     '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': { accessibilityHidden: () => ({}), listRowBackground: value => ({ background: value }) },
@@ -39,7 +40,7 @@ for (const platform of ['ios', 'android']) for (const mode of ['light', 'dark'])
   assert.deepEqual(cover.props.name, platform === 'ios' ? { ios: 'function' } : { android: 'calculate' });
   assert.equal(tree.some(node => node.type === 'Thumbnail'), false);
   const expected = mode === 'dark' ? '#3D2859' : '#EDE0FF';
-  assert.ok(platform === 'ios' ? row.props.modifiers.some(value => value.background === expected) : row.props.backgroundColor === expected);
+  assert.ok(platform === 'ios' ? row.props.modifiers.some(value => value.background === expected) : row.props.backgroundColor === 'field');
   if (platform === 'android') { const info = tree.find(node => node.type === 'Pressable'); assert.equal(info.props.accessibilityLabel, 'Info');
     let stopped = false; info.props.onPress({ stopPropagation: () => { stopped = true; } }); assert.equal(stopped, true); }
   assert.deepEqual(calls, platform === 'ios' ? ['open'] : ['open', 'open']);

@@ -1,24 +1,20 @@
-import { Column, FilterChip, Row, SegmentedButton, SingleChoiceSegmentedButtonRow, Text } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, padding, semantics, testID } from '@expo/ui/jetpack-compose/modifiers';
+import { padding } from '@expo/ui/jetpack-compose/modifiers';
+import { useMemo } from 'react';
+import { View } from 'react-native';
+import { BaseHost } from '../components/BaseHost.android';
+import { useBaseTheme } from '../components/useBaseTheme';
+import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
+import { AdminText } from './AdminTypography.android';
 import type { AdminWorkMapControlsProps } from './adminWorkMapControlsTypes';
 
-export function AdminWorkMapModules(props: AdminWorkMapControlsProps) {
-  return <SingleChoiceSegmentedButtonRow modifiers={[fillMaxWidth(), padding(12, 4, 12, 4)]}>
-    <SegmentedButton selected={props.module === 'sequence'} onClick={() => props.onModule('sequence')}><SegmentedButton.Label><Text>Ketma-ketlik</Text></SegmentedButton.Label></SegmentedButton>
-    <SegmentedButton selected={props.module === 'orders'} onClick={() => props.onModule('orders')}><SegmentedButton.Label><Text>Buyurtmalar</Text></SegmentedButton.Label></SegmentedButton>
-    <SegmentedButton selected={props.module === 'move'} onClick={() => props.onModule('move')} modifiers={[testID('admin-work-map-module-move')]}><SegmentedButton.Label><Text>Ko‘chirish</Text></SegmentedButton.Label></SegmentedButton>
-    <SegmentedButton selected={props.module === 'closed'} onClick={() => props.onModule('closed')} modifiers={[testID('admin-work-map-module-closed')]}><SegmentedButton.Label><Text>Yopilgan</Text></SegmentedButton.Label></SegmentedButton>
-    <SegmentedButton selected={props.module === 'audit'} onClick={() => props.onModule('audit')}><SegmentedButton.Label><Text>Tekshiruv</Text></SegmentedButton.Label></SegmentedButton>
-  </SingleChoiceSegmentedButtonRow>;
-}
-export function AdminWorkMapApparatusFilter(props: AdminWorkMapControlsProps) {
-  return <Column modifiers={[fillMaxWidth(), padding(12, 4, 12, 4)]}>
-    <FilterChip selected={props.expanded} onClick={props.onToggle} modifiers={[semantics({ contentDescription: [props.apparatusLabel, props.selected?.name ?? props.unselectedLabel].join(', ') })]}>
-      <FilterChip.Label><Row><Text>{props.apparatusLabel}</Text><Text>{props.selected?.name ?? props.unselectedLabel}</Text></Row></FilterChip.Label>
-    </FilterChip>
-    {props.expanded && props.catalog.map(item => <FilterChip key={item.id} selected={props.selected?.id === item.id} onClick={() => props.onApparatus(item.id)}>
-      <FilterChip.Label><Text>{item.name}</Text></FilterChip.Label>
-    </FilterChip>)}
-    {!!props.countText && <Text>{props.countText}</Text>}
-  </Column>;
+export function AdminWorkMapApparatusFilter({ catalog, selected, apparatusLabel, unselectedLabel, countText, onApparatus }: AdminWorkMapControlsProps) {
+  const { colors } = useBaseTheme();
+  const options = useMemo(() => catalog.map(item => ({ value: item.id, label: item.name.trim() })), [catalog]);
+  return <View style={{ paddingTop: 4 }}>
+    <DropdownFilter label={apparatusLabel} selectedLabel={selected?.name.trim() || unselectedLabel}
+      options={options} enabled={options.length > 0} backgroundColor={colors.surface} onChange={onApparatus} />
+    {!!countText && <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}>
+      <AdminText color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }} modifiers={[padding(12, 8, 12, 10)]}>{countText}</AdminText>
+    </BaseHost>}
+  </View>;
 }

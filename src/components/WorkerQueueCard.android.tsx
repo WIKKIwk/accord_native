@@ -4,10 +4,10 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 type Props = {
   children: ReactNode; backgroundColor: ViewStyle['backgroundColor']; backgroundImage?: ViewStyle['backgroundImage'];
   style?: StyleProp<ViewStyle>; containerStyle?: StyleProp<ViewStyle>;
-  first?: boolean; last?: boolean; onPress?: () => void; onLongPress?: () => void; disabled?: boolean;
+  first?: boolean; last?: boolean; onPress?: () => void; onLongPress?: () => void; disabled?: boolean; selected?: boolean;
 };
 
-export function WorkerQueueCard({ children, backgroundColor, backgroundImage, first = false, last = false, onPress, onLongPress, disabled = false, style, containerStyle }: Props) {
+export function WorkerQueueCard({ children, backgroundColor, backgroundImage, first = false, last = false, onPress, onLongPress, disabled = false, selected, style, containerStyle }: Props) {
   const cardStyle = [styles.row, {
     backgroundColor, backgroundImage,
     borderTopLeftRadius: first ? 16 : 4, borderTopRightRadius: first ? 16 : 4,
@@ -15,6 +15,7 @@ export function WorkerQueueCard({ children, backgroundColor, backgroundImage, fi
   }, style];
   return <View style={[styles.inset, { paddingTop: first ? 0 : 1, paddingBottom: last ? 12 : 1 }, containerStyle]}>
     {onPress || onLongPress ? <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} onLongPress={onLongPress}
+      accessibilityState={selected === undefined ? undefined : { selected }}
       accessibilityActions={!onPress && onLongPress ? [{ name: 'activate' }] : undefined}
       onAccessibilityAction={!onPress && onLongPress ? event => { if (event.nativeEvent.actionName === 'activate') onLongPress(); } : undefined}
       android_ripple={{}} style={cardStyle}>{children}</Pressable>

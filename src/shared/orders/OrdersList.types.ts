@@ -22,6 +22,7 @@ export type OrdersListProps<T = never> = {
   scrollEnabled?: boolean;
   scrollResetKey?: number;
   headerFollowsContent?: boolean;
+  userScrollPagination?: { distance: number; loadMore: () => void };
   passthrough?: (item: ReactNode) => boolean;
   keyboardShouldPersistTaps?: 'never' | 'always' | 'handled';
 };

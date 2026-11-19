@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -15,14 +16,11 @@ function load(file, mocks) {
 }
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)] : [];
 const modifiers = new Proxy({}, { get: (_target, name) => value => ({ name, value }) });
-const slot = name => Object.assign(() => {}, { Label: `${name}.Label` });
-for (const platform of ['ios', 'android']) test(`${platform} native module/filter controls expose only real destinations and preserve selected apparatus`, () => {
-  const calls = [], segmented = slot('SegmentedButton'), chip = slot('FilterChip');
-  const native = { Button: 'Button', HStack: 'HStack', Picker: 'Picker', Text: 'NativeText', VStack: 'VStack',
-    Column: 'Column', Row: 'Row', FilterChip: chip, SegmentedButton: segmented, SingleChoiceSegmentedButtonRow: 'SegmentRow' };
-  const exports = load(`admin/AdminWorkMapControls.${platform}.tsx`, {
-    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
-    [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}/modifiers`]: modifiers,
+test('iOS controls retain the selected apparatus and source tab labels', () => {
+  const calls = [];
+  const native = { Button: 'Button', HStack: 'HStack', Picker: 'Picker', Text: 'NativeText', VStack: 'VStack' };
+  const exports = load('admin/AdminWorkMapControls.ios.tsx', {
+    '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
   });
   const a = { id: 'a', name: 'Pechat' }, b = { id: 'b', name: 'Rezka' };
   const props = { module: 'sequence', catalog: [a, b], selected: b, expanded: true,
@@ -30,25 +28,48 @@ for (const platform of ['ios', 'android']) test(`${platform} native module/filte
     apparatusLabel: 'Apparat', unselectedLabel: 'Tanlanmagan', countText: '7 ta buyurtma' };
   const modules = nodes(exports.AdminWorkMapModules(props));
   assert.deepEqual(modules.filter(node => node.type === 'NativeText').map(node => node.props.children), ['Ketma-ketlik', 'Buyurtmalar', 'Ko‘chirish', 'Yopilgan', 'Tekshiruv']);
-  if (platform === 'ios') modules[0].props.onSelectionChange('orders');
-  else modules.find(node => node.type === segmented && !node.props.selected).props.onClick();
+  modules[0].props.onSelectionChange('orders');
   const filter = nodes(exports.AdminWorkMapApparatusFilter(props));
-  if (platform === 'ios') {
-    filter.find(node => node.type === 'Button' && node.props.label === 'Pechat').props.onPress();
-    assert.ok(filter.find(node => node.type === 'Button' && node.props.label === 'Rezka').props.modifiers.some(m => m.name === 'accessibilityAddTraits'));
-    filter.find(node => node.type === 'Button' && !node.props.label).props.onPress();
-  } else {
-    const chips = filter.filter(node => node.type === chip); assert.equal(chips[2].props.selected, true);
-    chips[1].props.onClick(); chips[0].props.onClick();
-  }
-  assert.deepEqual(calls, [['module', 'orders'], ['apparatus', 'a'], 'toggle']);
-  if (platform === 'ios') modules[0].props.onSelectionChange('closed');
-  else modules.find(node => node.type === segmented && node.props.modifiers?.some(modifier => modifier.name === 'testID' && modifier.value === 'admin-work-map-module-closed')).props.onClick();
-  assert.deepEqual(calls.at(-1), ['module', 'closed']);
-  if (platform === 'ios') modules[0].props.onSelectionChange('move');
-  else modules.find(node => node.type === segmented && node.props.modifiers?.some(modifier => modifier.name === 'testID' && modifier.value === 'admin-work-map-module-move')).props.onClick();
-  assert.deepEqual(calls.at(-1), ['module', 'move']);
+  filter.find(node => node.type === 'Button' && node.props.label === 'Pechat').props.onPress();
+  assert.ok(filter.find(node => node.type === 'Button' && node.props.label === 'Rezka').props.modifiers.some(m => m.name === 'accessibilityAddTraits'));
+  filter.find(node => node.type === 'Button' && !node.props.label).props.onPress();
+  modules[0].props.onSelectionChange('closed'); modules[0].props.onSelectionChange('move');
+  assert.deepEqual(calls, [['module', 'orders'], ['apparatus', 'a'], 'toggle', ['module', 'closed'], ['module', 'move']]);
   assert.ok(filter.some(node => node.type === 'NativeText' && node.props.children === props.countText));
   const collapsed = nodes(exports.AdminWorkMapApparatusFilter({ ...props, expanded: false }));
-  assert.equal(collapsed.some(node => node.props.label === 'Pechat' || node.type === 'NativeText' && node.props.children === 'Pechat'), false);
+  assert.equal(collapsed.some(node => node.props.label === 'Pechat'), false);
+});
+
+test('Android sequence uses the same dropdown as Worker with the original IDs and selected label', () => {
+  const chosen = [], colors = { surface: 'device surface', onSurfaceVariant: 'device content' };
+  const { AdminWorkMapApparatusFilter: Filter } = load('admin/AdminWorkMapControls.android.tsx', {
+    react: { useMemo: callback => callback() }, 'react-native': { View: 'View' },
+    '@expo/ui/jetpack-compose/modifiers': modifiers, '../components/BaseHost.android': { BaseHost: 'Host' },
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
+    '../shared/filters/DropdownFilter.android': { DropdownFilter: 'WorkerDropdown' },
+    './AdminTypography.android': { AdminText: 'NativeText' },
+  });
+  const b = { id: 'b', name: ' Rezka ' }, props = { catalog: [{ id: 'a', name: 'Pechat' }, b], selected: b,
+    apparatusLabel: 'Apparat', unselectedLabel: 'Tanlanmagan', countText: '7 ta buyurtma', onApparatus: id => chosen.push(id) };
+  const rendered = nodes(Filter(props)), dropdown = rendered.find(node => node.type === 'WorkerDropdown');
+  assert.equal(dropdown.props.selectedLabel, 'Rezka');
+  assert.deepEqual(dropdown.props.options, [{ value: 'a', label: 'Pechat' }, { value: 'b', label: 'Rezka' }]);
+  assert.equal(dropdown.props.backgroundColor, colors.surface); assert.equal(dropdown.props.enabled, true);
+  dropdown.props.onChange('a'); assert.deepEqual(chosen, ['a']);
+  assert.ok(rendered.some(node => node.type === 'NativeText' && node.props.children === '7 ta buyurtma'));
+  const empty = nodes(Filter({ ...props, catalog: [], selected: null, countText: '' })).find(node => node.type === 'WorkerDropdown');
+  assert.equal(empty.props.selectedLabel, 'Tanlanmagan'); assert.equal(empty.props.enabled, false);
+});
+
+test('Android Move selects the exact native-sheet ticket item through the shared picker', () => {
+  const { AdminWorkMapMovePicker: Picker } = load('admin/AdminWorkMapMovePicker.android.tsx', {
+    '../shared/orders/PickerSheetContent': { PickerSheetContent: 'WorkerPicker' },
+  });
+  const selection = { id: 'station-a' }, selected = [], closed = [];
+  const sheet = Picker({ title: 'Apparat', closeLabel: 'Yopish', rows: [{ key: 'a', name: 'Station A', selected: true, selection }],
+    onChoose: value => selected.push(value), onClose: () => closed.push(true) });
+  assert.equal(sheet.type, 'WorkerPicker'); assert.equal(sheet.props.searchEnabled, false);
+  assert.equal(sheet.props.items[0].selected, true);
+  sheet.props.items[0].select(); sheet.props.onClose();
+  assert.deepEqual(selected, [selection]); assert.deepEqual(closed, [true]);
 });

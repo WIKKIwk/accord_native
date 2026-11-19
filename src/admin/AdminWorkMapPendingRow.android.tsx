@@ -5,12 +5,13 @@ import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 
 type Props = { headline: string; supportingText: string; infoLabel: string; first?: boolean; last?: boolean; onPress: () => void };
 export function AdminWorkMapPendingRow({ headline, supportingText, infoLabel, first, last, onPress }: Props) {
-  const { mode, colors } = useBaseTheme(), secondary = colors.onSurfaceVariant ?? colors.onSurface;
-  return <WorkerQueueCard backgroundColor={mode === 'dark' ? '#3D2859' : '#EDE0FF'} first={first} last={last} onPress={onPress}>
+  const { colors } = useBaseTheme();
+  const secondary = colors.onSecondaryContainer;
+  return <WorkerQueueCard backgroundColor={colors.secondaryContainer} first={first} last={last} onPress={onPress}>
     <View accessible={false} style={[styles.cover, { backgroundColor: colors.secondaryContainer }]}>
       <SymbolView name={{ android: 'calculate' }} size={22} tintColor={colors.onSecondaryContainer} importantForAccessibility="no" />
     </View>
-    <View style={styles.text}><Text numberOfLines={1} style={[styles.headline, { color: colors.onSurface }]}>{headline}</Text>
+    <View style={styles.text}><Text numberOfLines={1} style={[styles.headline, { color: colors.onSecondaryContainer }]}>{headline}</Text>
       <Text numberOfLines={1} style={[styles.supporting, { color: secondary }]}>{supportingText}</Text></View>
     <Pressable accessibilityRole="button" accessibilityLabel={infoLabel} onPress={event => { event.stopPropagation(); onPress(); }} hitSlop={8} style={styles.info}>
       <SymbolView name={{ android: 'info_outline' }} size={22} tintColor={secondary} importantForAccessibility="no" />
