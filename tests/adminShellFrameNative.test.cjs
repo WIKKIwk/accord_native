@@ -84,6 +84,17 @@ for (const [family, id] of Object.entries(families)) for (const platform of ['an
   });
 }
 
+test('Expo Go Home remains interactive without native measurements, except inside a source window', () => {
+  const facts = { metrics: null, thinGestureBottom: false, sourceWindow: false };
+  const { AdminShellBodyFrame } = frameModule(colors, () => facts);
+  const body = () => nodes(AdminShellBodyFrame({ hasFooter: true, testID: 'preview', allowMissingInsets: true, children: 'Home' }),
+    node => node.props.testID === 'preview')[0];
+  assert.equal(body().props.pointerEvents, 'auto');
+  assert.equal(flattenStyle(body().props.style).opacity, 1);
+  facts.sourceWindow = true;
+  assert.equal(body().props.pointerEvents, 'none');
+});
+
 test('measurement-pending body keeps a genuine child read lifetime mounted across metric/keyboard updates', () => {
   const r = runtime(); let facts = { metrics: null, thinGestureBottom: false }, reads = 0, cleanups = 0;
   const { AdminShellBodyFrame } = frameModule(colors, () => facts);

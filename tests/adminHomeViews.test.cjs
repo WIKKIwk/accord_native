@@ -30,7 +30,7 @@ const react = { useEffect() {}, useRef: value => ({ current: value }), useState:
   useSyncExternalStore: (_subscribe, get) => get() };
 const baseState = { loadingSummary: false, loadedSummary: true, summaryError: null };
 const session = (role, capabilities) => ({ token: 'test', profile: { role, ref: 'test' }, capabilities });
-function render(platform, account, state = baseState, navigation = 'menu', isRouteAvailable = () => true, profileAction) {
+function render(platform, account, state = baseState, navigation = 'menu', isRouteAvailable = () => true, profileAction, expoGo = false) {
   const calls = [], opener = async () => {}, controller = { reload: async () => { calls.push('refresh'); },
     openAndReload: async (route, callback) => { assert.equal(callback, opener); calls.push(['open', route]); } };
   const native = { View: 'View', Text: 'NativeText', ScrollView: 'ScrollView', ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl',
@@ -38,10 +38,10 @@ function render(platform, account, state = baseState, navigation = 'menu', isRou
   const leading = navigation === null ? null : { icon: navigation, label: 'Navigation', onPress: () => calls.push('navigation') };
   const mocks = { react, '@expo/ui': { ListItem: 'ListItem' }, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods,
     '@expo/ui/jetpack-compose/modifiers': mods,
-    '@expo/ui/jetpack-compose': { Column: 'Column', Host: 'Host', Row: 'Row', Surface: 'Surface', Text: 'ComposeText', TextButton: 'TextButton',
+    '@expo/ui/jetpack-compose': { Box: 'Box', Column: 'Column', Host: 'Host', Row: 'Row', Surface: 'Surface', Text: 'ComposeText', TextButton: 'TextButton',
       RNHostView: 'RNHostView', Shape: { RoundedCorner: props => ({ type: 'RoundedCorner', props }) }, IconButton: 'IconButton', Spacer: 'Spacer', TopAppBar: topBar, useMaterialColors: () => ({ surfaceContainerLow: 'bg', surfaceContainerLowest: 'card', onSurface: 'text',
       onSurfaceVariant: 'secondary', primary: 'primary' }) }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
+    expo: { isRunningInExpoGo: () => expoGo }, 'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/BaseHost.android': { BaseHost: 'BaseHost' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surfaceContainerHigh: 'chrome', surfaceContainerLow: 'bg', surfaceContainerLowest: 'card',
       onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary' } }) },
@@ -123,6 +123,17 @@ for (const platform of ['ios', 'android']) {
       nodes(tree, n => n.type === 'TopAppBar.NavigationIcon')[0].props.children, platform === 'ios' ? undefined : null);
   });
 }
+test('Android Expo Go opens admin home without mounting the unavailable TopAppBar', () => {
+  const profile = { type: 'ExistingProfile', props: {} };
+  const { tree, calls } = render('android', admin, baseState, 'menu', () => true, profile, true);
+  const header = nodes(tree, n => n.props.testID === 'admin-home-header-safe-area')[0];
+  assert.equal(nodes(header, n => n.type === topBar || n.type === topBar.Title).length, 0);
+  assert.equal(nodes(header, n => n.type === 'ExistingProfile').length, 1);
+  nodes(header, n => n.type === 'IconButton')[0].props.onClick();
+  assert.deepEqual(calls, ['navigation']);
+  assert.equal(nodes(tree, n => n.props.testID === 'admin-home-body-frame')[0].props.allowMissingInsets, true);
+});
+
 test('each V2 home action icon has an explicit native symbol and unknown names fail', () => {
   const allModel = load('admin/adminHomeModel.ts', { '../shared/appRoutes': { ...routes, canOpenRoute: () => true }, '../shared/localization': localization });
   const all = allModel.adminHomeActions(admin, 'en'); assert.equal(all.length, 23);

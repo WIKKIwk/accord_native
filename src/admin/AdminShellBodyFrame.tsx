@@ -10,20 +10,23 @@ interface AdminShellBodyFrameProps {
   hasFooter: boolean;
   testID: string;
   contentPadding?: 'default' | 'none';
+  allowMissingInsets?: boolean;
 }
 
 /** @v2 AppShell
  * The dock reserve belongs outside the clipped body. Keeping children mounted
  * while native viewport facts arrive preserves their original owned reads.
  */
-export function AdminShellBodyFrame({ children, hasFooter, testID, contentPadding = 'none' }: AdminShellBodyFrameProps) {
+export function AdminShellBodyFrame({ children, hasFooter, testID, contentPadding = 'none', allowMissingInsets = false }: AdminShellBodyFrameProps) {
   const layout = useAdminShellLayout(hasFooter), { colors } = useBaseTheme();
+  // Expo Go lacks the app's native inset reader. Its Home scroll view handles the footer clearance.
+  const visible = layout.metricsReady || (allowMissingInsets && !layout.sourceWindow);
   const body =
     <View testID={`${testID}-reserve`} style={[styles.reserve, { marginHorizontal: layout.horizontalInset, marginBottom: layout.bottomReserve ?? undefined }]}>
-      <View testID={testID} pointerEvents={layout.metricsReady ? 'auto' : 'none'} accessibilityElementsHidden={!layout.metricsReady}
-        importantForAccessibility={layout.metricsReady ? 'auto' : 'no-hide-descendants'} accessibilityState={{ busy: !layout.metricsReady }}
+      <View testID={testID} pointerEvents={visible ? 'auto' : 'none'} accessibilityElementsHidden={!visible}
+        importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'} accessibilityState={{ busy: !visible }}
         style={[styles.frame, { backgroundColor: colors.surfaceContainerLow, borderTopLeftRadius: layout.topRadius, borderTopRightRadius: layout.topRadius,
-          borderBottomLeftRadius: layout.bottomRadius, borderBottomRightRadius: layout.bottomRadius, opacity: layout.metricsReady ? 1 : 0 }, contentPadding === 'default' && styles.defaultPadding]}>
+          borderBottomLeftRadius: layout.bottomRadius, borderBottomRightRadius: layout.bottomRadius, opacity: visible ? 1 : 0 }, contentPadding === 'default' && styles.defaultPadding]}>
         {children}
       </View>
     </View>;

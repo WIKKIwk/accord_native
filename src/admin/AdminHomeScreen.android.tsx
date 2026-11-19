@@ -1,5 +1,6 @@
-import { Column, IconButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, TopAppBar } from '@expo/ui/jetpack-compose';
+import { Box, Column, IconButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, TopAppBar } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
+import { isRunningInExpoGo } from 'expo';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -31,18 +32,29 @@ export function AdminHomeScreen(props: AdminHomeScreenProps) {
   const rows = (view === 'actions' ? adminHomeActions(session, locale) : view === 'shortcuts' ? adminHomeShortcuts(session, locale) : [])
     .filter(row => props.isRouteAvailable(row.routeName));
   const showIcons = view === 'actions' && adminHomeShowsActionIcons(session);
+  const expoGo = isRunningInExpoGo();
+  const navigationButton = navigation ? <IconButton onClick={navigation.onPress}
+    modifiers={[semantics({ contentDescription: navigation.label }), testID(navigation.testID ?? 'admin-home-navigation')]}>
+    <RNHostView matchContents><SymbolView name={{ android: navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView>
+  </IconButton> : null;
+  const title = <ComposeText color={colors.onSurface} maxLines={1} overflow="ellipsis" style={{ fontSize: 24, fontWeight: '800' }}>{adminHomeTitle(session, locale)}</ComposeText>;
+  const profileAction = props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null;
   return <View style={[styles.screen, { backgroundColor: colors.surfaceContainerHigh, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-home-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}>
-      <Column modifiers={[fillMaxWidth()]}><TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
-        <TopAppBar.NavigationIcon>{navigation ? <IconButton onClick={navigation.onPress}
-          modifiers={[semantics({ contentDescription: navigation.label }), testID(navigation.testID ?? 'admin-home-navigation')]}>
-          <RNHostView matchContents><SymbolView name={{ android: navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView>
-        </IconButton> : null}</TopAppBar.NavigationIcon>
-        <TopAppBar.Title><ComposeText style={{ fontSize: 24, fontWeight: '800' }}>{adminHomeTitle(session, locale)}</ComposeText></TopAppBar.Title>
-        <TopAppBar.Actions>{props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null}</TopAppBar.Actions>
-      </TopAppBar><Spacer modifiers={[height(3)]} /></Column>
+      <Column modifiers={[fillMaxWidth()]}>
+        {expoGo ? <Row verticalAlignment="center" modifiers={[fillMaxWidth(), height(60), padding(4, 0, 4, 0)]}>
+          {navigationButton}
+          <Box modifiers={[weight(1), padding(navigationButton ? 0 : 12, 0, 4, 0)]}>{title}</Box>
+          {profileAction}
+        </Row> : <TopAppBar windowInsets={{}} colors={{ containerColor: colors.surfaceContainerHigh }} modifiers={[height(60)]}>
+          <TopAppBar.NavigationIcon>{navigationButton}</TopAppBar.NavigationIcon>
+          <TopAppBar.Title>{title}</TopAppBar.Title>
+          <TopAppBar.Actions>{profileAction}</TopAppBar.Actions>
+        </TopAppBar>}
+        <Spacer modifiers={[height(3)]} />
+      </Column>
     </BaseHost></SafeAreaView>
-    {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} testID="admin-home-body-frame">
+    {props.topNotice}<AdminShellBodyFrame hasFooter={footer != null} allowMissingInsets={expoGo} testID="admin-home-body-frame">
     {view === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
       view === 'error' ? <View style={styles.error}><BaseHost matchContents={{ vertical: true }} style={{ width: retryWidth, maxWidth: '100%' }}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }}>
