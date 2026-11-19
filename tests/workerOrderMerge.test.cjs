@@ -167,6 +167,7 @@ for (const flow of ['order opening', 'roll merge']) test(`Android ${flow}: the l
   const viewport = nodes(tree, node => node.type === 'AnimatedView' && node.props.children?.type === 'CameraView')[0];
   assert.ok(panel && viewport);
   assert.equal(nodes(scroll, node => node.type === 'CameraView').length, 0);
+  assert.equal(viewport.props.children.props.ratio, '4:3', 'request native preview fitting while the height is clipped');
   const bounds = () => {
     const { top, height } = viewport.props.style[1].calculate();
     return [top, height];

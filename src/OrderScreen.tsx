@@ -1133,8 +1133,11 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
+  // An Android aspect ratio selects CameraX's FIT_CENTER so the native surface
+  // stays within the preview as its visible height shrinks.
   const quickCamera = showQuickScanner && permission?.granted ? <CameraView
     style={android ? StyleSheet.absoluteFill : [styles.quickCamera, Platform.OS === 'ios' && iosStyles.quickCamera]}
+    ratio={android ? '4:3' : undefined}
     barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }}
     onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> : null;
 
