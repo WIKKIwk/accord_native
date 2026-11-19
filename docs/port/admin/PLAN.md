@@ -123,13 +123,15 @@ Quick Orders and Open Order checkpoint: 94 targeted tests, both platform type ch
 | Long-press edit/reset and M3SequenceList | DropdownFilter option long press, useNativeSheet, WorkerSheetButton, BrigaderSequenceList and the scoped V2 display-order store |
 | Sequence, pending and opened order rows | OrdersList keyed rows, OrderListItem with the sequence rank and thumbnail, and the existing WorkerQueueCard pending row |
 | Closed and Audit lists and cards | OrdersList keyed rows and WorkerQueueCard, preserving passive controls, counts and retry |
+| Closed ExpansionTile, deferred history and per-log details | Existing scoped AdminClosedHistoryOwner embedded in WorkerQueueCard, shared native sheet with targeted dismissal |
 | Move panes, selection and loading | Retain the existing resizable pair and native sheet owner; adapt panes to OrdersList and picker to PickerSheetContent |
 | Search, detail sheet, initial and refresh states | Existing OrdersHeader, native order sheet and Worker queue progress, with original session and view tickets |
 
 - [x] Confirm that the Android entry opens the Worker-derived tab, filter, row, list and picker components.
 - [x] Keep selection, pending/opened order routing, read/refresh scope, cursor, retry and Move split behavior.
 - [x] Port the source's apparatus-filter order editor, reset, refreshed-catalog reconciliation and account retirement behavior.
-- [ ] Complete the source's inactive-window cache, move actions and closed history after their respective data/presentation contracts are ready.
+- [ ] Verify the Closed history admission from the actual Android route and the original sheet's targeted dismissal.
+- [ ] Complete the source's inactive-window cache, sequence and Move writes, height restoration and QR copy in their dedicated contracts.
 
 Ish xaritasi checkpoint: 258 focused tests, both platform type checks, changed-file ESLint, and both Expo exports passed. Android uses the Worker tab height and dropdown presentation. Sequence and orders use the Worker's staged thumbnail loading. The list requests at most one page per gesture at the source's strict 400 dp threshold. The existing Work Map data owner still loads only the selected module. The connected phone did not complete an inspector query, so native gesture and visual verification remain open.
 
@@ -169,7 +171,9 @@ Users and item catalog checkpoint. 258 focused tests, configured Android and iOS
 | Factory apparatus selection, search, headings and confirm | PickerSheetContent with its OrdersList, passive group headings, original multi-selection and a WorkerSheetButton; keep the WorkerOrderSheet result owner |
 | Warehouse roll ListView.separated and segmented rows | OrdersList and WorkerQueueCard, preserving original spacing, roll identity and nested details |
 
-- [ ] Verify search, toggle and confirm, passive headings, roll detail selection, loading and close.
+- [x] Verify search, toggle and confirm, passive headings, roll detail selection, loading and close.
+
+Apparatus and roll sheets checkpoint. 370 focused tests, configured platform type checks, changed-file ESLint and both Expo exports passed. The shared picker exposes group headings and confirmation for the factory caller. Android device sheet gestures and corresponding iOS UI work remain open.
 
 ## Decisions
 

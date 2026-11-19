@@ -9,20 +9,22 @@ import { WorkerIconButton } from '../../components/WorkerIconButton.android';
 import { WorkerQueueCard } from '../../components/WorkerQueueCard.android';
 import { OrdersList } from './OrdersList';
 
-type PickerItem = { key: string; title: string; subtitle?: string; selected?: boolean; select: () => void };
+type PickerItem = { key: string; title: string; heading?: false; subtitle?: string; selected?: boolean; select: () => void }
+  | { key: string; title: string; heading: true };
 type Props = {
   title: string; hint?: string; closeLabel: string; emptyLabel?: string; searchEnabled?: boolean;
   items: readonly PickerItem[]; onClose: () => void; onSearch?: (query: string) => void;
   query?: string; loading?: boolean; error?: string; retryLabel?: string; onRetry?: () => void;
   hasMore?: boolean; onLoadMore?: () => void; photoLabel?: string; onPhoto?: () => void;
   photoLoading?: boolean; photoError?: string;autoFocus?:boolean;headerAction?:ReactElement;
+  showSelectionIndicator?: boolean; footerAction?: ReactElement;
 };
 const passthrough = () => true;
 
 /** Picker rows use the same segmented cards as the order and material lists. */
 export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, searchEnabled = true, items, onClose, onSearch,
   query, loading = false, error, retryLabel, onRetry, hasMore = false, onLoadMore,
-  photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction }: Props) {
+  photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction, showSelectionIndicator, footerAction }: Props) {
   const colors = useMaterialColors(), input = useNativeState(query ?? '');
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => { if (query !== undefined && input.get() !== query) input.set(query); }, [input, query]);
@@ -49,8 +51,11 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, search
     {photoError ? <Text style={[styles.message, { color: colors.onSurfaceVariant }]}>{photoError}</Text> : null}
     <OrdersList<PickerItem> active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0}
       rows={items} rowKey={item => item.key} passthrough={passthrough} keyboardShouldPersistTaps="handled" onEndReached={loadMore}
-      renderRow={(item, index) => <WorkerQueueCard backgroundColor={item.selected ? colors.primaryContainer : colors.surfaceContainerHighest}
-        selected={item.selected} first={index === 0} last={index === items.length - 1} onPress={item.select}>
+      renderRow={(item, index) => item.heading ? <Text accessibilityRole="header" style={[styles.heading, { color: colors.primary }]}>{item.title}</Text> :
+        <WorkerQueueCard backgroundColor={item.selected ? colors.primaryContainer : colors.surfaceContainerHighest}
+        selected={item.selected} first={index === 0 || !!items[index - 1]?.heading} last={index === items.length - 1 || !!items[index + 1]?.heading} onPress={item.select}>
+        {showSelectionIndicator && <SymbolView name={{ android: item.selected ? 'check_circle' : 'radio_button_unchecked' }} size={24}
+          tintColor={item.selected ? colors.primary : colors.onSurfaceVariant} importantForAccessibility="no" />}
         <View style={styles.row}>
           <Text style={[styles.rowTitle, { color: item.selected ? colors.onPrimaryContainer : colors.onSurface }]}>{item.title}</Text>
           {item.subtitle ? <Text style={[styles.rowSubtitle, { color: item.selected ? colors.onPrimaryContainer : colors.onSurfaceVariant }]}>{item.subtitle}</Text> : null}
@@ -62,6 +67,7 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, search
             <Text style={{ color: colors.primary }}>{retryLabel}</Text></Pressable> : null}</View> : null}</>}>
       {emptyLabel != null && !items.length && !loading && !error ? <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>{emptyLabel}</Text> : null}
     </OrdersList>
+    {footerAction && <View style={styles.footerAction}>{footerAction}</View>}
   </GestureHandlerRootView>;
 }
 
@@ -72,6 +78,8 @@ const styles = StyleSheet.create({
   search: { marginHorizontal: 12, minHeight: 58, paddingHorizontal: 18, borderRadius: 30, borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row', alignItems: 'center', gap: 12 },
   searchInput: { flex: 1 },
+  heading: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, fontWeight: '700' },
+  footerAction: { paddingHorizontal: 16, paddingBottom: 8 },
   row: { flex: 1, paddingHorizontal: 10, paddingVertical: 10, gap: 6 },
   rowTitle: { fontSize: 20, lineHeight: 26, fontWeight: '700', includeFontPadding: false },
   rowSubtitle: { fontSize: 12, lineHeight: 17, includeFontPadding: false },

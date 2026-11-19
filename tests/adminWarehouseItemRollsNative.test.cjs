@@ -13,9 +13,13 @@ function rolls(platform, phase = 'ready', details = false, empty = false) {
 for (const platform of ['android', 'ios']) {
   test(`${platform} genuine rolls sheet preserves source fields/order, title, no extra close/retry, and nested details event`, () => {
     const f = rolls(platform), tree = f.render(); assert.ok(text(tree).includes(f.model.a('warehouse.rolls'))); assert.ok(text(tree).includes(' Item ')); assert.ok(text(tree).includes('Rulon 1 • Paddon P'));
-    const row = byID(tree, `warehouse-item-roll-${f.rows[0].key}`); click(row, platform); assert.deepEqual(f.calls, [['details', f.roll]]);
+    const row = byID(tree, `warehouse-item-roll-${f.rows[0].key}`); row.props.onPress(); assert.deepEqual(f.calls, [['details', f.roll]]);
     const sheet = nodes(tree, node => node.type === (platform === 'android' ? 'ModalBottomSheet' : 'BottomSheet'))[0]; assert.equal(sheet.key, 7);
-    if (platform === 'android') { assert.equal(sheet.props.showDragHandle, false); sheet.props.onDismissRequest(); const list = nodes(tree, node => node.type === 'FlatList')[0]; assert.equal(list.props.contentContainerStyle.paddingBottom, 12); assert.ok(row.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 61)); }
+    if (platform === 'android') {
+      assert.equal(sheet.props.showDragHandle, false); sheet.props.onDismissRequest();
+      const list = nodes(tree, node => node.type === 'OrdersList')[0]; assert.equal(list.props.footer.props.style.height, 12);
+      assert.equal(list.props.rowKey(f.rows[0]), f.rows[0].key); assert.equal(row.type, 'WorkerQueueCard'); assert.equal(row.props.style.height, 61);
+    }
     else { sheet.props.onIsPresentedChange(false); sheet.props.onDismiss(); }
     assert.deepEqual(f.calls.slice(1), platform === 'android' ? ['close'] : ['dismiss', 'close']);
     const nested = rolls(platform, 'ready', true), childTree = nested.render(); assert.ok(text(childTree).includes(nested.model.a('warehouse.paddon'))); assert.ok(text(childTree).includes('Batch'));

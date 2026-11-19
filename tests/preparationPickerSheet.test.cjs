@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -77,3 +78,17 @@ for (const platform of ['android', 'ios']) {
     assert.deepEqual(calls, [['search', 'qog‘oz'], 'close', 'photo', 'two', 'next']);
   });
 }
+
+test('the shared Android picker supports passive group headings and opt-in multi-selection with a separate confirm action', () => {
+  const calls = [], render = picker('android');
+  const items = [{ key: 'default', title: 'Default', heading: true }, { key: 'a', title: 'A', selected: true, select: () => calls.push('toggle') },
+    { key: 'custom', title: 'Custom', heading: true }, { key: 'b', title: 'B', selected: false, select: () => calls.push('other') }];
+  const tree = render({ title: 'Equipment', closeLabel: 'Close', onClose: () => calls.push('close'), items, showSelectionIndicator: true,
+    footerAction: jsx.jsx('Confirm', { onPress: () => calls.push('confirm') }) });
+  const list = nodes(tree, node => node.type === 'OrdersList')[0], heading = list.props.renderRow(items[0], 0), choice = list.props.renderRow(items[1], 1);
+  assert.equal(heading.props.accessibilityRole, 'header'); assert.equal(heading.props.onPress, undefined);
+  assert.equal(choice.props.first, true); assert.equal(choice.props.last, true); assert.equal(choice.props.selected, true);
+  assert.equal(nodes(choice, node => node.type === 'SymbolView')[0].props.name.android, 'check_circle');
+  choice.props.onPress(); nodes(tree, node => node.type === 'Confirm')[0].props.onPress();
+  assert.deepEqual(calls, ['toggle', 'confirm']);
+});

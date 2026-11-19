@@ -1,3 +1,4 @@
+/* global __dirname */
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module'), ts = require('typescript');
 const { load, strings, l10n } = require('./adminUsersSupport.cjs');
 const jsx = { Fragment: 'Fragment', jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) };
@@ -30,6 +31,9 @@ function nativeModule(file, mocks = {}, options = {}) {
     'react-native': { View: 'View', Text: 'RN.Text', ScrollView: 'RN.ScrollView', StyleSheet: { create: value => value }, useWindowDimensions: () => ({ width: 400, height: 800 }),
       FlatList: props => ({ type: 'FlatList', props: { ...props, children: props.data.flatMap((item, index) => [index && props.ItemSeparatorComponent ? { type: props.ItemSeparatorComponent, props: {} } : null, props.renderItem({ item })]) } }) },
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) }, 'react-native-gesture-handler': { GestureHandlerRootView: 'GestureHandlerRootView' },
+    '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
+    '../shared/orders/OrdersList': { OrdersList: props => ({ type: 'OrdersList', props: { ...props, children: [...props.rows.map(props.renderRow), props.children, props.footer] } }) },
     '../shared/themeRuntime': { themeController: { variant: 'white' } }, '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './AdminWarehouseMainRows': rowDetails,
     './AdminLoadingIndicator.android': { AdminLoadingIndicator: props => ({ type: 'AdminLoadingIndicator', props: { size: 64, glyphSize: 38, ...props } }) }, './AdminWarehouseRawQrPreview': { AdminWarehouseRawQrPreview: 'AdminWarehouseRawQrPreview' }, './dartJsonString': strings, ...mocks };
   const filename = path.resolve(__dirname, '../src/admin', file), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths; mod.require = name => Object.hasOwn(base, name) ? base[name] : require(name);

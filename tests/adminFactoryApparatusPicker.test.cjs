@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -73,6 +74,7 @@ function renderScreen(platform, overrides = {}) {
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/BaseHost.android': { BaseHost: 'Host' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { primaryContainer: 'selected' } }) }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     '../components/WorkerIconButton.android': { WorkerIconButton: 'WorkerIconButton' }, '../shared/localization': l10n,
+    '../components/WorkerSheetButton': { WorkerSheetButton: 'WorkerSheetButton' }, '../shared/orders/PickerSheetContent.android': { PickerSheetContent: 'PickerSheetContent' },
     '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './useFactoryApparatusPicker': { useFactoryApparatusPicker: () => state } };
   const Screen = load(`admin/FactoryApparatusPicker.${platform}.tsx`, mocks).FactoryApparatusPicker;
@@ -85,15 +87,16 @@ for (const platform of ['ios', 'android']) {
       assert.ok(nodes(tree, n => n.type === 'Text' && n.props.children === state.text.empty).length);
       nodes(tree, n => n.type === 'Button' && n.props.label === state.text.confirm)[0].props.onPress();
     } else {
-      const list = nodes(tree, n => n.type === 'FlatList')[0]; assert.equal(list.props.ListEmptyComponent.props.children, state.text.empty);
-      nodes(tree, n => n.type === 'ComposeButton')[0].props.onClick();
+      assert.equal(tree.type, 'PickerSheetContent'); assert.equal(tree.props.emptyLabel, state.text.empty); assert.deepEqual(tree.props.items, []);
+      assert.equal(tree.props.footerAction.type, 'WorkerSheetButton'); assert.equal(tree.props.footerAction.props.label, state.text.confirm);
+      tree.props.footerAction.props.onPress();
     }
     assert.deepEqual(calls, ['confirm']);
   });
   test(`${platform} picker delegates query, selection, confirm and cancel without a fake navigation`, () => {
     const { tree, calls, state } = renderScreen(platform);
-    nodes(tree, n => n.type === 'TextInput')[0].props.onChangeText('print');
     if (platform === 'ios') {
+      nodes(tree, n => n.type === 'TextInput')[0].props.onChangeText('print');
       const buttons = nodes(tree, n => n.type === 'Button');
       const close = buttons.find(n => n.props.systemImage === 'xmark');
       assert.equal(close.props.modifiers.find(m => m.name === 'accessibilityLabel').args[0], 'Close'); close.props.onPress();
@@ -101,10 +104,10 @@ for (const platform of ['ios', 'android']) {
       const selected = buttons.find(n => typeof n.props.onPress === 'function' && n.props.modifiers?.some(m => m.name === 'accessibilityLabel' && m.args[0] === a.name));
       assert.ok(selected.props.modifiers.some(m => m.name === 'listRowBackground' && m.args[0] === 'selected')); selected.props.onPress();
     } else {
-      const close = nodes(tree, n => n.type === 'WorkerIconButton')[0]; assert.equal(close.props.label, 'Close'); close.props.onPress();
-      nodes(tree, n => n.type === 'ComposeButton')[0].props.onClick();
-      const flat = nodes(tree, n => n.type === 'FlatList')[0], row = flat.props.renderItem({ item: state.rows.find(r => r.kind === 'item' && r.item.id === a.id) });
-      assert.equal(row.type, 'WorkerQueueCard'); assert.equal(row.props.backgroundColor, 'selected'); row.props.onPress();
+      assert.equal(tree.type, 'PickerSheetContent'); assert.equal(tree.props.showSelectionIndicator, true); tree.props.onSearch('print');
+      assert.equal(tree.props.closeLabel, 'Close'); tree.props.onClose(); tree.props.footerAction.props.onPress();
+      const row = tree.props.items.find(item => item.title === a.name); assert.equal(row.selected, true); row.select();
+      assert.deepEqual(tree.props.items.filter(item => item.heading).map(item => item.title), state.rows.filter(row => row.kind === 'heading').map(row => row.title));
     }
     assert.deepEqual(calls, [['query', 'print'], 'cancel', 'confirm', ['toggle', a.id]]);
   });
