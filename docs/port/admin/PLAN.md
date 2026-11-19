@@ -120,6 +120,7 @@ Quick Orders and Open Order checkpoint: 94 targeted tests, both platform type ch
 | --- | --- |
 | TabBar and TabBarView with sequence, orders, move, closed and audit | The Android Worker OrdersWorkspace with the source labels, order and swipe. Keep one active V4 data window and retire stale selection callbacks. |
 | Sequence apparatus selector and total | Worker DropdownFilter and AdminText count using the existing apparatus catalog and selection callback |
+| Long-press edit/reset and M3SequenceList | DropdownFilter option long press, useNativeSheet, WorkerSheetButton, BrigaderSequenceList and the scoped V2 display-order store |
 | Sequence, pending and opened order rows | OrdersList keyed rows, OrderListItem with the sequence rank and thumbnail, and the existing WorkerQueueCard pending row |
 | Closed and Audit lists and cards | OrdersList keyed rows and WorkerQueueCard, preserving passive controls, counts and retry |
 | Move panes, selection and loading | Retain the existing resizable pair and native sheet owner; adapt panes to OrdersList and picker to PickerSheetContent |
@@ -127,9 +128,12 @@ Quick Orders and Open Order checkpoint: 94 targeted tests, both platform type ch
 
 - [x] Confirm that the Android entry opens the Worker-derived tab, filter, row, list and picker components.
 - [x] Keep selection, pending/opened order routing, read/refresh scope, cursor, retry and Move split behavior.
-- [ ] Complete the source's apparatus-filter long-press order editor, inactive-window cache, move actions and closed history after their respective data/presentation contracts are ready.
+- [x] Port the source's apparatus-filter order editor, reset, refreshed-catalog reconciliation and account retirement behavior.
+- [ ] Complete the source's inactive-window cache, move actions and closed history after their respective data/presentation contracts are ready.
 
 Ish xaritasi checkpoint: 258 focused tests, both platform type checks, changed-file ESLint, and both Expo exports passed. Android uses the Worker tab height and dropdown presentation. Sequence and orders use the Worker's staged thumbnail loading. The list requests at most one page per gesture at the source's strict 400 dp threshold. The existing Work Map data owner still loads only the selected module. The connected phone did not complete an inspector query, so native gesture and visual verification remain open.
+
+Apparatus filter checkpoint. The profile-local store preserves selection during editing and reconciles removed, renamed and new machines on save. The ported source scenarios are covered by the Android component callbacks and scoped storage tests. Both Expo exports, configured platform type checks and changed-file ESLint passed. Physical drag and iOS editor presentation remain to be checked.
 
 ## Factory Locations and Inactive Suppliers list mapping
 

@@ -67,6 +67,9 @@ export function useAdminWorkMapView() {
   const next = (module: AdminWorkMapModule) => {
     if (shell.isCurrent() && workspace.getSnapshot().module === module) return controller.next();
   };
+  const sequenceCurrent = useCallback(() => shell.isCurrent() && workspace.getSnapshot().module === 'sequence', [shell, workspace]);
+  const { role, ref } = shell.session.profile;
+  const filterProfileRef = role === 'admin' || role === 'brigader' ? String(ref ?? '') : '';
   const move: AdminWorkMapMoveProps = { loading: workspaceState.catalogLoading, error: workspaceState.catalogError,
     empty: workspaceState.catalogLoaded && (!pair.top || !pair.bottom) ? adminText('production.move.no_equipment', locale) : '', retryLabel,
     onRetry: () => workspace.reload(), panes: !pair.top || !pair.bottom ? [] : (['top', 'bottom'] as const).map(id => {
@@ -77,5 +80,5 @@ export function useAdminWorkMapView() {
         empty: adminWorkMapMoveIsUnassigned(apparatus) ? 'Tanlanmagan zakaz yo‘q' : `${apparatus.name} uchun zakaz yo‘q`, moreLabel: label.more, retryLabel,
         onRefresh: () => controller.reload(), onMore: () => controller.next(), onPick: () => openMovePicker(id) };
     }) };
-  return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), next, query, goBack, onProfile, search, open };
+  return { shell, locale, state, controller, controls, error, loading, emptyText, move, closed: adminWorkMapClosedRows(state.closed ?? []), audit: adminWorkMapAuditPresentation(state.audit ?? null, error, loading, locale), refresh: () => workspace.reload(), next, sequenceCurrent, filterProfileRef, query, goBack, onProfile, search, open };
 }

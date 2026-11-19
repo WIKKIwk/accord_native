@@ -20,10 +20,11 @@ const route = '/admin-production-map-orders';
 for (const platform of ['ios', 'android']) test(`${platform} Work Map gates direct entry and binds real list handlers`, async () => {
   const calls = [], row = { kind: 'order', id: 'zakaz-1', code: '1', title: 'Order', customer: 'Client', imageId: 'i', displayState: 'paused', kg: null, position: 13 };
   let current = true, permitted = true;
-  const shell = { session: {}, isCurrent: () => current, destination: value => permitted && value === route ? `/${platform}-admin/work-map` : null };
+  const shell = { session: { profile: { role: 'admin', ref: 'ADMIN-A' } }, isCurrent: () => current, destination: value => permitted && value === route ? `/${platform}-admin/work-map` : null };
   const view = { shell, locale: 'uz', state: { query: '', rows: [row], loading: false, loaded: true, error: null, hasMore: true },
     controller: { reload: async () => calls.push('reload'), next: async () => calls.push('next') }, query: '',
     controls: { module: 'sequence', onModule: id => calls.push(['tab', id]) }, next: module => calls.push(['next', module]), loading: false, error: null, emptyText: '', refresh: async () => calls.push('reload'),
+    filterProfileRef: 'ADMIN-A', sequenceCurrent: () => current && view.controls.module === 'sequence',
     search: value => calls.push(['search', value]), goBack: () => calls.push('back'), onProfile: () => calls.push('profile'), open: item => calls.push(['open', item.id]) };
   const mocks = { react: { useEffect() {}, isValidElement: value => !!value && typeof value === 'object' && 'type' in value }, 'react-native': { Platform: { OS: platform }, PlatformColor: value => value, View: 'View', ActivityIndicator: 'ActivityIndicator', StyleSheet: { create: value => value }, BackHandler: { addEventListener: () => ({ remove() {} }) } },
     'react-native-reanimated': { useSharedValue: value => ({ value }) }, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0 }), SafeAreaView: 'SafeAreaView' },
@@ -33,7 +34,8 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     '../components/BaseHost': { BaseHost: 'BaseHost' }, '../shared/orders/OrderListItem': { OrderListItem: 'OrderListItem' }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'OrdersWorkspace' }, '../shared/orders/ordersWorkspaceTypes': { ORDERS_TAB_BAR_HEIGHT: 48 },
     './adminWorkMapControlsTypes': load('admin/adminWorkMapControlsTypes.ts'), './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
-    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapPendingRow': { AdminWorkMapPendingRow: 'AdminWorkMapPendingRow' }, './AdminWorkMapSequenceRow': { AdminWorkMapSequenceRow: 'AdminWorkMapSequenceRow' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter' },
+    './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapPendingRow': { AdminWorkMapPendingRow: 'AdminWorkMapPendingRow' }, './AdminWorkMapSequenceRow': { AdminWorkMapSequenceRow: 'AdminWorkMapSequenceRow' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter', AdminWorkMapSequenceFilter: 'AdminWorkMapSequenceFilter' },
+    './AdminShellNoticeProvider': { useAdminShellNotice: () => ({ topNotice: null, onErrorNotice: () => {} }) },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' },
     './AdminShellProfileAction': { AdminShellProfileAction: 'AdminShellProfileAction' },
@@ -69,7 +71,8 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     assert.equal(find(frame, 'AdminBottomBar'), undefined);
     assert.equal(list.props.pagerGesture, 'PagerGesture');
     assert.equal(list.props.topInset, 48);
-    assert.ok(find(list, 'AdminWorkMapApparatusFilter'));
+    const filter = find(list, 'AdminWorkMapSequenceFilter');
+    assert.equal(filter.props.profileRef, 'ADMIN-A'); assert.equal(filter.props.isCurrent(), true);
   }
   header.props.onSearchChange('abc'); header.props.onBack(); header.props.onProfile();
   assert.equal(list.type, 'OrdersList'); await list.props.onRefresh();
@@ -112,7 +115,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
 
 test('opening a detail requires the current shell, enabled destination and a list authority ticket', () => {
   let current = true, allowed = true, ticket = { generation: 1, id: 'o' }; const opened = [];
-  const shell = { session: {}, isCurrent: () => current, destination: () => allowed ? '/ios-admin/work-map' : null };
+  const shell = { session: { profile: { role: 'admin', ref: 'ADMIN-A' } }, isCurrent: () => current, destination: () => allowed ? '/ios-admin/work-map' : null };
   const row = { id: 'o', kind: 'order' }, ctrl = { detailTicket: () => ticket, setQuery() {} };
   const mocks = { react: { useCallback: fn => fn, useState: value => [value, () => {}], useSyncExternalStore: (_s, g) => g() },
     'expo-router': { router: { canGoBack: () => false, replace() {}, push() {} } }, 'react-native': { Platform: { OS: 'ios' } },
@@ -132,7 +135,7 @@ test('Move headers open the source picker and bind a ticket to each choice', () 
   const dart = load('admin/dartJsonString.ts'), model = load('admin/adminWorkMapMoveModel.ts', { './dartJsonString': dart });
   const a = { id: 'a', name: ' A ' }, b = { id: 'b', name: 'B' }, ticket = { side: 'top', generation: 8, selected: a,
     options: [model.adminWorkMapMoveUnassigned, a] }, opened = [], chosen = []; let current = true, closes = 0;
-  const shell = { session: {}, isCurrent: () => current, destination: () => '/ios-admin/work-map' };
+  const shell = { session: { profile: { role: 'admin', ref: 'ADMIN-A' } }, isCurrent: () => current, destination: () => '/ios-admin/work-map' };
   const window = { rows: [{ id: 'o', kind: 'order', code: ' 17 ', title: '', customer: ' Ana ' }], loading: false, loaded: true, error: null, hasMore: false };
   const move = { picker: side => side === 'top' ? ticket : null, choose: (issued, selection) => { chosen.push([issued, selection]); return true; },
     topWindow: { reload() {}, next() {} }, bottomWindow: { reload() {}, next() {} } };

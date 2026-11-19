@@ -20,7 +20,8 @@ import { AdminWorkMapMove } from './AdminWorkMapMove';
 import { AdminWorkMapPendingRow } from './AdminWorkMapPendingRow';
 import { AdminWorkMapClosedRow } from './AdminWorkMapClosedRow';
 import { AdminWorkMapAudit } from './AdminWorkMapAudit';
-import { AdminWorkMapApparatusFilter } from './AdminWorkMapControls';
+import { AdminWorkMapSequenceFilter } from './AdminWorkMapControls';
+import { useAdminShellNotice } from './AdminShellNoticeProvider';
 import type { AdminWorkMapClosedRow as ClosedRow } from './adminWorkMapClosedModel';
 import type { AdminWorkMapRow } from './adminWorkMapController';
 import { adminWorkMapTabs } from './adminWorkMapControlsTypes';
@@ -34,6 +35,7 @@ const passthrough = () => true;
 function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
   const view = useAdminWorkMapView(), { shell, locale, state, controls } = view;
   const { chromeBackground, colors } = useAdminShellTheme(), insets = useSafeAreaInsets();
+  const notice = useAdminShellNotice();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), goBack = view.goBack;
   const focused = useIsFocused(), navigation = useNavigation();
   const tabs = adminWorkMapTabs.filter(tab => tab.id !== 'move' || shell.session.profile?.role !== 'sales_manager');
@@ -55,6 +57,7 @@ function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
   return <View style={[styles.fill, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']}><OrdersHeader search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)}
       onSearchChange={view.search} onBack={view.goBack} onProfile={view.onProfile} profileAction={<AdminShellProfileAction />} /></SafeAreaView>
+    {notice.topNotice}
     <AdminShellBodyFrame hasFooter={footer !== null} testID="admin-work-map-body-frame">
       <OrdersWorkspace session={shell.session} tabs={tabs} selected={controls.module} swipeEnabled={focused}
         onSelect={id => {
@@ -81,7 +84,8 @@ function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
                   headline={item.headline} supportingText={item.supporting} cardTone={item.tone} first={first} last={last} onPress={onPress}
                   leadingAdornment={tab === 'sequence' ? <View style={styles.rank}><AdminClosedRank position={String(row.position ?? index + 1)} /></View> : undefined} />;
               }}>
-              {tab === 'sequence' && <AdminWorkMapApparatusFilter {...controls} />}
+              {tab === 'sequence' && <AdminWorkMapSequenceFilter {...controls} locale={locale} profileRef={view.filterProfileRef}
+                isCurrent={view.sequenceCurrent} onError={notice.onErrorNotice} />}
               {view.loading && !state.loaded && <WorkerQueueConnectionProgress active />}
               {!!view.emptyText && <Text style={[styles.message, { color: colors.onSurfaceVariant }]}>{view.emptyText}</Text>}
             </OrdersList>
