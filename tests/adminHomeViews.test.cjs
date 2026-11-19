@@ -90,14 +90,32 @@ for (const platform of ['ios', 'android']) {
       ['Factory map', 'Quick orders', 'Open order', 'Work map']);
     (rows[0].props.onPress ?? rows[0].props.onClick)(); assert.deepEqual(calls, [['open', routes.appRoutes.adminFactoryMap]]);
   });
-  test(`${platform} real partial shell exposes the Work Map shortcut and its actual route`, () => {
+  test(`${platform} real Admin shell exposes all four Home shortcuts under its own routes`, () => {
     const access = load('admin/adminShellAccess.ts', { '../shared/appRoutes': routes });
-    const enabled = new Set([routes.appRoutes.profile, routes.appRoutes.adminProductionMapOrders]);
-    const available = route => !!access.adminDestinationPath(admin, route, platform, enabled);
-    const { tree, calls } = render(platform, admin, baseState, 'menu', available);
-    const rows = nodes(tree, node => homeRow(node, rowType)); assert.equal(rows.length, 1);
-    assert.equal(nodes(rows[0], n => (n.type === 'Text' || n.type === 'NativeText' || n.type === 'ComposeText') && typeof n.props.children === 'string')[0].props.children, 'Work map');
-    (rows[0].props.onPress ?? rows[0].props.onClick)(); assert.deepEqual(calls, [['open', routes.appRoutes.adminProductionMapOrders]]);
+    const { AdminShellProvider } = load('admin/AdminShellContext.tsx', {
+      react: { ...react, createContext: () => ({ Provider: 'AdminProvider' }), useMemo: make => make(), useCallback: fn => fn },
+      '../auth': { isSessionWitnessCurrent: () => true }, '../sessionReadScope': { sessionReadScope: () => 'admin-scope' },
+      '../shared/appRoutes': routes, './adminShellAccess': access, './adminStore': { AdminStore: class {} },
+      './adminActivityReader': { adminActivityReader: () => ({}) }, './adminActivityBinding': { createAdminActivityBinding: () => null },
+      './adminHomeSummaryReader': { adminHomeSummaryReader: () => ({}) },
+    });
+    const shell = AdminShellProvider({ session: admin, witness: {}, onLogout() {} }).props.value;
+    const { tree, calls } = render(platform, admin, baseState, 'menu', shell.isRouteAvailable);
+    const rows = nodes(tree, node => homeRow(node, rowType));
+    const expected = [
+      [routes.appRoutes.adminFactoryMap, 'factory-map'],
+      [routes.appRoutes.adminCalculateOrders, 'calculate-orders'],
+      [routes.appRoutes.adminCalculate, 'calculate'],
+      [routes.appRoutes.adminProductionMapOrders, 'work-map'],
+    ];
+    assert.equal(rows.length, expected.length);
+    rows.forEach(row => (row.props.onPress ?? row.props.onClick)());
+    assert.deepEqual(calls, expected.map(([route]) => ['open', route]));
+    for (const [route, slug] of expected) {
+      assert.equal(shell.destination(route, platform), `/${platform}-admin/${slug}`);
+      const group = platform === 'ios' ? '(home)' : '';
+      assert.ok(fs.existsSync(path.join(__dirname, '..', 'src', 'app', `${platform}-admin`, group, `${slug}.tsx`)));
+    }
   });
   test(`${platform} omits unavailable destinations rather than opening placeholders`, () => {
     const { tree } = render(platform, admin, baseState, 'menu', route => route === routes.appRoutes.adminCalculateOrders);

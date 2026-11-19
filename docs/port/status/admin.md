@@ -3,6 +3,10 @@
 Status: Admin port in progress; `port/admin` merged into `main`, common login entry connected on `main` (2026-11-17).
 Stopped at: the shared native palette and Admin navigation work through the guarded Admin entry. Full Root/Source containers, global CreateHub placement, actual feature sheet callers/results, Firebase configuration and remaining Admin parity are still Open.
 
+## 2026-11-19 Admin Home shortcut routes
+
+Factory Map, Quick Orders and Open Order have guarded Admin destinations on Android and iOS. The new pages show their existing localized title and shared navigation. The user requested the route connections first. The three page bodies and their feature flows remain Open.
+
 ## 2026-11-19 Admin content edges
 
 The user requested that V4 Admin drop the V2-style outer frame. Admin content now fills the safe width with square page corners. The header and dock sit above and below the body, with the existing dock reserve and keyboard behavior. The shared wrapper still supports the rounded Brigader layout. Android Expo Go confirmed the Admin Home body had zero side margin and zero corner radius. Both platform type checks and 231 focused tests passed.
