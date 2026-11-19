@@ -125,6 +125,25 @@ test('Android scroll metrics preserve the native geometry and are scoped to the 
   } finally { x.restore(); }
 });
 
+test('Android list geometry drives refresh eligibility without altering other callers', async () => {
+  const x = android(), geometry = [];
+  let refreshed = 0;
+  const props = { ...common, children: null, onRefresh: async () => { refreshed++; }, onGeometryChange: value => geometry.push(value) };
+  try {
+    const short = x.render({ ...props, refreshEnabled: false });
+    short.props.onLayout({ nativeEvent: { layout: { height: 400 } } });
+    short.props.onContentSizeChange(180, 400);
+    await short.props.refreshControl.props.onRefresh();
+    assert.equal(short.props.refreshControl.props.enabled, false); assert.equal(refreshed, 0);
+    short.props.onContentSizeChange(180, 640);
+    assert.deepEqual(geometry.slice(-2), [{ viewportHeight: 400, contentHeight: 400 }, { viewportHeight: 400, contentHeight: 640 }]);
+    const long = x.render({ ...props, refreshEnabled: true });
+    await long.props.refreshControl.props.onRefresh();
+    assert.equal(refreshed, 1); assert.equal(long.props.refreshControl.props.enabled, true);
+    assert.equal(x.render({ ...common, children: null }).props.refreshControl.props.enabled, undefined);
+  } finally { x.restore(); }
+});
+
 test('Android Work Map pagination runs once per actual drag below the source distance', () => {
   const x = android(), calls = [], context = {};
   const event = y => ({ contentSize: { height: 1000 }, layoutMeasurement: { height: 400 }, contentOffset: { y } });

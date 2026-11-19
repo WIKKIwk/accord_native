@@ -3,10 +3,14 @@ import { AdminTopBar } from './AdminTopBar.android';
 import { defaultMinSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text as NativeText, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text as NativeText, useWindowDimensions, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
+import { OrdersList } from '../shared/orders/OrdersList';
+import type { OrdersListGeometry } from '../shared/orders/OrdersList.types';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
@@ -18,20 +22,19 @@ import { useAdminInactiveSuppliers } from './useAdminInactiveSuppliers';
 
 type Model = ReturnType<typeof useAdminInactiveSuppliers>;
 const rounded = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
-function SoftCard({ children }: { children: ReactNode }) {
-  const { colors, mode } = useBaseTheme(), dark = mode === 'dark';
-  return <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.outlineVariant, borderWidth: dark ? 1.35 : 1,
-    boxShadow: [{ offsetX: 0, offsetY: dark ? 8 : 2, blurRadius: dark ? 18 : 8, color: dark ? '#00000018' : '#00000006' }] }]}>
-    {children}
-  </View>;
+const passthrough = () => true;
+function SupplierSurface({ children, spaced = false }: { children: ReactNode; spaced?: boolean }) {
+  const { colors } = useBaseTheme();
+  return <WorkerQueueCard first last backgroundColor={colors.surfaceContainerLowest}
+    containerStyle={[styles.cardInset, spaced && styles.spaced]} style={styles.card}>{children}</WorkerQueueCard>;
 }
 function SupplierCard({ item, model, index }: { item: AdminInactiveSupplier; model: Model; index: number }) {
   const { colors, direction } = useBaseTheme(), fontsReady = useAdminFontsReady(), busy = model.state.busyRef === item.ref;
-  return <SoftCard><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
+  return <SupplierSurface spaced={index < model.state.items.length - 1}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
     <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}>
       <Text style={{ typography: 'titleLarge' }} modifiers={[weight(1)]}>{item.name}</Text>
       {item.removed || item.blocked ? <Surface color="transparent" shape={rounded(999)} border={{ width: 1, color: colors.outlineVariant }}>
-        <Text color="#FFFFFF" style={{ typography: 'bodySmall' }} modifiers={[padding(10, 6, 10, 6)]}>{model.a(item.removed ? 'users.removed' : 'users.blocked')}</Text>
+        <Text color={colors.onSurfaceVariant} style={{ typography: 'bodySmall' }} modifiers={[padding(10, 6, 10, 6)]}>{model.a(item.removed ? 'users.removed' : 'users.blocked')}</Text>
       </Surface> : null}
     </Row><Spacer modifiers={[height(6)]} />
     <Text style={{ typography: 'bodySmall' }}>{item.phone}</Text><Spacer modifiers={[height(10)]} />
@@ -49,27 +52,28 @@ function SupplierCard({ item, model, index }: { item: AdminInactiveSupplier; mod
         <Text style={{ typography: 'labelLarge' }}>{model.a(busy ? 'users.unblocking' : 'users.unblock')}</Text>
       </OutlinedButton> : null}
     </Row>
-  </Column></BaseHost></SoftCard>;
+  </Column></BaseHost></SupplierSurface>;
 }
 
 function SupplierList({ model }: { model: Model }) {
   const items = model.state.items, owner = useMemo(() => ({ items }), [items]), mounted = useRef<typeof owner | null>(null);
-  type Metrics = { owner: typeof owner; viewport: number | null; content: number | null };
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  type Metrics = OrdersListGeometry & { owner: typeof owner };
   const latest = useRef<Metrics | null>(null), [metrics, setMetrics] = useState<Metrics | null>(null);
   useLayoutEffect(() => { mounted.current = owner; return () => { if (mounted.current === owner) mounted.current = null; }; }, [owner]);
-  const record = (key: 'viewport' | 'content', value: number) => {
-    if (mounted.current !== owner || !Number.isFinite(value) || value < 0 || key === 'viewport' && value === 0) return;
-    const previous = latest.current?.owner === owner ? latest.current : { owner, viewport: null, content: null };
-    if (previous[key] === value) return;
-    const next = { ...previous, [key]: value }; latest.current = next; setMetrics(next);
+  const record = ({ viewportHeight, contentHeight }: OrdersListGeometry) => {
+    if (mounted.current !== owner || !Number.isFinite(viewportHeight) || !Number.isFinite(contentHeight) || viewportHeight <= 0 || contentHeight < 0) return;
+    const previous = latest.current;
+    if (previous?.owner === owner && previous.viewportHeight === viewportHeight && previous.contentHeight === contentHeight) return;
+    const next = { owner, viewportHeight, contentHeight }; latest.current = next; setMetrics(next);
   };
   // AppRefreshIndicator's default rejects lists whose native scroll extent is <= .5.
-  const canRefresh = (value: Metrics | null) => value?.owner === owner && value.viewport !== null && value.content !== null && value.content - value.viewport > .5;
+  const canRefresh = (value: Metrics | null) => value?.owner === owner && value.contentHeight - value.viewportHeight > .5;
   const refresh = () => mounted.current === owner && canRefresh(latest.current) ? model.reload() : Promise.resolve();
-  return <FlatList style={styles.content} data={items} keyExtractor={(item, index) => `${item.ref}:${index}`}
-    renderItem={({ item, index }) => <SupplierCard item={item} model={model} index={index} />} contentContainerStyle={styles.list}
-    onLayout={event => record('viewport', event.nativeEvent.layout.height)} onContentSizeChange={(_width, height) => record('content', height)}
-    ItemSeparatorComponent={() => <View style={styles.separator} />} refreshControl={<RefreshControl refreshing={false} enabled={canRefresh(metrics)} onRefresh={refresh} />} />;
+  return <OrdersList rows={items} rowKey={(item, index) => `${item.ref}:${index}`} active passthrough={passthrough}
+    headerOffset={headerOffset} headerHeight={headerHeight} topInset={4} onGeometryChange={record}
+    onRefresh={refresh} refreshing={false} refreshEnabled={canRefresh(metrics)}
+    renderRow={(item, index) => <SupplierCard item={item} model={model} index={index} />}>{null}</OrdersList>;
 }
 
 /** @v2 AdminInactiveSuppliersScreen */
@@ -94,15 +98,16 @@ export function AdminInactiveSuppliersScreen(props: AdminInactiveSuppliersScreen
               <Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text>
             </TextButton>
           </Column>
-        </BaseHost></View> : state.items.length === 0 ? <View style={styles.center}><SoftCard><BaseHost matchContents>
+        </BaseHost></View> : state.items.length === 0 ? <View style={styles.center}><SupplierSurface><BaseHost matchContents>
           <Text style={{ typography: 'titleMedium' }}>{model.a('users.inactive_empty')}</Text>
-        </BaseHost></SoftCard></View> : <SupplierList model={model} />}
+        </BaseHost></SupplierSurface></View> : <SupplierList model={model} />}
     </AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, fullWidth: { width: '100%' },
-  card: { padding: 18, borderRadius: 24 }, code: { fontSize: 16, fontWeight: '500', includeFontPadding: false },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, list: { paddingTop: 4 }, separator: { height: 12 },
+const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' },
+  card: { padding: 18 }, cardInset: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }, spaced: { paddingBottom: 12 },
+  code: { fontSize: 16, fontWeight: '500', includeFontPadding: false },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   retry: { flex: 1, paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

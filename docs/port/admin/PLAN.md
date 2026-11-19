@@ -140,7 +140,9 @@ Ish xaritasi checkpoint: 258 focused tests, both platform type checks, changed-f
 | Inactive Suppliers ListView.separated and AppRefreshIndicator | OrdersList keyed supplier cards with V2 scroll-extent refresh guard |
 | Supplier SoftCard, status, restore and unblock | WorkerQueueCard with source spacing, device palette and the existing guarded action controls |
 
-- [ ] Verify initial loading, empty, retry, refresh, row identity and the original edit/restore actions.
+- [x] Verify initial loading, empty, retry, refresh, row identity and the original edit/restore actions.
+
+Secondary lists checkpoint. 109 targeted tests, both configured platform type checks, changed-file ESLint and both Expo exports passed. Inactive Suppliers retains the source's scroll-extent refresh rule using two optional OrdersList callbacks. Native Android interactions and the iOS list presentation remain to be checked.
 
 ## Decisions
 

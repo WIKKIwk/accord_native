@@ -4,13 +4,16 @@ import { DropdownMenu, DropdownMenuItem, IconButton, RNHostView, SnackbarHost, T
 import { semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AdminApparatus } from '../apparatusApi';
 import { BaseHost as Host } from '../components/BaseHost.android';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { WorkerSheetButton } from '../components/WorkerSheetButton';
 import { localeController } from '../shared/localization/runtime';
+import { OrdersList } from '../shared/orders/OrdersList';
+import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminScreenHeader } from './AdminTopBar.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import type { AdminFactoryLocation } from './factoryLocationModel';
@@ -20,6 +23,7 @@ import { useFactoryLocationScreen } from './useFactoryLocationScreen';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
+const passthrough = () => true;
 function LocationRow({ location, apparatus, disabled, text, onEdit, onRename, onActive, first, last }: { location: AdminFactoryLocation;
   apparatus: readonly AdminApparatus[]; disabled: boolean; text: ReturnType<typeof factoryLocationScreenText>;
   onEdit: () => void; onRename: () => void; onActive: () => void; first: boolean; last: boolean }) {
@@ -53,10 +57,8 @@ function LocationRow({ location, apparatus, disabled, text, onEdit, onRename, on
 export function FactoryLocationScreen(props: FactoryLocationScreenProps) {
   const state = useFactoryLocationScreen(props), locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale);
   const text = factoryLocationScreenText(locale), { controller, navigation, footer } = props, { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
-  const snackbar = useRef<SnackbarHostRef>(null), mounted = useRef(true), [refreshing, setRefreshing] = useState(false);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const snackbar = useRef<SnackbarHostRef>(null), headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => { if (state.notice) void snackbar.current?.showSnackbar({ message: factoryLocationNoticeText(state.notice, locale), duration: 'short' }); }, [state.notice, locale]);
-  const refresh = async () => { setRefreshing(true); try { await controller.load(); } finally { if (mounted.current) setRefreshing(false); } };
   const openEditor = (id: string | null) => { const ticket = controller.beginEditor(id); if (ticket) props.onOpenEditor(ticket); };
   const rename = (id: string) => { const ticket = controller.beginEditor(id); if (ticket) props.onOpenRename(ticket); };
   return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
@@ -66,27 +68,28 @@ export function FactoryLocationScreen(props: FactoryLocationScreenProps) {
         <RNHostView matchContents><SymbolView name={{ android: 'add_location_alt' }} size={24} tintColor={colors.onSurface} /></RNHostView>
       </IconButton>} />
     <AdminShellBodyFrame hasFooter={footer != null} testID="admin-factory-locations-body-frame">
-    {state.status === 'loading' ? <View style={styles.center}><ActivityIndicator /></View> :
+    {state.status === 'loading' ? <View style={styles.center}><Host matchContents><AdminLoadingIndicator /></Host></View> :
       state.status === 'error' ? <View style={styles.error}><Text style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>{text.loadError}</Text>
-        <Text accessibilityRole="button" onPress={() => { void controller.load(); }} style={[styles.retry, { color: colors.primary }]}>{text.retry}</Text></View> :
-        state.status === 'ready' ? <FlatList data={state.locations} keyExtractor={item => item.id} style={styles.content}
-          contentContainerStyle={{ flexGrow: 1, paddingTop: 10, paddingBottom: insets.bottom + 120 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void refresh(); }} />}
-          ListHeaderComponent={<View style={styles.create}><WorkerSheetButton label={text.create} variant="filled" disabled={state.saving}
-            icon={{ ios: 'plus', android: 'add' }} onPress={() => openEditor(null)} /></View>}
-          ListEmptyComponent={<View style={styles.empty}><SymbolView name={{ android: 'add_location_alt' }} size={48} tintColor={colors.onSurfaceVariant} />
-            <Text style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>{text.empty}</Text></View>}
-          renderItem={({ item, index }) => <LocationRow location={item} apparatus={state.apparatus} disabled={state.saving} text={text}
+        <WorkerSheetButton variant="text" label={text.retry} onPress={() => { void controller.load(); }} /></View> :
+        state.status === 'ready' ? <OrdersList rows={state.locations} rowKey={item => item.id} active passthrough={passthrough}
+          headerOffset={headerOffset} headerHeight={headerHeight} topInset={10} onRefresh={() => controller.load()}
+          footer={<View style={{ height: insets.bottom + 120 }} />}
+          renderRow={(item, index) => <LocationRow location={item} apparatus={state.apparatus} disabled={state.saving} text={text}
             first={index === 0} last={index === state.locations.length - 1} onEdit={() => openEditor(item.id)} onRename={() => rename(item.id)}
-            onActive={() => { void controller.setActive(item.id, !item.active); }} />} /> : null}
+            onActive={() => { void controller.setActive(item.id, !item.active); }} />}>
+          <View style={styles.create}><WorkerSheetButton label={text.create} variant="filled" disabled={state.saving}
+            icon={{ ios: 'plus', android: 'add' }} onPress={() => openEditor(null)} /></View>
+          {!state.locations.length && <View style={styles.empty}><SymbolView name={{ android: 'add_location_alt' }} size={48} tintColor={colors.onSurfaceVariant} />
+            <Text style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>{text.empty}</Text></View>}
+        </OrdersList> : null}
     </AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{footer}</View>
     <View pointerEvents="none" style={[styles.snackbar, { bottom: insets.bottom + 16 }]}><Host matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></Host></View>
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+const styles = StyleSheet.create({ screen: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  error: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 16 }, retry: { paddingHorizontal: 12, paddingVertical: 8, fontWeight: '600' },
+  error: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 16 },
   create: { paddingHorizontal: 8, paddingBottom: 10 }, empty: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: 24, gap: 12 },
   rowBody: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8, paddingStart: 8 }, rowText: { flex: 1, gap: 4 },
   name: { fontSize: 16, fontWeight: '700' }, badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

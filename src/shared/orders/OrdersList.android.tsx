@@ -8,12 +8,13 @@ import { OrderListItem } from './OrderListItem';
 import { WorkerOrderPalette } from '../../components/workerOrderPalette';
 import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
-import type { OrdersListProps } from './OrdersList.types';
+import type { OrdersListGeometry, OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, scrollEnabled, scrollResetKey, headerFollowsContent, userScrollPagination, keyboardShouldPersistTaps }: OrdersListProps<T>) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, refreshEnabled, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, onGeometryChange, scrollEnabled, scrollResetKey, headerFollowsContent, userScrollPagination, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshPending, setRefreshPending] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
+  const geometry = useRef<OrdersListGeometry>({ viewportHeight: 0, contentHeight: 0 });
   const { colors } = useBaseTheme();
   const listRef = useAnimatedRef<FlatList<ReactNode | T>>();
   const scrollOffset = useSharedValue(0);
@@ -51,10 +52,10 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     }
   );
   const refresh = useCallback(async () => {
-    if (!onRefresh) return;
+    if (!onRefresh || refreshEnabled === false) return;
     setRefreshPending(true);
     try { await onRefresh(); } finally { setRefreshPending(false); }
-  }, [onRefresh]);
+  }, [onRefresh, refreshEnabled]);
   const onScroll = useAnimatedScrollHandler<{ previous?: number; dragging?: boolean; momentum?: boolean; userScroll?: boolean; paged?: boolean }>({
     onBeginDrag: (event, context) => {
       const maxScroll = Math.max(0, event.contentSize.height - event.layoutMeasurement.height);
@@ -106,12 +107,14 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
   }, [headerItems.length, dataRows, renderRow, imagesReady, passthrough]);
 
   return <WorkerOrderPalette.Provider value={colors}><GestureDetector gesture={scrollGesture}><Animated.FlatList ref={listRef} style={{ flex: 1 }} contentContainerStyle={{ paddingTop: topInset, minHeight: viewportHeight + Math.max(0, topInset - 48) }} data={data} keyExtractor={keyExtractor}
-    onLayout={event => { const height = event.nativeEvent.layout.height; setViewportHeight(height); viewHeight.set(height); }}
+    onLayout={event => { const height = event.nativeEvent.layout.height; setViewportHeight(height); viewHeight.set(height);
+      if (onGeometryChange) { const next = { ...geometry.current, viewportHeight: height }; geometry.current = next; onGeometryChange(next); } }}
     onEndReached={onEndReached} onEndReachedThreshold={0.5}
-    onContentSizeChange={(_width, height) => { contentHeight.set(height); }}
+    onContentSizeChange={(_width, height) => { contentHeight.set(height);
+      if (onGeometryChange) { const next = { ...geometry.current, contentHeight: height }; geometry.current = next; onGeometryChange(next); } }}
     onScroll={onScroll} scrollEventThrottle={onScrollMetrics ? 100 : 16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     scrollEnabled={scrollEnabled} keyboardShouldPersistTaps={keyboardShouldPersistTaps}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
-    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing ?? refreshPending} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
+    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing ?? refreshPending} enabled={refreshEnabled} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
     renderItem={renderItem} /></GestureDetector></WorkerOrderPalette.Provider>;
 }

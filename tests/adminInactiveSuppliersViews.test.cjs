@@ -19,6 +19,7 @@ function expand(tree) {
   if (Array.isArray(tree)) return tree.map(expand);
   if (!tree || typeof tree !== 'object') return tree;
   if (typeof tree.type === 'function' && tree.type !== topBar) return expand(tree.type(tree.props));
+  if (tree.type === 'OrdersList') return { ...tree, props: { ...tree.props, children: tree.props.rows.map((item, index) => expand(tree.props.renderRow(item, index))) } };
   if (tree.type === 'FlatList') return { ...tree, props: { ...tree.props, children: tree.props.data.map((item, index) => expand(tree.props.renderItem({ item, index }))) } };
   return { ...tree, props: { ...tree.props, children: expand(tree.props?.children) } };
 }
@@ -39,9 +40,11 @@ function render(platform, patch = {}, options = {}) {
       if (!old || deps.some((value, i) => !Object.is(value, old.deps[i]))) { slots[index] = { deps }; effects.push(() => { cleanups[index]?.(); cleanups[index] = callback(); }); }
     } };
   if (options.current !== undefined) model.current = options.current;
-  const colors = { surface: 'surface', surfaceContainerHigh: 'chrome', surfaceContainerLow: 'body', outlineVariant: 'border', outline: 'outline', onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary' };
+  const colors = { surface: 'surface', surfaceContainerLowest: 'device-card', surfaceContainerHigh: 'chrome', surfaceContainerLow: 'body', outlineVariant: 'border', outline: 'outline', onSurface: 'text', onSurfaceVariant: 'secondary', primary: 'primary' };
   const mocks = { './AdminTopBar.android': require('./support/adminChrome.cjs'), react, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': native, '@expo/ui/swift-ui': native,
     '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui/modifiers': modifiers,
+    'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { View: 'View', Text: 'NativeText', FlatList: 'FlatList', RefreshControl: 'RefreshControl', Platform: { Version: options.iosVersion ?? '26.0' }, useWindowDimensions: () => ({ width: 390 }), StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
@@ -94,7 +97,7 @@ for (const platform of ['android', 'ios']) {
     (retry.props.onClick ?? retry.props.onPress)(); assert.deepEqual(error.calls, ['reload']);
     const empty = render(platform, { items: [] });
     assert.equal(nodes(empty.tree, node => node.type === 'Text' && node.props.children === 'users.inactive_empty').length, 1);
-    assert.equal(nodes(empty.tree, node => node.type === 'List' || node.type === 'FlatList').length, 0);
+    assert.equal(nodes(empty.tree, node => node.type === 'List' || node.type === 'FlatList' || node.type === 'OrdersList').length, 0);
     assert.equal(render(platform, { phase: 'invalidated' }).tree, null);
     assert.equal(render(platform, {}, { current: false }).tree, null);
   });
@@ -133,50 +136,45 @@ for (const platform of ['android', 'ios']) {
     else assert.deepEqual(gap.props.modifiers.find(m => m.name === 'frame').args, [{ width: 12 }]);
   });
 }
-test('Android inactive cards retain source card geometry, theme borders and dark shadow', () => {
-  for (const dark of [false, true]) {
-    const { tree } = render('android', {}, { dark, rtl: true });
-    const cards = nodes(tree, node => node.type === 'View' && Array.isArray(node.props.style) && node.props.style[0]?.borderRadius === 24);
-    assert.equal(cards.length, 4);
-    for (const card of cards) {
-      assert.equal(card.props.style[0].padding, 18); assert.equal(card.props.style[1].backgroundColor, 'surface');
-      assert.equal(card.props.style[1].borderColor, 'border'); assert.equal(card.props.style[1].borderWidth, dark ? 1.35 : 1);
-      assert.equal(card.props.style[1].boxShadow[0].blurRadius, dark ? 18 : 8);
-    }
-    const code = nodes(tree, node => node.type === 'NativeText' && node.props.children === 'Code removed')[0];
-    assert.equal(code.props.style[1].fontFamily, 'source-medium'); assert.equal(code.props.style[1].writingDirection, 'rtl');
-    const list = nodes(tree, node => node.type === 'FlatList')[0]; assert.equal(list.props.contentContainerStyle.paddingTop, 4);
-    list.props.refreshControl.props.onRefresh();
+test('Android inactive cards use the Worker card and preserve the source content and gap', () => {
+  const { tree } = render('android', {}, { rtl: true });
+  const cards = nodes(tree, node => node.type === 'WorkerQueueCard');
+  assert.equal(cards.length, 4);
+  for (const [index, card] of cards.entries()) {
+    assert.equal(card.props.style.padding, 18);
+    assert.equal(card.props.backgroundColor, 'device-card');
+    assert.equal(card.props.containerStyle[1]?.paddingBottom, index === 3 ? undefined : 12);
   }
+  const code = nodes(tree, node => node.type === 'NativeText' && node.props.children === 'Code removed')[0];
+  assert.equal(code.props.style[1].fontFamily, 'source-medium'); assert.equal(code.props.style[1].writingDirection, 'rtl');
+  const list = nodes(tree, node => node.type === 'OrdersList')[0]; assert.equal(list.props.topInset, 4);
+  assert.deepEqual(list.props.rows.map(list.props.rowKey), ['removed:0', 'blocked:1', 'both:2', 'neither:3']);
 });
 
 test('Android inactive refresh uses actual viewport/content extent and the exact source .5 threshold', async () => {
   let complete;
   const pending = new Promise(resolve => { complete = resolve; });
-  const f = render('android', {}, { reload: () => pending }), list = () => nodes(f.tree, node => node.type === 'FlatList')[0];
-  const control = () => list().props.refreshControl.props;
-  assert.equal(control().enabled, false); await control().onRefresh(); assert.deepEqual(f.calls, []);
-  list().props.onLayout({ nativeEvent: { layout: { height: 500 } } }); f.rerender(); assert.equal(control().enabled, false);
-  list().props.onContentSizeChange(390, 500.5); f.rerender(); assert.equal(control().enabled, false);
-  list().props.onContentSizeChange(390, 500.51); f.rerender(); assert.equal(control().enabled, true);
-  const requested = control().onRefresh(); assert.equal(requested, pending); assert.deepEqual(f.calls, ['reload']);
+  const f = render('android', {}, { reload: () => pending }), list = () => nodes(f.tree, node => node.type === 'OrdersList')[0].props;
+  assert.equal(list().refreshEnabled, false); await list().onRefresh(); assert.deepEqual(f.calls, []);
+  list().onGeometryChange({ viewportHeight: 500, contentHeight: 0 }); f.rerender(); assert.equal(list().refreshEnabled, false);
+  list().onGeometryChange({ viewportHeight: 500, contentHeight: 500.5 }); f.rerender(); assert.equal(list().refreshEnabled, false);
+  list().onGeometryChange({ viewportHeight: 500, contentHeight: 500.51 }); f.rerender(); assert.equal(list().refreshEnabled, true);
+  const requested = list().onRefresh(); assert.equal(requested, pending); assert.deepEqual(f.calls, ['reload']);
   let finished = false; requested.then(() => { finished = true; }); await Promise.resolve(); assert.equal(finished, false);
   complete(); await requested; assert.equal(finished, true);
-  const captured = control().onRefresh;
-  list().props.onContentSizeChange(390, 200); await captured(); assert.deepEqual(f.calls, ['reload']);
-  f.rerender(); assert.equal(control().enabled, false);
+  const captured = list().onRefresh;
+  list().onGeometryChange({ viewportHeight: 500, contentHeight: 200 }); await captured(); assert.deepEqual(f.calls, ['reload']);
+  f.rerender(); assert.equal(list().refreshEnabled, false);
 });
 
 test('Android native measurements and refresh callbacks retire with the original list/items', async () => {
-  const f = render('android'), list = () => nodes(f.tree, node => node.type === 'FlatList')[0], original = list().props;
-  original.onLayout({ nativeEvent: { layout: { height: 300 } } }); original.onContentSizeChange(390, 900); f.rerender();
-  assert.equal(list().props.refreshControl.props.enabled, true);
-  f.model.state = { ...f.model.state, items: [...f.items] }; f.rerender();
-  assert.equal(list().props.refreshControl.props.enabled, false);
-  original.onLayout({ nativeEvent: { layout: { height: 100 } } }); original.onContentSizeChange(390, 1000); f.rerender();
-  assert.equal(list().props.refreshControl.props.enabled, false); await original.refreshControl.props.onRefresh(); assert.deepEqual(f.calls, []);
-  list().props.onLayout({ nativeEvent: { layout: { height: 300 } } }); list().props.onContentSizeChange(390, 900); f.rerender();
-  const current = list().props.refreshControl.props.onRefresh; assert.equal(list().props.refreshControl.props.enabled, true);
+  const f = render('android'), list = () => nodes(f.tree, node => node.type === 'OrdersList')[0].props, original = list();
+  original.onGeometryChange({ viewportHeight: 300, contentHeight: 900 }); f.rerender(); assert.equal(list().refreshEnabled, true);
+  f.model.state = { ...f.model.state, items: [...f.items] }; f.rerender(); assert.equal(list().refreshEnabled, false);
+  original.onGeometryChange({ viewportHeight: 100, contentHeight: 1000 }); f.rerender();
+  assert.equal(list().refreshEnabled, false); await original.onRefresh(); assert.deepEqual(f.calls, []);
+  list().onGeometryChange({ viewportHeight: 300, contentHeight: 900 }); f.rerender();
+  const current = list().onRefresh; assert.equal(list().refreshEnabled, true);
   f.unmount(); await current(); assert.deepEqual(f.calls, []);
 });
 

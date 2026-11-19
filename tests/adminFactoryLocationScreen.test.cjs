@@ -1,3 +1,4 @@
+/* global __dirname */
 const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -66,7 +67,9 @@ function render(platform, changes = {}, ticket = { owner: Symbol('ticket') }) {
     ActivityIndicator: 'ActivityIndicator', PlatformColor: color => color, StyleSheet: { create: value => value } };
   const colors = { surface: 'surface', surfaceContainerLow: 'low', surfaceContainerLowest: 'card', surfaceContainerHighest: 'high',
     primary: 'primary', primaryContainer: 'primaryContainer', errorContainer: 'error', onErrorContainer: 'onError', onSurface: 'text', onSurfaceVariant: 'variant' };
-  const mocks = { './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose/modifiers': mods,
+  const mocks = { 'react-native-reanimated': { useSharedValue: value => ({ value }) },
+    '../shared/orders/OrdersList': { OrdersList: 'OrdersList' }, './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' },
+    './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' }, react, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': mods, '@expo/ui/jetpack-compose/modifiers': mods,
     '@expo/ui/jetpack-compose': { DropdownMenu, DropdownMenuItem, IconButton: 'IconButton', RNHostView: 'RNHostView', SnackbarHost: 'SnackbarHost',
       Text: 'ComposeText', useMaterialColors: () => colors }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
@@ -88,13 +91,13 @@ for (const platform of ['ios', 'android']) {
         nodes(r.tree, n => n.type === 'AdminScreenHeader')[0].props.actions;
       assert.equal(platform === 'ios' ? header.props.disabled : !header.props.enabled, false); (header.props.onPress ?? header.props.onClick)(); assert.deepEqual(r.calls, [['begin', null], ['edit', r.ticket]]);
       assert.equal(nodes(r.tree, n => n.type === 'ExistingDock').length, 1);
-      if (status === 'loading') assert.equal(nodes(r.tree, n => n.type === (platform === 'ios' ? 'ProgressView' : 'ActivityIndicator')).length, 1);
+      if (status === 'loading') assert.equal(nodes(r.tree, n => n.type === (platform === 'ios' ? 'ProgressView' : 'AdminLoadingIndicator')).length, 1);
       if (status === 'error') {
         const retry = nodes(r.tree, n => platform === 'ios' ? n.type === 'Button' && n.props.label === model.factoryLocationScreenText('en').retry :
-          n.type === 'NativeText' && n.props.accessibilityRole === 'button')[0]; retry.props.onPress(); assert.equal(r.calls.at(-1), 'load');
+          n.type === 'WorkerSheetButton' && n.props.label === model.factoryLocationScreenText('en').retry)[0]; retry.props.onPress(); assert.equal(r.calls.at(-1), 'load');
       }
       if (status === 'ready' && platform === 'ios') assert.ok(nodes(r.tree, n => n.type === 'Text' && n.props.children === model.factoryLocationScreenText('en').empty).length);
-      if (status === 'ready' && platform === 'android') assert.ok(nodes(r.tree, n => n.type === 'FlatList')[0].props.ListEmptyComponent);
+      if (status === 'ready' && platform === 'android') assert.ok(nodes(r.tree, n => n.type === 'NativeText' && n.props.children === model.factoryLocationScreenText('en').empty).length);
     }
     for (const changes of [{ saving: true }, { status: 'forbidden' }]) {
       const r = render(platform, changes), header = platform === 'ios' ? nodes(r.tree, n => n.type === 'Stack.Screen')[0].props.options.headerRight() :
@@ -117,7 +120,7 @@ for (const platform of ['ios', 'android']) {
         assert.ok(nodes(row, n => n.type === 'Text' && n.props.children === 'Print A, Print B').length);
         assert.ok(nodes(row, n => n.type === 'Text' && n.props.children === location.id && n.props.modifiers.some(m => m.name === 'textSelection')).length);
       } else {
-        const list = nodes(r.tree, n => n.type === 'FlatList')[0], element = list.props.renderItem({ item: location, index: 0 }); row = element.type(element.props);
+        const list = nodes(r.tree, n => n.type === 'OrdersList')[0], element = list.props.renderRow(location, 0); row = element.type(element.props);
         assert.equal(row.type, 'WorkerQueueCard'); assert.equal(row.props.onPress, undefined);
         nodes(row, n => n.type === 'Pressable')[0].props.onPress();
         const options = nodes(row, n => n.type === DropdownMenuItem);
@@ -137,8 +140,8 @@ for (const platform of ['ios', 'android']) {
       assert.ok(nodes(row, n => n.type === 'Menu')[0].props.modifiers.some(m => m.name === 'disabled' && m.args[0]));
       nodes(row, n => n.type === 'Button' && n.props.label === 'Activate')[0].props.onPress();
     } else {
-      const list = nodes(r.tree, n => n.type === 'FlatList')[0]; list.props.refreshControl.props.onRefresh();
-      const e = list.props.renderItem({ item: other, index: 1 }), row = e.type(e.props);
+      const list = nodes(r.tree, n => n.type === 'OrdersList')[0]; assert.equal(list.props.rowKey(other), 'state-b'); await list.props.onRefresh();
+      const e = list.props.renderRow(other, 1), row = e.type(e.props);
       assert.ok(nodes(row, n => n.type === 'NativeText' && n.props.children === 'Inactive').length);
       assert.equal(nodes(row, n => n.type === 'Pressable')[0].props.disabled, true); assert.equal(nodes(row, n => n.type === 'IconButton')[0].props.enabled, false);
       const old = global.requestAnimationFrame; global.requestAnimationFrame = callback => { callback(); return 1; };
