@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect, useMemo, useSyncExternalStore } from 'rea
 import { Keyboard } from 'react-native';
 import { adminText, localizedGetter, productionText } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
+import type { OrdersListScrollMetrics } from '../shared/orders/OrdersList.types';
 import { adminWarehouseMainCanEditStock } from './adminWarehouseMainModel';
 import { createAdminWarehouseMainSession } from './adminWarehouseMainSession';
 import { adminWarehouseMainItemRow, adminWarehouseMainQolipRow, adminWarehouseMainRawRow, adminWarehouseMainReservationRows, type AdminWarehouseMainRow } from './AdminWarehouseMainRows';
@@ -89,6 +90,7 @@ export function useAdminWarehouseMain(props: AdminWarehouseMainScreenProps) {
   const filterNames = state.summary.sections.map(row => row.warehouse);
   const settingsCanInteract = useCallback(() => view.canInteract() && controller.getSnapshot().pageTab === 'settings' && !view.getSnapshot().dialog, [view, controller]);
   const summaryScreen = state.summaryPhase === 'error' ? 'error' : (state.summaryPhase === 'idle' || state.summaryPhase === 'loading') && !presentation.summarySeen ? 'loading' : 'content';
+  const loadMore = () => interactive() && controller.getSnapshot().pageTab === 'products' && controller.getSnapshot().stockTab === 'available' && !view.getSnapshot().dialog ? controller.loadMoreItems() : Promise.resolve();
   return { state, presentation, scope, focused, locale, a, t, current, interactive, controller, products, availableGroups, reservedGroups, filterNames, dialog, dialogCurrent, closeDialog, beginDismissDialog, created,
     valid: state.valid && scopeMatches && current(), searchHint: a(scope === 'admin' ? 'warehouse.products_search' : 'warehouse.location_products_search'), bottomPaddingOffset: scope === 'material' || owner.flags.adminScoped ? 128 : 24, summaryScreen, actions, hasSearchText: !!dartTrim(state.search), setSearch, clearSearch, setSearchFocused, closeSearch, openRow, runDetailAction,
     back: () => { if (interactive() && !view.getSnapshot().dialog) props.onBack(); },
@@ -99,7 +101,10 @@ export function useAdminWarehouseMain(props: AdminWarehouseMainScreenProps) {
     selectWarehouse: (name: string) => { if (interactive() && !view.getSnapshot().dialog && controller.getSnapshot().summary.sections.some(row => row.warehouse === name)) controller.selectWarehouse(name); },
     reload: () => interactive() && !view.getSnapshot().dialog ? changed().catch(() => {}) : Promise.resolve(),
     retryItems: () => interactive() && controller.getSnapshot().pageTab === 'products' && !view.getSnapshot().dialog ? controller.retryItems() : Promise.resolve(),
-    loadMore: () => interactive() && controller.getSnapshot().pageTab === 'products' && controller.getSnapshot().stockTab === 'available' && !view.getSnapshot().dialog ? controller.loadMoreItems() : Promise.resolve(),
+    loadMore,
+    onItemsScroll: ({ contentHeight, offset, viewportHeight }: OrdersListScrollMetrics) => {
+      if (contentHeight - offset - viewportHeight <= 420) void loadMore();
+    },
     detailOrder: dialog?.kind === 'details' && dartTrim(dialog.row.orderId) ? props.renderReservedOrderDetails(dialog.row.orderId, context(dialogCurrent)) : null,
     materialStates: props.scope === 'material' ? props.materialStates.render({ query: state.search, onAssetReturned: changed, isCurrent: mountedCurrent }) : null,
     settings: { session, witness, isCurrent: current, canInteract: settingsCanInteract, summaries: state.summary.sections, warehouse: state.warehouse, filterExpanded: state.filterExpanded,

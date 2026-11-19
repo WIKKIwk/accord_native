@@ -123,6 +123,32 @@ test('reviewed management destinations require their own capabilities in additio
   }
 });
 
+test('Android Admin opens the existing warehouse screen with its V2 capabilities and settings dock', () => {
+  const allowed = new Set([r.adminWarehouses]);
+  for (const capability of ['catalog.item.read', 'catalog.item_group.read', 'raw_material.assign']) {
+    const account = session('admin', ['admin.access', capability]);
+    assert.equal(access.adminDestinationPath(account, r.adminWarehouses, 'android', allowed), '/android-admin/warehouses');
+    assert.equal(access.adminDestinationPath(account, r.adminWarehouses, 'ios', allowed), null);
+  }
+  assert.equal(access.adminDestinationPath(admin, r.adminWarehouses, 'android', allowed), null);
+  const account = session('admin', ['admin.access', 'catalog.item.read']), witness = { generation: 1 };
+  const back = () => {}, profile = () => {}, current = () => true;
+  let admitted = true;
+  const warehouses = load('app/android-admin/warehouses.tsx', {
+    'expo-router': { Redirect: 'Redirect' }, '../../admin/AdminBottomBar.android': { AdminBottomBar: 'Dock' },
+    '../../admin/AdminWarehouseScreen.android': { AdminWarehouseScreen: 'WarehouseScreen' }, '../../shared/appRoutes': routes,
+    '../../brigader/useBrigaderPage': { useBrigaderPage: route => {
+      assert.equal(route, r.adminWarehouses);
+      return { current, back, profile, shell: { session: account, witness, isCurrent: current, destination: () => admitted ? '/android-admin/warehouses' : null } };
+    } },
+  }).default;
+  const screen = warehouses();
+  assert.equal(screen.type, 'WarehouseScreen'); assert.equal(screen.props.scope, 'admin'); assert.equal(screen.props.witness, witness);
+  assert.equal(screen.props.isCurrent, current); assert.equal(screen.props.onBack, back); assert.equal(screen.props.onProfile, profile);
+  assert.equal(screen.props.footer.props.active, 'settings');
+  admitted = false; assert.equal(warehouses().type, 'Redirect');
+});
+
 test('session hook captures once and rejects stale loads, inactive and unauthorized sessions', async () => {
   async function run(result, { reset = false, unmount = false, active = true } = {}) {
     const updates = []; let effect, resetHook, resolve, unregistered = false, unobserved = false;

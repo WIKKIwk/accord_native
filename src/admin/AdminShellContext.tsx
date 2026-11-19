@@ -17,7 +17,7 @@ export const AdminShellContextProvider = Context.Provider;
 // Admission and each destination retain their existing account/capability guards.
 const enabledDestinations: ReadonlySet<string> = new Set([appRoutes.adminHome, appRoutes.profile,
   appRoutes.adminFactoryMap, appRoutes.adminCalculateOrders, appRoutes.adminCalculate,
-  appRoutes.adminProductionMapOrders, appRoutes.adminActivity, appRoutes.adminFactoryLocations,
+  appRoutes.adminProductionMapOrders, appRoutes.adminActivity, appRoutes.adminFactoryLocations, appRoutes.adminWarehouses,
   appRoutes.adminSettings, appRoutes.adminAdditionalSettings, appRoutes.adminItemGroupCreate, appRoutes.adminInactiveSuppliers,
   appRoutes.adminQueuePolicies, appRoutes.adminRoles, appRoutes.chat]);
 export function AdminShellProvider({ session, witness, onLogout, children }: { session: Session; witness: SessionWitness; onLogout: () => void; children: ReactNode }) {

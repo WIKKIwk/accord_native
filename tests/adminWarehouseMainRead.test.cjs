@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -11,6 +12,7 @@ function load(file, mocks = {}) {
 }
 const dart = load('admin/dartJsonString.ts'), uri = load('admin/dartUri.ts'), exception = load('shared/mobileApiException.ts');
 const strict = load('shared/camera/synchronousGuard.ts'), scope = load('sessionReadScope.ts');
+const orderNote = load('shared/productionOrderNote.ts');
 const flags = { warehouseScoped: false, adminScoped: true };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
@@ -27,7 +29,7 @@ function fixture(t, profile = {}) {
   const request = load('admin/adminProductionRequest.ts', { '../authorizedFetch': transport, '../shared/mobileApiException': exception, '../workerControlsApi': controls });
   const apparatus = load('apparatusApi.ts', { './authorizedFetch': transport, './workerControlsApi': controls });
   const raw = load('workerRawMaterials.ts', { './authorizedFetch': transport, './workerControlsApi': controls });
-  const inventory = load('inventoryModels.ts', { './workerControlsApi': controls });
+  const inventory = load('inventoryModels.ts', { './workerControlsApi': controls, './shared/productionOrderNote': orderNote });
   const qolip = load('qolipCatalogApi.ts', { './auth': auth, './authorizedFetch': transport, './workerControlsApi': controls });
   const print = load('shared/printApi.ts', { '../authorizedFetch': transport, './mobileApiException': exception, '../workerPrintJob': {} });
   const users = load('admin/adminUsersModel.ts', { '../shared/localization': {}, '../shared/appRoutes': {}, '../workerControlsApi': controls, './dartJsonString': dart });

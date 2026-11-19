@@ -10,7 +10,7 @@ import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
 import type { OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, keyboardShouldPersistTaps }: OrdersListProps<T>) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, scrollEnabled, scrollResetKey, headerFollowsContent, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshPending, setRefreshPending] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -37,6 +37,7 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
   const scrollGesture = useNativeGesture(scrollGestureConfig);
   useEffect(() => () => { if (imageFrame.current !== null) cancelAnimationFrame(imageFrame.current); }, []);
   useEffect(() => { pageActive.set(active); }, [active, pageActive]);
+  useEffect(() => { if (scrollResetKey !== undefined) listRef.current?.scrollToOffset({ offset: 0, animated: false }); }, [listRef, scrollResetKey]);
   // Align inactive pages near the top without changing deeper scroll positions.
   useAnimatedReaction(
     () => ({ active: pageActive.get(), header: headerOffset.get(), height: headerHeight.get(), max: Math.max(0, contentHeight.get() - viewHeight.get()) }),
@@ -70,7 +71,9 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
       context.previous = current;
       scrollOffset.set(current);
       if (active && onScrollMetrics) scheduleOnRN(onScrollMetrics, { offset: current, viewportHeight: event.layoutMeasurement.height, contentHeight: event.contentSize.height });
-      if (active && (context.dragging || context.momentum)) {
+      if (active && headerFollowsContent) {
+        headerOffset.set(Math.min(current, headerHeight.get()));
+      } else if (active && (context.dragging || context.momentum)) {
         const next = Math.max(0, Math.min(current, headerHeight.get(), headerOffset.get() + current - previous));
         headerOffset.set(next);
       }
@@ -101,7 +104,7 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     onEndReached={onEndReached} onEndReachedThreshold={0.5}
     onContentSizeChange={(_width, height) => { contentHeight.set(height); }}
     onScroll={onScroll} scrollEventThrottle={onScrollMetrics ? 100 : 16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
-    keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+    scrollEnabled={scrollEnabled} keyboardShouldPersistTaps={keyboardShouldPersistTaps}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
     refreshControl={onRefresh ? <RefreshControl refreshing={refreshing ?? refreshPending} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
     renderItem={renderItem} /></GestureDetector></WorkerOrderPalette.Provider>;

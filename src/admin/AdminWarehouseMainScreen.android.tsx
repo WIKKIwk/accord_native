@@ -1,15 +1,18 @@
 import { BasicTextField, Box, Column, FilledTonalIconButton, FilterChip, FlowRow, IconButton, ModalBottomSheet, OutlinedButton, RNHostView, Row, Shape, Spacer, Surface, TextButton, useNativeState, type BasicTextFieldRef } from '@expo/ui/jetpack-compose';
-import PagerView, { type PagerViewRef } from '@expo/ui/community/pager-view';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useMemo, useRef } from 'react';
-import { FlatList, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import type { PanGesture } from 'react-native-gesture-handler';
+import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
 import { RoleHeaderRow, RoleHeaderSearchField } from '../shared/navigation/RoleHeaderRow';
+import { OrdersList } from '../shared/orders/OrdersList';
+import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
+import { ORDERS_TAB_BAR_HEIGHT } from '../shared/orders/ordersWorkspaceTypes';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { AdminCreateMenu } from './AdminCreateMenu.android';
@@ -24,6 +27,7 @@ import { AdminWarehouseSettingsTab } from './AdminWarehouseSettingsTab.android';
 import { useAdminWarehouseMain, type AdminWarehouseMainModel } from './useAdminWarehouseMain';
 
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
+const passthrough = () => true;
 type IconName = 'arrow_back' | 'close' | 'warehouse' | 'expand_less' | 'expand_more' | 'check' | 'inventory_2' | 'category' | 'grid_view' | 'lock_outline' | 'chevron_right' | 'qr_code_2' | 'edit' | 'refresh';
 function Icon({ name, color, iconSize = 24 }: { name: IconName; color: string; iconSize?: number }) {
   return <RNHostView matchContents><SymbolView name={{ android: name }} size={iconSize} tintColor={color} importantForAccessibility="no" /></RNHostView>;
@@ -54,16 +58,6 @@ function SearchHeader({ model, props }: { model: AdminWarehouseMainModel; props:
     </RoleHeaderSearchField>
     {!presentation.searchFocused && model.profile()}
   </RoleHeaderRow>;
-}
-function Tabs({ options, selected, select, id }: { options: readonly { value: string; label: string }[]; selected: string; select: (value: string) => void; id: string }) {
-  const { colors } = useBaseTheme();
-  return <View style={{ flexDirection: 'row', backgroundColor: colors.surfaceContainer, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.outlineVariant }}>
-    {options.map(option => <View key={option.value} style={{ flex: 1, borderBottomWidth: 2, borderBottomColor: option.value === selected ? colors.primary : 'transparent' }}>
-      <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><TextButton onClick={() => select(option.value)} modifiers={[fillMaxWidth(), height(38), testID(`${id}-${option.value}`)]}>
-        <Text color={option.value === selected ? colors.primary : colors.onSurfaceVariant} style={{ fontSize: 14, fontWeight: '400' }}>{option.label}</Text>
-      </TextButton></BaseHost>
-    </View>)}
-  </View>;
 }
 function FilterChevron({ expanded, color }: { expanded: boolean; color: string }) {
   const turn = useSharedValue(expanded ? 180 : 0);
@@ -112,21 +106,37 @@ function Entry({ entry, model }: { entry: AdminWarehouseMainEntry; model: AdminW
     </Column>
   </BaseHost>}</View>;
 }
-function ProductList({ model, bottomPadding, tab }: { model: AdminWarehouseMainModel; bottomPadding: number; tab: 'available' | 'reserved' }) {
-  const { state, products } = model, list = useRef<FlatList<AdminWarehouseMainEntry>>(null), active = state.stockTab === tab;
+function ProductList({ model, bottomPadding, tab, pagerGesture, headerOffset, headerHeight, showStockTabs }: {
+  model: AdminWarehouseMainModel; bottomPadding: number; tab: 'available' | 'reserved'; pagerGesture?: PanGesture;
+  headerOffset: SharedValue<number>; headerHeight: SharedValue<number>; showStockTabs: boolean;
+}) {
+  const { state, products } = model;
+  const active = state.pageTab === 'products' && state.stockTab === tab && model.focused && !model.dialog;
   const entries = useMemo(() => adminWarehouseMainEntries({ ...state, stockTab: tab }, products.qolip, model.availableGroups, model.reservedGroups), [state, tab, products.qolip, model.availableGroups, model.reservedGroups]);
-  useEffect(() => { if (tab === 'available') list.current?.scrollToOffset({ offset: 0, animated: false }); }, [state.scrollReset, tab]);
-  const selected = !!state.summary.sections.length && !!state.warehouse;
-  return <FlatList ref={list} key={tab === 'reserved' ? `${state.warehouse}:${products.hasReserved}` : 'available'} data={entries} keyExtractor={entry => entry.key} renderItem={({ item }) => <Entry entry={item} model={model} />} keyboardShouldPersistTaps="handled" scrollEnabled={active && model.focused && !model.dialog}
-    contentContainerStyle={{ paddingHorizontal: 4, paddingTop: 4, paddingBottom: bottomPadding }}
-    ListHeaderComponent={<>{selected ? <Tabs id="warehouse-stock-tab" options={[{ value: 'available', label: model.a('warehouse.available', { count: products.availableCount }) }, ...(products.hasReserved ? [{ value: 'reserved', label: model.a('warehouse.reserved', { count: products.reservedCount }) }] : [])]}
-      selected={state.stockTab} select={value => { if (value === 'available' || value === 'reserved') model.setStockTab(value); }} /> : null}<WarehouseFilter model={model} /></>}
-    onScroll={event => { const { contentSize, contentOffset, layoutMeasurement } = event.nativeEvent; if (active && tab === 'available' && contentSize.height - contentOffset.y - layoutMeasurement.height <= 420) void model.loadMore(); }} scrollEventThrottle={100} />;
+  return <View style={styles.productList}><OrdersList rows={entries} rowKey={entry => entry.key}
+    renderRow={entry => <Entry entry={entry} model={model} />} passthrough={passthrough} keyboardShouldPersistTaps="handled"
+    active={active} scrollEnabled={active} scrollResetKey={tab === 'available' ? state.scrollReset : undefined} pagerGesture={pagerGesture}
+    headerOffset={headerOffset} headerHeight={headerHeight} headerFollowsContent={showStockTabs}
+    topInset={4 + (showStockTabs ? ORDERS_TAB_BAR_HEIGHT : 0)} onScrollMetrics={tab === 'available' ? model.onItemsScroll : undefined}
+    footer={<View style={{ height: bottomPadding }} />}>
+    <WarehouseFilter model={model} />
+  </OrdersList></View>;
 }
-function Products({ model, bottomPadding }: { model: AdminWarehouseMainModel; bottomPadding: number }) {
-  return <View style={styles.body}>{(['available', 'reserved'] as const).map(tab => <View key={tab} style={{ flex: 1, display: model.state.stockTab === tab ? 'flex' : 'none' }}>
-    <ProductList model={model} bottomPadding={bottomPadding} tab={tab} />
-  </View>)}</View>;
+function Products({ model, bottomPadding, session, pagerGesture }: { model: AdminWarehouseMainModel; bottomPadding: number; session: AdminWarehouseMainScreenProps['session']; pagerGesture?: PanGesture }) {
+  const { state, products } = model, headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
+  const showStockTabs = !!state.summary.sections.length && !!state.warehouse;
+  useEffect(() => {
+    headerHeight.set(showStockTabs ? ORDERS_TAB_BAR_HEIGHT : 0);
+    headerOffset.set(0);
+  }, [showStockTabs, headerHeight, headerOffset]);
+  const listProps = { model, bottomPadding, pagerGesture, headerOffset, headerHeight, showStockTabs };
+  if (!showStockTabs) return <ProductList {...listProps} tab="available" />;
+  const tabs = [{ id: 'available', name: model.a('warehouse.available', { count: products.availableCount }) }];
+  if (products.hasReserved) tabs.push({ id: 'reserved', name: model.a('warehouse.reserved', { count: products.reservedCount }) });
+  return <OrdersWorkspace session={session} tabs={tabs} selected={state.stockTab} swipeEnabled={false} headerOffset={headerOffset}
+    onSelect={tab => { if (tab === 'available' || tab === 'reserved') model.setStockTab(tab); }}>
+    {tab => <ProductList {...listProps} key={tab === 'reserved' ? state.warehouse : 'available'} tab={tab === 'reserved' ? 'reserved' : 'available'} />}
+  </OrdersWorkspace>;
 }
 function Details({ model, renderActionSurface }: { model: AdminWarehouseMainModel; renderActionSurface?: AdminWarehouseMainScreenProps['renderDetailActionSurface'] }) {
   const { colors } = useBaseTheme(), { height: viewportHeight } = useWindowDimensions(), dialog = model.dialog;
@@ -150,11 +160,10 @@ function Details({ model, renderActionSurface }: { model: AdminWarehouseMainMode
 }
 /** @v2 AdminWarehousesScreen */
 export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
-  const model = useAdminWarehouseMain(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width: viewportWidth } = useWindowDimensions(), pager = useRef<PagerViewRef>(null), { interactive, state } = model;
-  useEffect(() => { if (interactive()) pager.current?.setPage(state.pageTab === 'products' ? 0 : 1); }, [state.pageTab, interactive]);
+  const model = useAdminWarehouseMain(props), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets(), { width: viewportWidth } = useWindowDimensions(), { state } = model;
   if (!model.valid) return null;
   const bottomPadding = insets.bottom + model.bottomPaddingOffset, tabs = model.scope === 'werka' ? [] : [
-    { value: 'products', label: model.scope === 'material' ? model.a('warehouse.tabs_warehouses') : 'Mahsulotlar' }, { value: 'settings', label: model.scope === 'material' ? model.a('warehouse.tabs_states') : 'Sozlamalar' }];
+    { id: 'products', name: model.scope === 'material' ? model.a('warehouse.tabs_warehouses') : 'Mahsulotlar' }, { id: 'settings', name: model.scope === 'material' ? model.a('warehouse.tabs_states') : 'Sozlamalar' }];
   return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ backgroundColor: chromeBackground }}><SearchHeader model={model} props={props} /></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-warehouse-main-body-frame">
@@ -164,14 +173,14 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
         <TextButton onClick={() => { void model.reload(); }} colors={{ contentColor: colors.primary }} contentPadding={{ start: 12, top: 8, end: 12, bottom: 8 }}
           modifiers={[defaultMinSize({ minWidth: 0, minHeight: 0 }), testID('warehouse-retry')]}><Text style={{ typography: 'bodyMedium', fontWeight: '600' }}>{model.t('retry')}</Text></TextButton>
       </Column></BaseHost>
-    </ScrollView> : <>
-      {tabs.length ? <Tabs id="warehouse-main-tab" options={tabs} selected={model.state.pageTab} select={value => { if (value === 'products' || value === 'settings') model.setPageTab(value); }} /> : null}
-      {model.scope === 'werka' ? <Products model={model} bottomPadding={bottomPadding} /> : <PagerView ref={pager} style={styles.body} initialPage={0} offscreenPageLimit={1} scrollEnabled={model.focused && !model.dialog}
-        onPageSelected={event => { if (event.nativeEvent.position === 0 || event.nativeEvent.position === 1) model.setPageTab(event.nativeEvent.position === 0 ? 'products' : 'settings'); }}>
-        <View key="products" style={styles.body}><Products model={model} bottomPadding={bottomPadding} /></View>
-        <View key="settings" style={styles.body}>{model.scope === 'material' ? model.materialStates : <AdminWarehouseSettingsTab {...model.settings} bottomPadding={bottomPadding} />}</View>
-      </PagerView>}
-    </>}
+    </ScrollView> : model.scope === 'werka' ? <Products model={model} bottomPadding={bottomPadding} session={props.session} /> :
+      <OrdersWorkspace session={props.session} tabs={tabs} selected={state.pageTab} swipeEnabled={model.focused && !model.dialog}
+        onSelect={tab => { if (tab === 'products' || tab === 'settings') model.setPageTab(tab); }}>
+        {(tab, pagerGesture) => <View style={styles.productPage}>{tab === 'products' ?
+          <Products model={model} bottomPadding={bottomPadding} session={props.session} pagerGesture={pagerGesture} /> :
+          model.scope === 'material' ? model.materialStates : <AdminWarehouseSettingsTab {...model.settings} bottomPadding={bottomPadding} />}
+        </View>}
+      </OrdersWorkspace>}
     </AdminShellBodyFrame>
     <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
     {model.scope === 'admin' ? <AdminCreateMenu actions={model.actions} isCurrent={model.interactive} openLabel={localizedGetter('adminCreateTitle', model.locale)} closeLabel={model.a('action.close')} visible={model.focused && !model.dialog} bottomOffset={insets.bottom + 94} /> : null}
@@ -179,4 +188,4 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
     {model.dialog?.kind === 'details' ? <Details key={model.dialog.id} model={model} renderActionSurface={props.renderDetailActionSurface} /> : null}
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, searchField: { flex: 1, minWidth: 0, height: 56 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, productPage: { flex: 1, marginTop: ORDERS_TAB_BAR_HEIGHT }, productList: { flex: 1, marginHorizontal: 4 }, searchField: { flex: 1, minWidth: 0, height: 56 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

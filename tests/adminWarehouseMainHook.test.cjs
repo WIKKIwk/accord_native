@@ -23,7 +23,7 @@ function fixture(scope = 'admin') {
     owner = { controller, current, flags: { adminScoped: scope === 'admin', warehouseScoped: scope !== 'admin' }, activate: () => controller.start(), deactivate: () => controller.dispose(),
       onCreated: controller.reload, onChanged: controller.reload, onDeleted: controller.warehouseDeleted, refreshInPlace: controller.refreshInPlace }; return owner;
   };
-  const { useAdminWarehouseMain } = load('admin/useAdminWarehouseMain', { react, 'expo-router': { useIsFocused: () => focused }, 'react-native': { Keyboard: { dismiss: () => calls.push('keyboard') } },
+  const { useAdminWarehouseMain: renderWarehouseMain } = load('admin/useAdminWarehouseMain', { react, 'expo-router': { useIsFocused: () => focused }, 'react-native': { Keyboard: { dismiss: () => calls.push('keyboard') } },
     '../shared/localization': l10n, '../shared/localization/runtime': { localeController: { get locale() { return locale; }, addListener() {} } },
     './adminWarehouseMainModel': domain, './adminWarehouseMainSession': { createAdminWarehouseMainSession: createSession }, './AdminWarehouseMainRows': rows,
     './AdminWarehouseMainViewState': { AdminWarehouseMainViewState: class extends viewModule.AdminWarehouseMainViewState { constructor(current) { super(current); presentation = this; } } },
@@ -32,7 +32,7 @@ function fixture(scope = 'admin') {
     onBack: () => calls.push('back'), renderProfileAction: context => ({ type: 'RealProfile', props: context }), onItemRolls: async () => { calls.push('rolls'); },
     onRawStockQr: async () => { calls.push('qr'); }, onRawStockEdit: async () => { calls.push('edit'); }, renderReservedOrderDetails: (orderId, context) => ({ type: 'RealOrder', props: { orderId, ...context } }),
     materialStates: { render: context => ({ type: 'RealStates', props: context }), search: query => calls.push(['material-search', query]), reload: async () => { calls.push('material-reload'); } } };
-  const render = () => { let result; for (let i = 0; i < 12; i++) { cursor = 0; result = useAdminWarehouseMain(props); pending.splice(0).forEach(run => run());
+  const render = () => { let result; for (let i = 0; i < 12; i++) { cursor = 0; result = renderWarehouseMain(props); pending.splice(0).forEach(run => run());
     if (result.presentation === presentation.getSnapshot() && result.state === owner.controller.getSnapshot()) return result; } throw Error('hook did not settle'); };
   const unmount = () => slots.forEach(slot => slot?.cleanup?.());
   return { props, item, raw, calls, live, render, unmount, view: () => presentation, owner: () => owner, focus: value => { focused = value; }, retire: () => { authorized = false; }, locale: value => { locale = value; },
@@ -73,6 +73,18 @@ test('opening and closing a native dialog retires the old main controls before R
   old.setPageTab('settings'); old.setSearch('under modal'); old.toggleFilter(); old.selectWarehouse('A'); old.back(); assert.deepEqual(f.calls, before); assert.equal(f.owner().controller.getSnapshot(), selected);
   const sheet = f.render(); sheet.closeDialog(); old.setSearch('after close'); assert.equal(f.owner().controller.getSnapshot().search, '');
   f.render().setSearch('fresh header'); assert.equal(f.owner().controller.getSnapshot().search, 'fresh header'); f.unmount();
+});
+
+test('warehouse paging uses the source 420 dp threshold and ignores geometry from hidden pages', async () => {
+  const f = fixture(), model = await f.selected();
+  f.owner().controller.loadMoreItems = async () => { f.calls.push('more'); };
+  const metrics = { contentHeight: 1000, viewportHeight: 400 };
+  model.onItemsScroll({ ...metrics, offset: 179 });
+  model.setPageTab('settings'); model.onItemsScroll({ ...metrics, offset: 180 });
+  assert.equal(f.calls.includes('more'), false);
+  model.setPageTab('products'); model.onItemsScroll({ ...metrics, offset: 180 });
+  assert.equal(f.calls.at(-1), 'more');
+  f.unmount();
 });
 test('a retained material return callback cannot restart child reads after unmount or across a StrictMode mount lifetime', async () => {
   const f = fixture('material'), original = await f.selected(), returned = original.materialStates.props.onAssetReturned;

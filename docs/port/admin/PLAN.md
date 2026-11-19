@@ -76,9 +76,24 @@ Roles checkpoint: 29 focused tests, both platform type checks, changed-file lint
 | Warehouse filter, stock detail cards, sections and overlays | Existing inline filter, existing source-specific row composition and the existing warehouse detail, roll and QR sheet owners |
 | Retry and loading | Source summary, item and page retry callbacks, with existing Admin loader |
 
-- [ ] Wire the existing warehouse screen to the Admin drawer on Android using the V2 capability gate.
-- [ ] Check Products/Settings swipe, Available/Reserved selection and the unchanged Werka/Material/Brigader presets.
-- [ ] Verify retained filter, query paging, reserved-row routing and stale-snapshot protections.
+- [x] Wire the existing warehouse screen to the Admin drawer on Android using the V2 capability gate.
+- [x] Check Products/Settings swipe, Available/Reserved selection and the unchanged Werka/Material/Brigader presets.
+- [x] Verify retained filter, query paging, reserved-row routing and stale-snapshot protections.
+
+Warehouses checkpoint: 310 focused tests, both platform type checks, changed-file lint and the iOS export passed. The Warehouse transport tests use the real order-note parser. The shared tabs use their 48 dp height. Android device verification remains open.
+
+## Factory Map mapping
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| AdminShell with drawer, profile and home dock | AdminScreenHeader, AdminShellBodyFrame and AdminBottomBar |
+| Factory map viewport and animation-complete loading | Existing AdminFactoryMapViewer with bundled model, reused factory controller and native transition lifecycle |
+| Mapping notice, model retry and overlay controls | Existing map status, retry and camera/labels/refresh controls |
+| Attach, machine, order and unlink surfaces | Existing factory presentation owner, resizable sheets, and canonical apparatus mutation guards |
+| Live and stock updates | Existing FactoryMapBindings, FactoryMapLive and FactoryMapStock under the original account lifetime |
+
+- [ ] Connect Factory Map to the Android Admin home shortcut under the original route permission and session.
+- [ ] Verify model mounting, bind/unbind and live order sheets on a device with a test account.
 
 ## Decisions
 
@@ -722,3 +737,4 @@ Roles checkpoint: 29 focused tests, both platform type checks, changed-file lint
 - Item Groups tabs and item list (`src/admin/ItemGroupsRoute.android.tsx`).
 - Activity list and retry typography (`src/admin/AdminActivityScreen.android.tsx`).
 - Roles and Assignments tabs and list hosts (`src/admin/AdminRolesScreen.android.tsx`).
+- Warehouses drawer route, list and both sets of tabs (`src/app/android-admin/warehouses.tsx`, `src/admin/AdminWarehouseMainScreen.android.tsx`).

@@ -31,7 +31,7 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
     availableGroups: [[item], [row]], reservedGroups: [[row]], dialog: dialog ? { id: 77, kind: 'details', row } : null,
     profile: () => ({ type: 'RealProfileAction', props: {} }), setSearch: value => calls.push(['search', value]), setSearchFocused: value => calls.push(['focus', value]), closeSearch: () => calls.push('close-search'), clearSearch: () => calls.push('clear-search'),
     back: () => calls.push('back'), toggleFilter: () => calls.push('filter'), selectWarehouse: value => calls.push(['warehouse', value]), setPageTab: value => calls.push(['page', value]), setStockTab: value => calls.push(['stock', value]),
-    openRow: value => calls.push(['row', value]), runDetailAction: (...values) => calls.push(['detail-action', ...values]), loadMore: async () => calls.push('more'), retryItems: async () => calls.push('retry-items'), reload: async () => calls.push('reload'),
+    openRow: value => calls.push(['row', value]), runDetailAction: (...values) => calls.push(['detail-action', ...values]), loadMore: async () => calls.push('more'), onItemsScroll: value => calls.push(['scroll', value]), retryItems: async () => calls.push('retry-items'), reload: async () => calls.push('reload'),
     actions: [{ id: 'warehouse-create' }], settings: { onChanged: async () => {}, onDeleted: async () => {}, isCurrent: () => true }, materialStates: { type: 'RealMaterialStates', props: {} }, detailOrder: { type: 'RealReservationOrderDetails', props: {} },
     closeDialog: () => calls.push('close-dialog'), beginDismissDialog: () => calls.push('dismiss-dialog'), dialogCurrent: () => true, created: async () => calls.push('created') };
   const compose = new Proxy({ Shape: { RoundedCorner: value => value }, useNativeState: value => ({ value }),
@@ -39,13 +39,16 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
   const swift = new Proxy({ Grid: native('Grid', ['Row']), TabView: native('TabView', ['Tab']), List: native('List') }, { get: (target, name) => target[name] ?? String(name) });
   swift.List.ForEach = props => ({ type: 'List.ForEach', props: { ...props, children: props.data.map((item, index) => props.children({ item, index })) } });
   const transition = { duration: () => transition, easing: () => transition };
-  const mocks = { react: { useEffect() {}, useMemo: fn => fn(), useRef: value => ({ current: value }), useState: value => [value, () => {}] }, 'react/jsx-runtime': jsx,
+  const mocks = { react: { createElement: jsx.jsx, useEffect() {}, useMemo: fn => fn(), useRef: value => ({ current: value }), useState: value => [value, () => {}] }, 'react/jsx-runtime': jsx,
     '@expo/ui/jetpack-compose': compose, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': swift, '@expo/ui/swift-ui/modifiers': { ...modifiers, ...new Proxy({}, {}) },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'expo-router': { Stack: { Screen: 'Stack.Screen' } },
     'react-native': { View: 'View', ScrollView: 'RN.ScrollView', Platform: { Version: 18 }, PlatformColor: value => value, StyleSheet: { create: value => value, hairlineWidth: .5 }, useWindowDimensions: () => ({ width: 400, height: 800 }),
       FlatList: props => ({ type: 'FlatList', props: { ...props, children: [props.ListHeaderComponent, props.data.map(item => props.renderItem({ item }))] } }) },
-    '@expo/ui/community/pager-view': { __esModule: true, default: 'PagerView' },
-    'react-native-reanimated': { __esModule: true, default: { View: 'Animated.View' }, LinearTransition: transition, Easing: { out: value => value, cubic: 'cubic' }, useSharedValue: value => ({ value }), useAnimatedStyle: fn => fn(), withTiming: value => value },
+    '../shared/orders/OrdersWorkspace': { OrdersWorkspace: props => ({ type: 'OrdersWorkspace', props: { ...props, children: [
+      ...props.tabs.map(tab => ({ type: 'Text', props: { children: tab.name } })), ...props.tabs.map(tab => props.children(tab.id, 'PagerGesture'))] } }) },
+    '../shared/orders/OrdersList': { OrdersList: props => ({ type: 'OrdersList', props: { ...props, children: [props.children, ...props.rows.map(props.renderRow), props.footer] } }) },
+    '../shared/orders/ordersWorkspaceTypes': { ORDERS_TAB_BAR_HEIGHT: 48 },
+    'react-native-reanimated': { __esModule: true, default: { View: 'Animated.View' }, LinearTransition: transition, Easing: { out: value => value, cubic: 'cubic' }, useSharedValue: value => ({ value, set() {} }), useAnimatedStyle: fn => fn(), withTiming: value => value },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
     '../shared/localization': l10n, '../shared/themeRuntime': { themeController: { variant: 'white' } }, '../shared/navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
@@ -65,12 +68,18 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
 for (const platform of ['android', 'ios']) {
   test(`${platform} main native filter, retained pager, source rows and stock tab dispatch exact values`, () => {
     const f = fixture(platform, { reserved: true }), tree = f.render();
-    if (platform === 'android') { click(byID(tree, 'warehouse-filter'), platform); click(byID(tree, 'warehouse-main-tab-settings'), platform); click(byID(tree, 'warehouse-stock-tab-reserved'), platform); }
+    const [pager, stock] = nodes(tree, node => node.type === (platform === 'android' ? 'OrdersWorkspace' : 'TabView'));
+    if (platform === 'android') { click(byID(tree, 'warehouse-filter'), platform); pager.props.onSelect('settings'); stock.props.onSelect('reserved'); }
     else { byID(tree, 'warehouse-filter').props.onIsExpandedChange(false); byID(tree, 'warehouse-main-tabs').props.onSelectionChange('settings'); byID(tree, 'warehouse-stock-tabs').props.onSelectionChange('reserved'); }
     click(byID(tree, 'warehouse-filter-option-1'), platform); click(byID(tree, `warehouse-row-${f.row.id}`), platform);
     assert.deepEqual(f.calls.slice(0, 5), ['filter', ['page', 'settings'], ['stock', 'reserved'], ['warehouse', 'B'], ['row', f.row]]);
-    const pager = nodes(tree, node => node.type === (platform === 'android' ? 'PagerView' : 'TabView'))[0]; assert.ok(pager);
-    if (platform === 'android') { pager.props.onPageSelected({ nativeEvent: { position: 99 } }); pager.props.onPageSelected({ nativeEvent: { position: 0 } }); }
+    assert.ok(pager);
+    if (platform === 'android') {
+      assert.deepEqual(pager.props.tabs.map(tab => tab.id), ['products', 'settings']);
+      assert.deepEqual(stock.props.tabs.map(tab => tab.id), ['available', 'reserved']);
+      assert.equal(pager.props.swipeEnabled, true); assert.equal(stock.props.swipeEnabled, false);
+      pager.props.onSelect('unknown'); pager.props.onSelect('products');
+    }
     else { pager.props.onSelectionChange('unknown'); pager.props.onSelectionChange('products'); }
     assert.deepEqual(f.calls.at(-1), ['page', 'products']); assert.equal(nodes(tree, node => node.type === 'AdminWarehouseSettingsTab')[0].props.onChanged, f.model.settings.onChanged);
     assert.equal(nodes(tree, node => node.type === 'AdminCreateMenu')[0].props.actions, f.model.actions);
@@ -84,7 +93,7 @@ for (const platform of ['android', 'ios']) {
     const material = fixture(platform, { scope: 'material' }).render(); assert.equal(nodes(material, node => node.type === 'RealMaterialStates').length, 1); assert.equal(nodes(material, node => node.type === 'AdminWarehouseSettingsTab').length, 0); assert.equal(nodes(material, node => node.type === 'AdminCreateMenu').length, 0);
     if (platform === 'android') assert.ok(text(material).includes(l10n.adminText('warehouse.location_products_search', 'uz')));
     else assert.equal(nodes(material, node => node.type === 'Stack.Screen')[0].props.options.headerSearchBarOptions.placeholder, l10n.adminText('warehouse.location_products_search', 'uz'));
-    const worker = fixture(platform, { scope: 'werka' }).render(); assert.equal(nodes(worker, node => node.type === 'AdminCreateMenu' || node.type === 'TabView' || node.type === 'PagerView').length, 0);
+    const worker = fixture(platform, { scope: 'werka' }).render(); assert.equal(nodes(worker, node => node.type === 'AdminCreateMenu' || node.type === 'TabView' || node.type === 'OrdersWorkspace' && node.props.tabs.some(tab => tab.id === 'settings')).length, 0);
   });
   test(`${platform} source no-selection/loading/error and native summary retry do not expose pretend data`, async () => {
     const unselected = fixture(platform, { selected: false }); assert.ok(text(unselected.render()).includes(unselected.model.a('warehouse.no_selection')));
@@ -125,20 +134,22 @@ for (const platform of ['android', 'ios']) {
       assert.equal(nodes(header, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve').length, 0);
     }
     const missing = fixture(platform, { nativeMetrics: null }).render(), frame = nodes(missing, node => node.props.testID === 'admin-warehouse-main-body-frame')[0];
-    assert.equal(flattenStyle(frame.props.style).opacity, 0); assert.equal(frame.props.pointerEvents, 'none'); assert.ok(nodes(frame, node => node.type === (platform === 'android' ? 'PagerView' : 'TabView')).length);
+    assert.equal(flattenStyle(frame.props.style).opacity, 0); assert.equal(frame.props.pointerEvents, 'none'); assert.ok(nodes(frame, node => node.type === (platform === 'android' ? 'OrdersWorkspace' : 'TabView')).length);
     const f = fixture(platform); f.props.footer = null; const tree = f.render();
     assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0].props.style).marginBottom, 0);
     assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0].props.style).borderBottomRightRadius, undefined);
   });
 }
-test('Android main keeps the shared toolbar and search alongside the source row, segmented corners,4 body and420 pagination threshold', async () => {
+test('Android main keeps source row geometry and delegates scrolling and reset to the shared list', () => {
   const f = fixture('android'), tree = f.render(); assert.ok(nodes(tree, node => node.type === 'RoleHeaderRow').length);
   const field = byID(tree, 'warehouse-search'); field.props.onValueChange(' raw '); field.props.onFocusChanged(true); field.props.keyboardActions.onSearch(); assert.deepEqual(f.calls, [['search', ' raw '], ['focus', true], 'close-search']);
   assert.ok(field.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 56));
   const row = byID(tree, `warehouse-row-${f.row.id}`); assert.ok(row.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 61)); assert.deepEqual(row.props.shape.cornerRadii, { topStart: 18, topEnd: 18, bottomStart: 6, bottomEnd: 6 });
-  const list = nodes(tree, node => node.type === 'FlatList')[0]; assert.equal(list.props.contentContainerStyle.paddingHorizontal, 4); assert.equal(list.props.contentContainerStyle.paddingBottom, 144);
-  list.props.onScroll({ nativeEvent: { contentSize: { height: 1000 }, contentOffset: { y: 179 }, layoutMeasurement: { height: 400 } } }); assert.equal(f.calls.includes('more'), false);
-  list.props.onScroll({ nativeEvent: { contentSize: { height: 1000 }, contentOffset: { y: 180 }, layoutMeasurement: { height: 400 } } }); await Promise.resolve(); assert.equal(f.calls.at(-1), 'more');
+  const list = nodes(tree, node => node.type === 'OrdersList')[0];
+  assert.equal(list.props.topInset, 48 + 4); assert.equal(list.props.footer.props.style.height, 144);
+  assert.equal(list.props.headerFollowsContent, true); assert.equal(list.props.scrollResetKey, 2);
+  const metrics = { contentHeight: 1000, offset: 180, viewportHeight: 400 };
+  list.props.onScrollMetrics(metrics); assert.deepEqual(f.calls.at(-1), ['scroll', metrics]);
 });
 test('iOS native search Cancel retains text and suppresses UIKit trailing empty change without clearing loaded filter', () => {
   const f = fixture('ios'), options = nodes(f.render(), node => node.type === 'Stack.Screen')[0].props.options, search = options.headerSearchBarOptions;

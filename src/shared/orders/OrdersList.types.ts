@@ -19,6 +19,9 @@ export type OrdersListProps<T = never> = {
   topInset: number;
   onEndReached?: () => void;
   onScrollMetrics?: (metrics: OrdersListScrollMetrics) => void;
+  scrollEnabled?: boolean;
+  scrollResetKey?: number;
+  headerFollowsContent?: boolean;
   passthrough?: (item: ReactNode) => boolean;
   keyboardShouldPersistTaps?: 'never' | 'always' | 'handled';
 };

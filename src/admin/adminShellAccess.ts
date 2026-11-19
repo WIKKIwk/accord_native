@@ -16,6 +16,7 @@ export function adminDestinationPath(session: Session, route: string, platform: 
   if (session.token === 'test-mode-token') return null;
   if (route === appRoutes.adminHome) return `/${platform}-admin`;
   if (route === appRoutes.adminFactoryLocations) return `/${platform}-admin/factory-locations`;
+  if (route === appRoutes.adminWarehouses && platform === 'android') return '/android-admin/warehouses';
   if (route === appRoutes.adminSettings) return `/${platform}-admin/settings`;
   if (route === appRoutes.adminAdditionalSettings) return `/${platform}-admin/additional-settings`;
   if (route === appRoutes.adminItemGroupCreate) return `/${platform}-admin/item-groups`;
