@@ -149,7 +149,8 @@ test('Android source material loading uses expressive48 glyph in64 host; profile
   const tree = f.render(), glyph = nodes(tree, n => n.type === 'LoadingIndicator')[0]; assert.ok(glyph.props.modifiers.some(mod => mod.name === 'size' && mod.args[0] === 48));
   assert.ok(nodes(tree, n => n.type === 'Box' && n.props.modifiers?.some(mod => mod.name === 'size' && mod.args[0] === 64)).length);
   assert.ok(nodes(tree, n => n.type === 'CircularProgressIndicator' && n.props.modifiers?.some(mod => mod.name === 'size' && mod.args[0] === 18)).length);
-  assert.ok(nodes(tree, n => n.type === 'Surface' && n.props.color === colors.surfaceContainerLow && n.props.modifiers?.some(mod => mod.name === 'height' && mod.args[0] === 3)).length);
+  const header = nodes(tree, n => n.props.testID === 'admin-header-safe-area')[0];
+  assert.equal(nodes(header, n => n.type === 'AdminTopBar').length, 1);
 });
 test('iOS independent editors nest second sheet within first presented content in original overlay order', () => {
   const f = fixture('ios', { overlays: [{ mode: 'warehouse', id: 3 }, { mode: 'material', id: 4 }] }), tree = f.render(), sheets = nodes(tree, n => n.type === 'BottomSheet');

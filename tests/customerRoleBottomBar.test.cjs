@@ -10,7 +10,8 @@ const NavigationBarItem = Object.assign(() => null, { Icon: 'NavigationBarItem.I
 const BadgedBox = Object.assign(() => null, { Badge: 'BadgedBox.Badge' });
 const palette = { onSecondaryContainer: 'selected', onSurface: 'surface', secondaryContainer: 'indicator',
   onSurfaceVariant: 'muted', surfaceContainerLow: 'background', surfaceContainerHigh: 'raised-background' };
-const mocks = { '../../components/BaseHost.android': { BaseHost: 'Host' }, '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: palette }) }, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
+const mocks = { './roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics,
+  '../../components/BaseHost.android': { BaseHost: 'Host' }, '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: palette }) }, 'react/jsx-runtime': jsx, '@expo/ui/jetpack-compose': { Badge: 'Badge', BadgedBox, Host: 'Host', Icon: 'Icon',
   NavigationBar: 'NavigationBar', NavigationBarItem, RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => palette },
   '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => 'fillMaxWidth', height: value => ({ height: value }), testID: id => `testID:${id}` },
   react: { useEffect() {}, useRef: value => ({ current: value }) },
@@ -32,14 +33,12 @@ function renderedItem(Bar, item, active, select = () => {}) {
   const itemElement = nav.props.children[0];
   return { bar, surface, nav, item: itemElement.type(itemElement.props) };
 }
-test('compact and regular Android navigation use the same device background', () => {
-  for (const compact of [false, true]) {
-    const bar = newBar({ active: 'home', items: [], onSelect() {}, compact });
-    const surface = bar.props.children;
-    const nav = surface.props.children.props.children;
-    assert.equal(surface.props.style[1].backgroundColor, palette.surfaceContainerLow);
-    assert.equal(nav.props.containerColor, palette.surfaceContainerLow);
-  }
+test('shared Android navigation uses the device background through the system inset', () => {
+  const bar = newBar({ active: 'home', items: [], onSelect() {}, bottomInset: 9 });
+  const surface = bar.props.children;
+  const nav = surface.props.children.props.children;
+  assert.deepEqual(surface.props.style[1], { backgroundColor: palette.surfaceContainerLow, paddingBottom: 9 });
+  assert.equal(nav.props.containerColor, palette.surfaceContainerLow);
 });
 
 test('no badge keeps existing selected/unselected icons, labels, styles and interaction', () => {

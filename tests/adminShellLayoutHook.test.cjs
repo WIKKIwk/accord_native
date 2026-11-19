@@ -23,7 +23,7 @@ function fixture(t, platform = 'android', expoGo = false) {
   const runtime = load('admin/adminShellLayoutRuntime', { 'react-native': rn, '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge });
   const hook = load('admin/useAdminShellLayout', { react, expo: { isRunningInExpoGo: () => expoGo }, 'react-native': rn, 'react-native-safe-area-context': { useSafeAreaInsets: () => safe },
     './AdminShellSourceWindowLayoutContext': { useAdminShellSourceWindowLayout: () => sourceScope },
-    '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge, './adminShellLayoutPolicy': policy, './adminShellLayoutRuntime': runtime });
+    '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': bridge, '../shared/navigation/roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics, './adminShellLayoutPolicy': policy, './adminShellLayoutRuntime': runtime });
   const render = () => { cursor = 0; effects.length = 0; const view = hook.useAdminShellLayout(hasFooter, bottomDockHeight); for (const commit of [...effects]) commit(); return view; };
   const cleanup = () => { for (const slot of slots) if (slot?.kind === 'effect') { slot.cleanup?.(); slot.cleanup = null; slot.deps = null; } };
   t.after(cleanup);
@@ -37,11 +37,11 @@ test('Expo Go uses activity safe area and keyboard for the visible frame, with n
   assert.equal(preview.metrics, null);
   assert.equal(preview.metricsReady, true);
   assert.equal(preview.dockBottomInset, 24);
-  assert.equal(preview.bottomReserve, 84);
+  assert.equal(preview.bottomReserve, 104);
   f.keyboard.get('keyboardDidShow').forEach(callback => callback());
   assert.equal(f.render().bottomReserve, 0);
   f.keyboard.get('keyboardDidHide').forEach(callback => callback());
-  assert.equal(f.render().bottomReserve, 84);
+  assert.equal(f.render().bottomReserve, 104);
   f.scope({ metrics: null, thinGestureBottom: null, safeInsets: null });
   assert.equal(f.render().metricsReady, false);
   assert.equal(f.render().dockBottomInset, null);
@@ -50,7 +50,7 @@ test('Expo Go uses activity safe area and keyboard for the visible frame, with n
 test('original-window scope uses only its own metrics/insets and installs no Activity native, keyboard or navigation readers', async t => {
   const f = fixture(t), metrics = { platform: 'android', width: 300, height: 600, viewPaddingBottom: 7, systemGestureInsetsBottom: 9, viewInsetsBottom: 0 }, safeInsets = { top: 13, left: 17, right: 19 };
   f.scope({ metrics, thinGestureBottom: false, safeInsets }); const view = f.render(); await tick();
-  assert.equal(view.sourceWindow, true); assert.equal(view.metrics, metrics); assert.equal(view.safeInsets, safeInsets); assert.equal(view.bottomReserve, 69); assert.equal(view.navigationResolved, true);
+  assert.equal(view.sourceWindow, true); assert.equal(view.metrics, metrics); assert.equal(view.safeInsets, safeInsets); assert.equal(view.bottomReserve, 89); assert.equal(view.navigationResolved, true);
   assert.equal(f.reads.length, 0); assert.equal(f.navCalls(), 0); assert.equal(f.native.size, 0); assert.equal(f.foreground.size, 0); assert.equal(f.keyboard.size, 0);
   f.safe({ top: 99, left: 98, right: 97, bottom: 96 }); f.dimensions({ width: 999, height: 888, scale: 3 }); const changed = f.render(); await tick(); assert.equal(changed.safeInsets, safeInsets); assert.equal(changed.metrics, metrics); assert.equal(f.reads.length, 0);
 });
@@ -66,9 +66,9 @@ test('leaving an original-window scope creates a fresh legacy measurement lifeti
   f.setReader(async () => ({ platform: 'android', width: 800, height: 900, viewPaddingBottom: 12, systemGestureInsetsBottom: 13, viewInsetsBottom: 1 })); f.scope(null);
   assert.equal(f.render().metricsReady, false); await tick(); const fresh = f.render(); assert.equal(fresh.sourceWindow, false); assert.equal(fresh.metrics.width, 800); assert.equal(fresh.bottomReserve, 0); assert.equal(f.native.size, 1); assert.equal(f.foreground.size, 1); assert.equal(f.navCalls(), 1);
 });
-test('actual Admin frame hook waits for genuine measurements, then uses cached nav result and original source60 rather than nativebar80', async t => {
+test('actual Admin frame hook waits for genuine measurements, then uses cached nav result and shared Android dock height', async t => {
   const f = fixture(t); const initial = f.render(); assert.equal(initial.metricsReady, false); assert.equal(initial.bottomReserve, null);
-  await tick(); const measured = f.render(); assert.equal(measured.metricsReady, true); assert.equal(measured.bottomReserve, 75); assert.equal(measured.thinGestureBottom, true); assert.equal(f.navCalls(), 1);
+  await tick(); const measured = f.render(); assert.equal(measured.metricsReady, true); assert.equal(measured.bottomReserve, 95); assert.equal(measured.thinGestureBottom, true); assert.equal(f.navCalls(), 1);
   f.footer(false); assert.equal(f.render().bottomReserve, 0); f.footer(true); f.dockHeight(70); assert.equal(f.render().bottomReserve, 85); assert.equal(f.reads.length, 1); assert.equal(f.navCalls(), 1);
 });
 test('frame exposes its exact original raw snapshot for root Scaffold layout without another native measurement', async t => {
@@ -85,7 +85,7 @@ test('native/safe-area/dimension changes refresh actual metrics and cannot infer
 test('real keyboard events reread native IME; any measuredpositive zeroes reserve and hidden0 restores it', async t => {
   const f = fixture(t); f.render(); await tick(); f.render(); const native = { platform: 'android', width: 400, height: 500, viewPaddingBottom: 24, systemGestureInsetsBottom: 16, viewInsetsBottom: 300 };
   f.metrics(native); f.keyboard.get('keyboardDidShow').forEach(callback => callback({ endCoordinates: { height: 300 } })); await tick(); assert.equal(f.render().bottomReserve, 0);
-  f.metrics({ ...native, height: 800, viewInsetsBottom: 0 }); f.keyboard.get('keyboardDidHide').forEach(callback => callback()); await tick(); assert.equal(f.render().bottomReserve, 75); assert.equal(f.navCalls(), 1);
+  f.metrics({ ...native, height: 800, viewInsetsBottom: 0 }); f.keyboard.get('keyboardDidHide').forEach(callback => callback()); await tick(); assert.equal(f.render().bottomReserve, 95); assert.equal(f.navCalls(), 1);
 });
 test('iOS floating keyboard nativezero does not zero frame even though keyboard show event exists; shortestSide600 uses iPadreal safearea', async t => {
   const f = fixture(t, 'ios'), native = { platform: 'ios', width: 1024, height: 1366, viewPaddingBottom: 20, systemGestureInsetsBottom: 0, viewInsetsBottom: 0 };
@@ -102,7 +102,7 @@ test('StrictMode cleanup/reattach fences old native/keyboard/app callbacks and r
   const f = fixture(t); f.render(); await tick(); const oldNative = [...f.native], oldKeys = [...f.keyboard.values()].flatMap(values => [...values]), oldForeground = [...f.foreground];
   f.cleanup(); assert.equal(f.native.size, 0); assert.equal([...f.keyboard.values()].reduce((total, values) => total + values.size, 0), 0); assert.equal(f.foreground.size, 0);
   f.render(); await tick(); const before = f.reads.length; oldNative.forEach(callback => callback()); oldKeys.forEach(callback => callback()); oldForeground.forEach(callback => callback('active')); await tick();
-  assert.equal(f.reads.length, before); assert.equal(f.render().bottomReserve, 75); assert.equal(f.navCalls(), 1);
+  assert.equal(f.reads.length, before); assert.equal(f.render().bottomReserve, 95); assert.equal(f.navCalls(), 1);
 });
 test('retained old async geometry response cannot install after hook replay or supersede new viewport/IME reading', async t => {
   const f = fixture(t), wait = deferred(); f.setReader(() => wait.promise); f.render(); f.cleanup(); f.setReader(async () => ({ platform: 'android', width: 800, height: 400, viewPaddingBottom: 32, systemGestureInsetsBottom: 40, viewInsetsBottom: 300 }));

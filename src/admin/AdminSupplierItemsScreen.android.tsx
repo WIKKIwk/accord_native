@@ -68,8 +68,8 @@ export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
   return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
-        title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView>} /><Spacer modifiers={[height(3)]} />
+        title={<Text style={{ typography: 'titleLarge' }}>{model.title}</Text>}
+        actions={<RNHostView matchContents>{props.profileAction}</RNHostView>} />
     </Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-items-body-frame" contentPadding="default"><View style={styles.content}>
       {model.state.loading ? <BaseHost style={styles.body}><Box contentAlignment="center" modifiers={[fillMaxSize()]}><Box contentAlignment="center" modifiers={[size(64, 64)]}>
@@ -83,7 +83,7 @@ export function AdminSupplierItemsScreen(props: AdminSupplierItemsScreenProps) {
 export function AdminSupplierItemsViewScreen(props: AdminSupplierItemsPageProps) { return <AdminSupplierItemsScreen {...props} mode="view" />; }
 /** @v2 AdminSupplierItemsAddScreen */
 export function AdminSupplierItemsAddScreen(props: AdminSupplierItemsPageProps) { return <AdminSupplierItemsScreen {...props} mode="add" />; }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' },
+const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' },
   content: { flex: 1, paddingTop: 4 },
   table: { borderRadius: 24, borderWidth: 1, overflow: 'hidden' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   dialogHost: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } });

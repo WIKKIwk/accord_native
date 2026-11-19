@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { BaseHost } from '../components/BaseHost.ios';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
-import { AdminProfileAction } from './AdminProfileAction.ios';
+import { AdminProfileAction } from './AdminProfileAction';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { useAdminPartyCreate, type AdminPartyCreateProps } from './useAdminPartyCreate';
 

@@ -27,6 +27,7 @@ function loadHeader(os) {
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Platform: { OS: os }, Pressable: 'Pressable', View: 'View', StyleSheet: { create: value => value } },
     '../../components/useWorkerColors': { useWorkerColors: () => ({}) },
+    '../navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
     '../navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     './OrdersSearchInput': { OrdersSearchInput: 'OrdersSearchInput' },
     './SearchTextSync': { SearchTextSync: class { nativeChanged() {} reactChanged() { return false; } } },

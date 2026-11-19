@@ -30,10 +30,8 @@ export function WorkerPaddonList(props: WorkerPaddonListProps & { onProfile?: ()
     clip({ type: 'roundedCorner', radius: 12 }), background(colors.surfaceContainerHighest), padding(12, 8, 12, 8),
   ]}>{`${label}: ${value}`}</Text>;
   return <View style={{ flex: 1, backgroundColor: colors.background }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 10 }}>
-      <View style={{ flex: 1 }}><RoleHeader title={h.title} subtitle={p('worker.paddon.subtitle')} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: props.onBack }} /></View>
-      {props.onProfile ? <RoleHeaderButton icon="profile" label={h.t('Profil')} onPress={props.onProfile} tintColor={colors.onSurfaceVariant} /> : null}
-    </View>
+    <RoleHeader title={h.title} subtitle={p('worker.paddon.subtitle')} navigation={{ icon: 'back', label: h.t('Orqaga'), onPress: props.onBack }}
+      profileAction={props.onProfile ? <RoleHeaderButton icon="profile" label={h.t('Profil')} onPress={props.onProfile} tintColor={colors.onSurfaceVariant} /> : null} />
     {state.phase === 'loading' ? <ActivityIndicator style={{ flex: 1 }} /> : state.phase === 'error' ? <View style={{ flex: 1, padding: 20, gap: 16 }}>
       <Host matchContents><Text>{p('worker.paddon.load_failed')}</Text></Host><WorkerOrderButton label={h.t('Qayta urinish')} onPress={() => { void h.controller.load(); }} />
     </View> : <FlatList data={state.rows} keyExtractor={row => row.code} contentContainerStyle={{ paddingHorizontal: 4, paddingBottom: 112 }}

@@ -1,5 +1,6 @@
 /* global __dirname */
 const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
+const roleNavigation = require('./support/roleNavigation.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -53,21 +54,22 @@ function render(platform, account, state = baseState, navigation = 'menu', isRou
     '../shared/localization': localization, '../shared/localization/runtime': { localeController: { locale: 'en', addListener() {} } },
     './adminHomeModel': model, './adminHomeSymbols': symbols, './useAdminHome': { useAdminHome: () => ({ state, controller }) } };
   const theme = mocks['../components/useBaseTheme'], baseHost = mocks['../components/BaseHost.android'];
-  const top = load('shared/navigation/RoleTopBar.android.tsx', {
-    ...mocks, '../../components/useBaseTheme': theme,
+  const row = roleNavigation.load('RoleHeaderRow.tsx', {
+    'react-native': native, 'expo-symbols': mocks['expo-symbols'],
+    './roleNavigationMetrics': roleNavigation.metrics, '../../components/useWorkerColors': {},
   });
   const header = load('shared/navigation/RoleHeader.android.tsx', {
     ...mocks, '../../components/useBaseTheme': theme, '../../components/BaseHost.android': baseHost,
-    './RoleTopBar.android': top,
+    './RoleHeaderButton': mocks['../shared/navigation/RoleHeaderButton'], './RoleHeaderRow': row,
   });
   const adminHeader = load('admin/AdminTopBar.android.tsx', {
-    ...mocks, '../shared/navigation/RoleHeader.android': header, '../shared/navigation/RoleTopBar.android': top,
+    ...mocks, '../shared/navigation/RoleHeader.android': header,
   });
   mocks['./AdminTopBar.android'] = adminHeader;
   const expand = node => {
     if (Array.isArray(node)) return node.map(expand);
     if (!node || typeof node !== 'object') return node;
-    if ([adminHeader.AdminScreenHeader, header.RoleHeader, top.RoleTopBar].includes(node.type)) return expand(node.type(node.props));
+    if ([adminHeader.AdminScreenHeader, header.RoleHeader, row.RoleHeaderRow].includes(node.type)) return expand(node.type(node.props));
     return { ...node, props: { ...node.props, children: expand(node.props.children) } };
   };
   const Screen = load(`admin/AdminHomeScreen.${platform}.tsx`, mocks).AdminHomeScreen;
@@ -134,14 +136,13 @@ for (const platform of ['ios', 'android']) {
     for (const icon of ['menu', 'back']) {
       const { tree, calls } = render(platform, admin, baseState, icon);
       const leading = platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft() :
-        nodes(tree, n => n.type === 'IconButton')[0];
-      if (platform === 'ios') assert.equal(leading.props.icon, icon);
-      else assert.deepEqual(nodes(leading, n => n.type === 'SymbolView')[0].props.name, { android: icon === 'back' ? 'arrow_back' : 'menu' });
-      (platform === 'ios' ? leading.props.onPress : leading.props.onClick)(); assert.deepEqual(calls, ['navigation']);
+        nodes(tree, n => n.type === 'RoleHeaderButton')[0];
+      assert.equal(leading.props.icon, icon);
+      leading.props.onPress(); assert.deepEqual(calls, ['navigation']);
     }
     const { tree } = render(platform, admin, baseState, null);
     assert.equal(platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.headerLeft :
-      nodes(tree, n => n.type === 'IconButton')[0], undefined);
+      nodes(tree, n => n.type === 'RoleHeaderButton')[0], undefined);
   });
 }
 test('Android Expo Go opens admin home without mounting the unavailable TopAppBar', () => {
@@ -149,11 +150,10 @@ test('Android Expo Go opens admin home without mounting the unavailable TopAppBa
   const { tree, calls } = render('android', admin, baseState, 'menu', () => true, profile, true);
   const header = nodes(tree, n => n.props.testID === 'admin-home-header-safe-area')[0];
   assert.equal(nodes(header, n => n.type === topBar || n.type === topBar.Title).length, 0);
-  assert.equal(header.props.style.backgroundColor, 'bg');
-  assert.equal(nodes(header, n => n.type === 'Surface')[0].props.color, 'transparent');
-  assert.equal(nodes(header, n => n.type === 'Row')[0].props.modifiers.find(m => m.name === 'height').args[0], 60);
+  assert.equal(tree.props.style[1].backgroundColor, 'bg');
+  assert.equal(header.props.children.props.style.minHeight, 70);
   assert.equal(nodes(header, n => n.type === 'ExistingProfile').length, 1);
-  nodes(header, n => n.type === 'IconButton')[0].props.onClick();
+  nodes(header, n => n.type === 'RoleHeaderButton')[0].props.onPress();
   assert.deepEqual(calls, ['navigation']);
   assert.equal(nodes(tree, n => n.props.testID === 'admin-home-body-frame')[0].props.hasFooter, true);
 });
@@ -251,16 +251,16 @@ for (const platform of ['ios', 'android']) {
     assert.equal(nodes(missing, n => n.type === 'RealProfileAction').length, 0);
   });
 }
-test('Android Home reuses the source native toolbar, scoped text, expressive loading and side safe area', () => {
+test('Android Home uses the shared header row with a native title, loading feedback and side safe area', () => {
   const { tree } = render('android', admin, { ...baseState, loadingSummary: true, loadedSummary: false });
-  const header = nodes(tree, n => n.type === 'Surface' && n.props.color === 'transparent')[0];
-  const row = nodes(header, n => n.type === 'Row')[0];
-  assert.deepEqual(row.props.modifiers.find(m => m.name === 'height').args, [60]);
+  const safe = nodes(tree, n => n.type === 'SafeAreaView')[0];
+  const header = safe.props.children;
+  assert.equal(header.props.style.minHeight, 70);
+  assert.equal(header.props.style.paddingVertical, 6);
   const title = nodes(header, n => n.type === 'ComposeText')[0];
-  assert.equal(title.props.style.fontSize, 24); assert.equal(title.props.style.fontWeight, '800');
-  const safe = nodes(tree, n => n.type === 'SafeAreaView')[0]; assert.deepEqual(safe.props.edges, ['left', 'right']);
-  assert.equal(nodes(safe, n => n === header).length, 1);
-  assert.equal(nodes(safe, n => n.props.style?.height === 3).length, 1);
+  assert.equal(title.props.style.typography, 'titleLarge');
+  assert.deepEqual(safe.props.edges, ['left', 'right']);
+  assert.equal(tree.props.style[1].paddingTop, 24);
   const frame = nodes(tree, n => n.type === 'AdminShellBodyFrame')[0];
   assert.equal(nodes(frame, n => n.type === 'AdminLoadingIndicator').length, 1);
   assert.equal(nodes(frame, n => n.type === 'ActivityIndicator').length, 0);

@@ -133,8 +133,8 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
   return <View style={[styles.screen, { backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><View style={{ paddingTop: insets.top, backgroundColor: chromeBackground }}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-supplier-detail-back')]}><Icon name="arrow_back" color={colors.onSurface} /></IconButton>}
-        title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('profile.title')}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profileAction}>{props.profileAction}</View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
+        title={<Text style={{ typography: 'titleLarge' }}>{model.a('profile.title')}</Text>}
+        actions={<RNHostView matchContents>{props.profileAction}</RNHostView>} />
     </Column></BaseHost></View></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-supplier-detail-body-frame">
     {props.bodySafeAreaBottom === undefined ? body : <View testID="admin-supplier-detail-inner-safe-area" pointerEvents={props.bodySafeAreaBottom === null ? 'none' : 'auto'}
@@ -148,6 +148,6 @@ export function AdminSupplierDetailScreen(props: AdminSupplierDetailScreenProps)
 const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, content: { padding: 4, paddingBottom: 116 },
   card: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomLeftRadius: 6, borderBottomRightRadius: 6, overflow: 'hidden', elevation: 2, shadowColor: '#000000', shadowOpacity: .16, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
   profileHeader: { height: 204 }, banner: { position: 'absolute', left: 0, right: 0, top: 0, height: 112, backgroundColor: '#000000' }, status: { position: 'absolute', right: 14, top: 14 },
-  avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 }, identity: { position: 'absolute', left: 124, right: 16, top: 140 }, profileAction: { width: 58, height: 60, justifyContent: 'center' },
+  avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 }, identity: { position: 'absolute', left: 124, right: 16, top: 140 },
   retry: { paddingLeft: 20, paddingTop: 4, paddingRight: 20, paddingBottom: 24, alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, notice: { position: 'absolute', left: 16, right: 16 },
   dialogHost: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } });

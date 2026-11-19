@@ -8,7 +8,7 @@ import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
-import { AdminProfileAction } from './AdminProfileAction.android';
+import { AdminProfileAction } from './AdminProfileAction';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminOutlinedTextField as OutlinedTextField } from './AdminTextFields.android';
 import { AdminText as Text } from './AdminTypography.android';
@@ -86,8 +86,8 @@ export function AdminUserCreateScreen(props: AdminUserCreateAndroidScreenProps) 
   return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
     <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel }), testID('admin-user-create-back')]}><UserCreateIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
-        title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }} maxLines={1}>{model.a('user.create_title')}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profile}><AdminProfileAction session={props.session} witness={props.witness} isCurrent={model.current} canInteract={model.interactive} onProfile={props.onProfile} /></View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
+        title={<Text style={{ typography: 'titleLarge' }} maxLines={1}>{model.a('user.create_title')}</Text>}
+        actions={<RNHostView matchContents><AdminProfileAction session={props.session} witness={props.witness} isCurrent={model.current} canInteract={model.interactive} onProfile={props.onProfile} /></RNHostView>} />
     </Column></BaseHost></SafeAreaView>
     {model.notice ? <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={model.state.notice?.tone === 'error' ? '#FCE8E6' : '#E6F4EA'} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), padding(16, 12, 16, 12)]}><Text color={model.state.notice?.tone === 'error' ? '#5F1412' : '#173A24'} style={{ typography: 'bodyMedium' }}>{model.notice}</Text></Column></Surface></BaseHost></SafeAreaView> : null}
     <AdminShellBodyFrame hasFooter={model.footer != null} testID="admin-user-create-body-frame"><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>
@@ -95,4 +95,4 @@ export function AdminUserCreateScreen(props: AdminUserCreateAndroidScreenProps) 
     </ScrollView></AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{model.footer}</View><AdminUserCreateOverlays model={model} windowObserver={props.windowObserver} />
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' }, page: { paddingHorizontal: 4, paddingTop: 4 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' }, page: { paddingHorizontal: 4, paddingTop: 4 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

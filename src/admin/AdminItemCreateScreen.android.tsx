@@ -27,7 +27,7 @@ function OwnedScreen({ scaffold, footerPlacement, ...props }: AdminItemCreateAnd
   if (!model.current() || !model.state.form.valid || !model.state.list.valid) return null;
   return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top ?? undefined }]} testID="admin-item-create-screen">
     <Stack.Screen options={{ headerShown: false }} />
-    <AdminShellInlineSafeArea testID="admin-item-create-header-safe-area"><AdminItemCreateHeader model={model} props={props} /><View style={styles.headerBottom} /></AdminShellInlineSafeArea>
+    <AdminShellInlineSafeArea testID="admin-item-create-header-safe-area"><AdminItemCreateHeader model={model} props={props} /></AdminShellInlineSafeArea>
     <AdminTopNoticeHost scaffold={scaffold} inlineInsets={insets.inlineInsets} dismissLabel={props.topNoticeDismissLabel} />
     <AdminItemCreateScaffold>{bottomPadding => <AdminItemCreateList model={model} bottomPadding={bottomPadding} />}</AdminItemCreateScaffold>
     {footerPlacement === 'screen' ? <View pointerEvents="box-none" style={styles.footer}>{props.footer}</View> : null}<AdminItemCreatePrimaryAction model={model} render={props.renderPrimaryAction} />
@@ -40,4 +40,4 @@ export function AdminItemCreateScreen(props: AdminItemCreateAndroidScreenProps) 
   return <AdminItemCreateSourceScene screen={props} validate={validatePresentation} render={(screen, scaffold, footerPlacement) => <OwnedScreen {...screen} scaffold={scaffold} footerPlacement={footerPlacement} />} />;
 }
 const validatePresentation = (props: AdminItemCreateAndroidScreenProps) => requireAdminItemCreateAndroidPresentation(props.dialogPortal, props.windowObserver);
-const styles = StyleSheet.create({ screen: { flex: 1 }, headerBottom: { height: 3 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

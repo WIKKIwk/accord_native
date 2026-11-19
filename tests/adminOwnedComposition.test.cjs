@@ -56,7 +56,7 @@ for (const platform of ['android', 'ios']) {
       '../shared/appRoutes': s.routes, '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, './adminActivityBackLabel': { adminActivityBackLabel: () => 'Back' },
       './AdminOwnedBackContext': { AdminOwnedBackProvider: 'ActualBackProvider' }, [`./AdminOwnedDock.${platform}`]: { AdminOwnedDock: 'ActualDock' },
       [`./AdminOwnedRouteContent.${platform}`]: { AdminOwnedRouteContent: 'ActualContent' }, [`./AdminOwnedRouteNotice.${platform}`]: { AdminOwnedRouteNotice: 'ActualNotice' },
-      [`./AdminProfileAction.${platform}`]: { AdminProfileAction: 'ActualProfileAction' }, './AdminShellContext': { useAdminShell: () => shell },
+      './AdminProfileAction': { AdminProfileAction: 'ActualProfileAction' }, './AdminShellContext': { useAdminShell: () => shell },
       './useAdminOwnedPage': { useAdminOwnedPage: () => page }, './useAdminOwnedNotice': { useAdminOwnedNotice: () => ({ show() {}, notice: null }) } };
     const { AdminOwnedRoutePage } = s.compile(path.resolve(__dirname, `../src/admin/AdminOwnedRoutePage.${platform}.tsx`), mocks);
     assert.equal(AdminOwnedRoutePage().props.href, `/${platform}-admin`); ready = true; assert.equal(AdminOwnedRoutePage().type, 'Redirect');
@@ -82,7 +82,7 @@ for (const platform of ['android', 'ios']) {
     const { AdminUsersPage } = s.compile(path.resolve(__dirname, `../src/admin/AdminUsersPage.${platform}.tsx`), {
       'expo-router': { Redirect: 'Redirect' }, react: { useSyncExternalStore: (_subscribe, get) => get() }, 'react-native': { View: 'View', StyleSheet: { create: value => value } },
       '../shared/localization/runtime': { localeController: { locale: 'uz', addListener() {} } }, './adminActivityBackLabel': { adminActivityBackLabel: () => 'Back' },
-      [`./AdminOwnedDock.${platform}`]: { AdminOwnedDock: 'ActualDock' }, [`./AdminProfileAction.${platform}`]: { AdminProfileAction: 'ActualProfileAction' },
+      [`./AdminOwnedDock.${platform}`]: { AdminOwnedDock: 'ActualDock' }, './AdminProfileAction': { AdminProfileAction: 'ActualProfileAction' },
       './AdminShellContext': { useAdminShell: () => shell }, [`./AdminUsersRoute.${platform}`]: { AdminUsersRoute: 'ActualUsersRoute' }, './useAdminUsersPage': { useAdminUsersPage: () => page },
     });
     assert.equal(AdminUsersPage().props.href, `/${platform}-admin`); assert.equal(primary.length, 0); ready = true;

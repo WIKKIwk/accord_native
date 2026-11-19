@@ -1,5 +1,4 @@
 import { Redirect, usePathname } from 'expo-router';
-import { NativeTabs } from 'expo-router/native-tabs';
 import { useCallback, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { isSessionWitnessCurrent, logout, sessionWitnessVersion, subscribeSessionWitness } from '../auth';
@@ -8,6 +7,7 @@ import { appRoutes } from '../shared/appRoutes';
 import { useChatUnreadCount } from '../shared/chat/useChatUnreadCount';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
+import { RoleTabs, roleTabIcons } from '../shared/navigation/RoleTabs.ios';
 import { AdminDrawer } from './AdminDrawer';
 import { AdminTestTokenNotice } from './AdminTestTokenNotice';
 import { AdminShellProvider, useAdminShell } from './AdminShellContext';
@@ -25,15 +25,11 @@ function AdminTabs() {
   const pathname = usePathname(), ownedDock = pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/');
   const showActivity = !!shell.activityBinding && !!shell.destination(appRoutes.adminActivity, 'ios');
   const showChat = !!shell.destination(appRoutes.chat, 'ios');
-  return <NativeTabs hidden={ownedDock}>
-    <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
-      <NativeTabs.Trigger.Label>{localizedGetter('adminHomeNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-    <NativeTabs.Trigger name="activity" hidden={!showActivity}><NativeTabs.Trigger.Icon sf={{ default: 'clock.arrow.circlepath', selected: 'clock.arrow.circlepath' }} />
-      <NativeTabs.Trigger.Label>{localizedGetter('adminActivityNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-    <NativeTabs.Trigger name="chat" hidden={!showChat}><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
-      <NativeTabs.Trigger.Label>{adminDockChatDestination.label}</NativeTabs.Trigger.Label>
-      <NativeTabs.Trigger.Badge hidden={unread <= 0}>{''}</NativeTabs.Trigger.Badge></NativeTabs.Trigger>
-  </NativeTabs>;
+  return <RoleTabs hidden={ownedDock} tabs={[
+    { name: '(home)', label: localizedGetter('adminHomeNavTitle', locale), icon: roleTabIcons.home },
+    { name: 'activity', label: localizedGetter('adminActivityNavTitle', locale), icon: 'clock.arrow.circlepath', hidden: !showActivity },
+    { name: 'chat', label: adminDockChatDestination.label, icon: roleTabIcons.chat, hidden: !showChat, showBadge: unread > 0 },
+  ]} />;
 }
 function AdminSessionGate() {
   const admission = useAdminShellSession(), session = admission?.session, witness = admission?.witness;

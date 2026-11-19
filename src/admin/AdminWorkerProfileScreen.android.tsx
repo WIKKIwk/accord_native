@@ -34,8 +34,8 @@ export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
   return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: props.backLabel })]}><RNHostView matchContents><SymbolView name={{ android: 'arrow_back' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton>}
-        title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</Text>}
-        actions={<RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView>} /><Spacer modifiers={[height(3)]} />
+        title={<Text style={{ typography: 'titleLarge' }}>{model.title}</Text>}
+        actions={<RNHostView matchContents>{props.profileAction}</RNHostView>} />
     </Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-profile-body-frame">
       {model.state.phase === 'content' ? <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={() => { void model.reload(); }} tintColor={colors.primary} colors={[colors.primary]} />}>
@@ -46,6 +46,6 @@ export function AdminWorkerProfileScreen(props: AdminWorkerProfileScreenProps) {
     </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{props.footer}</View>
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' },
+const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' },
   content: { paddingHorizontal: 8, paddingTop: 8, paddingBottom: 116 }, card: { width: '100%', marginBottom: 8 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

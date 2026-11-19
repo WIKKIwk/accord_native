@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { AdminProfileAction } from './AdminProfileAction.android';
+import { AdminProfileAction } from './AdminProfileAction';
 import { AdminWarehouseReservedOrderDetails } from './AdminWarehouseItemRollsOrderDetails.android';
 import { AdminWarehouseItemRollsSheet } from './AdminWarehouseItemRollsSheet.android';
 import { AdminWarehouseMainScreen } from './AdminWarehouseMainScreen.android';

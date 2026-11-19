@@ -79,10 +79,12 @@ for (const phase of ['unavailable', 'error', 'empty']) test(`native combo ${phas
   if (phase === 'empty') assert.match(text(tree), /calculate\.combo_products_empty/); else { assert.match(text(tree), /calculate\.combo_load_failed/); const button = nodes(tree, node => node.type === 'TextButton').find(node => text(node).includes('calculate.combo_load_failed')); assert.equal(button.props.enabled, phase !== 'unavailable'); if (phase === 'unavailable') assert.equal(f.calls.some(value => value[0] === 'combo'), false); }
   f.cleanup(); await s.flush();
 });
-test('Android Source controls retain56 minimum height/r20, source header24w800/60+3 and card geometry', async () => {
+test('Android item detail uses the shared title style and preserves its action and card geometry', async () => {
   const f = v.fixture('android'); f.renderRead(); await s.flush(); const tree = f.renderRead();
   for (const id of ['admin-item-detail-edit', 'admin-item-detail-change-group', 'admin-item-detail-delete']) { const button = byID(tree, id); assert.ok(button.props.modifiers.some(modifier => modifier.type === 'defaultMinSize' && modifier.args[0].minHeight === 56)); assert.deepEqual(button.props.shape.value.cornerRadii, { topStart: 20, topEnd: 20, bottomStart: 20, bottomEnd: 20 }); }
-  const top = nodes(tree, node => node.type === 'AdminTopBar')[0]; assert.ok(top.props.title != null); assert.ok(nodes(tree, node => node.type === 'Text' && node.props.style?.fontSize === 24 && node.props.style?.fontWeight === '800').length); assert.ok(nodes(tree, node => node.type === 'Column' && node.props.modifiers?.some(value => value.type === 'padding' && JSON.stringify(value.args) === '[18,18,18,18]')).length); f.cleanup(); await s.flush();
+  const top = nodes(tree, node => node.type === 'AdminTopBar')[0];
+  assert.equal(top.props.title.props.style.typography, 'titleLarge');
+  assert.ok(nodes(tree, node => node.type === 'Column' && node.props.modifiers?.some(value => value.type === 'padding' && JSON.stringify(value.args) === '[18,18,18,18]')).length); f.cleanup(); await s.flush();
 });
 test('original scope/epoch invalidation and replaced interaction guard reject queued body/header events and old pending reads', async () => {
   const pending = s.deferred(), f = v.fixture('android', { read: () => pending.promise }); f.renderOwner(); f.scope('new-permission-scope'); f.notify(); pending.resolve(s.detail()); await s.flush(); let model = f.renderOwner(); assert.equal(model.state.phase, 'invalidated'); model.dispatch('edit'); assert.equal(model.controller.getSnapshot().dialogs.length, 0); f.cleanup(); await s.flush();

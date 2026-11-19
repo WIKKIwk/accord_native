@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { localeController } from '../shared/localization/runtime';
 import { adminActivityBackLabel } from './adminActivityBackLabel';
 import { AdminOwnedDock } from './AdminOwnedDock.android';
-import { AdminProfileAction } from './AdminProfileAction.android';
+import { AdminProfileAction } from './AdminProfileAction';
 import { useAdminShell } from './AdminShellContext';
 import { AdminUsersRoute } from './AdminUsersRoute.android';
 import { useAdminUsersPage } from './useAdminUsersPage';

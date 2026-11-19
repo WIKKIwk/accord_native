@@ -26,12 +26,12 @@ export function useAccountSwitcherLauncher(onProfile?: () => void) {
     sheet.open(<AccountSwitcher onEmpty={sheet.close}
       onSwitched={(session: Session) => finish(() => goHome(session))}
       onAddAccount={() => finish(() => router.push('/add-account'))} />, {
-      compact: true, fitContent: true, dismissible: true,
+      fitContent: true, heightFraction: 0.65, dismissible: true,
       onDismiss: () => { const action = afterDismiss.current; afterDismiss.current = null; action?.(); },
     });
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
   };
   return { open, hint: localizedGetter('accountSwitchHint', locale),
-    // SwiftUI may deliver its Button action when a long press is released.
+    // Keep a short tap from opening a second screen while the chooser is active.
     onPress: () => { if (!sheet.isOpen()) onProfile?.(); } };
 }

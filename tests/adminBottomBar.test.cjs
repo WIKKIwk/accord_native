@@ -50,10 +50,10 @@ function fixture({ active = 'home', pathname = '/android-admin', focused = true,
     stack: () => state.routes.slice(0, state.index + 1).map(route => route.name), flush: () => frames.splice(0).forEach(fn => fn()),
     removeActivity: () => { activityEnabled = false; }, unmount: () => cleanups.forEach(fn => fn()) };
 }
-test('Admin uses the compact shared native dock and marks the allowed Chat destination unread', () => {
+test('Admin uses the shared native dock and marks the allowed Chat destination unread', () => {
   const home = fixture({ chat: true, unread: 2 });
   assert.equal(home.tree.type, 'RoleBottomBar');
-  assert.equal(home.tree.props.compact, true);
+  assert.equal(home.tree.props.bottomInset, 24);
   assert.deepEqual(home.tree.props.items.at(-1), { id: 'shared-chat', label: 'Chat', icon: 'chat_bubble', testID: 'shared-chat', showBadge: true });
   home.tree.props.onSelect('shared-chat'); home.flush();
   assert.deepEqual(home.stack(), ['index', 'chat']);

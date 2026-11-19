@@ -40,6 +40,6 @@ export function AdminBottomBar({ active }: { active: AdminDockTab | null }) {
       adminDockSelection(destination, active, context.currentPath() === homePath ? home : null, home) !== 'replaceRoot') return;
     adminRootNavigation.schedule(destination.routeName, context);
   };
-  return <RoleBottomBar compact active={destinations.find(item => item.tab === active)?.id ?? ''}
+  return <RoleBottomBar active={destinations.find(item => item.tab === active)?.id ?? ''}
     items={adminAndroidDockItems(destinations, unread > 0)} onSelect={select} bottomInset={layout.dockBottomInset ?? insets.bottom} />;
 }

@@ -154,11 +154,11 @@ test('a witness transition invalidates the old shell and never recaptures the st
   assert.equal(updates.at(-1), undefined); valid = true; listener(); assert.equal(captures, 1); cleanup();
 });
 function layout(platform, value, active = true, os = platform, pathname = '/ios-admin') {
-  const Trigger = Object.assign(function Trigger() {}, { Icon: 'NativeTabs.Icon', Label: 'NativeTabs.Label' });
+  const Trigger = Object.assign(function Trigger() {}, { Icon: 'NativeTabs.Icon', Label: 'NativeTabs.Label', Badge: 'NativeTabs.Badge' });
   const tabs = Object.assign(function NativeTabs() {}, { Trigger });
   const admission = value == null ? value : { session: value, witness: { session: value } };
   const mocks = { react: { useCallback: fn => fn, useSyncExternalStore: (_subscribe, get) => get() },
-    'expo-router': { Redirect: 'Redirect', Stack: 'Stack', usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs: tabs },
+    'expo-router': { Redirect: 'Redirect', Stack: 'Stack', usePathname: () => pathname }, '../shared/navigation/RoleTabs.ios': require('./support/roleNavigation.cjs').tabs(tabs),
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: os }, View: 'View' },
     '../auth': { isSessionWitnessCurrent: () => active, logout: async () => {}, sessionWitnessVersion: () => 1, subscribeSessionWitness: () => () => {} },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../shared/appRoutes': routes,
@@ -178,7 +178,7 @@ test('iOS native Home/Activity roots stay stable while genuine pushed Users/owne
   for (const pathname of ['/ios-admin', '/ios-admin/users', '/ios-admin/owned/17', '/ios-admin/settings', '/ios-admin/activity']) {
     const tree = layout('ios', admin, true, 'ios', pathname), owner = find(tree, node => node.type === 'AdminOwnedNavigationProvider');
     assert.ok(owner); assert.equal(owner.props.providers, undefined, 'no dummy source-primary provider is injected');
-    const tabsOwner = find(tree, node => typeof node.type === 'function' && node.type.name === 'AdminTabs'), tabs = tabsOwner.type();
+    const tabsOwner = find(tree, node => typeof node.type === 'function' && node.type.name === 'AdminTabs'), sharedTabs = tabsOwner.type(), tabs = sharedTabs.type(sharedTabs.props);
     assert.equal(tabs.props.hidden, pathname === '/ios-admin/users' || pathname.startsWith('/ios-admin/owned/'));
     assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', 'activity', 'chat']);
     assert.equal(tabs.props.backgroundColor, undefined); assert.equal(tabs.props.tintColor, undefined);

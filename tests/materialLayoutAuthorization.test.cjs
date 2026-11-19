@@ -24,7 +24,7 @@ function setup(platform, initial) {
   const mocks = { 'react/jsx-runtime': jsx, react: { useSyncExternalStore: (_s, read) => read() },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}) },
     'expo-router': { Redirect: 'Redirect', Stack: 'Stack', router: { navigate() {} }, usePathname: () => `/${platform}-material` },
-    'expo-router/native-tabs': { NativeTabs },
+    '../shared/navigation/RoleTabs.ios': require('./support/roleNavigation.cjs').tabs(NativeTabs),
     'react-native': { ActivityIndicator: 'ActivityIndicator', Platform: { OS: platform }, Text: 'Text', View: 'View' },
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 0 }) },
     '../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' },

@@ -76,6 +76,7 @@ for (const platform of ['android', 'ios']) test(`${platform} worker FAB exposes 
 test('shared navigation fills only the selected Google icon and keeps all destinations clickable', () => {
   const calls = [], item = Object.assign(function NavigationItem() {}, { Icon: 'ItemIcon', Label: 'ItemLabel' });
   const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+    './roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics,
     '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui/jetpack-compose': { Host: 'Host', Icon: 'Icon', NavigationBar: 'NavigationBar', NavigationBarItem: item,
       RNHostView: 'RNHostView', Text: 'Text', useMaterialColors: () => ({ onSecondaryContainer: 'selected', onSurfaceVariant: 'outline' }) },
@@ -104,6 +105,7 @@ test('shared navigation fills only the selected Google icon and keeps all destin
 
 test('navigation can stay mounted in place behind the keyboard without changing the default', () => {
   const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+    './roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics,
     '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
     '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
@@ -124,6 +126,7 @@ test('the dock behind the keyboard ignores Compose height inflated by the IME', 
     const refs = [], shared = [], effects = [], listeners = {};
     let refIndex = 0, sharedIndex = 0, keyboard = startOpen ? { height: 286.9 } : undefined;
     const { RoleBottomBar } = load('shared/navigation/RoleBottomBar.android.tsx', {
+      './roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics,
       '../../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({}), NavigationBarItem: {} },
       '@expo/ui/jetpack-compose/modifiers': { fillMaxWidth: () => ({}) }, 'expo-symbols': {},
@@ -157,6 +160,7 @@ test('the dock behind the keyboard ignores Compose height inflated by the IME', 
 test('shared header button keeps the worker menu icon and callback', () => {
   const calls = [];
   const { RoleHeaderButton } = load('shared/navigation/RoleHeaderButton.tsx', {
+    './roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics,
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Pressable: 'Pressable', StyleSheet: { create: styles => styles } },
     '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: onPress => ({ onPress }) },

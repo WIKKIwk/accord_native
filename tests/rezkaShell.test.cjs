@@ -110,7 +110,7 @@ test('iOS shell uses native tabs, real worker settings route and refuses invalid
   const NativeTabs = Object.assign(function NativeTabs() {}, { Trigger });
   const mocks = { 'react/jsx-runtime': jsx, react, 'expo-router': { DarkTheme: {}, DefaultTheme: {}, Redirect: 'Redirect', ThemeProvider: 'ThemeProvider',
       usePathname: () => '/ios-rezka', router: { navigate: value => calls.push(['navigate', value]), replace: value => calls.push(['replace', value]) } },
-    'expo-router/native-tabs': { NativeTabs }, 'react-native': { Platform: { OS: 'ios' }, ActivityIndicator: 'ActivityIndicator', View: 'View', useColorScheme: () => 'light' },
+    '../../shared/navigation/RoleTabs.ios': require('./support/roleNavigation.cjs').tabs(NativeTabs), 'react-native': { Platform: { OS: 'ios' }, ActivityIndicator: 'ActivityIndicator', View: 'View', useColorScheme: () => 'light' },
     '../../components/WorkerSecurity': { WorkerSecurityProvider: 'WorkerSecurityProvider' }, '../../shared/localization': localization,
     '../../shared/navigation/RoleDrawer': { RoleDrawer: 'RoleDrawer' }, '../../shared/navigation/roleDrawerLogout': { confirmRoleDrawerLogout: fn => { logoutDialog = fn; } },
     '../../rezka/RezkaShellContext': { RezkaShellContext: { Provider: 'Provider' } }, '../../rezka/RezkaTestSessionUnavailable': { RezkaTestSessionUnavailable: 'TestUnavailable' },

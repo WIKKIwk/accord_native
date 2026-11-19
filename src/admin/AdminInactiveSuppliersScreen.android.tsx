@@ -81,8 +81,8 @@ export function AdminInactiveSuppliersScreen(props: AdminInactiveSuppliersScreen
       <AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label }), testID('admin-inactive-suppliers-back')]}>
           <RNHostView matchContents><SymbolView name={{ android: props.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView>
         </IconButton>}
-        title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('users.inactive_title')}</Text>}
-        actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} />
+        title={<Text style={{ typography: 'titleLarge' }}>{model.a('users.inactive_title')}</Text>}
+        actions={props.profileAction ? <RNHostView matchContents><>{props.profileAction}</></RNHostView> : null} />
     </Column></BaseHost></SafeAreaView>
     {props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-inactive-suppliers-body-frame" contentPadding="default">
       {state.phase === 'loading' ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :
@@ -105,4 +105,4 @@ const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, fu
   card: { padding: 18, borderRadius: 24 }, code: { fontSize: 16, fontWeight: '500', includeFontPadding: false },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, list: { paddingTop: 4 }, separator: { height: 12 },
   retry: { flex: 1, paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' },
-  profile: { width: 58, height: 60, justifyContent: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

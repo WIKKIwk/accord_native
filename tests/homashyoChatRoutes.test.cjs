@@ -55,13 +55,17 @@ test('iOS dock keeps V2 order and hides only inside Chat children until their cl
   const Trigger = Object.assign(() => {}, { Icon: 'Icon', Label: 'Label', Badge: 'Badge' });
   const NativeTabs = Object.assign(() => {}, { Trigger });
   const Layout = load('app/ios-homashyo/_layout.tsx', {
-    'expo-router': { usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs },
+    'expo-router': { usePathname: () => pathname }, '../../shared/navigation/RoleTabs.ios': require('./support/roleNavigation.cjs').tabs(NativeTabs),
     '../../homashyo/RawSplitContext': { useRawSplitContext: () => state },
     '../../homashyo/RawSplitDrawer': { RawSplitDrawer: 'Drawer' },
     '../../homashyo/RawSplitSessionGate': { RawSplitSessionGate: 'Gate' },
     '../../preparation/PreparationUI': { usePreparationText: () => value => value },
   }).default;
-  const render = Layout().props.children.props.children.type;
+  const render = () => {
+    const contents = Layout().props.children.props.children;
+    const sharedTabs = contents.type(contents.props);
+    return sharedTabs.type(sharedTabs.props);
+  };
   const badge = tree => tree.props.children.at(-1).props.children.find(child => child.type === 'Badge');
   let tabs = render(); assert.equal(tabs.props.hidden, false);
   assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', 'profile', 'chat']);

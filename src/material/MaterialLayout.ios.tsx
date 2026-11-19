@@ -1,5 +1,5 @@
 import { Redirect, usePathname } from 'expo-router';
-import { NativeTabs } from 'expo-router/native-tabs';
+import { RoleTabs, roleTabIcons } from '../shared/navigation/RoleTabs.ios';
 import { useSyncExternalStore } from 'react';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { WorkerSecurityProvider } from '../components/WorkerSecurity';
@@ -32,20 +32,11 @@ export function MaterialLayout() {
 /** @v2 MaterialTaminotchiDock */
 function MaterialTabs({ current }: { current: string }) {
   const { session, unread, chatClosing } = useMaterialContext(), pathname = usePathname();
-  return <NativeTabs hidden={pathname.startsWith('/ios-material/chat/') && !chatClosing} disableHiddenAnimation>
-      <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <NativeTabs.Trigger.Label>{localizedGetter('homeNavTitle', current)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="receipt" hidden={!canOpenRoute(session, appRoutes.gscaleMode)}>
-        <NativeTabs.Trigger.Icon sf={{ default: 'scalemass', selected: 'scalemass.fill' }} />
-        <NativeTabs.Trigger.Label>Kirim</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="tasks" hidden={!canOpenRoute(session, appRoutes.materialTasks)}>
-        <NativeTabs.Trigger.Icon sf={{ default: 'checklist', selected: 'checklist' }} />
-        <NativeTabs.Trigger.Label>Vazifalar</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile"><NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
-        <NativeTabs.Trigger.Label>{localizedGetter('profileTitle', current)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chat"><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
-        <NativeTabs.Trigger.Label>Chat</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Badge hidden={unread <= 0}>{''}</NativeTabs.Trigger.Badge>
-      </NativeTabs.Trigger>
-    </NativeTabs>;
+  return <RoleTabs hidden={pathname.startsWith('/ios-material/chat/') && !chatClosing} disableHiddenAnimation tabs={[
+    { name: '(home)', label: localizedGetter('homeNavTitle', current), icon: roleTabIcons.home },
+    { name: 'receipt', label: 'Kirim', icon: { default: 'scalemass', selected: 'scalemass.fill' }, hidden: !canOpenRoute(session, appRoutes.gscaleMode) },
+    { name: 'tasks', label: 'Vazifalar', icon: 'checklist', hidden: !canOpenRoute(session, appRoutes.materialTasks) },
+    { name: 'profile', label: localizedGetter('profileTitle', current), icon: roleTabIcons.profile },
+    { name: 'chat', label: 'Chat', icon: roleTabIcons.chat, showBadge: unread > 0 },
+  ]} />;
 }

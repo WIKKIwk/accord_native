@@ -2,12 +2,14 @@ import { BasicTextField, Box, Column, FilledTonalIconButton, FilterChip, FlowRow
 import PagerView, { type PagerViewRef } from '@expo/ui/community/pager-view';
 import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { FlatList, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
+import { RoleHeaderRow, RoleHeaderSearchField } from '../shared/navigation/RoleHeaderRow';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { localizedGetter } from '../shared/localization';
 import { AdminCreateMenu } from './AdminCreateMenu.android';
@@ -22,7 +24,6 @@ import { AdminWarehouseSettingsTab } from './AdminWarehouseSettingsTab.android';
 import { useAdminWarehouseMain, type AdminWarehouseMainModel } from './useAdminWarehouseMain';
 
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
-const blend = (outline: string, surface: string) => `#${[1, 3, 5].map(offset => Math.round(parseInt(outline.slice(offset, offset + 2), 16) * .08 + parseInt(surface.slice(offset, offset + 2), 16) * .92).toString(16).padStart(2, '0')).join('')}FF`;
 type IconName = 'arrow_back' | 'close' | 'warehouse' | 'expand_less' | 'expand_more' | 'check' | 'inventory_2' | 'category' | 'grid_view' | 'lock_outline' | 'chevron_right' | 'qr_code_2' | 'edit' | 'refresh';
 function Icon({ name, color, iconSize = 24 }: { name: IconName; color: string; iconSize?: number }) {
   return <RNHostView matchContents><SymbolView name={{ android: name }} size={iconSize} tintColor={color} importantForAccessibility="no" /></RNHostView>;
@@ -30,37 +31,29 @@ function Icon({ name, color, iconSize = 24 }: { name: IconName; color: string; i
 export function WarehouseLoadingIndicator({ small = false }: { small?: boolean }) {
   return <AdminLoadingIndicator size={small ? 48 : 64} glyphSize={small ? 28 : 38} />;
 }
-function HeaderSlot({ visible, slotWidth, children }: { visible: boolean; slotWidth: number; children: ReactNode }) {
-  const extent = useSharedValue(visible ? slotWidth : 0), opacity = useSharedValue(visible ? 1 : 0);
-  useEffect(() => { extent.value = withTiming(visible ? slotWidth : 0, { duration: 180, easing: Easing.out(Easing.cubic) }); opacity.value = withTiming(visible ? 1 : 0, { duration: 120, easing: Easing.out(Easing.cubic) }); }, [visible, slotWidth, extent, opacity]);
-  const motion = useAnimatedStyle(() => ({ width: extent.value, opacity: opacity.value }));
-  return <Animated.View style={[styles.headerSlot, motion]} pointerEvents={visible ? 'auto' : 'none'} accessibilityElementsHidden={!visible} importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}>
-    <View style={{ width: slotWidth, height: 60, justifyContent: 'center' }}>{children}</View>
-  </Animated.View>;
-}
 function SearchHeader({ model, props }: { model: AdminWarehouseMainModel; props: AdminWarehouseMainScreenProps }) {
   const { colors } = useBaseTheme(), { presentation, current } = model, text = useNativeState(model.state.search), field = useRef<BasicTextFieldRef>(null);
   // Only programmatic fills write back; a reported keystroke must never echo over newer native text.
   useEffect(() => { if (current()) void field.current?.setText(presentation.fillText); }, [presentation.fillVersion, presentation.fillText, current]);
   useEffect(() => { if (!presentation.searchFocused) void field.current?.blur(); }, [presentation.searchFocused]);
   const close = () => { if (model.interactive()) { void field.current?.blur(); model.closeSearch(); } };
-  return <View style={styles.header}>
-    <HeaderSlot visible={!presentation.searchFocused} slotWidth={44}><BaseHost matchContents><IconButton onClick={model.back} modifiers={[size(38, 48), semantics({ contentDescription: props.backLabel }), testID('warehouse-back')]}><Icon name="arrow_back" color={colors.onSurfaceVariant} /></IconButton></BaseHost></HeaderSlot>
-    <BaseHost style={styles.searchField}><Surface color={blend(colors.outlineVariant, colors.surfaceContainerLow)} shape={shape(999)} modifiers={[fillMaxWidth(), height(58)]}>
-      <Row verticalAlignment="center" modifiers={[fillMaxSize(), padding(18, 0, 0, 0)]}>
+  return <RoleHeaderRow>
+    {!presentation.searchFocused && <RoleHeaderButton icon="back" label={props.backLabel} onPress={model.back} tintColor={colors.onSurfaceVariant} testID="warehouse-back" />}
+    <RoleHeaderSearchField focused={presentation.searchFocused}>
+      <BaseHost style={styles.searchField}><Row verticalAlignment="center" modifiers={[fillMaxSize()]}>
         <BasicTextField ref={field} value={text} singleLine onValueChange={model.setSearch} onFocusChanged={model.setSearchFocused}
           keyboardOptions={{ imeAction: 'search', capitalization: 'none', autoCorrectEnabled: false }} keyboardActions={{ onSearch: close }}
-          textStyle={{ color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '400', lineHeight: 16.8 }} modifiers={[weight(1), height(58), semantics({ contentDescription: model.searchHint }), testID('warehouse-search')]}>
+          textStyle={{ color: colors.onSurfaceVariant, fontSize: 15, textAlign: 'left' }} modifiers={[weight(1), height(56), semantics({ contentDescription: model.searchHint }), testID('warehouse-search')]}>
           <BasicTextField.DecorationBox><Box contentAlignment="centerStart" modifiers={[fillMaxSize()]}><BasicTextField.InnerTextField />
-            <BasicTextField.Placeholder><Text color={colors.onSurfaceVariant} style={{ fontSize: 14, fontWeight: '400', textAlign: 'center' }} modifiers={[fillMaxWidth()]}>{presentation.searchFocused ? '' : model.searchHint}</Text></BasicTextField.Placeholder>
+            <BasicTextField.Placeholder><Text color={colors.onSurfaceVariant} style={{ fontSize: 14, fontWeight: '400', textAlign: 'left' }} modifiers={[fillMaxWidth()]}>{presentation.searchFocused ? '' : model.searchHint}</Text></BasicTextField.Placeholder>
           </Box></BasicTextField.DecorationBox>
         </BasicTextField>
         {presentation.searchFocused || model.hasSearchText ? <IconButton onClick={presentation.searchFocused ? close : model.clearSearch}
-          modifiers={[size(48, 48), semantics({ contentDescription: model.a(presentation.searchFocused ? 'action.close' : 'action.clear') }), testID('warehouse-search-close')]}><Icon name="close" color={colors.onSurfaceVariant} /></IconButton> : <Spacer modifiers={[size(18, 1)]} />}
-      </Row>
-    </Surface></BaseHost>
-    <HeaderSlot visible={!presentation.searchFocused} slotWidth={58}>{model.profile()}</HeaderSlot>
-  </View>;
+          modifiers={[size(48, 48), semantics({ contentDescription: model.a(presentation.searchFocused ? 'action.close' : 'action.clear') }), testID('warehouse-search-close')]}><Icon name="close" color={colors.onSurfaceVariant} /></IconButton> : null}
+      </Row></BaseHost>
+    </RoleHeaderSearchField>
+    {!presentation.searchFocused && model.profile()}
+  </RoleHeaderRow>;
 }
 function Tabs({ options, selected, select, id }: { options: readonly { value: string; label: string }[]; selected: string; select: (value: string) => void; id: string }) {
   const { colors } = useBaseTheme();
@@ -186,5 +179,4 @@ export function AdminWarehouseMainScreen(props: AdminWarehouseMainScreenProps) {
     {model.dialog?.kind === 'details' ? <Details key={model.dialog.id} model={model} renderActionSurface={props.renderDetailActionSurface} /> : null}
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, header: { height: 63, width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 3 },
-  headerSlot: { height: 60, overflow: 'hidden' }, searchField: { flex: 1, minWidth: 0, height: 58, transform: [{ translateY: -1 }] }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
+const styles = StyleSheet.create({ screen: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, searchField: { flex: 1, minWidth: 0, height: 56 }, center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, retry: { paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 } });

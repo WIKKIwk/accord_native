@@ -34,6 +34,8 @@ function fixture(platform = 'android', overrides = {}) {
   const nativeLeaf = (name, id) => value => { leaf[id] = value; return { type: name, props: value }; };
   const assembly = view.compile(path.resolve(__dirname, `../src/admin/AdminItemCreateScreen.${platform}.tsx`), { react: r.react,
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'react-native': { View: 'View', StyleSheet: { create: value => value } }, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => { if (!safeAvailable) throw Error('genuine SafeArea provider required'); return safe; } },
+    '../shared/navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
+    '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: view.colors }) }, './AdminCreateHubProvider': { useAdminCreateHubScaffoldLayout: () => { if (!hubAvailable) throw Error('genuine Hub provider required'); return sourceLayout; } },
     './AdminItemCreateHeader.android': { AdminItemCreateHeader: nativeLeaf('GenuineNativeHeader', 'header') }, './AdminItemCreateHeader.ios': { AdminItemCreateHeader: nativeLeaf('GenuineNativeHeader', 'header') },
     './AdminItemCreateList.android': { AdminItemCreateList: nativeLeaf('GenuineNativeCatalogList', 'list') }, './AdminItemCreateList.ios': { AdminItemCreateList: nativeLeaf('GenuineNativeCatalogList', 'list') },

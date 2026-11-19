@@ -1,5 +1,4 @@
 import { Redirect, usePathname } from 'expo-router';
-import { NativeTabs } from 'expo-router/native-tabs';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { loadSession, logout, type Session } from '../../auth';
@@ -9,6 +8,7 @@ import { PreparationProvider } from '../../preparation/PreparationContext';
 import { PreparationDrawer } from '../../preparation/PreparationDrawer';
 import { usePreparationText } from '../../preparation/PreparationUI';
 import { appRoutes, canOpenRoute } from '../../shared/appRoutes';
+import { RoleTabs, roleTabIcons } from '../../shared/navigation/RoleTabs.ios';
 
 export default function PreparationLayout() {
   const t = usePreparationText(), pathname = usePathname();
@@ -20,13 +20,12 @@ export default function PreparationLayout() {
   if (!session) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   const onLogout = () => { void Promise.all([logout(session).catch(() => {}), clearAppLock(session).catch(() => {})]).finally(() => setSession(null)); };
   return <WorkerSecurityProvider key={session.imageCacheScope} session={session} onLogout={onLogout}>
-    <PreparationProvider session={session} onLogout={onLogout} setChatClosing={setChatClosing}><PreparationDrawer><NativeTabs hidden={pathname.startsWith('/ios-preparation/chat/') && !chatClosing} disableHiddenAnimation>
-      <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <NativeTabs.Trigger.Label>{t('Tayyorlov')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chat"><NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
-        <NativeTabs.Trigger.Label>{t('Chat')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile"><NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
-        <NativeTabs.Trigger.Label>{t('Profil')}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-    </NativeTabs></PreparationDrawer></PreparationProvider>
+    <PreparationProvider session={session} onLogout={onLogout} setChatClosing={setChatClosing}><PreparationDrawer>
+      <RoleTabs hidden={pathname.startsWith('/ios-preparation/chat/') && !chatClosing} disableHiddenAnimation tabs={[
+        { name: '(home)', label: t('Tayyorlov'), icon: roleTabIcons.home },
+        { name: 'chat', label: t('Chat'), icon: roleTabIcons.chat },
+        { name: 'profile', label: t('Profil'), icon: roleTabIcons.profile },
+      ]} />
+    </PreparationDrawer></PreparationProvider>
   </WorkerSecurityProvider>;
 }

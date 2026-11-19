@@ -50,8 +50,8 @@ test('role docks and drawer preserve V2 destination order with real unread dots'
   assert.ok(drawer.indexOf("id: 'astatka'") < drawer.indexOf("id: 'chat'"));
   assert.ok(drawer.indexOf("id: 'chat'") < drawer.indexOf("id: 'profile'"));
   assert.match(android, /showBadge: unread > 0/);
-  assert.match(ios, /name="chat"/);
-  assert.match(ios, /NativeTabs\.Trigger\.Badge hidden=\{unread <= 0\}/);
+  assert.match(ios, /name: 'chat'/);
+  assert.match(ios, /showBadge: unread > 0/);
   assert.match(context, /useChatUnreadCount\(session\)/);
 });
 
@@ -85,7 +85,7 @@ test('iOS hides its dock inside a conversation and derives the unread dot from t
   const state = { unread: 0, chatClosing: false };
   let pathname = '/ios-boyoqchi/chat';
   const mocks = {
-    'expo-router': { usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs },
+    'expo-router': { usePathname: () => pathname }, '../../../shared/navigation/RoleTabs.ios': require('./support/roleNavigation.cjs').tabs(NativeTabs),
     '../../../boyoqchi/BoyoqchiContext': { useBoyoqchiContext: () => state },
     '../../../boyoqchi/useBoyoqchiText': { useBoyoqchiGetter: () => key => key, useBoyoqchiText: () => key => key },
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
@@ -95,7 +95,7 @@ test('iOS hides its dock inside a conversation and derives the unread dot from t
   loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);
-  const render = loaded.exports.default;
+  const render = () => { const sharedTabs = loaded.exports.default(); return sharedTabs.type(sharedTabs.props); };
   let tabs = render();
   assert.equal(tabs.props.hidden, false);
   assert.deepEqual(tabs.props.children.map(child => child.props.name), ['(home)', '(astatka)', 'profile', 'chat']);
@@ -103,6 +103,6 @@ test('iOS hides its dock inside a conversation and derives the unread dot from t
   assert.equal(badge(tabs).props.hidden, true);
   state.unread = 3; pathname = '/ios-boyoqchi/chat/conversation-1'; tabs = render();
   assert.equal(tabs.props.hidden, true); assert.equal(badge(tabs).props.hidden, false);
-  assert.equal(badge(tabs).props.children, '', 'an unread dot has no invented count label');
+  assert.equal(badge(tabs).props.children, undefined, 'an unread dot has no invented count label');
   state.chatClosing = true; assert.equal(render().props.hidden, false);
 });

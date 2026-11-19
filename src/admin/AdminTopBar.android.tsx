@@ -1,27 +1,17 @@
-import { RNHostView } from '@expo/ui/jetpack-compose';
+import { Row } from '@expo/ui/jetpack-compose';
 import type { ComponentProps, ReactNode } from 'react';
-import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BaseHost } from '../components/BaseHost.android';
 import { RoleHeader } from '../shared/navigation/RoleHeader.android';
-import { RoleTopBar } from '../shared/navigation/RoleTopBar.android';
-import { AdminText } from './AdminTypography.android';
-import { useAdminShellTheme } from './useAdminShellTheme';
 
-export function AdminTopBar(props: Omit<ComponentProps<typeof RoleTopBar>, 'compact'>) {
-  return <RoleTopBar {...props} compact />;
-}
+export { RoleTopBar as AdminTopBar } from '../shared/navigation/RoleTopBar.android';
 
-export function AdminScreenHeader({ title, navigation, actions, profileAction, testID, standardTitle = false }: {
+export function AdminScreenHeader({ title, navigation, actions, profileAction, testID }: {
   title: string; navigation?: ComponentProps<typeof RoleHeader>['navigation'];
-  actions?: ReactNode; profileAction?: ReactNode; testID?: string; standardTitle?: boolean;
+  actions?: ReactNode; profileAction?: ReactNode; testID?: string;
 }) {
-  const { colors, chromeBackground } = useAdminShellTheme();
-  const profile = profileAction ? <RNHostView matchContents><View style={{ width: 58, height: 60, justifyContent: 'center' }}>{profileAction}</View></RNHostView> : null;
-  return <SafeAreaView edges={['left', 'right']} testID={testID} style={{ backgroundColor: chromeBackground }}>
-    <RoleHeader compact title={title} navigation={navigation}
-      titleContent={<AdminText maxLines={1} overflow="ellipsis" color={colors.onSurface}
-        style={standardTitle ? { typography: 'titleLarge', fontSize: 20, fontWeight: '700' } : { fontSize: 24, fontWeight: '800' }}>{title}</AdminText>}
-      actions={actions || profile ? <>{actions}{profile}</> : null} />
-    <View style={{ height: 3 }} />
+  const nativeActions = actions ? <BaseHost matchContents><Row verticalAlignment="center">{actions}</Row></BaseHost> : null;
+  return <SafeAreaView edges={['left', 'right']} testID={testID}>
+    <RoleHeader title={title} navigation={navigation} actions={nativeActions} profileAction={profileAction} />
   </SafeAreaView>;
 }

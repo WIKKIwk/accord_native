@@ -1,5 +1,4 @@
 import { DarkTheme, DefaultTheme, Redirect, router, ThemeProvider, usePathname, type Href } from 'expo-router';
-import { NativeTabs } from 'expo-router/native-tabs';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, useColorScheme, View } from 'react-native';
 import { loadSession, logout, type Session } from '../../auth';
@@ -9,6 +8,7 @@ import { WorkerSecurityProvider } from '../../components/WorkerSecurity';
 import { clearAppLock } from '../../appLock';
 import { useWorkerOrderText } from '../../components/useWorkerOrderText';
 import { workerDailyWorkVisible, workerInventoryVisible } from '../../workerNavigation';
+import { RoleTabs, roleTabIcons } from '../../shared/navigation/RoleTabs.ios';
 
 export default function IosWorkerLayout() {
   const { t } = useWorkerOrderText();
@@ -48,20 +48,12 @@ export default function IosWorkerLayout() {
         <WorkerDrawer visible={drawerOpen} onOpen={() => setDrawerOpen(true)} onClose={() => setDrawerOpen(false)} onSelect={selectDestination}
           displayName={String(session.profile.display_name ?? '')} canTransfer={workerInventoryVisible(session)} showDailyWork={workerDailyWorkVisible(session)}
           active={pathname === '/ios-worker/profile' ? 'profile' : pathname === '/ios-worker' ? 'queue' : pathname === '/ios-worker/daily' ? 'daily' : pathname === '/ios-worker/inventory' ? 'transfer' : ''}>
-          <NativeTabs hidden={pathname === '/ios-worker/inventory' || pathname.startsWith('/ios-worker/chat/') && !chatClosing} disableHiddenAnimation>
-            <NativeTabs.Trigger name="(home)">
-              <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
-              <NativeTabs.Trigger.Label>{t('Uy')}</NativeTabs.Trigger.Label>
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="chat">
-              <NativeTabs.Trigger.Icon sf={{ default: 'bubble.left', selected: 'bubble.left.fill' }} />
-              <NativeTabs.Trigger.Label>{t('Chat')}</NativeTabs.Trigger.Label>
-            </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="profile">
-              <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
-              <NativeTabs.Trigger.Label>{t('Profil')}</NativeTabs.Trigger.Label>
-            </NativeTabs.Trigger>
-          </NativeTabs>
+          <RoleTabs hidden={pathname === '/ios-worker/inventory' || pathname.startsWith('/ios-worker/chat/') && !chatClosing}
+            disableHiddenAnimation tabs={[
+              { name: '(home)', label: t('Uy'), icon: roleTabIcons.home },
+              { name: 'chat', label: t('Chat'), icon: roleTabIcons.chat },
+              { name: 'profile', label: t('Profil'), icon: roleTabIcons.profile },
+            ]} />
         </WorkerDrawer>
       </View>
       </WorkerSecurityProvider>

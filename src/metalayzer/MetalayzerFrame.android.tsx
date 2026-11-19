@@ -28,13 +28,11 @@ export function MetalayzerFrame({ title, busy = false, profile = false, back = f
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), drawer = useRoleDrawer();
   const { isCurrent } = useMetalayzerContext();
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 10 }}>
-    <View style={{ flex: 1 }}><RoleHeader title={title} navigation={{ icon: profile || back ? 'back' : 'menu', label: profile || back ? 'Orqaga' : 'Bo‘limlar',
+    <RoleHeader title={title} navigation={{ icon: profile || back ? 'back' : 'menu', label: profile || back ? 'Orqaga' : 'Bo‘limlar',
       onPress: profile ? () => router.navigate('/android-metalayzer' as Href) : back
-        ? () => { if (router.canGoBack()) router.back(); else router.navigate('/android-metalayzer' as Href); } : drawer.open }} /></View>
-    <RoleHeaderButton icon="profile" label="Profil" testID="header-profile" tintColor={colors.onSurfaceVariant}
-      onPress={() => { if (isCurrent()) router.navigate('/android-metalayzer/profile' as Href); }} />
-    </View>
+        ? () => { if (router.canGoBack()) router.back(); else router.navigate('/android-metalayzer' as Href); } : drawer.open }}
+      profileAction={<RoleHeaderButton icon="profile" label="Profil" tintColor={colors.onSurfaceVariant}
+        onPress={() => { if (isCurrent()) router.navigate('/android-metalayzer/profile' as Href); }} />} />
     {busy && <RawSplitBusy />}
     <View style={{ flex: 1 }}>{children}</View><MetalayzerDock active={profile ? 'profile' : 'home'} />
   </View>;

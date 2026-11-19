@@ -65,6 +65,7 @@ function render(platform, value) {
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, '../shared/themeRuntime': { themeController: { variant: 'white' } },
     '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' },
     './AdminShellBodyFrame': require('./adminShellFrameViewSupport.cjs').frameModule(colors), './AdminTypography.android': { AdminText: 'Text' }, './AdminTextFields.android': { AdminBasicTextField: compose.BasicTextField },
+    '../shared/navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, './useAdminUsersScreen': { useAdminUsersScreen: () => value } };
   mocks['./AdminLoadingIndicator.android'] = load('AdminLoadingIndicator.android.tsx', mocks);
   const Screen = load(`AdminUsersScreen.${platform}.tsx`, mocks).AdminUsersScreen;
@@ -90,9 +91,8 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} users search focus hides source back/profile and cancel keeps the query`, () => {
     const m = model({ searchFocused: true, searchText: 'One', hasSearchText: true }), { tree } = render(platform, m);
     if (platform === 'android') {
-      const hiddenSlots = nodes(tree, n => n.type === 'Animated.View' && n.props.importantForAccessibility === 'no-hide-descendants');
-      assert.equal(hiddenSlots.length, 2); assert.ok(hiddenSlots.every(slot => slot.props.pointerEvents === 'none' && slot.props.style[1].width === 0));
-      assert.equal(nodes(tree, n => n.type === 'RealGuardedProfileAction').length, 1);
+      assert.equal(nodes(tree, n => n.type === 'RoleHeaderButton').length, 0);
+      assert.equal(nodes(tree, n => n.type === 'RealGuardedProfileAction').length, 0);
       const close = nodes(tree, n => n.props.modifiers?.some(mod => mod.name === 'testID' && mod.args[0] === 'admin-users-search-close'))[0]; close.props.onClick();
     } else {
       const options = nodes(tree, n => n.type === 'Stack.Screen')[0].props.options;

@@ -76,6 +76,7 @@ test('orders header uses a back button for preparation and keeps the worker menu
     'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { Platform: { OS: 'android' }, Pressable: 'Pressable', View: 'View', StyleSheet: { create: value => value } },
     '../../components/useWorkerColors': { useWorkerColors: () => ({}) },
+    '../navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
     '../navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     './OrdersSearchInput': { OrdersSearchInput: 'OrdersSearchInput' },
     './SearchTextSync': { SearchTextSync: class {} },

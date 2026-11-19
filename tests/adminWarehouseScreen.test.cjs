@@ -45,7 +45,7 @@ function fixture(platform, scope = 'admin') {
   const providers = { './useAdminWarehouseItemRollsProvider': load('admin/useAdminWarehouseItemRollsProvider', shared), './useAdminWarehouseRawQrProvider': load('admin/useAdminWarehouseRawQrProvider', shared),
     './useAdminWarehouseDetailSurface': load('admin/useAdminWarehouseDetailSurface', shared) };
   const screen = compile(`AdminWarehouseScreen.${platform}.tsx`, { ...shared, ...providers,
-    [`./AdminProfileAction.${platform}`]: { AdminProfileAction: 'AdminProfileAction' }, [`./AdminWarehouseItemRollsOrderDetails.${platform}`]: { AdminWarehouseReservedOrderDetails: 'AdminWarehouseReservedOrderDetails' },
+    './AdminProfileAction': { AdminProfileAction: 'AdminProfileAction' }, [`./AdminWarehouseItemRollsOrderDetails.${platform}`]: { AdminWarehouseReservedOrderDetails: 'AdminWarehouseReservedOrderDetails' },
     [`./AdminWarehouseItemRollsSheet.${platform}`]: { AdminWarehouseItemRollsSheet: 'AdminWarehouseItemRollsSheet' }, [`./AdminWarehouseMainScreen.${platform}`]: { AdminWarehouseMainScreen: 'AdminWarehouseMainScreen' },
     [`./AdminWarehouseRawQrSheet.${platform}`]: { AdminWarehouseRawQrNativeSheet: 'AdminWarehouseRawQrNativeSheet' } }).AdminWarehouseScreen;
   const orderHook = load('admin/useAdminWarehouseItemRollsOrder', shared).useAdminWarehouseItemRollsOrder;

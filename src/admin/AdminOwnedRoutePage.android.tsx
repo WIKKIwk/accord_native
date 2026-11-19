@@ -8,7 +8,7 @@ import { AdminOwnedBackProvider } from './AdminOwnedBackContext';
 import { AdminOwnedDock } from './AdminOwnedDock.android';
 import { AdminOwnedRouteContent } from './AdminOwnedRouteContent.android';
 import { AdminOwnedRouteNotice } from './AdminOwnedRouteNotice.android';
-import { AdminProfileAction } from './AdminProfileAction.android';
+import { AdminProfileAction } from './AdminProfileAction';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminOwnedNotice } from './useAdminOwnedNotice';
 import { useAdminOwnedPage } from './useAdminOwnedPage';

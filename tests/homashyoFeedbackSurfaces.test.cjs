@@ -87,11 +87,11 @@ for (const page of ['home', 'history']) test(`Android ${page} mounts its native 
   const busy = h.render(page, true), children = busy.props.children;
   assert.equal(children[1].type, 'Busy'); assert.equal(find(children[0], n => n.type === 'RoleHeader').length, 1);
   assert.equal(find(children[2], n => n.type === 'Content').length, 1); assert.equal(children[3].type, 'Dock');
-  const busyActions = find(busy, n => n.type === 'IconButton');
+  const busyActions = find(children[0].props.actions, n => n.type === 'IconButton');
   assert.equal(busyActions.length, page === 'home' ? 2 : 1);
   assert.ok(busyActions.every(n => n.props.enabled === false));
   const idle = h.render(page, false); assert.equal(find(idle, n => n.type === 'Busy').length, 0);
-  const printer = find(idle, n => n.type === 'IconButton' && n.props.modifiers.some(modifier => modifier.semantics?.contentDescription === 'Printer tanlash'))[0];
+  const printer = find(idle.props.children[0].props.actions, n => n.type === 'IconButton' && n.props.modifiers.some(modifier => modifier.semantics?.contentDescription === 'Printer tanlash'))[0];
   assert.equal(printer.props.enabled, true); printer.props.onClick(); assert.deepEqual(h.calls, ['picker']);
 });
 test('Android profile keeps the existing no-busy default', () => {

@@ -66,7 +66,7 @@ export function AdminQueuePolicyScreen(props: AdminQueuePolicyScreenProps) {
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <BaseHost matchContents={{ vertical: true }} style={styles.full}><AdminTopBar leading={<IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-queue-policy-back')]}>
         <QueueIcon name={model.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} iconSize={24} /></IconButton>}
-      title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.a('queue.title')}</Text>}
+      title={<Text style={{ typography: 'titleLarge' }}>{model.a('queue.title')}</Text>}
       actions={props.profileAction ? <RNHostView matchContents>{props.profileAction}</RNHostView> : null} /></BaseHost>{props.topNotice}
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-queue-policy-body-frame"><View style={[styles.root, framed && { backgroundColor: colors.surfaceContainerHighest }]}>
       {model.state.loading && !model.state.data ? <View style={styles.center}><BaseHost matchContents><AdminLoadingIndicator /></BaseHost></View> :

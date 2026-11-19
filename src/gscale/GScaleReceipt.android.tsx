@@ -11,6 +11,7 @@ import type { Session } from '../auth';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { PreparationDock } from '../preparation/PreparationUI.android';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
+import { RoleHeaderRow } from '../shared/navigation/RoleHeaderRow';
 import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { gscaleReceiptGroups } from './gscaleReceiptLayout';
 import type { GScaleRow, GScaleSection } from './gscaleScreenModel';
@@ -274,7 +275,7 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
   return <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.surfaceContainerLow }]}>
     <View ref={root} collapsable={false} style={[styles.root, { paddingTop: insets.top }]} onLayout={measureFrame}>
     <KeyboardAvoidingView behavior="height" style={[styles.scrollViewport, { marginBottom: Math.max(0, embedded ? 0 : dockHeight + resizeOffset, frame.keyboardOverlap) }]}>
-    <View style={styles.header}>
+    <RoleHeaderRow>
       <RoleHeaderButton icon={onMenu ? 'menu' : 'back'} label={t(onMenu ? 'Material bo‘limlari' : 'Orqaga')}
         tintColor={colors.onSurfaceVariant} onPress={onMenu ?? onBack} />
       <Host matchContents={{ vertical: true }} style={{ flex: 1 }}><Text color={colors.onSurface} style={{ typography: 'titleLarge', fontWeight: '600' }}>{title}</Text></Host>
@@ -283,7 +284,7 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
       ]}><Icon source={icons.devices} size={26} tint={attention || !connected ? colors.error : colors.primary} /></IconButton></Host>
       <RoleHeaderButton icon="profile" label={t('Profil')} tintColor={colors.onSurfaceVariant}
         onPress={onProfile ?? (() => router.navigate('/android-preparation/profile' as Href))} />
-    </View>
+    </RoleHeaderRow>
     <OrdersWorkspace session={session} tabs={[{ id: 'control', name: t('Print') }, { id: 'history', name: t('Print tarixi') }]}
       selected={section} onSelect={id => { if (id === 'control' || id === 'history') onSelect(id); }}>
       {(id, pagerGesture) => <ReceiptScroll pagerGesture={pagerGesture} refreshing={refreshing} onRefresh={id === 'history' ? onRefresh : undefined}>
@@ -303,7 +304,6 @@ export function GScaleReceipt({ session, title, section, onSelect, control, hist
 
 const styles = StyleSheet.create({
   root: { flex: 1 }, full: { width: '100%' }, scrollViewport: { flex: 1 }, dockOverlay: { position: 'absolute', left: 0, right: 0 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 64, paddingHorizontal: 10 },
   content: { paddingTop: tabBarInset, paddingHorizontal: 14, paddingBottom: 24, flexGrow: 1 }, scrollContent: { gap: 10 },
   historyText: { flex: 1, padding: 10, gap: 4 }, historyTitle: { fontSize: 16, fontWeight: '500' },
 });

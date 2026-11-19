@@ -25,11 +25,11 @@ function CustomerPage({ title, active, root, clearAction, children }: { title: s
       if (router.canGoBack()) router.back(); else router.replace('/android-customer' as Href);
     } };
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.surfaceContainerLow }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}><View style={{ flex: 1 }}><RoleHeader title={title} navigation={navigation} /></View>
-      {clearAction ? <Pressable accessibilityRole="button" accessibilityLabel={text('clearTitle')} onPress={clearAction}
-        style={{ width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16,
-          backgroundColor: colors.secondaryContainer }}><SymbolView name={{ android: 'clear_all' }} size={24} tintColor={colors.onSecondaryContainer} /></Pressable> : null}
-    </View><View style={{ flex: 1 }}>{children}</View><CustomerDock active={active} />
+    <RoleHeader title={title} navigation={navigation}
+      actions={clearAction ? <Pressable accessibilityRole="button" accessibilityLabel={text('clearTitle')} onPress={clearAction}
+        style={{ width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+          backgroundColor: colors.secondaryContainer }}><SymbolView name={{ android: 'clear_all' }} size={24} tintColor={colors.onSecondaryContainer} /></Pressable> : null} />
+    <View style={{ flex: 1 }}>{children}</View><CustomerDock active={active} />
   </View>;
 }
 

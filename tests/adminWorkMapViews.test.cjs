@@ -54,7 +54,6 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   assert.equal(header.props.profileAction.type, 'AdminShellProfileAction');
   assert.equal(find(frame, 'OrdersHeader'), undefined);
   if (platform === 'android') {
-    assert.equal(header.props.compact, true);
     assert.equal(find(tree, 'AdminBottomBar').props.active, 'home');
     assert.equal(find(frame, 'AdminBottomBar'), undefined);
   }

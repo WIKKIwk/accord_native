@@ -47,7 +47,8 @@ function fixture(platform, { scope = 'admin', selected = true, locale = 'uz', sc
     '@expo/ui/community/pager-view': { __esModule: true, default: 'PagerView' },
     'react-native-reanimated': { __esModule: true, default: { View: 'Animated.View' }, LinearTransition: transition, Easing: { out: value => value, cubic: 'cubic' }, useSharedValue: value => ({ value }), useAnimatedStyle: fn => fn(), withTiming: value => value },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
-    '../shared/localization': l10n, '../shared/themeRuntime': { themeController: { variant: 'white' } }, '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
+    '../shared/localization': l10n, '../shared/themeRuntime': { themeController: { variant: 'white' } }, '../shared/navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
+    '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' },
     './AdminCreateMenu.android': { AdminCreateMenu: 'AdminCreateMenu' }, './AdminCreateMenu.ios': { AdminCreateMenu: 'AdminCreateMenu' }, './AdminWarehouseCreateDialog.android': { AdminWarehouseCreateDialog: 'AdminWarehouseCreateDialog' }, './AdminWarehouseCreateDialog.ios': { AdminWarehouseCreateDialog: 'AdminWarehouseCreateDialog' },
     './AdminWarehouseSettingsTab.android': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseSettingsTab.ios': { AdminWarehouseSettingsTab: 'AdminWarehouseSettingsTab' }, './AdminWarehouseMainRows': rows, './AdminWarehouseMainEntries': entries, './useAdminWarehouseMain': { useAdminWarehouseMain: () => model },
     './AdminShellBodyFrame': frameModule(colors, () => ({ metrics: nativeMetrics, thinGestureBottom: false })), './AdminTypography.android': { AdminText: 'Text' } };
@@ -130,10 +131,10 @@ for (const platform of ['android', 'ios']) {
     assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0].props.style).borderBottomRightRadius, undefined);
   });
 }
-test('Android main keeps source63 toolbar,58 search,61 row, segmented corners,4 body and420 pagination threshold', async () => {
-  const f = fixture('android'), tree = f.render(); assert.ok(nodes(tree, node => node.type === 'View' && node.props.style?.height === 63).length);
+test('Android main keeps the shared toolbar and search alongside the source row, segmented corners,4 body and420 pagination threshold', async () => {
+  const f = fixture('android'), tree = f.render(); assert.ok(nodes(tree, node => node.type === 'RoleHeaderRow').length);
   const field = byID(tree, 'warehouse-search'); field.props.onValueChange(' raw '); field.props.onFocusChanged(true); field.props.keyboardActions.onSearch(); assert.deepEqual(f.calls, [['search', ' raw '], ['focus', true], 'close-search']);
-  assert.ok(field.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 58));
+  assert.ok(field.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 56));
   const row = byID(tree, `warehouse-row-${f.row.id}`); assert.ok(row.props.modifiers.some(mod => mod.name === 'height' && mod.args[0] === 61)); assert.deepEqual(row.props.shape.cornerRadii, { topStart: 18, topEnd: 18, bottomStart: 6, bottomEnd: 6 });
   const list = nodes(tree, node => node.type === 'FlatList')[0]; assert.equal(list.props.contentContainerStyle.paddingHorizontal, 4); assert.equal(list.props.contentContainerStyle.paddingBottom, 144);
   list.props.onScroll({ nativeEvent: { contentSize: { height: 1000 }, contentOffset: { y: 179 }, layoutMeasurement: { height: 400 } } }); assert.equal(f.calls.includes('more'), false);

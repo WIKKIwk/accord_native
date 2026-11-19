@@ -120,7 +120,7 @@ for (const platform of ['ios', 'android']) {
     if (platform === 'android') {
       const header = nodes(f.tree, node => node.props.testID === 'admin-settings-header-safe-area')[0], bar = nodes(header, node => node.type === 'AdminTopBar')[0];
       assert.deepEqual(header.props.edges, ['left', 'right']); assert.ok(bar.props.title != null);
-      const title = nodes(bar, node => node.type === 'Text' && node.props.style?.fontSize === 24)[0]; assert.equal(title.props.style.fontWeight, '800');
+      assert.equal(bar.props.title.props.style.typography, 'titleLarge');
       assert.equal(nodes(bar, node => node.type === 'GenuineProfileAction').length, 1);
       nodes(bar, node => node.type === 'IconButton')[0].props.onClick();
     } else {

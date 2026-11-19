@@ -32,7 +32,8 @@ test('Android Homashyo header uses native icon actions with source enable condit
     replace: value => calls.push(['replace', value]), back: () => calls.push(['back']), navigate: value => calls.push(['navigate', value]) };
   const { RoleHeaderButton } = load('../shared/navigation/RoleHeaderButton.tsx', {
     'react/jsx-runtime': jsx, 'expo-symbols': { SymbolView: 'SymbolView' },
-    'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
+    'react-native': { Platform: { OS: 'android' }, Pressable: 'Pressable', StyleSheet: { create: value => value } },
+    './roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics,
     '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: onProfile => ({
       onPress: onProfile, open: () => calls.push(['switch-account']), hint: 'accountSwitchHint' }) },
   });
@@ -48,14 +49,16 @@ test('Android Homashyo header uses native icon actions with source enable condit
     './RawSplitBusy': { RawSplitBusy: 'Busy' }, './RawSplitDock.android': { RawSplitDock: 'Dock' },
   });
   const render = props => RawSplitFrame({ title: 'Rezka', page: 'home', onPrinter: () => calls.push(['printer']), children: null, ...props });
+  const header = tree => find(tree, node => node.type === 'RoleHeader')[0];
+  const controls = tree => find(header(tree).props.actions, node => node.type === 'IconButton');
   let tree = render({ busy: true });
-  assert.deepEqual(find(tree, node => node.type === 'IconButton').map(node => node.props.enabled), [false, false]);
+  assert.deepEqual(controls(tree).map(node => node.props.enabled), [false, false]);
   tree = render({ printerDisabled: true });
-  let actions = find(tree, node => node.type === 'IconButton');
+  let actions = controls(tree);
   assert.deepEqual(actions.map(node => node.props.enabled), [true, false]);
   assert.deepEqual(actions.map(node => node.props.modifiers[0].semantics.contentDescription), ['Rezka tarixi', 'Printer tanlash']);
   actions[0].props.onClick();
-  tree = render({}); actions = find(tree, node => node.type === 'IconButton'); actions[1].props.onClick();
+  tree = render({}); actions = controls(tree); actions[1].props.onClick();
   assert.deepEqual(calls, [['push', '/android-homashyo/history'], ['printer']]);
   const history = render({ page: 'history' });
   find(history, node => node.type === 'RoleHeader')[0].props.navigation.onPress();
@@ -64,8 +67,10 @@ test('Android Homashyo header uses native icon actions with source enable condit
   find(render({ page: 'history' }), node => node.type === 'RoleHeader')[0].props.navigation.onPress();
   assert.deepEqual(calls.at(-1), ['back']);
   for (const page of ['home', 'history', 'profile']) {
-    const entry = find(render({ page, busy: true }), node => node.type === RoleHeaderButton)[0];
-    const button = RoleHeaderButton(entry.props);
+    const entry = header(render({ page, busy: true })).props.profileAction;
+    assert.equal(entry.type, RoleHeaderButton);
+    let button = entry;
+    while (typeof button.type === 'function') button = button.type(button.props);
     assert.equal(button.props.testID, 'header-profile'); assert.equal(button.props.accessibilityLabel, 'Profil');
     button.props.onPress(); button.props.onLongPress();
     assert.deepEqual(calls.slice(-2), [['navigate', '/android-homashyo/profile'], ['switch-account']]);

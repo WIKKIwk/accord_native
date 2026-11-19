@@ -58,13 +58,18 @@ function nativeDock(platform, { inset = 15, keyboard = 0, role = 'admin' } = {})
     '../components/BaseHost.ios': { BaseHost: 'Host' }, './adminDockModel': dock,
     './AdminShellContext': { useOptionalAdminShell: () => ({ session: { profile: { role } } }) },
     './useAdminOwnedDock': { useAdminOwnedDock: () => model }, './useAdminShellLayout': { useAdminShellLayout: () => ({ dockBottomInset: inset }) } };
+  const navigation = require('./support/roleNavigation.cjs');
   if (platform === 'android') {
     const sharedMocks = { ...mocks, '../../components/BaseHost.android': mocks['../components/BaseHost.android'],
-      '../../components/useBaseTheme': mocks['../components/useBaseTheme'] };
+      '../../components/useBaseTheme': mocks['../components/useBaseTheme'], './roleNavigationMetrics': navigation.metrics };
     for (const name of ['outlined/home.xml', 'filled/home_fill.xml', 'outlined/person.xml', 'filled/person_fill.xml', 'outlined/chat_bubble.xml', 'filled/chat_bubble_fill.xml']) {
       sharedMocks[`../../../assets/icons/navigation/${name}`] = name;
     }
     mocks['../shared/navigation/RoleBottomBar.android'] = s.compile(path.resolve(__dirname, '../src/shared/navigation/RoleBottomBar.android.tsx'), sharedMocks);
+  } else {
+    mocks['../shared/navigation/RoleTabs.ios'] = navigation.tabs(null);
+    mocks['../shared/navigation/RoleBottomBar.ios'] = navigation.load('RoleBottomBar.ios.tsx', { ...mocks,
+      '../../components/BaseHost.ios': mocks['../components/BaseHost.ios'], '../../components/useBaseTheme': mocks['../components/useBaseTheme'] });
   }
   const { AdminOwnedDock } = s.compile(path.resolve(__dirname, `../src/admin/AdminOwnedDock.${platform}.tsx`), mocks), render = () => r.render(() => expand(AdminOwnedDock({})));
   return { r, calls, keyboardListeners, render };
@@ -72,12 +77,13 @@ function nativeDock(platform, { inset = 15, keyboard = 0, role = 'admin' } = {})
 test('Android owned dock uses the shared Compose NavigationBar with the measured source inset', () => {
   const f = nativeDock('android'), tree = f.render(), tabs = nodes(tree, node => node.type === 'NavigationBarItem');
   const bar = nodes(tree, node => node.type === 'NavigationBar')[0];
-  assert.equal(tree.props.style[1].height, 75);
-  assert.equal(bar.props.modifiers.find(mod => mod.name === 'height').args[0], 75);
+  assert.equal(tree.props.style[1].height, 95);
+  assert.equal(tree.props.children.props.style[1].paddingBottom, 15);
+  assert.equal(bar.props.modifiers.some(mod => mod.name === 'height'), false);
   assert.equal(bar.props.containerColor, '#eee');
   assert.equal(tabs.length, 3); assert.deepEqual(tabs.map(item => item.props.selected), [false, true, false]);
   tabs[0].props.onClick(); assert.deepEqual(f.calls, ['admin-home']); assert.equal(nodes(tree, node => node.type === 'Icon' && node.props.source === 'filled/person_fill.xml').length, 1);
-  f.keyboardListeners.get('keyboardDidShow')({ endCoordinates: { height: 300 } }); const hidden = f.render(); assert.equal(hidden.props.style[1].height, 0); assert.equal(hidden.props.style[1].transform[0].translateY, 225);
+  f.keyboardListeners.get('keyboardDidShow')({ endCoordinates: { height: 300 } }); const hidden = f.render(); assert.equal(hidden.props.style[1].height, 0); assert.equal(hidden.props.style[1].transform[0].translateY, 205);
   f.r.unmount(); assert.equal(f.keyboardListeners.size, 0); const unresolved = nativeDock('android', { inset: null }); assert.equal(unresolved.render(), null); unresolved.r.unmount();
 });
 test('iOS owned dock preserves native buttons/selected semantics and measured source inset while UIKit system tabs are hidden', () => {
@@ -88,9 +94,9 @@ test('iOS owned dock preserves native buttons/selected semantics and measured so
   assert.ok(buttons[1].props.modifiers.some(mod => mod.name === 'accessibilityAddTraits' && mod.args[0].includes('isSelected'))); buttons[2].props.onPress(); assert.deepEqual(f.calls, ['admin-activity']);
   f.r.unmount(); const unresolved = nativeDock('ios', { inset: null }); assert.equal(unresolved.render(), null); unresolved.r.unmount();
 });
-test('the shared compact dock accepts the existing Brigader background', () => {
+test('Brigader uses the same system dock surface as other roles', () => {
   const f = nativeDock('android', { role: 'brigader' });
   const bar = nodes(f.render(), node => node.type === 'NavigationBar')[0];
-  assert.equal(bar.props.containerColor, '#ccc');
+  assert.equal(bar.props.containerColor, '#eee');
   f.r.unmount();
 });

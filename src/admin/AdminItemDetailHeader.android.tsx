@@ -11,10 +11,10 @@ import { AdminItemDetailThumbnail } from './AdminItemDetailThumbnail';
 import type { AdminItemDetailReadModel } from './AdminItemDetailReadOwner';
 
 export function AdminItemDetailTopBar({ model, backLabel }: { model: AdminItemDetailReadModel; backLabel: string }) {
-  const { colors, chromeBackground } = useAdminShellTheme();
-  return <SafeAreaView edges={['left', 'right']}><BaseHost style={{ width: '100%', height: 63 }}><Column modifiers={[fillMaxWidth()]}>
+  const { colors } = useAdminShellTheme();
+  return <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column modifiers={[fillMaxWidth()]}>
     <AdminTopBar leading={<IconButton onClick={model.back} modifiers={[semantics({ contentDescription: backLabel }), testID('admin-item-detail-back')]}><ItemDetailIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
-      title={<Text style={{ typography: 'titleLarge', fontSize: 24, fontWeight: '800' }}>{model.a('detail.item_title')}</Text>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} />
+      title={<Text style={{ typography: 'titleLarge' }}>{model.a('detail.item_title')}</Text>} />
   </Column></BaseHost></SafeAreaView>;
 }
 /** @v2 _ItemDetailHeader */

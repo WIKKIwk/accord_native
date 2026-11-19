@@ -23,7 +23,6 @@ test('Profile uses the shared Android header with its standard title and native 
   const bar = s.nodes(tree, node => node.type === 'AdminScreenHeader')[0];
   assert.equal(tree.props.style.paddingTop, 24);
   assert.equal(tree.props.style.backgroundColor, colors.surfaceContainerLow);
-  assert.equal(bar.props.standardTitle, true);
   assert.equal(bar.props.title, 'Profil');
   assert.equal(bar.props.navigation.icon, 'back');
   bar.props.navigation.onPress();
@@ -46,5 +45,5 @@ for (const platform of ['android', 'ios']) test(`${platform} standalone Profile 
     './AdminShellContext': { useAdminShell: () => ({ session, isCurrent: current, destination: () => '/profile', onLogout() {} }) } });
   const tree = s.expand(route.AdminProfileRoute()), body = s.nodes(tree, node => node.props.testID === 'admin-profile-body-frame')[0], profile = s.nodes(body, node => node.type === 'GenuineProfileScreen')[0];
   assert.equal(profile.props.session, session); assert.equal(profile.props.isCurrent, current); assert.equal(profile.props.settingsDisabled, true); assert.equal(profile.props.settingsUnavailableMessage, undefined);
-  assert.equal(s.nodes(body, node => node.type === 'GenuineStandaloneDock').length, 0); if (platform === 'android') { assert.equal(s.nodes(tree, node => node.type === 'GenuineStandaloneDock').length, 1); assert.equal(s.nodes(tree, node => node.type === 'AdminScreenHeader')[0].props.standardTitle, true); }
+  assert.equal(s.nodes(body, node => node.type === 'GenuineStandaloneDock').length, 0); if (platform === 'android') { assert.equal(s.nodes(tree, node => node.type === 'GenuineStandaloneDock').length, 1); assert.equal(s.nodes(tree, node => node.type === 'AdminScreenHeader')[0].props.title, 'Profil'); }
 });

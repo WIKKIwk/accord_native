@@ -78,9 +78,9 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
   const chatAction = props.renderChatAction?.(model.scopeCurrent, model.interactive);
   const action = (label: string, click: () => void, id: string) => <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><OutlinedButton onClick={click} colors={{ contentColor: colors.onSurface }} shape={workerDetailShape(14)} modifiers={[fillMaxWidth(), defaultMinSize({ minHeight: 54 }), testID(id)]}><Text style={{ fontSize: 16, fontWeight: '500' }}>{label}</Text></OutlinedButton></BaseHost>;
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
-    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost style={styles.header}><Column><AdminTopBar leading={<IconButton onClick={() => { model.back(); }} modifiers={[size(48, 48), semantics({ contentDescription: props.backLabel })]}><WorkerDetailIcon name="arrow_back" color={colors.onSurfaceVariant} /></IconButton>}
-      title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{a('profile.title')}</Text>}
-      actions={<RNHostView matchContents><View style={styles.headerAction}>{props.profileAction}</View></RNHostView>} /><Surface color={chromeBackground} modifiers={[fillMaxWidth(), height(3)]} /></Column></BaseHost></SafeAreaView>
+    <SafeAreaView edges={['left', 'right']} testID="admin-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column><AdminTopBar leading={<IconButton onClick={() => { model.back(); }} modifiers={[size(48, 48), semantics({ contentDescription: props.backLabel })]}><WorkerDetailIcon name="arrow_back" color={colors.onSurfaceVariant} /></IconButton>}
+      title={<Text style={{ typography: 'titleLarge' }}>{a('profile.title')}</Text>}
+      actions={<RNHostView matchContents>{props.profileAction}</RNHostView>} /></Column></BaseHost></SafeAreaView>
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-worker-detail-body-frame"><ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Surface color={colors.surface} shadowElevation={2} shape={workerDetailCardShape()} modifiers={[fillMaxWidth()]}><Column modifiers={[fillMaxWidth(), animateContentSize()]}>
         <RNHostView matchContents={{ vertical: true }}><View style={styles.profileHeader}>
@@ -107,6 +107,6 @@ export function AdminWorkerDetailScreen(props: AdminWorkerDetailScreenProps) {
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }
-const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, header: { height: 63, width: '100%' }, headerAction: { width: 58, height: 60, alignItems: 'center', justifyContent: 'center' },
+const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, footer: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   content: { padding: 4, paddingBottom: 116 }, profileHeader: { height: 204, width: '100%' }, banner: { position: 'absolute', left: 0, right: 0, top: 0, height: 112, backgroundColor: '#000' }, lowerBanner: { position: 'absolute', left: 0, right: 0, top: 112, bottom: 0 },
   status: { position: 'absolute', right: 14, top: 14 }, avatar: { position: 'absolute', left: 16, top: 74, width: 92, height: 92 }, identity: { position: 'absolute', left: 124, right: 16, top: 140 }, gap: { height: 12 }, notice: { position: 'absolute', left: 16, right: 16 } });

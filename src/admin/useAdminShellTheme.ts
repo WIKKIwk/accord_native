@@ -6,6 +6,6 @@ export function useAdminShellTheme() {
   const theme = useBaseTheme();
   const framed = useOptionalAdminShell()?.session.profile.role === 'brigader';
   const { colors } = theme;
-  const bodyBackground = Platform.OS === 'ios' && !framed ? colors.surface : colors.surfaceContainerLow;
-  return { ...theme, framed, bodyBackground, chromeBackground: framed ? colors.surfaceContainerHigh : bodyBackground };
+  const background = Platform.OS === 'ios' ? colors.surface : colors.surfaceContainerLow;
+  return { ...theme, framed, bodyBackground: background, chromeBackground: background };
 }

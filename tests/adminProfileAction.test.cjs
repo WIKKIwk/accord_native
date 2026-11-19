@@ -70,19 +70,38 @@ test('shared cache observer reports committed bytes/clear, unsubscribes and cann
   const remove = cache.subscribe(() => { events.push(cache.get(account)); }); cache.subscribe(() => { throw Error('observer'); });
   cache.clear(); assert.deepEqual(events, []); const uri = cache.remember(account, Uint8Array.of(1)); assert.equal(events[0], uri); cache.clear(); assert.equal(events[1], null); remove(); cache.remember(account, Uint8Array.of(2)); assert.equal(events.length, 2);
 });
-for (const platform of ['android', 'ios']) test(`${platform} native profile keeps source38 avatar, native click/hold and actual image/fallback without extra text`, () => {
+for (const platform of ['android', 'ios']) test(`${platform} Admin uses the shared profile press target with its real avatar and guarded actions`, () => {
   const clicks = [], model = { state: { valid: true, uri: null }, current: () => true, label: 'Profil', hint: 'Hisoblar', press: () => clicks.push('press'), hold: () => clicks.push('hold') };
-  const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) });
-  const native = new Proxy({ Shape: { RoundedCorner: value => value } }, { get: (target, name) => target[name] ?? String(name) });
-  const module = compile(path.resolve(__dirname, `../src/admin/AdminProfileAction.${platform}.tsx`), {
-    '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
-    'expo-image': { Image: 'ExpoImage' }, 'expo-symbols': { SymbolView: 'SymbolView' }, [`../components/BaseHost.${platform}`]: { BaseHost: 'BaseHost' },
-    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { onPrimaryContainer: 'outer', primaryContainer: 'icon' } }) }, './useAdminProfileAction': { useAdminProfileAction: () => model } });
-  let tree = expand(module.AdminProfileAction({})); assert.equal(nodes(tree, node => node.type === 'Text').length, 0);
-  if (platform === 'android') { const mod = nodes(tree, node => node.type === 'Box')[0].props.modifiers.find(mod => mod.name === 'combinedClickable'); mod.args[0].onClick(); mod.args[0].onLongClick(); }
-  else { const button = nodes(tree, node => node.type === 'Button')[0]; button.props.onPress(); button.props.modifiers.find(mod => mod.name === 'onLongPressGesture').args[0](); }
-  assert.deepEqual(clicks, ['press', 'hold']); model.state.uri = 'data:image/png;base64,AQ=='; tree = expand(module.AdminProfileAction({}));
-  const image = nodes(tree, node => node.type === 'ExpoImage')[0]; assert.equal(image.props.source.uri, model.state.uri); assert.equal(image.props.style.width, 38); assert.equal(image.props.style.height, 38); assert.equal(image.props.cachePolicy, 'memory');
+  const navigation = require('./support/roleNavigation.cjs');
+  const native = { Platform: { OS: platform }, Pressable: 'Pressable', StyleSheet: { create: value => value } };
+  const buttons = navigation.load('RoleHeaderButton.tsx', {
+    'react-native': native, 'expo-symbols': { SymbolView: 'SymbolView' },
+    './roleNavigationMetrics': navigation.metrics, '../../components/useAccountSwitcherLauncher': {},
+  });
+  const module = compile(path.resolve(__dirname, '../src/admin/AdminProfileAction.tsx'), {
+    'react-native': native, 'expo-image': { Image: 'ExpoImage' }, '../shared/navigation/RoleHeaderButton': buttons,
+    '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: 'ink', onSurfaceVariant: 'muted' } }) },
+    './useAdminProfileAction': { useAdminProfileAction: () => model },
+  });
+  let target = module.AdminProfileAction({});
+  assert.equal(target.type, buttons.RoleProfileButton);
+  const press = target.type(target.props);
+  assert.equal(press.props.testID, 'admin-profile-account-action');
+  assert.equal(press.props.delayLongPress, 500);
+  assert.equal(press.props.accessibilityHint, model.hint);
+  assert.equal(press.props.style({ pressed: false }).filter(Boolean).at(-1).height, platform === 'android' ? 48 : 44);
+  assert.equal(press.props.children.type, 'SymbolView');
+  press.props.onPress();
+  press.props.onLongPress();
+  assert.deepEqual(clicks, ['press', 'hold']);
+  model.state.uri = 'data:image/png;base64,AQ==';
+  target = module.AdminProfileAction({});
+  const image = target.type(target.props).props.children;
+  assert.equal(image.type, 'ExpoImage');
+  assert.equal(image.props.source.uri, model.state.uri);
+  assert.equal(image.props.style.width, 32);
+  assert.equal(image.props.style.height, 32);
+  assert.equal(image.props.cachePolicy, 'memory');
   model.state.valid = false; assert.equal(module.AdminProfileAction({}), null);
 });
 for (const changed of ['epoch', 'scope', 'witness', 'parent', 'test-token']) test(`profile action session captures original authority and never revives after ${changed} change`, () => {

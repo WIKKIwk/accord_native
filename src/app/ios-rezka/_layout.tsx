@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, Redirect, router, ThemeProvider, usePathname, type Href } from 'expo-router';
-import { NativeTabs } from 'expo-router/native-tabs';
+import { RoleTabs, roleTabIcons } from '../../shared/navigation/RoleTabs.ios';
 import { useState } from 'react';
 import { ActivityIndicator, Platform, useColorScheme, View } from 'react-native';
 import { WorkerSecurityProvider } from '../../components/WorkerSecurity';
@@ -42,12 +42,10 @@ export default function IosRezkaLayout() {
           closeAccessibilityLabel={localizedGetter('closeAction', locale)}
           footerAction={{ id: 'logout', label: localizedGetter('logoutTitle', locale), symbol: 'rectangle.portrait.and.arrow.right', destructive: true }}
           onSelect={id => { if (id === 'logout') confirmRoleDrawerLogout(onLogout); else if (id === 'queue' || id === 'workers' || id === 'daily' || id === 'instructions' || id === 'profile') navigate(id); }}>
-          <NativeTabs>
-            <NativeTabs.Trigger name="(home)"><NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
-              <NativeTabs.Trigger.Label>{localizedGetter('homeNavTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-            <NativeTabs.Trigger name="profile"><NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} />
-              <NativeTabs.Trigger.Label>{localizedGetter('profileTitle', locale)}</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-          </NativeTabs>
+          <RoleTabs tabs={[
+            { name: '(home)', label: localizedGetter('homeNavTitle', locale), icon: roleTabIcons.home },
+            { name: 'profile', label: localizedGetter('profileTitle', locale), icon: roleTabIcons.profile },
+          ]} />
         </RoleDrawer>
       </WorkerSecurityProvider>
     </ThemeProvider>

@@ -217,14 +217,26 @@ const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name, 
 function switcherMock(calls) {
   return onProfile => ({ onPress: onProfile, open: () => calls.push('switch'), hint: 'accountSwitchHint' });
 }
+function loadRoleHeaderButtons(launcher, platform = 'ios') {
+  const navigation = require('./support/roleNavigation.cjs');
+  return navigation.load('RoleHeaderButton.tsx', {
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { Platform: { OS: platform }, Pressable: 'Pressable', StyleSheet: { create: value => value } },
+    '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: launcher },
+    './roleNavigationMetrics': navigation.metrics,
+  });
+}
+
+function pressTarget(node) {
+  while (typeof node.type === 'function') node = node.type(node.props);
+  return node;
+}
+
 test('the shared header binds long press only to profile, with a 500ms hold and the original short tap', () => {
   const calls = [];
-  const { RoleHeaderButton } = load('shared/navigation/RoleHeaderButton.tsx', {
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
-    '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: switcherMock(calls) },
-  });
+  const { RoleHeaderButton } = loadRoleHeaderButtons(switcherMock(calls), 'android');
   for (const icon of ['menu', 'back', 'profile']) {
-    const button = RoleHeaderButton({ icon, label: icon, tintColor: 'ink', onPress: () => calls.push(icon) });
+    const button = pressTarget(RoleHeaderButton({ icon, label: icon, tintColor: 'ink', onPress: () => calls.push(icon) }));
     button.props.onPress();
     if (icon === 'profile') { assert.equal(button.props.delayLongPress, 500); assert.equal(button.props.accessibilityHint, 'accountSwitchHint'); button.props.onLongPress(); }
     else assert.equal(button.props.onLongPress, undefined);
@@ -233,10 +245,11 @@ test('the shared header binds long press only to profile, with a 500ms hold and 
 });
 
 function loadProfilePressTarget(launcher) {
-  return load('components/ProfilePressTarget.ios.tsx', {
-    'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
+  const { ProfilePressTarget } = load('components/ProfilePressTarget.ios.tsx', {
+    '../shared/navigation/RoleHeaderButton': loadRoleHeaderButtons(launcher),
     './useAccountSwitcherLauncher': { useAccountSwitcherLauncher: launcher },
-  }).ProfilePressTarget;
+  });
+  return props => pressTarget(ProfilePressTarget(props));
 }
 
 test('the iOS toolbar avatar and Homashyo header share the profile and account-switch press target', () => {
@@ -424,18 +437,26 @@ for (const platform of ['android', 'ios']) {
     const ListItem = Object.assign(() => null, Object.fromEntries(['LeadingContent', 'HeadlineContent', 'SupportingContent', 'TrailingContent'].map(name => [name, `ListItem.${name}`])));
     ui.ListItem = ListItem; ui.OutlinedTextField = Object.assign(() => null, { Label: 'Label' }); ui.useNativeState = () => field;
     ui.useMaterialColors = () => ({ onSurface: '#ffffff', primary: '#d0bcff' });
+    const layout = load('components/AccountSwitcherLayout.tsx', {
+      'react-native': { View: 'View', ScrollView: 'ScrollView', StyleSheet: { create: value => value } },
+    });
     const { AccountSwitcher } = load(`components/AccountSwitcher.${platform}.tsx`, {
       [`@expo/ui/${platform === 'android' ? 'jetpack-compose' : 'swift-ui'}`]: ui,
       [`@expo/ui/${platform === 'android' ? 'jetpack-compose' : 'swift-ui'}/modifiers`]: modifiers,
       '../shared/accountEntryLogic': { savedAccountDisplayName: account => account.profile.display_name, savedAccountSubtitle: () => 'role' },
       './BaseHost': { BaseHost: 'Host' }, './useAccountSwitcher': { useAccountSwitcher: () => model },
+      './AccountSwitcherLayout': layout,
       './useBaseTheme': { useBaseTheme: () => ({ colors: { onSurface: '#ffffff', primary: '#d0bcff' } }) },
       '../../assets/icons/gscale/arrow_back.xml': 'arrow-back',
     });
     const byId = (tree, id) => nodes(tree, node => node.props?.modifiers?.some(mod =>
       ['testID', 'accessibilityIdentifier'].includes(mod.name) && mod.args[0] === id))[0];
-    let tree = AccountSwitcher({});
+    let tree = pressTarget(AccountSwitcher({}));
     assert.ok(byId(tree, 'saved-account-current')); assert.ok(byId(tree, 'saved-account-protected'));
+    const list = nodes(tree, node => node.type === 'ScrollView')[0];
+    assert.ok(byId(list, 'saved-account-current'));
+    assert.equal(byId(list, 'account-switch-add'), undefined);
+    assert.equal(nodes(list, node => node.props?.children === 'accountSwitchTitle').length, 0);
     const row = byId(tree, 'saved-account-other');
     if (platform === 'android') {
       assert.equal(byId(tree, 'saved-account-current').props.modifiers.some(mod => mod.name === 'clickable'), false);
@@ -446,7 +467,7 @@ for (const platform of ['android', 'ios']) {
     }
     const add = byId(tree, 'account-switch-add'); (add.props.onClick ?? add.props.onPress)();
     assert.deepEqual(calls, [['select', 'other'], 'add']);
-    model.target = accounts[1]; model.pinPrompt = 'Protected PIN'; tree = AccountSwitcher({});
+    model.target = accounts[1]; model.pinPrompt = 'Protected PIN'; tree = pressTarget(AccountSwitcher({}));
     const input = byId(tree, 'account-switch-pin');
     if (platform === 'android') {
       assert.equal(input.props.visualTransformation, 'password'); assert.equal(input.props.colors.unfocusedTextColor, '#ffffff');
@@ -454,7 +475,7 @@ for (const platform of ['android', 'ios']) {
     } else { assert.equal(input.type, 'SecureField'); input.props.onTextChange('1234'); }
     const unlock = byId(tree, 'account-switch-unlock'); (unlock.props.onClick ?? unlock.props.onPress)();
     assert.deepEqual(calls.at(-1), ['verify', '1234']);
-    model.busy = true; tree = AccountSwitcher({});
+    model.busy = true; tree = pressTarget(AccountSwitcher({}));
     const back = byId(tree, 'account-switch-back');
     if (platform === 'android') assert.equal(back.props.enabled, false);
     else assert.equal(back.props.modifiers.find(mod => mod.name === 'disabled').args[0], true);

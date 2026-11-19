@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } f
 import { AppState, Keyboard, Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { subscribeAdminSystemInsets } from '../../modules/accord-admin-layout/src/AccordAdminLayoutModule';
+import { androidRoleBottomBarHeight } from '../shared/navigation/roleNavigationMetrics';
 import { adminShellDockHeight, adminShellFrameLayout } from './adminShellLayoutPolicy';
 import { AdminShellLayoutController } from './adminShellLayoutRuntime';
 import { useAdminShellSourceWindowLayout } from './AdminShellSourceWindowLayoutContext';
@@ -30,10 +31,11 @@ export function useAdminShellLayout(hasFooter: boolean, bottomDockHeight?: numbe
     return () => { native(); foreground.remove(); keyboard.forEach(subscription => subscription.remove()); };
   }, [controller, expoGo]);
   const metrics = sourceWindow ? source.metrics : state.metrics, thinGestureBottom = sourceWindow ? source.thinGestureBottom : state.thinGestureBottom;
-  const frame = adminShellFrameLayout(metrics, hasFooter, thinGestureBottom === true, bottomDockHeight);
+  const dockHeight = bottomDockHeight ?? (Platform.OS === 'android' ? androidRoleBottomBarHeight : adminShellDockHeight);
+  const frame = adminShellFrameLayout(metrics, hasFooter, thinGestureBottom === true, dockHeight);
   // Expo Go exposes the activity safe area, but not the app's native layout module or a source window's metrics.
   const preview = expoGo && !sourceWindow && metrics === null;
-  const previewBottomReserve = hasFooter && !keyboardVisible ? (bottomDockHeight ?? adminShellDockHeight) + safe.bottom : 0;
+  const previewBottomReserve = hasFooter && !keyboardVisible ? dockHeight + safe.bottom : 0;
   return { ...frame, bottomReserve: preview ? previewBottomReserve : frame.bottomReserve,
     dockBottomInset: preview ? safe.bottom : frame.dockBottomInset,
     metrics, metricsReady: metrics !== null || preview, navigationResolved: sourceWindow ? typeof thinGestureBottom === 'boolean' : state.navigationResolved,

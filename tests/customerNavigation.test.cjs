@@ -169,15 +169,16 @@ test('iOS Customer hides held Chat while keeping the notification badge', () => 
     const Trigger = Object.assign(function Trigger() {}, { Icon: 'Icon', Label: 'Label', Badge: 'Badge' });
     const NativeTabs = Object.assign(function NativeTabs() {}, { Trigger });
     const shell = load('src/customer/CustomerShell.ios.tsx', {
-      'react/jsx-runtime': jsx, 'expo-router': { usePathname: () => pathname }, 'expo-router/native-tabs': { NativeTabs },
+      'react/jsx-runtime': jsx, 'expo-router': { usePathname: () => pathname }, '../shared/navigation/RoleTabs.ios': require('./support/roleNavigation.cjs').tabs(NativeTabs),
       react: { createContext: () => ({ Provider: 'Provider' }), useContext: () => () => {}, useState: value => [value, () => {}] },
       './CustomerDrawer': { CustomerDrawer: 'CustomerDrawer' },
       './CustomerContext': { useCustomerText: () => ({ text: key => key }), useCustomerUnread: () => true },
       './customerNavigation': nav,
     }).CustomerShell();
-    const triggers = nodes(shell, node => node.type === Trigger);
+    const sharedTabs = shell.props.children;
+    const triggers = nodes(sharedTabs.type(sharedTabs.props), node => node.type === Trigger);
     assert.deepEqual(triggers.map(item => item.props.name), ['(home)', 'notifications', 'chat']);
-    assert.equal(nodes(triggers[1], node => node.type === 'Badge').length, pathname.endsWith('/notifications') ? 0 : 1);
+    assert.equal(nodes(triggers[1], node => node.type === 'Badge')[0].props.hidden, pathname.endsWith('/notifications'));
     assert.equal(triggers[2].props.hidden, true);
     assert.equal(nodes(triggers[2], node => node.type === 'Badge').length, 0);
   }

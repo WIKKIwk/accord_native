@@ -2,12 +2,14 @@ import { Box, Column, FilterChip, FlowRow, IconButton, RNHostView, Row, Shape, S
   Spacer, Surface, TextButton, useNativeState, type BasicTextFieldRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
 import { fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, useWindowDimensions, View, type NativeScrollEvent } from 'react-native';
 import Animated, { Easing, FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useBaseTheme } from '../components/useBaseTheme';
+import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
+import { RoleHeaderRow, RoleHeaderSearchField } from '../shared/navigation/RoleHeaderRow';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import type { AdminUsersRow, AdminUsersScreenProps } from './AdminUsersScreenTypes';
 import { useAdminUsersScreen, type AdminUsersScreenModel } from './useAdminUsersScreen';
@@ -17,49 +19,35 @@ import { AdminBasicTextField as BasicTextField } from './AdminTextFields.android
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
-const searchFill = (outline: string, surface: string) => `#${[1, 3, 5].map(offset => Math.round(parseInt(outline.slice(offset, offset + 2), 16) * .08 +
-  parseInt(surface.slice(offset, offset + 2), 16) * .92).toString(16).padStart(2, '0')).join('')}FF`;
 function Icon({ name, color, iconSize = 24 }: { name: 'arrow_back' | 'close' | 'person_outline' | 'expand_more' | 'expand_less' | 'check'; color: string; iconSize?: number }) {
   return <RNHostView matchContents><SymbolView name={{ android: name }} size={iconSize} tintColor={color} importantForAccessibility="no" /></RNHostView>;
-}
-function HeaderSlot({ visible, slotWidth, children }: { visible: boolean; slotWidth: number; children: ReactNode }) {
-  const width = useSharedValue(visible ? slotWidth : 0), alpha = useSharedValue(visible ? 1 : 0);
-  useEffect(() => {
-    width.value = withTiming(visible ? slotWidth : 0, { duration: 180, easing: Easing.out(Easing.cubic) });
-    alpha.value = withTiming(visible ? 1 : 0, { duration: 120, easing: Easing.out(Easing.cubic) });
-  }, [visible, slotWidth, width, alpha]);
-  const motion = useAnimatedStyle(() => ({ width: width.value, opacity: alpha.value }));
-  return <Animated.View style={[styles.headerSlot, motion]} pointerEvents={visible ? 'auto' : 'none'} accessibilityElementsHidden={!visible}
-    importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}><View style={{ width: slotWidth, height: 60, justifyContent: 'center' }}>{children}</View></Animated.View>;
 }
 function SearchHeader({ model, props }: { model: AdminUsersScreenModel; props: AdminUsersScreenProps }) {
   const { colors } = useBaseTheme(), field = useRef<BasicTextFieldRef>(null), text = useNativeState(model.searchText);
   useEffect(() => { void field.current?.setText(model.searchText); }, [model.searchText]);
   const close = () => { if (model.interactive()) { void field.current?.blur(); model.setSearchFocused(false); } };
-  return <View style={styles.header}>
-    <HeaderSlot visible={!model.searchFocused} slotWidth={44}><BaseHost matchContents><IconButton onClick={model.back} modifiers={[size(38, 48), semantics({ contentDescription: props.backLabel }), testID('admin-users-back')]}>
-      <Icon name="arrow_back" color={colors.onSurfaceVariant} />
-    </IconButton></BaseHost></HeaderSlot>
-    <BaseHost style={styles.searchField}><Surface color={searchFill(colors.outlineVariant, colors.surfaceContainerLow)} shape={shape(999)} modifiers={[fillMaxWidth(), height(58)]}>
-      <Row verticalAlignment="center" modifiers={[fillMaxSize(), padding(18, 0, 0, 0)]}>
+  return <RoleHeaderRow>
+    {!model.searchFocused && <RoleHeaderButton icon="back" label={props.backLabel} onPress={model.back} tintColor={colors.onSurfaceVariant} testID="admin-users-back" />}
+    <RoleHeaderSearchField focused={model.searchFocused}>
+      <BaseHost style={styles.searchField}><Row verticalAlignment="center" modifiers={[fillMaxSize()]}>
         <BasicTextField ref={field} value={text} singleLine onValueChange={model.setSearch} onFocusChanged={model.setSearchFocused}
           keyboardOptions={{ imeAction: 'search', capitalization: 'none', autoCorrectEnabled: false }} keyboardActions={{ onSearch: close }}
-          textStyle={{ color: colors.onSurfaceVariant, fontSize: 14, fontWeight: '400', lineHeight: 16.8 }}
-          modifiers={[weight(1), height(58), semantics({ contentDescription: model.a('users.search') }), testID('admin-users-search')]}>
+          textStyle={{ color: colors.onSurfaceVariant, fontSize: 15, textAlign: 'left' }}
+          modifiers={[weight(1), height(56), semantics({ contentDescription: model.a('users.search') }), testID('admin-users-search')]}>
           <BasicTextField.DecorationBox><Box contentAlignment="centerStart" modifiers={[fillMaxSize()]}>
             <BasicTextField.InnerTextField />
-            <BasicTextField.Placeholder><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyMedium', textAlign: 'center' }}
+            <BasicTextField.Placeholder><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyMedium', textAlign: 'left' }}
               modifiers={[fillMaxWidth()]}>{model.searchFocused ? '' : model.a('users.search')}</Text></BasicTextField.Placeholder>
           </Box></BasicTextField.DecorationBox>
         </BasicTextField>
         {model.searchFocused || model.hasSearchText ? <IconButton onClick={model.searchFocused ? close : () => { if (model.interactive()) { void field.current?.clear(); model.setSearch(''); } }}
           modifiers={[size(48, 48), semantics({ contentDescription: model.a(model.searchFocused ? 'action.close' : 'action.clear') }), testID('admin-users-search-close')]}>
           <Icon name="close" color={colors.onSurfaceVariant} />
-        </IconButton> : <Spacer modifiers={[size(18, 1)]} />}
-      </Row>
-    </Surface></BaseHost>
-    <HeaderSlot visible={!model.searchFocused} slotWidth={58}>{props.profileAction}</HeaderSlot>
-  </View>;
+        </IconButton> : null}
+      </Row></BaseHost>
+    </RoleHeaderSearchField>
+    {!model.searchFocused && props.profileAction}
+  </RoleHeaderRow>;
 }
 function RoleFilter({ model }: { model: AdminUsersScreenModel }) {
   const { colors } = useBaseTheme(), chipColors = { containerColor: colors.surfaceContainerLowest, labelColor: colors.onSurface,
@@ -154,8 +142,7 @@ export function AdminUsersScreen(props: AdminUsersScreenProps) {
   </View>;
 }
 const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 }, fullWidth: { width: '100%' },
-  header: { height: 63, width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 3 },
-  headerSlot: { height: 60, overflow: 'hidden' }, searchField: { flex: 1, minWidth: 0, height: 58, transform: [{ translateY: -1 }] },
+  searchField: { flex: 1, minWidth: 0, height: 56 },
   list: { flexGrow: 1, paddingTop: 4, paddingHorizontal: 4, paddingBottom: 116 }, rowClip: { overflow: 'hidden' }, row: { width: '100%', height: 61 },
   invisible: { opacity: 0 }, overlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
   errorOverlay: { justifyContent: 'flex-start', paddingHorizontal: 24, paddingVertical: 40 },

@@ -65,8 +65,8 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
   return <View style={[styles.root, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']} testID="admin-settings-header-safe-area"><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}>
       <AdminTopBar leading={model.navigation ? <IconButton onClick={model.navigation.onPress} modifiers={[semantics({ contentDescription: model.navigation.label }), testID('admin-settings-back')]}><RNHostView matchContents><SymbolView name={{ android: model.navigation.icon === 'back' ? 'arrow_back' : 'menu' }} size={24} tintColor={colors.onSurface} /></RNHostView></IconButton> : null}
-        title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{t('adminSettingsTitle')}</Text>}
-        actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} />
+        title={<Text style={{ typography: 'titleLarge' }}>{t('adminSettingsTitle')}</Text>}
+        actions={props.profileAction ? <RNHostView matchContents>{props.profileAction}</RNHostView> : null} />
     </Column></BaseHost></SafeAreaView>
     {props.topNotice}<AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-settings-body-frame"><View style={styles.content}>
       {state.phase === 'error' ? <View style={styles.retry}><BaseHost matchContents={{ vertical: true }} style={{ width: Math.min(Math.max(width * .88, 280), 360), maxWidth: '100%' }}>
@@ -106,5 +106,5 @@ export function AdminSettingsScreen(props: AdminSettingsScreenProps) {
   </View>;
 }
 const styles = StyleSheet.create({ root: { flex: 1 }, body: { flex: 1 }, fullWidth: { width: '100%' }, content: { flex: 1, paddingStart: 12, paddingEnd: 14 },
-  retry: { flex: 1, paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }, profile: { width: 58, height: 60, justifyContent: 'center' },
+  retry: { flex: 1, paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, notice: { position: 'absolute', left: 16, right: 16 } });

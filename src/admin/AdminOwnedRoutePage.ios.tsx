@@ -8,7 +8,7 @@ import { AdminOwnedBackProvider } from './AdminOwnedBackContext';
 import { AdminOwnedDock } from './AdminOwnedDock.ios';
 import { AdminOwnedRouteContent } from './AdminOwnedRouteContent.ios';
 import { AdminOwnedRouteNotice } from './AdminOwnedRouteNotice.ios';
-import { AdminProfileAction } from './AdminProfileAction.ios';
+import { AdminProfileAction } from './AdminProfileAction';
 import { useAdminShell } from './AdminShellContext';
 import { useAdminOwnedNotice } from './useAdminOwnedNotice';
 import { useAdminOwnedPage } from './useAdminOwnedPage';

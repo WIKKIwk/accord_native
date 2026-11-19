@@ -88,6 +88,7 @@ test('embedded Android receipt keeps Material navigation and leaves its dock to 
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
     'react-native-gesture-handler': { GestureHandlerRootView: 'GestureRoot' },
     '../components/WorkerQueueCard.android': {}, '../preparation/PreparationUI.android': { PreparationDock: 'PreparationDock' },
+    '../shared/navigation/RoleHeaderRow': require('./support/roleNavigation.cjs').header,
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'HeaderButton' },
     '../shared/orders/OrdersWorkspace': { OrdersWorkspace: 'Workspace' }, './gscaleReceiptLayout': {},
     './useGScaleScreen': { useGScaleText: () => value => value },

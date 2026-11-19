@@ -30,7 +30,7 @@ test('restricted shells reuse native navigation and do not start unread transpor
   assert.ok(shell.includes('registerSessionResetHook')); assert.ok(shell.includes('canOpenRoute(session, appRoutes.supplierHome)'));
   assert.ok(shell.includes('RoleDrawer')); assert.ok(shell.includes("item.id !== 'notifications'"));
   assert.ok(android.includes('RoleBottomBar')); assert.ok(android.includes("item.id !== 'chat' && item.id !== 'notifications'"));
-  assert.ok(ios.includes('<NativeTabs>')); assert.ok(!ios.includes('name="notifications"')); assert.ok(!ios.includes('name="chat"'));
+  assert.ok(ios.includes('<RoleTabs tabs=')); assert.ok(!ios.includes("name: 'notifications'")); assert.ok(!ios.includes("name: 'chat'"));
   for (const source of [shell, android, ios]) {
     assert.ok(!source.includes('useChatUnreadCount')); assert.ok(!source.includes('notificationUnreadStore'));
   }

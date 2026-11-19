@@ -5,7 +5,7 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { useAdminShellTheme } from './useAdminShellTheme';
-import { AdminProfileAction } from './AdminProfileAction.android';
+import { AdminProfileAction } from './AdminProfileAction';
 import { AdminText } from './AdminTypography.android';
 import { AdminOutlinedTextField } from './AdminTextFields.android';
 import { UserCreateIcon, userCreateRounded } from './AdminUserCreateNative.android';
@@ -20,7 +20,7 @@ export function AdminPartyCreateScreen(props: AdminPartyCreateProps & { footer: 
   if (!model.current()) return null;
   return <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: chromeBackground }}>
     <BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><AdminTopBar leading={<IconButton onClick={props.onBack} modifiers={[semantics({ contentDescription: props.backLabel }), testID("admin-party-create-back")]}><UserCreateIcon name="arrow_back" color={colors.onSurface} /></IconButton>}
-      title={<AdminText style={{ fontSize: 24, fontWeight: '800' }}>{model.title}</AdminText>}
+      title={<AdminText style={{ typography: 'titleLarge' }}>{model.title}</AdminText>}
       actions={<RNHostView matchContents><AdminProfileAction {...props} onProfile={props.onProfile} /></RNHostView>} /></BaseHost>
     <AdminShellBodyFrame hasFooter testID="admin-party-create-body-frame"><ScrollView keyboardShouldPersistTaps="handled"><BaseHost matchContents={{ vertical: true }} style={{ width: '100%' }}><Column modifiers={[fillMaxWidth(), padding(12, 12, 12, 0)]}>
       <AdminOutlinedTextField {...field} value={name} onValueChange={model.changeName} modifiers={[fillMaxWidth(), testID('admin-party-create-name')]}><AdminOutlinedTextField.Label><AdminText>{model.nameLabel}</AdminText></AdminOutlinedTextField.Label></AdminOutlinedTextField>

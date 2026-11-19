@@ -46,7 +46,7 @@ function fixture(platform, kind = 'customer', locale = 'uz', { hide = async () =
     '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors, mode: 'light' }) },
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' }, './AdminTypography.android': { AdminText: 'Text', useAdminFontsReady: () => false },
     './AdminTextFields.android': { AdminBasicTextField: ui.BasicTextField, AdminOutlinedTextField: ui.OutlinedTextField }, './adminFontFamily.android': { adminTextStyle: value => value },
-    './AdminProfileAction.android': { AdminProfileAction: 'AdminProfileAction' }, './AdminProfileAction.ios': { AdminProfileAction: 'AdminProfileAction' }, './AdminShellBodyFrame': frameModule(colors),
+    './AdminProfileAction': { AdminProfileAction: 'AdminProfileAction' }, './AdminShellBodyFrame': frameModule(colors),
     './adminUserCreateModel': source, './useAdminUserCreate': { useAdminUserCreate: () => { hookReads++; return model; } }, './useAdminPresentationWindow': presentationHook, './adminPresentationWindowTicket': ticket };
   function compile(name) {
     if (cache.has(name)) return cache.get(name); const filename = path.resolve(__dirname, '../src/admin', `${name}.tsx`), mod = new Module(filename, module); cache.set(name, mod.exports); mod.filename = filename; mod.paths = module.paths;

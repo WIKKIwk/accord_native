@@ -7,7 +7,7 @@ import { BaseHost } from '../components/BaseHost.ios';
 import { useBaseTheme } from '../components/useBaseTheme';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { RoleHeaderButton } from '../shared/navigation/RoleHeaderButton';
-import { AdminProfileAction } from './AdminProfileAction.ios';
+import { AdminProfileAction } from './AdminProfileAction';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminUserCreateOverlays } from './AdminUserCreateOverlays.ios';
 import type { AdminUserCreateScreenProps } from './AdminUserCreateScreenTypes';

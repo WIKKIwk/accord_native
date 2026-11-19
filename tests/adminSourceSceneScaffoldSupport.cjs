@@ -105,9 +105,9 @@ function nativeFixture(platform = 'android', options = {}) {
     './useAdminShellLayout': { useAdminShellLayout() { throw Error('No legacy Activity layout'); } } });
   const sourceContext = compile('AdminSourceSceneScaffoldContext.tsx', { './AdminRootRouterContext': rootContext, './AdminTopNoticeProvider': noticeProvider, './AdminSourceSceneScaffoldOwner': scene });
   const shellContext = compile('AdminShellSourceWindowLayoutContext.tsx'), inline = compile('AdminShellInlineSafeArea.tsx', { './AdminShellSourceWindowLayoutContext': shellContext });
-  const shellHook = compile('useAdminShellLayout.ts', { expo: { isRunningInExpoGo: () => false }, './AdminShellSourceWindowLayoutContext': shellContext, './adminShellLayoutPolicy': shellPolicy,
+  const shellHook = compile('useAdminShellLayout.ts', { expo: { isRunningInExpoGo: () => false }, './AdminShellSourceWindowLayoutContext': shellContext, '../shared/navigation/roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics, './adminShellLayoutPolicy': shellPolicy,
     './adminShellLayoutRuntime': { AdminShellLayoutController: class { constructor() { throw Error('No Activity controller'); } } }, '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': { subscribeAdminSystemInsets() { throw Error('No Activity metrics'); } } });
-  const frame = compile('AdminShellBodyFrame.tsx', { './useAdminShellLayout': shellHook, './adminShellLayoutPolicy': shellPolicy,
+  const frame = compile('AdminShellBodyFrame.tsx', { './useAdminShellLayout': shellHook, '../shared/navigation/roleNavigationMetrics': require('./support/roleNavigation.cjs').metrics, './adminShellLayoutPolicy': shellPolicy,
     './AdminShellContext': { useOptionalAdminShell: () => ({ session: { profile: { role: 'admin' } } }) } });
   const bodyLayout = source.load('admin/adminItemCreateNativeLayout', { './adminSupplierScaffoldLayout': source.load('admin/adminSupplierScaffoldLayout') });
   const itemScaffold = compile('AdminItemCreateScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellBodyFrame': frame, './adminItemCreateNativeLayout': bodyLayout });

@@ -132,8 +132,8 @@ export function AdminRolesScreen(props: AdminRolesScreenProps) {
   </LazyColumn></PullToRefreshBox>;
   return <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: chromeBackground }]}>
     <SafeAreaView edges={['left', 'right']}><BaseHost matchContents={{ vertical: true }} style={styles.fullWidth}><Column modifiers={[fillMaxWidth()]}><AdminTopBar leading={<IconButton onClick={props.navigation.onPress} modifiers={[semantics({ contentDescription: props.navigation.label })]}><Icon name={props.navigation.icon === 'back' ? 'arrow_back' : 'menu'} color={colors.onSurface} /></IconButton>}
-      title={<Text style={{ fontSize: 24, fontWeight: '800' }}>{model.t('adminRolesTitle')}</Text>}
-      actions={props.profileAction ? <RNHostView matchContents><View style={styles.profile}>{props.profileAction}</View></RNHostView> : null} /><Spacer modifiers={[height(3)]} /></Column></BaseHost></SafeAreaView>{props.topNotice}
+      title={<Text style={{ typography: 'titleLarge' }}>{model.t('adminRolesTitle')}</Text>}
+      actions={props.profileAction ? <RNHostView matchContents><>{props.profileAction}</></RNHostView> : null} /></Column></BaseHost></SafeAreaView>{props.topNotice}
     <AdminShellBodyFrame hasFooter={props.footer != null} testID="admin-roles-body-frame"><BaseHost style={styles.screen}>
       {!state.data ? state.loading ? <Box contentAlignment="center" modifiers={[fillMaxSize()]}><AdminLoadingIndicator /></Box> : <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth(), padding(24, 40, 24, 40)]}>
         <Column horizontalAlignment="center" verticalArrangement={{ spacedBy: 16 }} modifiers={[fillMaxWidth()]}><Text color={colors.onSurfaceVariant} style={{ typography: 'bodyLarge', textAlign: 'center' }}>{model.t('serverDisconnectedRetry')}</Text>
@@ -152,5 +152,5 @@ export function AdminRolesScreen(props: AdminRolesScreenProps) {
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16, maxWidth: width - 32 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' }, profile: { width: 58, height: 60, justifyContent: 'center' },
+const styles = StyleSheet.create({ screen: { flex: 1 }, fullWidth: { width: '100%' },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, notice: { position: 'absolute', left: 16, right: 16 } });

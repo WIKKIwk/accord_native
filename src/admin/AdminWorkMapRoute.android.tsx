@@ -29,7 +29,7 @@ function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), label = adminWorkMapText(locale), goBack = view.goBack;
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; }); return () => sub.remove(); }, [goBack]);
   return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: chromeBackground }}>
-    <SafeAreaView edges={['left', 'right']}><OrdersHeader compact search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)}
+    <SafeAreaView edges={['left', 'right']}><OrdersHeader search={view.query} searchPlaceholder={productionText('worker.queue.search.open', locale)}
       onSearchChange={view.search} onBack={view.goBack} onProfile={view.onProfile} profileAction={<AdminShellProfileAction />} /></SafeAreaView>
     <AdminShellBodyFrame hasFooter={footer !== null} testID="admin-work-map-body-frame">
     <BaseHost matchContents={{ vertical: true }}><AdminWorkMapModules {...view.controls} /></BaseHost>

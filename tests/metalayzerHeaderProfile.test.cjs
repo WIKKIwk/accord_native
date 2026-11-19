@@ -23,12 +23,24 @@ function nodes(tree, predicate) {
 const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name, args }) });
 const launcher = calls => onProfile => ({ onPress: onProfile, open: () => calls.push('switch'), hint: 'account switch' });
 
-test('Android home, list and profile headers use the shared tap and hold control', () => {
-  const calls = []; let current = true;
-  const { RoleHeaderButton } = load('shared/navigation/RoleHeaderButton.tsx', {
-    'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
+function buttons(platform, calls) {
+  const navigation = require('./support/roleNavigation.cjs');
+  return navigation.load('RoleHeaderButton.tsx', {
+    'expo-symbols': { SymbolView: 'SymbolView' },
+    'react-native': { Platform: { OS: platform }, Pressable: 'Pressable', StyleSheet: { create: value => value } },
+    './roleNavigationMetrics': navigation.metrics,
     '../../components/useAccountSwitcherLauncher': { useAccountSwitcherLauncher: launcher(calls) },
   });
+}
+
+function nativePress(node) {
+  while (typeof node.type === 'function') node = node.type(node.props);
+  return node;
+}
+
+test('Android home, list and profile headers use the shared tap and hold control', () => {
+  const calls = []; let current = true;
+  const { RoleHeaderButton } = buttons('android', calls);
   const { MetalayzerFrame } = load('metalayzer/MetalayzerFrame.android.tsx', {
     '@expo/ui/jetpack-compose': { useMaterialColors: () => ({ surfaceContainerLow: 'surface', onSurfaceVariant: 'ink' }) },
     'expo-router': { router: { navigate: route => calls.push(route), canGoBack: () => true, back: () => calls.push('back') } },
@@ -40,9 +52,10 @@ test('Android home, list and profile headers use the shared tap and hold control
   });
   for (const options of [{}, { back: true }, { profile: true }]) {
     const tree = MetalayzerFrame({ title: 'Metalayzer', ...options, children: 'content' });
-    const item = nodes(tree, node => node.type === RoleHeaderButton)[0];
-    assert.equal(item.props.icon, 'profile'); assert.equal(item.props.testID, 'header-profile');
-    const press = RoleHeaderButton(item.props);
+    const item = nodes(tree, node => node.type === 'Header')[0].props.profileAction;
+    assert.equal(item.type, RoleHeaderButton); assert.equal(item.props.icon, 'profile');
+    const press = nativePress(item);
+    assert.equal(press.props.testID, 'header-profile');
     assert.equal(press.props.delayLongPress, 500);
     press.props.onPress(); press.props.onLongPress();
     assert.deepEqual(calls.slice(-2), ['/android-metalayzer/profile', 'switch']);
@@ -53,7 +66,7 @@ test('Android home, list and profile headers use the shared tap and hold control
 test('iOS header reuses the avatar with tap for profile and hold for account switching', () => {
   const calls = []; let current = true;
   const { ProfilePressTarget } = load('components/ProfilePressTarget.ios.tsx', {
-    'react-native': { Pressable: 'Pressable', StyleSheet: { create: value => value } },
+    '../shared/navigation/RoleHeaderButton': buttons('ios', calls),
     './useAccountSwitcherLauncher': { useAccountSwitcherLauncher: launcher(calls) },
   });
   const { WorkerProfileButton } = load('components/WorkerProfileButton.ios.tsx', {
@@ -73,7 +86,7 @@ test('iOS header reuses the avatar with tap for profile and hold for account swi
   const header = MetalayzerHeaderProfile(), avatar = header.props.children;
   assert.equal(header.type, 'Host'); assert.equal(avatar.props.session, session);
   const target = nodes(WorkerProfileButton(avatar.props), node => node.type === ProfilePressTarget)[0];
-  const press = ProfilePressTarget(target.props); assert.equal(press.props.delayLongPress, 500);
+  const press = nativePress(target); assert.equal(press.props.delayLongPress, 500);
   press.props.onPress(); press.props.onLongPress();
   assert.deepEqual(calls, ['/ios-metalayzer/profile', 'switch']);
   current = false; press.props.onPress(); assert.deepEqual(calls, ['/ios-metalayzer/profile', 'switch']);

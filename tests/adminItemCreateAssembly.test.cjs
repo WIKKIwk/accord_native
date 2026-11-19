@@ -18,10 +18,14 @@ for (const platform of ['android', 'ios']) {
     assert.equal(s.nodes(replacement, node => node.type === (platform === 'android' ? 'CircularProgressIndicator' : 'ProgressView')).length, 1); assert.ok(tree);
   });
 }
-test('Android source header58 centered search/hint,14regular and38+6 back footprint; focus closes without clearing query', () => {
-  const f = s.view('Header', 'android'), tree = f.render(), field = s.nativeId(tree, 'admin-item-create-search'); assert.equal(field.props.textStyle.fontSize, 14); assert.equal(field.props.textStyle.fontWeight, '400'); assert.equal(s.nativeId(tree, 'admin-item-search-close'), undefined);
+test('Android shared search header keeps its hint and closes focus without clearing the query', () => {
+  const f = s.view('Header', 'android'), tree = f.render(), field = s.nativeId(tree, 'admin-item-create-search');
+  assert.equal(tree.type, 'RoleHeaderRow');
+  assert.equal(field.props.textStyle.fontSize, 15);
+  assert.equal(s.nodes(tree, node => node.type === 'BackButton').length, 1);
+  assert.equal(s.nativeId(tree, 'admin-item-search-close'), undefined);
   assert.ok(s.text(tree).includes(f.model.a('item.search'))); f.model.searchFocused = true; f.model.profileVisible = false; const focused = f.render(); s.nativeId(focused, 'admin-item-search-close').props.onClick(); assert.ok(f.commands.includes('blur')); assert.deepEqual(f.calls.at(-1), ['focus', false]); assert.equal(f.calls.some(value => Array.isArray(value) && value[0] === 'search'), false);
-  assert.ok(f.motions.some(value => value.duration === 180 && Array.isArray(value.easing) && value.easing[2] === .58)); assert.ok(f.motions.some(value => value.duration === 120 && value.easing === 'linear'));
+  assert.equal(s.nodes(focused, node => node.type === 'BackButton').length, 0);
   assert.ok(f.motions.some(value => value.duration === 150 && Array.isArray(value.easing) && value.easing[2] === .58)); assert.ok(s.nodes(focused, node => node.type === 'Animated.View' && node.props.pointerEvents === 'none' && node.props.accessibilityElementsHidden === true).length);
 });
 test('Android unfocused query clear uses actual native clear and dispatches empty source search once', () => {

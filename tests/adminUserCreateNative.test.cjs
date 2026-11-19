@@ -110,10 +110,12 @@ test('Android retired original account/window callbacks cannot acknowledge a suc
 test('Android requires the genuine observer dependency before mounting any UserCreate read/command owner', () => {
   for (const value of [undefined, null, {}]) { const f = fixture('android'); f.props.windowObserver = value; assert.throws(() => f.render(), /genuine native window observer/); assert.equal(f.hookReads(), 0); assert.deepEqual(f.calls, []); }
 });
-test('Android source dimensions and native buffer fill semantics retain63/66/58/56/r18 and never echo reported keystrokes', () => {
+test('Android creation uses the shared toolbar and preserves form dimensions and native buffer fills', () => {
   const f = fixture('android'), tree = f.render(), selector = byID(tree, 'admin-user-create-role'), save = byID(tree, 'admin-user-create-save');
   assert.ok(selector.props.modifiers.some(value => value.name === 'defaultMinSize' && value.args[0].minHeight === 66)); assert.ok(save.props.modifiers.some(value => value.name === 'defaultMinSize' && value.args[0].minHeight === 56));
-  assert.equal(selector.props.shape.cornerRadii.topStart, 18); assert.ok(nodes(tree, node => node.type === 'AdminTopBar' && node.props.title != null).length); assert.ok(nodes(tree, node => node.type === 'Surface' && node.props.modifiers?.some(value => value.name === 'height' && value.args[0] === 3)).length); assert.ok(nodes(tree, node => node.type === 'Text' && node.props.style?.fontSize === 24).length);
+  assert.equal(selector.props.shape.cornerRadii.topStart, 18);
+  const toolbar = nodes(tree, node => node.type === 'AdminTopBar')[0];
+  assert.equal(toolbar.props.title.props.style.typography, 'titleLarge');
   const fields = nodes(tree, node => node.type === 'OutlinedTextField'), native = fields[0].props.value; fields[0].props.onValueChange('newer native'); f.model.fields.name = 'stale render'; f.render(); assert.deepEqual(native.writes, []);
   f.state.fillVersion++; f.model.fields.name = ''; f.render(); assert.deepEqual(native.writes, ['']);
 });
