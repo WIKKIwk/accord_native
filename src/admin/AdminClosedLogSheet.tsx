@@ -10,7 +10,7 @@ const icons = {
 } satisfies Record<string, SymbolViewProps['name']>;
 type Model = ReturnType<typeof adminClosedLogDetail>;
 
-/** Passive content only; the owning row and native sheet remain unconnected until the history boundary is reviewed. */
+/** The owning history row and sheet boundary supply the current hydrated log. */
 export function AdminClosedLogSheet({ model }: { model: Model }) {
   const colors = useWorkerColors();
   const field = (item: ClosedLogField, index: number) => <View key={`${item.label}:${index}`} style={styles.field}>

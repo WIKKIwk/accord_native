@@ -9,6 +9,7 @@ export type NativeSheetOptions = {
   fitContent?: boolean;
   dismissible?: boolean;
   heightFraction?: number;
+  dismissOwnRoute?: boolean;
 };
 
 type SheetSnapshot = {

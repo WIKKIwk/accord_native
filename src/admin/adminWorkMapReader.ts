@@ -55,7 +55,7 @@ export function adminWorkMapSummaryReader(session: Session, isWitnessCurrent: ()
   return async (id: string) => { guard(); const value = await adminProductionMapOrderSummary(session, id, guard, readWitness); guard(); return value; };
 }
 
-/** Closed history remains unconnected until its route and transport boundaries are reviewed. */
+/** Closed history inherits the captured Work Map account and window witness. */
 export function adminWorkMapClosedDetailReader(session: Session, isWitnessCurrent: () => boolean) {
   const { guard, readWitness } = adminWorkMapGuard(session, isWitnessCurrent);
   return async (id: string) => { guard(); const detail = await adminClosedOrderDetail(session, id, guard, readWitness); guard(); return detail; };

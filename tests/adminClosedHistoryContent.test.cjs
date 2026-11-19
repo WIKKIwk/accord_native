@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -21,6 +22,7 @@ for (const platform of ['ios', 'android']) test(`${platform} unconnected Closed 
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native,
     '@expo/ui/swift-ui/modifiers': { accessibilityHidden: value => ({ hidden: value }), font: value => value }, 'expo-symbols': { SymbolView: 'SymbolView' },
     'react-native': { ActivityIndicator: 'ActivityIndicator' }, './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank', AdminClosedLogIcon: 'LogIcon' },
+    '../components/BaseHost.android': { BaseHost: 'Host' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     './adminClosedLogPresentation': { adminClosedLogRow: log => ({ title: `Title ${log.event_id}`, subtitle: `Actor ${log.event_id}`, icon: 'history' }) },
     './adminWorkMapClosedModel': { adminWorkMapClosedRows: () => [{ headline: 'Hydrated title', supporting: 'Hydrated subtitle' }] },
   }).AdminClosedHistoryContent;
@@ -28,6 +30,7 @@ for (const platform of ['ios', 'android']) test(`${platform} unconnected Closed 
     state = { ticket: { id: 'o', historyVersion: 'v1', windowGeneration: 1 }, expanded: false, loading: false, error: null, detail: null },
     props = { row, summary, state, catalog: [], onToggle: () => calls.push('toggle'), onRetry: () => calls.push('retry'), onLog: (order, log) => calls.push([order, log]) };
   let tree = nodes(Component(props)), header = tree.find(value => value.props.testID === 'admin-closed-history-header');
+  if (platform === 'android') assert.ok(tree.some(node => node.type === 'WorkerQueueCard'));
   assert.equal(header.props.children.props.children, 'Summary title'); assert.equal(header.props.supportingText, 'Summary subtitle');
   header.props.onPress(); assert.deepEqual(calls, ['toggle']); assert.equal(tree.some(value => value.props.testID === 'admin-closed-log-0'), false);
   state.expanded = true; state.loading = true; tree = nodes(Component(props)); assert.ok(tree.some(value => value.type === 'ActivityIndicator'));
@@ -64,6 +67,7 @@ for (const platform of ['ios', 'android']) test(`${platform} decoded history can
   const Content = load(`admin/AdminClosedHistoryContent.${platform}.tsx`, { '@expo/ui': { ListItem: 'ListItem', Text: 'NativeText' },
     [`@expo/ui/${platform === 'ios' ? 'swift-ui' : 'jetpack-compose'}`]: native, '@expo/ui/swift-ui/modifiers': { accessibilityHidden: value => value, font: value => value },
     'expo-symbols': { SymbolView: 'SymbolView' }, 'react-native': { ActivityIndicator: 'ActivityIndicator' },
+    '../components/BaseHost.android': { BaseHost: 'Host' }, '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' },
     './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank', AdminClosedLogIcon: 'LogIcon' }, './adminClosedLogPresentation': model, './adminWorkMapClosedModel': closed }).AdminClosedHistoryContent;
   let selected; const props = { row, summary, catalog: [{ id: 'apparatus:default:press', name: 'Print' }], onToggle: () => lifecycle.toggle(), onRetry: () => lifecycle.retry(),
     onLog: (order, log) => { selected = model.adminClosedLogDetail(order, log, props.catalog, 'en'); } };

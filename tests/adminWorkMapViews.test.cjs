@@ -21,7 +21,7 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   const calls = [], row = { kind: 'order', id: 'zakaz-1', code: '1', title: 'Order', customer: 'Client', imageId: 'i', displayState: 'paused', kg: null, position: 13 };
   let current = true, permitted = true;
   const shell = { session: { profile: { role: 'admin', ref: 'ADMIN-A' } }, isCurrent: () => current, destination: value => permitted && value === route ? `/${platform}-admin/work-map` : null };
-  const view = { shell, locale: 'uz', state: { query: '', rows: [row], loading: false, loaded: true, error: null, hasMore: true },
+  const view = { shell, locale: 'uz', state: { query: '', rows: [row], closed: [], loading: false, loaded: true, error: null, hasMore: true },
     controller: { reload: async () => calls.push('reload'), next: async () => calls.push('next') }, query: '',
     controls: { module: 'sequence', onModule: id => calls.push(['tab', id]) }, next: module => calls.push(['next', module]), loading: false, error: null, emptyText: '', refresh: async () => calls.push('reload'),
     filterProfileRef: 'ADMIN-A', sequenceCurrent: () => current && view.controls.module === 'sequence',
@@ -36,6 +36,8 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
     './adminWorkMapControlsTypes': load('admin/adminWorkMapControlsTypes.ts'), './AdminClosedHistoryAccessories': { AdminClosedRank: 'Rank' }, '../shared/orders/OrdersHeader': { OrdersHeader: 'OrdersHeader' },
     './AdminWorkMapMove': { AdminWorkMapMove: 'AdminWorkMapMove' }, './AdminWorkMapPendingRow': { AdminWorkMapPendingRow: 'AdminWorkMapPendingRow' }, './AdminWorkMapSequenceRow': { AdminWorkMapSequenceRow: 'AdminWorkMapSequenceRow' }, './AdminWorkMapClosedRow': { AdminWorkMapClosedRow: 'AdminWorkMapClosedRow' }, './AdminWorkMapAudit': { AdminWorkMapAudit: 'AdminWorkMapAudit' }, './AdminWorkMapControls': { AdminWorkMapModules: 'AdminWorkMapModules', AdminWorkMapApparatusFilter: 'AdminWorkMapApparatusFilter', AdminWorkMapSequenceFilter: 'AdminWorkMapSequenceFilter' },
     './AdminShellNoticeProvider': { useAdminShellNotice: () => ({ topNotice: null, onErrorNotice: () => {} }) },
+    './AdminClosedHistoryOwner': { AdminClosedHistoryOwner: 'AdminClosedHistoryOwner' },
+    './AdminClosedLogSheetOwner': { useAdminClosedLogSheetOwner: () => ({ open() {} }) },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: {} }) },
     './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' },
     './AdminShellProfileAction': { AdminShellProfileAction: 'AdminShellProfileAction' },
@@ -107,6 +109,13 @@ for (const platform of ['ios', 'android']) test(`${platform} Work Map gates dire
   view.controls.module = 'closed'; view.closed = [{ id: 'closed', headline: 'Closed summary' }]; view.error = null;
   const closedRow = rows(getList(render())).find(value => value.type === 'AdminWorkMapClosedRow');
   assert.equal(closedRow.props.row, view.closed[0]); assert.equal(closedRow.props.onPress, undefined);
+  if (platform === 'android') {
+    const summary = { order_id: 'closed', history_version: 'v1' }; view.state.closed = [summary];
+    const history = rows(getList(render())).find(value => value.type === 'AdminClosedHistoryOwner');
+    assert.equal(history.props.summary, summary); assert.equal(history.props.window, view.controller);
+    assert.equal(history.props.fallback.props.row, view.closed[0]); assert.equal(history.props.canInteract(), true);
+    current = false; assert.equal(history.props.canInteract(), false); current = true;
+  }
   view.controls.module = 'move'; view.move = { panes: [] };
   const moveContent = find(page(render()), 'AdminWorkMapMove');
   assert.equal(moveContent.props.panes, view.move.panes);

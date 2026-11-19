@@ -14,6 +14,8 @@ import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
 import { ORDERS_TAB_BAR_HEIGHT } from '../shared/orders/ordersWorkspaceTypes';
 import { AdminBottomBar } from './AdminBottomBar.android';
 import { AdminClosedRank } from './AdminClosedHistoryAccessories';
+import { AdminClosedHistoryOwner } from './AdminClosedHistoryOwner';
+import { useAdminClosedLogSheetOwner } from './AdminClosedLogSheetOwner';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
 import { AdminShellProfileAction } from './AdminShellProfileAction';
 import { AdminWorkMapMove } from './AdminWorkMapMove';
@@ -36,6 +38,7 @@ function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
   const view = useAdminWorkMapView(), { shell, locale, state, controls } = view;
   const { chromeBackground, colors } = useAdminShellTheme(), insets = useSafeAreaInsets();
   const notice = useAdminShellNotice();
+  const logSheet = useAdminClosedLogSheetOwner();
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0), goBack = view.goBack;
   const focused = useIsFocused(), navigation = useNavigation();
   const tabs = adminWorkMapTabs.filter(tab => tab.id !== 'move' || shell.session.profile?.role !== 'sales_manager');
@@ -75,7 +78,13 @@ function BoundWorkMap({ footer }: { footer?: ReactNode } = {}) {
               rowKey={row => 'kind' in row ? `${row.kind}:${row.id}` : row.id}
               renderRow={(row, index) => {
                 const first = index === 0, last = index === rows.length - 1;
-                if (!('kind' in row)) return <AdminWorkMapClosedRow row={row} first={first} last={last} />;
+                if (!('kind' in row)) {
+                  const summary = state.closed[index];
+                  const fallback = <AdminWorkMapClosedRow row={row} first={first} last={last} />;
+                  return summary?.order_id === row.id ? <AdminClosedHistoryOwner session={shell.session} isCurrent={shell.isCurrent}
+                    window={view.controller} summary={summary} catalog={controls.catalog} logSheet={logSheet}
+                    first={first} last={last} fallback={fallback} canInteract={canInteract} /> : fallback;
+                }
                 const item = adminWorkMapPresentation(tab === 'sequence' ? { ...row, position: undefined } : row, locale);
                 const onPress = () => { if (canInteract()) view.open(row); };
                 if (row.kind === 'pending') return <AdminWorkMapPendingRow headline={item.headline} supportingText={item.supporting}

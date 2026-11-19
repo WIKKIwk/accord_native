@@ -130,12 +130,14 @@ Quick Orders and Open Order checkpoint: 94 targeted tests, both platform type ch
 - [x] Confirm that the Android entry opens the Worker-derived tab, filter, row, list and picker components.
 - [x] Keep selection, pending/opened order routing, read/refresh scope, cursor, retry and Move split behavior.
 - [x] Port the source's apparatus-filter order editor, reset, refreshed-catalog reconciliation and account retirement behavior.
-- [ ] Verify the Closed history admission from the actual Android route and the original sheet's targeted dismissal.
-- [ ] Complete the source's inactive-window cache, sequence and Move writes, height restoration and QR copy in their dedicated contracts.
+- [x] Verify the Closed history admission from the actual Android route and the original sheet's targeted dismissal.
+- [ ] Complete the source's inactive-window cache, sequence and Move writes, expanded-row retention and QR copy in their dedicated contracts.
 
 Ish xaritasi checkpoint: 258 focused tests, both platform type checks, changed-file ESLint, and both Expo exports passed. Android uses the Worker tab height and dropdown presentation. Sequence and orders use the Worker's staged thumbnail loading. The list requests at most one page per gesture at the source's strict 400 dp threshold. The existing Work Map data owner still loads only the selected module. The connected phone did not complete an inspector query, so native gesture and visual verification remain open.
 
 Apparatus filter checkpoint. The profile-local store preserves selection during editing and reconciles removed, renamed and new machines on save. The ported source scenarios are covered by the Android component callbacks and scoped storage tests. Both Expo exports, configured platform type checks and changed-file ESLint passed. Physical drag and iOS editor presentation remain to be checked.
+
+Closed history checkpoint. 280 focused tests, both configured platform type checks, changed-file ESLint and both Expo exports passed. The source detail reader and scoped window owner are connected to Android Work Map. Exact sheet dismissal preserves a newer route when the history authority retires. Physical-device and iOS route interaction remain open.
 
 ## Factory Locations and Inactive Suppliers list mapping
 

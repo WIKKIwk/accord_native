@@ -23,7 +23,7 @@ export function createAdminClosedLogSheetOwner(sheet: NativeSheet) {
       try {
         if (!isProfileSessionCurrent(selection.isCurrent) || active !== token || sheet.isOpen()) { clear(); return; }
         sheet.open(<AdminClosedLogBoundary selection={selection} history={history} window={window} catalog={catalog} close={close} />,
-          { dismissible: true, onDismiss: clear });
+          { dismissible: true, dismissOwnRoute: true, onDismiss: clear });
         // A retired or unmounted native owner may reject open without throwing.
         if (!sheet.isOpen()) clear();
       } catch (error) { clear(); throw error; }
@@ -32,7 +32,6 @@ export function createAdminClosedLogSheetOwner(sheet: NativeSheet) {
 }
 export type AdminClosedLogSheetOwner = ReturnType<typeof createAdminClosedLogSheetOwner>;
 
-/** Prepared only. Create once at screen scope; do not wire while transport and route ownership are held. */
 export function useAdminClosedLogSheetOwner() {
   const sheet = useNativeSheet();
   return useMemo(() => createAdminClosedLogSheetOwner(sheet), [sheet]);

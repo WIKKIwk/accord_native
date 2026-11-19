@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -32,9 +33,19 @@ function setup() {
     '../shared/profileSessionGuard': guard, './AdminClosedLogBoundary': { AdminClosedLogBoundary: 'Boundary' } }).createAdminClosedLogSheetOwner(sheet);
   function mountNext() {
     const id = pending.shift(); assert.ok(id); stack.push(id);
-    unmount.set(id, native.mountNativeSheet(id, () => {
-      const top = stack.pop(); popped.push({ intended: id, actual: top }); unmount.get(top)?.(); unmount.delete(top);
-    }));
+    const routeKey = sheetId => `route:${sheetId}`;
+    const remove = index => {
+      const [target] = stack.splice(index, 1);
+      popped.push({ intended: id, actual: target }); unmount.get(target)?.(); unmount.delete(target);
+    };
+    const navigation = { goBack: () => remove(stack.length - 1), getState: () => ({ type: 'stack', key: 'root', index: stack.length,
+      routes: [{ name: 'index', key: 'root-screen' }, ...stack.map(sheetId => ({ name: 'sheet/[id]', key: routeKey(sheetId), params: { id: sheetId } }))] }),
+      dispatch: action => { assert.equal(action.target, 'root'); remove(stack.findIndex(sheetId => routeKey(sheetId) === action.source)); } };
+    const Route = load('app/sheet/[id].tsx', { 'expo-router': { useLocalSearchParams: () => ({ id }), useRoute: () => ({ key: routeKey(id) }), useNavigation: () => navigation },
+      react: { useCallback: callback => callback, useEffect: effect => unmount.set(id, effect()), useSyncExternalStore: (_subscribe, snapshot) => snapshot() },
+      '../../components/WorkerSecurity': { SecurityContext: { Provider: 'Security' } }, '../../components/WorkerOrderSheet': { WorkerOrderSheet: 'NativeSheet' },
+      '../../nativeSheet': native, '../../admin/adminClosedSheetTarget': load('admin/adminClosedSheetTarget.ts') }).default;
+    assert.equal(Route().props.children.type, 'NativeSheet');
     return id;
   }
   const selection = label => ({ detail: { order_id: label }, log: { event_id: label }, isCurrent: () => true });
@@ -69,13 +80,12 @@ test('invalid selections cannot open, and a rejected native open does not reserv
   const input = { selection: f.selection('B'), history: {}, window: {}, catalog: [] };
   owner.open(input); owner.open(input); assert.equal(calls, 2, 'a no-op native open must not leave an active token');
 });
-test('hold: a newer independently owned route is popped by a lower sheet close', async () => {
+test('a lower history sheet retires its own route while a newer sheet remains active', async () => {
   const f = setup(); f.open('A'); const a = f.mountNext(), oldClose = f.native.getNativeSheet(a).content.props.close;
   f.other().open('unrelated'); const unrelated = f.mountNext(); assert.deepEqual(f.stack, [a, unrelated]);
   oldClose();
-  // Existing navigation.goBack is not target-specific. This negative regression keeps the feature held, not approved for routing.
-  assert.deepEqual(f.popped, [{ intended: a, actual: unrelated }]); assert.deepEqual(f.stack, [a]);
-  await tick(); assert.equal(f.native.getNativeSheet(unrelated), null); assert.equal(f.native.getNativeSheet(a).closing, true);
+  assert.deepEqual(f.popped, [{ intended: a, actual: a }]); assert.deepEqual(f.stack, [unrelated]);
+  await tick(); assert.equal(f.native.getNativeSheet(a), null); assert.equal(f.native.getNativeSheet(unrelated).closing, false);
 });
 test('a reentrant selection witness cannot reserve a competing row sheet', () => {
   const f = setup(), a = f.selection('A'), b = f.selection('B');
