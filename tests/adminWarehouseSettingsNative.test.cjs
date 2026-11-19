@@ -42,6 +42,8 @@ function fixture(platform, { current = true, selected = true, loading = false, b
     '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './adminUsersModel': { adminUserPrincipalRoleFromJson: role => role, adminUserRoleLabel: () => 'Werka' }, './adminWarehouseSettingsController': {
       adminWarehouseSettingsAssignmentKey: assignment => `${assignment.warehouse.toLowerCase()}-${assignment.principal_role}-${assignment.principal_ref.toLowerCase()}`, adminWarehouseSettingsRoleLabel: () => 'Werka' },
     './dartJsonString': { dartTrim: value => value.trim() }, './useAdminWarehouseSettings': { useAdminWarehouseSettings: () => value } };
+  if (platform === 'android' && picker) mocks['./AdminWarehouseAssigneePicker.android'] = require('./adminWarehouseItemRollsNativeSupport.cjs').nativeAssigneePicker();
+  else if (platform === 'android') mocks['./AdminWarehouseAssigneePicker.android'] = { AdminWarehouseAssigneePicker: 'AssigneePicker' };
   const filename = path.resolve(__dirname, `../src/admin/AdminWarehouseSettingsTab.${platform}.tsx`), mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
   mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
@@ -81,8 +83,15 @@ for (const platform of ['android', 'ios']) {
     }
   });
   test(`${platform} picker native search/select/dismiss preserve the issued ticket`, async () => {
-    const f = fixture(platform, { picker: true }), input = byID(f.tree, 'warehouse-settings-assignee-search'); input.props[platform === 'android' ? 'onValueChange' : 'onTextChange']('find');
-    const item = nodes(f.tree, node => node.type === (platform === 'android' ? 'Surface' : 'Button') && text(node).includes('Other'))[0]; item.props[platform === 'android' ? 'onClick' : 'onPress']();
+    const f = fixture(platform, { picker: true });
+    if (platform === 'android') {
+      const picker = nodes(f.tree, node => node.type === 'PickerSheetContent')[0];
+      assert.equal(picker.props.searchTestID, 'warehouse-settings-assignee-search'); picker.props.onSearch('find');
+      assert.equal(picker.props.items[0].title, 'Other'); picker.props.items[0].select();
+    } else {
+      byID(f.tree, 'warehouse-settings-assignee-search').props.onTextChange('find');
+      nodes(f.tree, node => node.type === 'Button' && text(node).includes('Other'))[0].props.onPress();
+    }
     await new Promise(resolve => setImmediate(resolve));
     if (platform === 'android') nodes(f.tree, node => node.type === 'ModalBottomSheet')[0].props.onDismissRequest(); else nodes(f.tree, node => node.type === 'BottomSheet')[0].props.onIsPresentedChange(false);
     assert.deepEqual(f.calls, [['search', 13, 'find'], ['select', 13, f.user], ['dismiss-picker', 13]]);

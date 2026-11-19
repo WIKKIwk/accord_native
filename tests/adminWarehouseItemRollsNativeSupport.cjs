@@ -40,4 +40,11 @@ function nativeModule(file, mocks = {}, options = {}) {
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return { exports: mod.exports, render: fn => host.render(fn) };
 }
-module.exports = { l10n, load, strings, colors, nativeModule, nodes, byID, text, click, expand };
+function nativeAssigneePicker(hide) {
+  const picker = nativeModule('AdminWarehouseAssigneePicker.android.tsx', {
+    './adminUsersModel': { adminUserRoleLabel: () => 'Werka' },
+    '../shared/orders/PickerSheetContent.android': { PickerSheetContent: props => ({ type: 'PickerSheetContent', props: { ...props, children: props.items.length ? null : props.emptyLabel } }) },
+  }, { hide });
+  return { AdminWarehouseAssigneePicker: props => picker.render(() => picker.exports.AdminWarehouseAssigneePicker(props)) };
+}
+module.exports = { l10n, load, strings, colors, nativeModule, nativeAssigneePicker, nodes, byID, text, click, expand };

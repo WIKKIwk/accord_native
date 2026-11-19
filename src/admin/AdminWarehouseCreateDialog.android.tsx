@@ -1,17 +1,18 @@
-import { BasicAlertDialog, Button, CircularProgressIndicator, Column, IconButton, LazyColumn, ModalBottomSheet, OutlinedTextField, RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, Text,
-  useMaterialColors, useNativeState, type ModalBottomSheetRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
-import { fillMaxWidth, height, imePadding, padding, semantics, size, testID, weight, width } from '@expo/ui/jetpack-compose/modifiers';
+import { BasicAlertDialog, Button, CircularProgressIndicator, Column, IconButton, OutlinedTextField, RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, Text,
+  useMaterialColors, useNativeState, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { fillMaxWidth, height, padding, semantics, size, testID, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BaseHost } from '../components/BaseHost.android';
 import { adminUserRoleLabel } from './adminUsersModel';
+import { AdminWarehouseAssigneePicker } from './AdminWarehouseAssigneePicker.android';
 import type { AdminWarehouseCreateProps } from './AdminWarehouseCreateTypes';
 import { useAdminWarehouseCreate } from './useAdminWarehouseCreate';
 
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
-function Icon({ name, color, size: iconSize = 24 }: { name: 'close' | 'search' | 'person_search' | 'expand_more' | 'link'; color: string; size?: number }) {
+function Icon({ name, color, size: iconSize = 24 }: { name: 'close' | 'person_search' | 'expand_more' | 'link'; color: string; size?: number }) {
   return <RNHostView matchContents><SymbolView name={{ android: name }} size={iconSize} tintColor={color} /></RNHostView>;
 }
 function NameField({ label, value, change, save }: { label: string; value: string; change: (text: string) => void; save: () => void }) {
@@ -21,46 +22,11 @@ function NameField({ label, value, change, save }: { label: string; value: strin
     <OutlinedTextField.Label><Text>{label}</Text></OutlinedTextField.Label>
   </OutlinedTextField>;
 }
-function AssigneePicker({ model }: { model: ReturnType<typeof useAdminWarehouseCreate> }) {
-  const { state, controller, a, t, users } = model, picker = state.picker!, colors = useMaterialColors(), { height: screenHeight } = useWindowDimensions();
-  const query = useNativeState(picker.query), sheet = useRef<ModalBottomSheetRef>(null), hiding = useRef(false);
-  const hide = async (action: () => void) => {
-    if (hiding.current) return;
-    hiding.current = true;
-    try { await sheet.current?.hide(); action(); } finally { hiding.current = false; }
-  };
-  return <ModalBottomSheet ref={sheet} onDismissRequest={() => controller.dismissPicker(picker.id)} skipPartiallyExpanded initialFullyExpanded showDragHandle={false}
-    scrimColor="rgba(0,0,0,0.32)" containerColor={colors.surface} sheetGesturesEnabled>
-    <Column modifiers={[fillMaxWidth(), height(screenHeight * .66), imePadding(), padding(12, 12, 12, 24)]}>
-      <Column modifiers={[fillMaxWidth()]} horizontalAlignment="center"><Surface color={colors.outlineVariant} shape={shape(999)} modifiers={[size(36, 4)]} /></Column><Spacer modifiers={[height(14)]} />
-      <Row verticalAlignment="center" modifiers={[fillMaxWidth()]}><Text style={{ fontSize: 22, fontWeight: 'bold' }} modifiers={[weight(1)]}>{a('warehouse.assign_to')}</Text>
-        <IconButton onClick={() => { void hide(() => controller.dismissPicker(picker.id)); }} modifiers={[size(48, 48), semantics({ contentDescription: a('action.close') })]}><Icon name="close" color={colors.onSurface} /></IconButton>
-      </Row><Spacer modifiers={[height(14)]} />
-      <OutlinedTextField value={query} onValueChange={text => controller.searchPicker(picker.id, text)} singleLine shape={shape(30)}
-        colors={{ focusedContainerColor: colors.surfaceContainerHighest, unfocusedContainerColor: colors.surfaceContainerHighest,
-          focusedIndicatorColor: colors.surfaceContainerHighest, unfocusedIndicatorColor: colors.surfaceContainerHighest }}
-        modifiers={[fillMaxWidth(), height(58), testID('admin-warehouse-assignee-search')]}>
-        <OutlinedTextField.Placeholder><Text>{a('warehouse.user_search')}</Text></OutlinedTextField.Placeholder>
-        <OutlinedTextField.LeadingIcon><Icon name="search" color={colors.onSurfaceVariant} size={26} /></OutlinedTextField.LeadingIcon>
-      </OutlinedTextField><Spacer modifiers={[height(14)]} />
-      <LazyColumn modifiers={[fillMaxWidth(), weight(1)]} verticalArrangement={{ spacedBy: 2 }}>
-        {!users.length ? <Text>{t('noRecordsYet')}</Text> : users.map((user, index) => <Surface key={`${user.kind}:${user.id}:${index}`} color={colors.surfaceContainerHighest}
-          shape={Shape.RoundedCorner({ cornerRadii: { topStart: index === 0 ? 18 : 6, topEnd: index === 0 ? 18 : 6,
-            bottomStart: index > 0 && index === users.length - 1 ? 18 : 6, bottomEnd: index > 0 && index === users.length - 1 ? 18 : 6 } })}
-          onClick={() => { void hide(() => controller.selectUser(picker.id, user)); }} modifiers={[fillMaxWidth()]}>
-          <Column modifiers={[fillMaxWidth(), padding(18, 16, 18, 16)]} verticalArrangement={{ spacedBy: 6 }}>
-            <Text style={{ fontSize: 22, fontWeight: 'bold' }}>{user.name}</Text><Text style={{ typography: 'bodySmall' }} color={colors.onSurfaceVariant}>{adminUserRoleLabel(user)}</Text>
-          </Column>
-        </Surface>)}
-      </LazyColumn>
-    </Column>
-  </ModalBottomSheet>;
-}
-
 /** @v2 _WarehouseCreateCard
- * Includes M3PickerSheet; mounting it does not expose the unfinished Warehouse screen. */
+ * Includes the source assignee picker. */
 export function AdminWarehouseCreateDialog(props: AdminWarehouseCreateProps) {
   const model = useAdminWarehouseCreate(props), { state, controller, a, current } = model, colors = useMaterialColors(), { width: screenWidth } = useWindowDimensions(), insets = useSafeAreaInsets();
+  const picker = state.picker;
   const snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null), message = state.notice ? a(state.notice.key) : '';
   useEffect(() => {
     if (current && state.notice && shown.current !== state.notice.serial) {
@@ -91,7 +57,10 @@ export function AdminWarehouseCreateDialog(props: AdminWarehouseCreateProps) {
           </Button>
         </Column>
       </Surface>
-      {state.picker ? <AssigneePicker key={state.picker.id} model={model} /> : null}
+      {picker && <AdminWarehouseAssigneePicker key={picker.id} users={model.users} query={picker.query}
+        title={a('warehouse.assign_to')} hint={a('warehouse.user_search')} closeLabel={a('action.close')} emptyLabel={model.t('noRecordsYet')}
+        searchTestID="admin-warehouse-assignee-search" onSearch={query => controller.searchPicker(picker.id, query)}
+        onSelect={user => controller.selectUser(picker.id, user)} onDismiss={() => controller.dismissPicker(picker.id)} />}
     </BasicAlertDialog></BaseHost>
     <View pointerEvents="none" style={[styles.notice, { bottom: insets.bottom + 16 }]}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;

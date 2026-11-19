@@ -17,14 +17,14 @@ type Props = {
   query?: string; loading?: boolean; error?: string; retryLabel?: string; onRetry?: () => void;
   hasMore?: boolean; onLoadMore?: () => void; photoLabel?: string; onPhoto?: () => void;
   photoLoading?: boolean; photoError?: string;autoFocus?:boolean;headerAction?:ReactElement;
-  showSelectionIndicator?: boolean; footerAction?: ReactElement;
+  showSelectionIndicator?: boolean; footerAction?: ReactElement; searchTestID?: string;
 };
 const passthrough = () => true;
 
 /** Picker rows use the same segmented cards as the order and material lists. */
 export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, searchEnabled = true, items, onClose, onSearch,
   query, loading = false, error, retryLabel, onRetry, hasMore = false, onLoadMore,
-  photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction, showSelectionIndicator, footerAction }: Props) {
+  photoLabel, onPhoto, photoLoading = false, photoError,autoFocus=false,headerAction, showSelectionIndicator, footerAction, searchTestID }: Props) {
   const colors = useMaterialColors(), input = useNativeState(query ?? '');
   const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   useEffect(() => { if (query !== undefined && input.get() !== query) input.set(query); }, [input, query]);
@@ -39,7 +39,7 @@ export function PickerSheetContent({ title, hint, closeLabel, emptyLabel, search
     {searchEnabled ? <View style={[styles.search, { backgroundColor: colors.surfaceContainerHighest, borderColor: colors.outlineVariant }]}>
       <SymbolView name={{ android: 'search' }} size={24} tintColor={colors.onSurfaceVariant} />
       <Host matchContents={{ vertical: true }} style={styles.searchInput}>
-        <TextInput autoFocus={autoFocus} value={input} onChangeText={onSearch} placeholder={hint} accessibilityLabel={hint}
+        <TextInput autoFocus={autoFocus} value={input} onChangeText={onSearch} placeholder={hint} accessibilityLabel={hint} testID={searchTestID}
           placeholderTextColor={colors.onSurfaceVariant} textStyle={{ color: colors.onSurface, fontSize: 16 }}
           style={{ width: '100%' }} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
       </Host>

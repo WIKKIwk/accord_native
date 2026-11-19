@@ -30,7 +30,7 @@ function text(node) {
   return node && typeof node === 'object' ? slots.map(key => text(node.props?.[key])).filter(Boolean).join(' ') : '';
 }
 const byID = (tree, id) => nodes(tree, node => node.props?.modifiers?.some(mod => ['testID', 'accessibilityIdentifier'].includes(mod.name) && mod.args[0] === id))[0];
-function fixture(platform, { saving = false, picker = false, selected = false, loadingUsers = false, current = true, empty = false, locale = 'uz' } = {}) {
+function fixture(platform, { saving = false, picker = false, selected = false, loadingUsers = false, current = true, empty = false, locale = 'uz', hide } = {}) {
   const calls = [], user = { id: 'id', name: 'Person', kind: 'werka' };
   const state = { phase: 'content', name: 'Storage', fillVersion: 0, saving, selected: selected ? user : null, loadingUsers, notice: null,
     picker: picker ? { id: 7, users: [user], query: '' } : null };
@@ -47,8 +47,21 @@ function fixture(platform, { saving = false, picker = false, selected = false, l
     'react-native-safe-area-context': { useSafeAreaInsets: () => ({ bottom: 20 }) }, '../components/BaseHost.android': { BaseHost: 'BaseHost' }, '../components/BaseHost.ios': { BaseHost: 'BaseHost' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors: { surface: 'surface', surfaceContainerLowest: 'card' } }) },
     '../preparation/PreparationNotice': { PreparationNotice: 'PreparationNotice' }, './adminUsersModel': { adminUserRoleLabel: () => 'Werka' }, './useAdminWarehouseCreate': { useAdminWarehouseCreate: () => value } };
+  if (platform === 'android' && picker) mocks['./AdminWarehouseAssigneePicker.android'] = require('./adminWarehouseItemRollsNativeSupport.cjs').nativeAssigneePicker(hide);
+  else if (platform === 'android') mocks['./AdminWarehouseAssigneePicker.android'] = { AdminWarehouseAssigneePicker: 'AssigneePicker' };
   return { tree: render(load(`admin/AdminWarehouseCreateDialog.${platform}.tsx`, mocks).AdminWarehouseCreateDialog({})), calls, value, user };
 }
+
+test('Android assignee picker settles a selection once, after the original native hide', async () => {
+  let finishHide;
+  const pending = new Promise(resolve => { finishHide = resolve; });
+  const f = fixture('android', { picker: true, hide: () => pending });
+  const picker = nodes(f.tree, node => node.type === 'PickerSheetContent')[0];
+  picker.props.items[0].select(); picker.props.items[0].select(); picker.props.onClose();
+  assert.deepEqual(f.calls, []);
+  finishHide(); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(f.calls, [['select', 7, f.user]]);
+});
 for (const platform of ['android', 'ios']) {
   test(`${platform} create uses source texts, native name field and native assignment action in all locales`, () => {
     for (const locale of ['uz', 'en', 'ru', 'ur']) {
@@ -76,16 +89,19 @@ for (const platform of ['android', 'ios']) {
     const field = nodes(f.tree, node => node.type === (platform === 'ios' ? 'TextField' : 'OutlinedTextField'))[0]; assert.notEqual(field.props.enabled, false);
   });
   test(`${platform} assignee sheet search, select and dismiss retain original picker ticket`, async () => {
-    const f = fixture(platform, { picker: true }), search = byID(f.tree, 'admin-warehouse-assignee-search');
-    search.props[platform === 'ios' ? 'onTextChange' : 'onValueChange']('query'); assert.deepEqual(f.calls[0], ['search', 7, 'query']);
+    const f = fixture(platform, { picker: true });
     if (platform === 'android') {
+      const picker = nodes(f.tree, node => node.type === 'PickerSheetContent')[0];
+      assert.equal(picker.props.searchTestID, 'admin-warehouse-assignee-search'); picker.props.onSearch('query');
       const sheet = nodes(f.tree, node => node.type === 'ModalBottomSheet')[0]; assert.equal(sheet.props.scrimColor, 'rgba(0,0,0,0.32)'); assert.equal(sheet.props.sheetGesturesEnabled, true);
-      const row = nodes(f.tree, node => node.type === 'Surface' && text(node).includes('Person') && text(node).includes('Werka'))[0]; row.props.onClick(); await new Promise(resolve => setImmediate(resolve));
+      const [row] = picker.props.items; assert.equal(row.title, 'Person'); assert.equal(row.subtitle, 'Werka'); row.select(); await new Promise(resolve => setImmediate(resolve));
       sheet.props.onDismissRequest();
     } else {
+      byID(f.tree, 'admin-warehouse-assignee-search').props.onTextChange('query');
       const row = nodes(f.tree, node => node.type === 'Button' && text(node).includes('Person'))[0]; row.props.onPress();
       const sheet = nodes(f.tree, node => node.type === 'BottomSheet')[0]; assert.equal(sheet.props.isPresented, true); sheet.props.onIsPresentedChange(false);
     }
+    assert.deepEqual(f.calls[0], ['search', 7, 'query']);
     assert.deepEqual(f.calls.slice(-2), [['select', 7, f.user], ['dismiss-picker', 7]]);
   });
   test(`${platform} picker empty search text is source noRecordsYet and inactive owner renders no modal`, () => {

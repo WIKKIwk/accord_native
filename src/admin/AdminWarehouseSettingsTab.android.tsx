@@ -1,49 +1,22 @@
-import { AlertDialog, BasicAlertDialog, Button, CircularProgressIndicator, Column, FilterChip, FlowRow, IconButton, LazyColumn, ModalBottomSheet, OutlinedButton,
-  OutlinedTextField, RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, Text, useMaterialColors, useNativeState, type ModalBottomSheetRef, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
-import { defaultMinSize, fillMaxSize, fillMaxWidth, height, imePadding, padding, semantics, size, testID, verticalScroll, weight, width } from '@expo/ui/jetpack-compose/modifiers';
+import { AlertDialog, BasicAlertDialog, Button, CircularProgressIndicator, Column, FilterChip, FlowRow, IconButton, OutlinedButton,
+  RNHostView, Row, Shape, SnackbarHost, Spacer, Surface, Text, useMaterialColors, type SnackbarHostRef } from '@expo/ui/jetpack-compose';
+import { defaultMinSize, fillMaxSize, fillMaxWidth, height, padding, semantics, size, testID, verticalScroll, weight, width } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BaseHost } from '../components/BaseHost.android';
-import { adminUserPrincipalRoleFromJson, adminUserRoleLabel } from './adminUsersModel';
+import { adminUserPrincipalRoleFromJson } from './adminUsersModel';
+import { AdminWarehouseAssigneePicker } from './AdminWarehouseAssigneePicker.android';
 import type { AdminWarehouseSettingsProps } from './AdminWarehouseSettingsTypes';
 import { adminWarehouseSettingsAssignmentKey, adminWarehouseSettingsRoleLabel } from './adminWarehouseSettingsController';
 import { dartTrim } from './dartJsonString';
 import { useAdminWarehouseSettings } from './useAdminWarehouseSettings';
 
 const shape = (radius: number) => Shape.RoundedCorner({ cornerRadii: { topStart: radius, topEnd: radius, bottomStart: radius, bottomEnd: radius } });
-function Icon({ name, color, iconSize = 24 }: { name: 'close' | 'search' | 'person_outline' | 'person_remove' | 'person_add' | 'delete_outline' | 'block' | 'warehouse' | 'expand_more' | 'expand_less'; color: string; iconSize?: number }) {
+function Icon({ name, color, iconSize = 24 }: { name: 'person_outline' | 'person_remove' | 'person_add' | 'delete_outline' | 'block' | 'warehouse' | 'expand_more' | 'expand_less'; color: string; iconSize?: number }) {
   return <RNHostView matchContents><SymbolView name={{ android: name }} size={iconSize} tintColor={color} /></RNHostView>;
 }
 type Model = ReturnType<typeof useAdminWarehouseSettings>;
-function Picker({ model }: { model: Model }) {
-  const picker = model.state.picker!, colors = useMaterialColors(), query = useNativeState(picker.query), { height: screenHeight } = useWindowDimensions();
-  const sheet = useRef<ModalBottomSheetRef>(null), hiding = useRef(false);
-  const hide = async (action: () => void) => {
-    if (hiding.current) return; hiding.current = true;
-    try { await sheet.current?.hide(); action(); } finally { hiding.current = false; }
-  };
-  return <ModalBottomSheet ref={sheet} skipPartiallyExpanded initialFullyExpanded showDragHandle={false} scrimColor="rgba(0,0,0,0.32)" containerColor={colors.surface} onDismissRequest={() => model.dismissPicker(picker.id)}>
-    <Column modifiers={[fillMaxWidth(), height(screenHeight * .66), imePadding(), padding(12, 12, 12, 24)]}>
-      <Column horizontalAlignment="center" modifiers={[fillMaxWidth()]}><Surface color={colors.outlineVariant} shape={shape(999)} modifiers={[size(36, 4)]} /></Column><Spacer modifiers={[height(14)]} />
-      <Row verticalAlignment="center"><Text style={{ fontSize: 22, fontWeight: 'bold' }} modifiers={[weight(1)]}>{model.a('warehouse.assign_to')}</Text><IconButton onClick={() => { void hide(() => model.dismissPicker(picker.id)); }}
-        modifiers={[size(48, 48), semantics({ contentDescription: model.a('action.close') })]}><Icon name="close" color={colors.onSurface} /></IconButton></Row>
-      <Spacer modifiers={[height(14)]} /><OutlinedTextField value={query} onValueChange={value => model.search(picker.id, value)} singleLine shape={shape(30)}
-        colors={{ focusedContainerColor: colors.surfaceContainerHighest, unfocusedContainerColor: colors.surfaceContainerHighest,
-          focusedIndicatorColor: colors.surfaceContainerHighest, unfocusedIndicatorColor: colors.surfaceContainerHighest }} modifiers={[fillMaxWidth(), height(58), testID('warehouse-settings-assignee-search')]}>
-        <OutlinedTextField.Placeholder><Text>{model.a('warehouse.user_search')}</Text></OutlinedTextField.Placeholder><OutlinedTextField.LeadingIcon><Icon name="search" color={colors.onSurfaceVariant} iconSize={26} /></OutlinedTextField.LeadingIcon>
-      </OutlinedTextField><Spacer modifiers={[height(14)]} />
-      <LazyColumn modifiers={[fillMaxWidth(), weight(1)]} verticalArrangement={{ spacedBy: 2 }}>
-        {!model.users.length ? <Text>{model.t('noRecordsYet')}</Text> : model.users.map((user, index) => <Surface key={`${user.kind}:${user.id}:${index}`} color={colors.surfaceContainerHighest}
-          shape={Shape.RoundedCorner({ cornerRadii: { topStart: index === 0 ? 18 : 6, topEnd: index === 0 ? 18 : 6,
-            bottomStart: index > 0 && index === model.users.length - 1 ? 18 : 6, bottomEnd: index > 0 && index === model.users.length - 1 ? 18 : 6 } })}
-          onClick={() => { void hide(() => model.select(picker.id, user)); }} modifiers={[fillMaxWidth()]}><Column verticalArrangement={{ spacedBy: 6 }} modifiers={[padding(18, 16, 18, 16)]}>
-            <Text style={{ fontSize: 22, fontWeight: 'bold' }}>{user.name}</Text><Text style={{ typography: 'bodySmall' }} color={colors.onSurfaceVariant}>{adminUserRoleLabel(user)}</Text>
-          </Column></Surface>)}
-      </LazyColumn>
-    </Column>
-  </ModalBottomSheet>;
-}
 function Confirmation({ model }: { model: Model }) {
   const dialog = model.state.dialog!, labels = model.dialogText!, colors = useMaterialColors(), { width: screenWidth } = useWindowDimensions();
   if (dialog.kind === 'unassign') return <BasicAlertDialog properties={{ usePlatformDefaultWidth: false }} onDismissRequest={() => model.dismiss(dialog.id)}>
@@ -68,6 +41,7 @@ function Confirmation({ model }: { model: Model }) {
 /** @v2 _WarehouseSettingsTab */
 export function AdminWarehouseSettingsTab(props: AdminWarehouseSettingsProps) {
   const model = useAdminWarehouseSettings(props), { state, summary, current, a } = model, colors = useMaterialColors(), snackbar = useRef<SnackbarHostRef>(null), shown = useRef<number | null>(null);
+  const picker = state.picker;
   const noticeSerial = state.notice?.serial, notice = model.notice;
   useEffect(() => { if (current && notice && noticeSerial !== shown.current) { shown.current = noticeSerial ?? null; void snackbar.current?.showSnackbar({ message: notice, duration: 'short' }); } }, [current, notice, noticeSerial]);
   if (!current) return null;
@@ -99,7 +73,12 @@ export function AdminWarehouseSettingsTab(props: AdminWarehouseSettingsProps) {
       <Spacer modifiers={[height(8)]} />{card(<><Text color={colors.onErrorContainer} style={{ typography: 'titleMedium', fontWeight: 'bold' }}>{a('warehouse.dangerous_action')}</Text><Spacer modifiers={[height(6)]} />
         <Text color={colors.onErrorContainer}>{a('warehouse.delete_cascade_warning')}</Text><Spacer modifiers={[height(12)]} />{button(a('warehouse.delete_title'), 'delete_outline', model.deleteWarehouse, !state.deleting, true)}</>, true)}
     </>}
-  </Column>{state.picker ? <Picker key={state.picker.id} model={model} /> : null}{state.dialog ? <Confirmation key={state.dialog.id} model={model} /> : null}</BaseHost>
+  </Column>
+    {picker && <AdminWarehouseAssigneePicker key={picker.id} users={model.users} query={picker.query} title={a('warehouse.assign_to')}
+      hint={a('warehouse.user_search')} closeLabel={a('action.close')} emptyLabel={model.t('noRecordsYet')} searchTestID="warehouse-settings-assignee-search"
+      onSearch={query => model.search(picker.id, query)} onSelect={user => model.select(picker.id, user)} onDismiss={() => model.dismissPicker(picker.id)} />}
+    {state.dialog && <Confirmation key={state.dialog.id} model={model} />}
+  </BaseHost>
     <View pointerEvents="none" style={styles.notice}><BaseHost matchContents={{ vertical: true }}><SnackbarHost ref={snackbar} /></BaseHost></View>
   </View>;
 }

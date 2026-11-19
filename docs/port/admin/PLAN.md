@@ -172,10 +172,13 @@ Users and item catalog checkpoint. 258 focused tests, configured Android and iOS
 | --- | --- |
 | Factory apparatus selection, search, headings and confirm | PickerSheetContent with its OrdersList, passive group headings, original multi-selection and a WorkerSheetButton; keep the WorkerOrderSheet result owner |
 | Warehouse roll ListView.separated and segmented rows | OrdersList and WorkerQueueCard, preserving original spacing, roll identity and nested details |
+| Warehouse create and settings assignee sheets | A single Android adapter for PickerSheetContent and the original native completion contract |
 
 - [x] Verify search, toggle and confirm, passive headings, roll detail selection, loading and close.
 
 Apparatus and roll sheets checkpoint. 370 focused tests, configured platform type checks, changed-file ESLint and both Expo exports passed. The shared picker exposes group headings and confirmation for the factory caller. Android device sheet gestures and corresponding iOS UI work remain open.
+
+Warehouse assignee checkpoint. Create and Settings both mount the same picker adapter. Callbacks retain the original picker ID and settle selection once after the original native hide. The combined Admin and shared-component run passed 1,137 tests, both configured type checks, changed-file ESLint and Expo exports for Android and iOS. Metro is running for Expo Go. Physical device verification remains open.
 
 ## Decisions
 
