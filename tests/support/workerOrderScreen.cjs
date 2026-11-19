@@ -69,6 +69,15 @@ function harness(platform, input = {}, locale = 'uz') {
       }, useEffectEvent: callback => callback },
     'react-native': { ...native, ActivityIndicator: 'ActivityIndicator', Alert: { alert: (...args) => alerts.push(args) }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) }, Platform: { OS: platform, Version: 26 },
       PlatformColor: value => value, DynamicColorIOS: value => ({ dynamic: value }), StyleSheet: { create: value => value }, View: 'View', Text: 'Text', ScrollView: 'ScrollView', Pressable: 'Pressable' },
+    'react-native-reanimated': {
+      __esModule: true, default: { ScrollView: 'ScrollView', View: 'AnimatedView' },
+      useSharedValue: initial => mocks.react.useMemo(() => {
+        let value = initial;
+        return { get: () => value, set: next => { value = next; } };
+      }, []),
+      useAnimatedStyle: calculate => ({ calculate }),
+      useAnimatedScrollHandler: handler => handler,
+    },
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },

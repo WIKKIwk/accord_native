@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, DynamicColorIOS, Platform, PlatformColor, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { activeSessionToken, type Session } from './auth';
 import { adminBosmaAstatkaReport } from './workerControlsApi';
 import { MobileApiException } from './shared/mobileApiException';
@@ -87,6 +88,10 @@ import { useWorkerInputProgress } from './components/useWorkerInputProgress';
 import { WorkerInputProgress } from './components/WorkerInputProgress';
 
 type Obj = Record<string, any>;
+const QUICK_CAMERA_SIZE = 218;
+const QUICK_CAMERA_RADIUS = 24;
+const QUICK_SCANNER_PADDING = 12;
+const OrderScrollView = Platform.OS === 'android' ? Animated.ScrollView : ScrollView;
 type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onWritePending?: (pending: boolean) => void; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
@@ -163,6 +168,44 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [inputSectionsLoaded, setInputSectionsLoaded] = useState(false);
   const [scanner, setScanner] = useState<ScanKind | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
+  const android = Platform.OS === 'android';
+  const scrollOffset = useSharedValue(0);
+  const viewportHeight = useSharedValue(0);
+  const cameraSlotTop = useSharedValue<number | null>(null);
+  const onOrderScroll = useAnimatedScrollHandler(event => {
+    scrollOffset.set(event.contentOffset.y);
+  });
+  const cameraViewport = useAnimatedStyle(() => {
+    const slotTop = cameraSlotTop.get();
+    const viewport = viewportHeight.get();
+    if (slotTop === null || viewport <= 0) return { top: 0, height: 0, display: 'none' } as const;
+
+    const cameraTop = slotTop - scrollOffset.get();
+    const cameraBottom = cameraTop + QUICK_CAMERA_SIZE;
+    const top = Math.min(viewport, Math.max(0, cameraTop));
+    const bottom = Math.min(viewport, cameraBottom);
+    if (bottom <= top) return { top, height: 0, display: 'none' } as const;
+
+    const topRadius = cameraTop < 0 ? 0 : QUICK_CAMERA_RADIUS;
+    const bottomRadius = cameraBottom > viewport ? 0 : QUICK_CAMERA_RADIUS;
+    return {
+      top,
+      height: bottom - top,
+      display: 'flex' as const,
+      borderTopLeftRadius: topRadius,
+      borderTopRightRadius: topRadius,
+      borderBottomLeftRadius: bottomRadius,
+      borderBottomRightRadius: bottomRadius,
+    };
+  });
+  useEffect(() => {
+    if (android && (scanner || imageOpen)) {
+      // These alternate views unmount the order's scroll view.
+      scrollOffset.set(0);
+      cameraSlotTop.set(null);
+      viewportHeight.set(0);
+    }
+  }, [android, scanner, imageOpen, scrollOffset, cameraSlotTop, viewportHeight]);
   const [scannedWipsStage, setScannedWipsStage] = useState('');
   const [paintImageId, setPaintImageId] = useState('');
   const [paintImageMetadata, setPaintImageMetadata] = useState<ReturnedPaintImage | null>(null);
@@ -1090,13 +1133,22 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
+  const quickCamera = showQuickScanner && permission?.granted ? <CameraView
+    style={android ? StyleSheet.absoluteFill : [styles.quickCamera, Platform.OS === 'ios' && iosStyles.quickCamera]}
+    barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }}
+    onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> : null;
 
-  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}><ScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]} keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'always' : 'handled'}>
+  return <View style={[styles.screen, { backgroundColor: sheetBackground }]}>
+    <OrderScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]}
+      keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'always' : 'handled'}
+      onLayout={android ? event => viewportHeight.set(event.nativeEvent.layout.height) : undefined}
+      onScroll={android ? onOrderScroll : undefined} scrollEventThrottle={android ? 16 : undefined}>
     <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
       onScannedWips={canOpenScannedWips ? () => setScannedWipsStage(scannedStage) : undefined}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
-    {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.scannerPanel]}>
-      {permission?.granted ? <CameraView style={[styles.quickCamera, Platform.OS === 'ios' && iosStyles.quickCamera]} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> :
+    {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.scannerPanel]}
+      onLayout={android ? event => cameraSlotTop.set(event.nativeEvent.layout.y + QUICK_SCANNER_PADDING) : undefined}>
+      {quickCamera ? (android ? <View style={styles.cameraSlot} /> : quickCamera) :
         <NativeButton label={t("Kameraga ruxsat berish")} onPress={() => { void askPermission(); }} />}
       <Text style={[styles.scannerText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.scannerText]}>{merge.scanning ? p('worker.scanner.merge_prompt') : t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
@@ -1186,7 +1238,11 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     <WorkerOrderOverview session={session} orderId={orderId} code={code} imageId={imageId}
       title={String(order.title || preview?.title || '')}
       detail={detail && detailReadScope === printingScope ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
-  </ScrollView>
+  </OrderScrollView>
+    {/* Android's camera surface can draw beyond a ScrollView's clip. Keep it in a stationary viewport and size it to the visible part of the slot. */}
+    {android && quickCamera && <Animated.View pointerEvents="none" style={[styles.cameraViewport, cameraViewport]}>
+      {quickCamera}
+    </Animated.View>}
     {!!initialSwitchQr && apparatus && <WorkerInitialOrderSwitch session={session} apparatus={apparatus} apparatusCatalog={apparatusCatalog} orderId={orderId}
       orderLabel={[code, String(order.title || preview?.title || '')].filter(Boolean).join(' • ')} qr={initialSwitchQr}
       ready={synchronized && !busy} data={bootstrap} current={isCurrent} snapshot={() => latestCursor.current as Obj | null}
@@ -1293,4 +1349,7 @@ const iosStyles = StyleSheet.create({
   moldWarningText: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
   success: { color: PlatformColor('systemGreen'), fontSize: 14, lineHeight: 20, paddingTop: 12, paddingBottom: 4 },
 });
-const styles = StyleSheet.create({ screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:12,alignItems:'center',gap:10},quickCamera:{width:218,height:218,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});
+const styles = StyleSheet.create({
+  cameraSlot: { width: QUICK_CAMERA_SIZE, height: QUICK_CAMERA_SIZE },
+  cameraViewport: { position: 'absolute', alignSelf: 'center', width: QUICK_CAMERA_SIZE, overflow: 'hidden' },
+  screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:QUICK_SCANNER_PADDING,alignItems:'center',gap:10},quickCamera:{width:QUICK_CAMERA_SIZE,height:QUICK_CAMERA_SIZE,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});

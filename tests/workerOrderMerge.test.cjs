@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict'), test = require('node:test');
-const { harness, nodes, buttons, load, merge, rules } = require('./support/workerOrderScreen.cjs');
+const { harness, nodes, main, buttons, load, merge, rules } = require('./support/workerOrderScreen.cjs');
 const station = 'apparatus:default:bosma_8';
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
@@ -152,6 +152,39 @@ for (const platform of ['ios', 'android']) test(`${platform}: the real order she
   assert.deepEqual(h.notices, ['2-rulon 1-rulonning davomiga ulandi.']);
   tree = h.render(); assert.equal(nodes(tree, node => node.type === 'CameraView').length, 0);
   assert.equal(buttons(tree).length, 0, 'an acknowledged mutation retires the old presentation until fresh controls arrive');
+});
+for (const flow of ['order opening', 'roll merge']) test(`Android ${flow}: the live camera stays within the sheet viewport while scrolling`, () => {
+  const f = fixture();
+  const h = flow === 'roll merge'
+    ? harness('android', { apparatus: { operation: 'cut' }, control: f.control, interaction: f.control.interaction, mergeReads: f.reads })
+    : harness('android', { control: { allowed_actions: ['start'] }, interaction: {
+      mode: 'fresh_start', blocking_reason_code: '', start_materials_mode: 'scan_required', material_scan_required: true,
+    }, requirements: { requires_material: true, scan_satisfied: false } });
+  if (flow === 'roll merge') buttons(h.render()).find(button => button.props.label === h.p('worker.action.merge')).props.onPress();
+
+  const tree = h.render(), scroll = main(tree);
+  const panel = nodes(scroll, node => node.type === 'View' && node.props.onLayout)[0];
+  const viewport = nodes(tree, node => node.type === 'AnimatedView' && node.props.children?.type === 'CameraView')[0];
+  assert.ok(panel && viewport);
+  assert.equal(nodes(scroll, node => node.type === 'CameraView').length, 0);
+  const bounds = () => {
+    const { top, height } = viewport.props.style[1].calculate();
+    return [top, height];
+  };
+  const scrollTo = y => scroll.props.onScroll({ contentOffset: { y } });
+  scroll.props.onLayout({ nativeEvent: { layout: { height: 360 } } });
+  panel.props.onLayout({ nativeEvent: { layout: { y: 92 } } });
+  assert.deepEqual(bounds(), [104, 218]);
+  scrollTo(144);
+  assert.deepEqual(bounds(), [0, 178]);
+  scrollTo(325);
+  assert.deepEqual(bounds(), [0, 0]);
+  assert.equal(viewport.props.style[1].calculate().display, 'none');
+  scrollTo(0);
+  assert.deepEqual(bounds(), [104, 218]);
+  assert.equal(viewport.props.style[1].calculate().display, 'flex');
+  scroll.props.onLayout({ nativeEvent: { layout: { height: 240 } } });
+  assert.deepEqual(bounds(), [104, 136]);
 });
 for (const platform of ['ios', 'android']) test(`${platform}: a missing queue acknowledgement shows no merge success and waits for fresh authority before scanning`, async () => {
   const f = fixture(), h = harness(platform, { apparatus: { operation: 'cut' }, control: structuredClone(f.control),
