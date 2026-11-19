@@ -4,12 +4,13 @@ const inline = tree => s.nodes(tree, node => node.props.testID === 'admin-top-no
 const measured = tree => s.nodes(tree, node => typeof node.props.onLayout === 'function')[0];
 function mounted(platform = 'android', accessible = false) { const f = s.fixture(platform, accessible); f.render(); const host = f.makeHost(null); host.render(); return { ...f, host }; }
 
-test('opt-in unresolved native accessibility retains the real stack and Scaffold without inventing notice readiness', () => {
-  const f = s.fixture('android', null, true);
+test('the compiled provider keeps the real stack and Scaffold after native accessibility resolves', () => {
+  const f = s.fixture('android', null, true, true);
   assert.equal(f.render().type, 'GenuineStackContent'); assert.equal(f.target.getSnapshot().accessibleNavigation, null);
   const host = f.makeHost(null); host.render(); const originalTicket = host.binding.ticket;
   assert.equal(f.show('unresolved'), null);
-  f.accessible(false); f.render(); host.render(); assert.equal(host.binding.ticket, originalTicket);
+  f.accessible(false); assert.equal(f.render().type, 'GenuineStackContent');
+  host.render(); assert.equal(host.binding.ticket, originalTicket);
   assert.equal(f.target.getSnapshot().accessibleNavigation, false); assert.ok(f.show('native ready'));
   const duplicate = f.makeDuplicateProvider(); assert.equal(duplicate.render(), null); duplicate.runtime.unmount(); f.cleanup();
 });

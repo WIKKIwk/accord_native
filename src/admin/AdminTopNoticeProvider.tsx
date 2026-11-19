@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { cancelAnimation, Easing, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import type { AdminTopNoticeMessenger } from './adminTopNoticeMessenger';
@@ -14,7 +14,9 @@ export function AdminTopNoticeProvider({ messenger, accessibleNavigation, childr
   if (typeof accessibleNavigation !== 'boolean' && !(accessibleNavigation === null && retainChildrenWhileUnresolved)) throw TypeError('Actual platform accessible-navigation state is required');
   const driver = useMemo(() => ({ messenger }), [messenger]), progress = useSharedValue(0), run = useRef<object | null>(null);
   const state = useSyncExternalStore(messenger.subscribe, messenger.getSnapshot, messenger.getSnapshot);
-  const leased = messenger.hasDriverLease(driver);
+  // The driver lease changes while both the Messenger and driver identities stay stable.
+  const getDriverLease = useCallback(() => messenger.hasDriverLease(driver), [messenger, driver]);
+  const leased = useSyncExternalStore(messenger.subscribe, getDriverLease, getDriverLease);
   useLayoutEffect(() => accessibleNavigation === null ? undefined : messenger.attachDriver(driver, accessibleNavigation) ?? undefined, [messenger, driver, accessibleNavigation]);
   useLayoutEffect(() => { if (accessibleNavigation !== null) messenger.setAccessibleNavigation(driver, accessibleNavigation); }, [messenger, driver, accessibleNavigation]);
   useEffect(() => {

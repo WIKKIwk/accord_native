@@ -33,10 +33,10 @@ function runtime() {
   return { react, counters, unmount, render(callback) { cursor = 0; pending = []; const value = callback(); pending.forEach(run => run()); return value; },
     replay() { unmount(); for (const [index, callback] of effects) cleanups.set(index, callback()); } };
 }
-function compile(filename, mocks) {
+function compile(filename, mocks, transform = source => source) {
   const mod = new Module(filename, module); mod.filename = filename; mod.paths = module.paths;
   mod.require = id => id === 'react/jsx-runtime' ? jsx : Object.hasOwn(mocks, id) ? mocks[id] : require(id);
-  mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
+  mod._compile(ts.transpileModule(transform(fs.readFileSync(filename, 'utf8')), { fileName: filename, compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   return mod.exports;
 }
 function hooks(r, extra = {}) {

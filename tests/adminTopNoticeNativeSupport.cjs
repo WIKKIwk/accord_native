@@ -4,19 +4,30 @@ const { flattenStyle } = require('./adminShellFrameViewSupport.cjs');
 const Bezier = view.compile(path.resolve(__dirname, '../node_modules/react-native-reanimated/src/Bezier.ts'), {}).Bezier;
 const Easing = view.compile(path.resolve(__dirname, '../node_modules/react-native-reanimated/src/Easing.ts'), { './Bezier': { Bezier } }).Easing;
 const modifiers = new Proxy({}, { get: (_target, name) => (...args) => ({ name: String(name), args }) });
-function fixture(platform = 'android', accessibleNavigation = false, retainChildrenWhileUnresolved = false) {
+function fixture(platform = 'android', accessibleNavigation = false, retainChildrenWhileUnresolved = false, useCompiler = false) {
   const f = s.fixture(), r = view.runtime(), animations = [], tasks = [], values = [], contexts = [];
   let activeRuntime = r;
   const react = new Proxy({ createContext(initial) { const context = { current: initial }; context.Provider = ({ value, children }) => { context.current = value; return children; }; contexts.push(context); return context; }, useContext: context => context.current }, { get: (target, name) => target[name] ?? activeRuntime.react[name] });
   const shared = initial => { const holder = activeRuntime.react.useRef(null); if (!holder.current) { holder.current = { value: initial, get() { return this.value; }, set(value) { if (value?.animation) { value.state = this; animations.push(value); } else this.value = value; } }; values.push(holder.current); } return holder.current; };
   const reanimated = { __esModule: true, default: { View: 'Animated.View' }, Easing, useSharedValue: shared, useAnimatedStyle: callback => callback(),
     withTiming: (target, options, callback) => ({ animation: true, target, options, callback }), cancelAnimation: state => { animations.filter(value => value.state === state && !value.finished).forEach(value => { value.cancelled = true; }); } };
-  const provider = view.compile(path.resolve(__dirname, '../src/admin/AdminTopNoticeProvider.tsx'), { react, 'react-native-reanimated': reanimated,
-    'react-native-worklets': { scheduleOnRN: (callback, ...args) => tasks.push(() => callback(...args)) }, './adminTopNoticeModel': s.noticeModel });
+  const providerPath = path.resolve(__dirname, '../src/admin/AdminTopNoticeProvider.tsx');
+  const transform = useCompiler ? source => require('@babel/core').transformSync(source, {
+    filename: providerPath, configFile: false, babelrc: false, parserOpts: { plugins: ['typescript', 'jsx'] },
+    plugins: [require('babel-plugin-react-compiler')],
+  }).code : undefined;
+  const compilerRuntime = { c(size) {
+    const cache = activeRuntime.react.useRef(null);
+    return cache.current ??= Array(size).fill(Symbol.for('react.memo_cache_sentinel'));
+  } };
+  const provider = view.compile(providerPath, { react, 'react-native-reanimated': reanimated,
+    'react/compiler-runtime': compilerRuntime, 'react-native-worklets': { scheduleOnRN: (callback, ...args) => tasks.push(() => callback(...args)) },
+    './adminTopNoticeModel': s.noticeModel }, transform);
   const hosts = [];
   const makeHost = ancestor => {
     const hostRuntime = view.runtime(), native = new Proxy({}, { get: (_target, name) => String(name) });
-    const theme = { colors: { onSurface: '#111111' }, direction: 'leftToRight' }, hostReact = { ...hostRuntime.react, useContext: context => context.current };
+    const theme = { colors: { onSurface: '#111111' }, direction: 'leftToRight' };
+    const hostReact = { ...hostRuntime.react, createContext: react.createContext, useContext: context => context.current };
     const content = view.compile(path.resolve(__dirname, `../src/admin/AdminTopNoticeContent.${platform}.tsx`), {
       '@expo/ui/jetpack-compose': native, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/swift-ui': native, '@expo/ui/swift-ui/modifiers': modifiers,
       'expo-symbols': { SymbolView: 'NativeMaterialSymbol' },
