@@ -61,10 +61,15 @@ V2 paths below are relative to `lib/src/`; the `admin_production_map_orders_` pr
 
 V2's `ProductionQuickScannerPanel` uses a square up to 218 dp with `BoxFit.cover`
 inside the order `ListView` (`raw_material_scan_dialog_models_part_02.dart:175`,
-`admin_production_map_orders_detail_widgets.dart:259`). The Accord Android build
-uses CameraX's texture preview inside the clipped V4 scroll view for both entry
-points. Expo Go and older builds keep the fitted preview with scroll bounds.
-The arm64 Android debug APK includes the patched camera module. All 330 focused
-tests and both platform type checks passed. Expo lint had no errors.
-Physical Android verification remains open for opening an order, entering roll
-merge, and scrolling the live preview partly out of the sheet and back.
+`admin_production_map_orders_detail_widgets.dart:259`). Both entry points use the
+same clipped square in V4. The Accord Android build uses the patched CameraX
+texture preview. Android Expo Go uses its bundled Expo GL view to crop the live
+camera texture to the square while the fixed-size camera source decodes barcodes.
+The fitted preview remains the fallback when texture rendering is unavailable.
+
+The Android Expo Go emulator read a camera-fed QR and rendered identical preview
+pixels after accounting for the scroll offset. The camera clipped at the sheet
+edge and returned to the full square when scrolled back. The 333 focused tests,
+both platform type checks and Android bundle export passed. Expo lint reported
+one existing warning in the Admin history screen. Physical Android verification
+of the two entry points remains open.

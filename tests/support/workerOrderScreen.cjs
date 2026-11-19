@@ -79,7 +79,11 @@ function harness(platform, input = {}, locale = 'uz') {
       useAnimatedScrollHandler: handler => handler,
     },
     '@expo/ui': { Host: 'Host', TextInput: 'NativeInput', useNativeState: initial => ({ value: initial, set() {} }) },
-    expo: { requireOptionalNativeModule: name => name === 'ExpoCamera' ? { supportsAccordTexturePreview: input.texturePreview } : null },
+    expo: { requireOptionalNativeModule: name => {
+      if (name === 'ExpoCamera') return { supportsAccordTexturePreview: input.texturePreview };
+      if (name === 'ExpoGL' && input.expoGoTexture) return { createCameraTextureAsync() {} };
+      return null;
+    } },
     'expo-image': { Image: 'Image' }, 'expo-camera': { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, async () => ({ granted: true })] },
     'expo-image-picker': native, 'expo-haptics': native, './auth': { activeSessionToken: () => 'token' },
     './sessionReadScope': { sessionReadScope: () => readScope }, './nativeSheet': { useNativeSheet: () => ({ open(content) { sheetContents.push(content); }, close() {}, update(content) { sheetContents.push(content); }, isOpen: () => false }) },

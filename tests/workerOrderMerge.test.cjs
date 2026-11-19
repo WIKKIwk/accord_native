@@ -136,9 +136,10 @@ test('lineage comparison ignores transport ordering; merge labels use only serve
     h.p('worker.merge_state.current', { batch: '3-rulon' }), h.p('worker.merge_state.count', { count: 3 })]);
   assert.deepEqual(merge.workerMergeStateLines(links.slice(0, 1), h.p), []);
 });
-for (const [platform, texturePreview] of [['ios', false], ['android', false], ['android', true]]) test(`${platform}${texturePreview ? ' with texture preview' : ''}: the real order sheet wires Merge → camera → confirmation → exact queue body`, async () => {
+for (const [platform, mode] of [['ios', 'camera'], ['android', 'fitted'], ['android', 'texture'], ['android', 'expo-gl']]) test(`${platform} ${mode}: the real order sheet wires Merge → camera → confirmation → exact queue body`, async () => {
   const f = fixture(), h = harness(platform, { apparatus: { operation: 'cut' }, control: structuredClone(f.control),
-    interaction: structuredClone(f.control.interaction), mergeReads: f.reads, texturePreview });
+    interaction: structuredClone(f.control.interaction), mergeReads: f.reads,
+    texturePreview: mode === 'texture', expoGoTexture: mode === 'expo-gl' });
   const mergeButton = buttons(h.render()).find(button => button.props.label === h.p('worker.action.merge'));
   assert.ok(mergeButton); mergeButton.props.onPress();
   const camera = nodes(h.render(), node => node.type === 'CameraView')[0]; assert.ok(camera);
@@ -153,19 +154,19 @@ for (const [platform, texturePreview] of [['ios', false], ['android', false], ['
   tree = h.render(); assert.equal(nodes(tree, node => node.type === 'CameraView').length, 0);
   assert.equal(buttons(tree).length, 0, 'an acknowledged mutation retires the old presentation until fresh controls arrive');
 });
-function renderAndroidScanner(flow, texturePreview) {
+function openAndroidScanner(flow, options) {
   const f = fixture();
   const h = flow === 'roll merge'
-    ? harness('android', { texturePreview, apparatus: { operation: 'cut' }, control: f.control, interaction: f.control.interaction, mergeReads: f.reads })
-    : harness('android', { texturePreview, control: { allowed_actions: ['start'] }, interaction: {
+    ? harness('android', { ...options, apparatus: { operation: 'cut' }, control: f.control, interaction: f.control.interaction, mergeReads: f.reads })
+    : harness('android', { ...options, control: { allowed_actions: ['start'] }, interaction: {
       mode: 'fresh_start', blocking_reason_code: '', start_materials_mode: 'scan_required', material_scan_required: true,
     }, requirements: { requires_material: true, scan_satisfied: false } });
   if (flow === 'roll merge') buttons(h.render()).find(button => button.props.label === h.p('worker.action.merge')).props.onPress();
-  return h.render();
+  return h;
 }
 
-for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in Expo Go: the fitted camera stays within the sheet while scrolling`, () => {
-  const tree = renderAndroidScanner(flow, undefined), scroll = main(tree);
+for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} without texture support: the fitted camera stays within the sheet while scrolling`, () => {
+  const tree = openAndroidScanner(flow, {}).render(), scroll = main(tree);
   const panel = nodes(scroll, node => node.type === 'View' && node.props.onLayout)[0];
   const viewport = nodes(tree, node => node.type === 'AnimatedView' && node.props.children?.type === 'CameraView')[0];
   assert.ok(panel && viewport);
@@ -192,7 +193,7 @@ for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in Exp
   assert.deepEqual(bounds(), [104, 136]);
 });
 for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in an Accord build: the texture fills a clipped square inside the scroll view`, () => {
-  const tree = renderAndroidScanner(flow, true), scroll = main(tree);
+  const tree = openAndroidScanner(flow, { texturePreview: true }).render(), scroll = main(tree);
   const [camera] = nodes(scroll, node => node.type === 'CameraView');
   const [frame] = nodes(scroll, node => node.type === 'View' && node.props.children === camera);
 
@@ -203,6 +204,27 @@ for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in an 
   assert.equal(scroll.props.style.overflow, 'hidden');
   assert.equal(scroll.props.removeClippedSubviews, false);
   assert.equal(nodes(tree, node => node.type === 'AnimatedView').length, 0);
+});
+for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in Expo Go: one camera feeds a clipped square and errors restore the fitted preview`, () => {
+  const h = openAndroidScanner(flow, { expoGoTexture: true });
+  const tree = h.render(), scroll = main(tree);
+  const [source] = nodes(tree, node => node.type === 'CameraView');
+  const [preview] = nodes(scroll, node => node.type === 'WorkerExpoGoCameraPreview');
+  const [frame] = nodes(scroll, node => node.type === 'View' && node.props.children === preview);
+  assert.ok(source && preview && frame);
+  assert.equal(source.props.style.opacity, 0);
+  assert.equal(nodes(tree, node => node.type === 'CameraView').length, 1);
+  assert.equal(nodes(scroll, node => node.type === 'CameraView').length, 0);
+  assert.equal(scroll.props.style.overflow, 'hidden');
+  assert.equal(frame.props.style.aspectRatio, 1);
+  assert.equal(frame.props.style.overflow, 'hidden');
+  assert.equal(nodes(tree, node => node.type === 'AnimatedView').length, 0);
+  preview.props.onFailure();
+  const fallback = h.render();
+  const [viewport] = nodes(fallback, node => node.type === 'AnimatedView');
+  assert.equal(nodes(fallback, node => node.type === 'WorkerExpoGoCameraPreview').length, 0);
+  assert.equal(nodes(fallback, node => node.type === 'CameraView').length, 1);
+  assert.equal(viewport?.props.children.props.ratio, '4:3');
 });
 for (const platform of ['ios', 'android']) test(`${platform}: a missing queue acknowledgement shows no merge success and waits for fresh authority before scanning`, async () => {
   const f = fixture(), h = harness(platform, { apparatus: { operation: 'cut' }, control: structuredClone(f.control),

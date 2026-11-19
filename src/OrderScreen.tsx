@@ -1,6 +1,6 @@
 import { Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
 import { requireOptionalNativeModule } from 'expo';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, type BarcodeSettings } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
 import { useCallback, useContext, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -57,6 +57,7 @@ import { WorkerSheetCloseContext } from './components/workerSheetContext';
 import { WorkerFormDialog } from './components/WorkerFormDialog';
 import { WorkerDeliveryDialog } from './components/WorkerDeliveryDialog';
 import { WorkerIconButton } from './components/WorkerIconButton';
+import { WorkerExpoGoCameraPreview } from './components/WorkerExpoGoCameraPreview';
 import { WorkerPreflightButton } from './components/WorkerPreflightButton';
 import { WorkerFormField } from './components/WorkerFormField';
 import { WorkerProgressField as PlatformField } from './components/WorkerProgressField';
@@ -92,12 +93,15 @@ type Obj = Record<string, any>;
 const QUICK_CAMERA_SIZE = 218;
 const QUICK_CAMERA_RADIUS = 24;
 const QUICK_SCANNER_PADDING = 12;
+const QUICK_CAMERA_BARCODES: BarcodeSettings = { barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] };
 const android = Platform.OS === 'android';
 const inlineTexturePreview = android &&
   requireOptionalNativeModule<{ supportsAccordTexturePreview?: boolean }>('ExpoCamera')?.supportsAccordTexturePreview === true;
-const fittedPreview = android && !inlineTexturePreview;
+const trackPreviewViewport = android && !inlineTexturePreview;
+const hasExpoGoCameraTexture = trackPreviewViewport &&
+  typeof requireOptionalNativeModule<{ createCameraTextureAsync?: unknown }>('ExpoGL')?.createCameraTextureAsync === 'function';
 const texturePreviewProps = inlineTexturePreview ? { accordTexturePreview: true } : {};
-const OrderScrollView = fittedPreview ? Animated.ScrollView : ScrollView;
+const OrderScrollView = trackPreviewViewport ? Animated.ScrollView : ScrollView;
 type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onWritePending?: (pending: boolean) => void; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
@@ -174,6 +178,17 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [inputSectionsLoaded, setInputSectionsLoaded] = useState(false);
   const [scanner, setScanner] = useState<ScanKind | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
+  const [goTextureFailed, setGoTextureFailed] = useState(false);
+  const [readyGoCamera, setReadyGoCamera] = useState<CameraView | null>(null);
+  const goCamera = useRef<CameraView | null>(null);
+  const registerGoCamera = useCallback((view: CameraView | null) => {
+    goCamera.current = view;
+    if (!view) setReadyGoCamera(null);
+  }, []);
+  const failGoTexture = useCallback(() => setGoTextureFailed(true), []);
+  const goTexture = hasExpoGoCameraTexture && !goTextureFailed;
+  const fittedPreview = trackPreviewViewport && !goTexture;
+  const useInlinePreview = inlineTexturePreview || goTexture;
   const scrollOffset = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
   const cameraSlotTop = useSharedValue<number | null>(null);
@@ -204,7 +219,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     };
   });
   useEffect(() => {
-    if (fittedPreview && (scanner || imageOpen)) {
+    if (trackPreviewViewport && (scanner || imageOpen)) {
       // These alternate views unmount the order's scroll view.
       scrollOffset.set(0);
       cameraSlotTop.set(null);
@@ -1138,28 +1153,34 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
-  // Expo Go and older Android builds fit their separate camera surface inside the measured viewport.
-  const quickCamera = showQuickScanner && permission?.granted ? <CameraView
+  const showCamera = showQuickScanner && permission?.granted;
+  const scanCameraBarcode = ({ data }: { data: string }) => { void quickScan(data); };
+  const quickCamera = showCamera && !goTexture ? <CameraView
     {...texturePreviewProps}
     style={android ? StyleSheet.absoluteFill : [styles.quickCamera, Platform.OS === 'ios' && iosStyles.quickCamera]}
     ratio={fittedPreview ? '4:3' : undefined}
-    barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }}
-    onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> : null;
-  const inlineCamera = inlineTexturePreview ? <View style={styles.textureFrame}>{quickCamera}</View> : quickCamera;
+    barcodeScannerSettings={QUICK_CAMERA_BARCODES}
+    onBarcodeScanned={scanCameraBarcode} /> : null;
+  const inlineCamera = useInlinePreview ? <View style={styles.textureFrame}>
+    {goTexture ? <WorkerExpoGoCameraPreview camera={readyGoCamera} onFailure={failGoTexture} /> : quickCamera}
+  </View> : quickCamera;
 
   return <View style={[styles.screen, { backgroundColor: sheetBackground }]}>
-    <OrderScrollView nestedScrollEnabled style={inlineTexturePreview ? styles.clippedScroll : undefined}
-      removeClippedSubviews={inlineTexturePreview ? false : undefined}
+    {showCamera && goTexture && <CameraView ref={registerGoCamera} style={styles.goCameraSource} pointerEvents="none" ratio="4:3"
+      onCameraReady={() => setReadyGoCamera(goCamera.current)} onMountError={failGoTexture}
+      barcodeScannerSettings={QUICK_CAMERA_BARCODES} onBarcodeScanned={scanCameraBarcode} />}
+    <OrderScrollView nestedScrollEnabled style={useInlinePreview ? styles.clippedScroll : undefined}
+      removeClippedSubviews={useInlinePreview ? false : undefined}
       contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]}
       keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'always' : 'handled'}
-      onLayout={fittedPreview ? event => viewportHeight.set(event.nativeEvent.layout.height) : undefined}
-      onScroll={fittedPreview ? onOrderScroll : undefined} scrollEventThrottle={fittedPreview ? 16 : undefined}>
+      onLayout={trackPreviewViewport ? event => viewportHeight.set(event.nativeEvent.layout.height) : undefined}
+      onScroll={trackPreviewViewport ? onOrderScroll : undefined} scrollEventThrottle={trackPreviewViewport ? 16 : undefined}>
     <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
       onScannedWips={canOpenScannedWips ? () => setScannedWipsStage(scannedStage) : undefined}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.scannerPanel]}
-      onLayout={fittedPreview ? event => cameraSlotTop.set(event.nativeEvent.layout.y + QUICK_SCANNER_PADDING) : undefined}>
-      {quickCamera ? (fittedPreview ? <View style={styles.cameraSlot} /> : inlineCamera) :
+      onLayout={trackPreviewViewport ? event => cameraSlotTop.set(event.nativeEvent.layout.y + QUICK_SCANNER_PADDING) : undefined}>
+      {showCamera ? (fittedPreview ? <View style={styles.cameraSlot} /> : inlineCamera) :
         <NativeButton label={t("Kameraga ruxsat berish")} onPress={() => { void askPermission(); }} />}
       <Text style={[styles.scannerText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.scannerText]}>{merge.scanning ? p('worker.scanner.merge_prompt') : t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
@@ -1363,6 +1384,8 @@ const iosStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   clippedScroll: { overflow: 'hidden' },
   textureFrame: { width: '100%', maxWidth: QUICK_CAMERA_SIZE, maxHeight: QUICK_CAMERA_SIZE, aspectRatio: 1, borderRadius: QUICK_CAMERA_RADIUS, overflow: 'hidden' },
+  // Keep the hidden CameraX source at a fixed size outside the scrolling content.
+  goCameraSource: { position: 'absolute', top: 0, left: 0, width: 240, height: 320, opacity: 0 },
   cameraSlot: { width: QUICK_CAMERA_SIZE, height: QUICK_CAMERA_SIZE },
   cameraViewport: { position: 'absolute', alignSelf: 'center', width: QUICK_CAMERA_SIZE, overflow: 'hidden' },
   screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:QUICK_SCANNER_PADDING,alignItems:'center',gap:10},quickCamera:{width:QUICK_CAMERA_SIZE,height:QUICK_CAMERA_SIZE,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});
