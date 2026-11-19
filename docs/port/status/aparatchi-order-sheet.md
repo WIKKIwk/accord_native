@@ -56,3 +56,15 @@ V2 paths below are relative to `lib/src/`; the `admin_production_map_orders_` pr
 - Verify camera permissions, keyboard/large-text layout, sheet scrolling through the bottom safe area, light/dark themes, physical printer choice/cancel, one reprint and successful/failed server confirmation. No camera, printer, device, simulator or emulator was exercised.
 - Structured material-link approval in a recipient/admin chat, the entire worker queue/WIP/lamination/rezka role and the remaining whole-role text differences are not newly declared complete by this order-sheet implementation.
 - V2 and Mini ERP working trees were checked and remained clean. No real API commands, alert messages, print jobs, database writes or external deployments were sent.
+
+## Android order and roll merge camera
+
+V2's `ProductionQuickScannerPanel` uses a square up to 218 dp with `BoxFit.cover`
+inside the order `ListView` (`raw_material_scan_dialog_models_part_02.dart:175`,
+`admin_production_map_orders_detail_widgets.dart:259`). The Accord Android build
+uses CameraX's texture preview inside the clipped V4 scroll view for both entry
+points. Expo Go and older builds keep the fitted preview with scroll bounds.
+The arm64 Android debug APK includes the patched camera module. All 330 focused
+tests and both platform type checks passed. Expo lint had no errors.
+Physical Android verification remains open for opening an order, entering roll
+merge, and scrolling the live preview partly out of the sheet and back.

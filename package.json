@@ -60,6 +60,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "postinstall": "node scripts/apply-expo-camera-patch.mjs",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -67,5 +68,12 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit -p tsconfig.android.json && tsc --noEmit -p tsconfig.ios.json"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": ["expo-camera"]
+      }
+    }
+  }
 }

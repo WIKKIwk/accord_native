@@ -1,4 +1,5 @@
 import { Host, TextInput as NativeInput, useNativeState } from '@expo/ui';
+import { requireOptionalNativeModule } from 'expo';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import type { ComponentProps } from 'react';
@@ -91,7 +92,12 @@ type Obj = Record<string, any>;
 const QUICK_CAMERA_SIZE = 218;
 const QUICK_CAMERA_RADIUS = 24;
 const QUICK_SCANNER_PADDING = 12;
-const OrderScrollView = Platform.OS === 'android' ? Animated.ScrollView : ScrollView;
+const android = Platform.OS === 'android';
+const inlineTexturePreview = android &&
+  requireOptionalNativeModule<{ supportsAccordTexturePreview?: boolean }>('ExpoCamera')?.supportsAccordTexturePreview === true;
+const fittedPreview = android && !inlineTexturePreview;
+const texturePreviewProps = inlineTexturePreview ? { accordTexturePreview: true } : {};
+const OrderScrollView = fittedPreview ? Animated.ScrollView : ScrollView;
 type Props = { session: Session; apparatusId: string; apparatus?: Apparatus; apparatusCatalog?: Apparatus[]; orderId: string; preview?: QueueOrder; queueCursor: QueueCursor | null; queueWindow?: string; onWritePending?: (pending: boolean) => void; busyOrderTitle?: string; initialAction?: 'complete' | 'astatka' | 'resume' | 'detach_roll'; initialScanQr?: string; initialSwitchQr?: string; onSwitchCommitted?: () => void; onNotice?: (message: string) => void; onClose: () => void; onChanged: () => void };
 function NativeButton(props: ComponentProps<typeof PlatformButton>) {
   const { t } = useWorkerOrderText(); return <PlatformButton {...props} label={t(props.label)} />;
@@ -168,7 +174,6 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   const [inputSectionsLoaded, setInputSectionsLoaded] = useState(false);
   const [scanner, setScanner] = useState<ScanKind | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
-  const android = Platform.OS === 'android';
   const scrollOffset = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
   const cameraSlotTop = useSharedValue<number | null>(null);
@@ -199,13 +204,13 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
     };
   });
   useEffect(() => {
-    if (android && (scanner || imageOpen)) {
+    if (fittedPreview && (scanner || imageOpen)) {
       // These alternate views unmount the order's scroll view.
       scrollOffset.set(0);
       cameraSlotTop.set(null);
       viewportHeight.set(0);
     }
-  }, [android, scanner, imageOpen, scrollOffset, cameraSlotTop, viewportHeight]);
+  }, [scanner, imageOpen, scrollOffset, cameraSlotTop, viewportHeight]);
   const [scannedWipsStage, setScannedWipsStage] = useState('');
   const [paintImageId, setPaintImageId] = useState('');
   const [paintImageMetadata, setPaintImageMetadata] = useState<ReturnedPaintImage | null>(null);
@@ -1133,25 +1138,28 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
   if (scanner) return <View style={styles.cameraScreen}><CameraView style={styles.camera} barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }} onBarcodeScanned={({ data }: { data: string }) => { void onScan(data); }} /><Text style={styles.cameraText}>{t(scanner === 'material' ? 'Material kodini skanerlang' : scanner === 'qolip' ? 'Qolip kodini skanerlang' : 'Kiruvchi rulonni skanerlang')}</Text><NativeButton label={t("Bekor qilish")} onPress={() => setScanner(null)} /></View>;
   const imageId = String(order.image_id || preview?.imageId || '');
   if (imageOpen) return <WorkerOrderImage session={session} orderId={orderId} imageId={imageId} onClose={() => setImageOpen(false)} />;
-  // An Android aspect ratio selects CameraX's FIT_CENTER so the native surface
-  // stays within the preview as its visible height shrinks.
+  // Expo Go and older Android builds fit their separate camera surface inside the measured viewport.
   const quickCamera = showQuickScanner && permission?.granted ? <CameraView
+    {...texturePreviewProps}
     style={android ? StyleSheet.absoluteFill : [styles.quickCamera, Platform.OS === 'ios' && iosStyles.quickCamera]}
-    ratio={android ? '4:3' : undefined}
+    ratio={fittedPreview ? '4:3' : undefined}
     barcodeScannerSettings={{ barcodeTypes: ['qr', 'datamatrix', 'code128', 'ean13', 'ean8'] }}
     onBarcodeScanned={({ data }: { data: string }) => { void quickScan(data); }} /> : null;
+  const inlineCamera = inlineTexturePreview ? <View style={styles.textureFrame}>{quickCamera}</View> : quickCamera;
 
   return <View style={[styles.screen, { backgroundColor: sheetBackground }]}>
-    <OrderScrollView nestedScrollEnabled contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]}
+    <OrderScrollView nestedScrollEnabled style={inlineTexturePreview ? styles.clippedScroll : undefined}
+      removeClippedSubviews={inlineTexturePreview ? false : undefined}
+      contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, Platform.OS === 'ios' && iosStyles.content]}
       keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'always' : 'handled'}
-      onLayout={android ? event => viewportHeight.set(event.nativeEvent.layout.height) : undefined}
-      onScroll={android ? onOrderScroll : undefined} scrollEventThrottle={android ? 16 : undefined}>
+      onLayout={fittedPreview ? event => viewportHeight.set(event.nativeEvent.layout.height) : undefined}
+      onScroll={fittedPreview ? onOrderScroll : undefined} scrollEventThrottle={fittedPreview ? 16 : undefined}>
     <WorkerOrderIdentity session={session} orderId={orderId} imageId={imageId} code={code} title={String(order.title || preview?.title || '')}
       onScannedWips={canOpenScannedWips ? () => setScannedWipsStage(scannedStage) : undefined}
       onOpenImage={() => setImageOpen(true)} onClose={closeSheet} />
     {showQuickScanner && <View style={[styles.scannerPanel, { backgroundColor: sheetCard }, Platform.OS === 'ios' && iosStyles.scannerPanel]}
-      onLayout={android ? event => cameraSlotTop.set(event.nativeEvent.layout.y + QUICK_SCANNER_PADDING) : undefined}>
-      {quickCamera ? (android ? <View style={styles.cameraSlot} /> : quickCamera) :
+      onLayout={fittedPreview ? event => cameraSlotTop.set(event.nativeEvent.layout.y + QUICK_SCANNER_PADDING) : undefined}>
+      {quickCamera ? (fittedPreview ? <View style={styles.cameraSlot} /> : inlineCamera) :
         <NativeButton label={t("Kameraga ruxsat berish")} onPress={() => { void askPermission(); }} />}
       <Text style={[styles.scannerText, { color: colors.muted }, Platform.OS === 'ios' && iosStyles.scannerText]}>{merge.scanning ? p('worker.scanner.merge_prompt') : t("Qolip yoki homashyo kodidan bittasini kamera markaziga olib keling")}</Text>
       {interaction.opening_wip_mode !== 'scan_required' && <>
@@ -1243,7 +1251,7 @@ export function OrderScreen({ session, apparatusId, apparatus, apparatusCatalog,
       detail={detail && detailReadScope === printingScope ? workerOrderDetailFromSnapshot(detail, orderId) : null} />
   </OrderScrollView>
     {/* Android's camera surface can draw beyond a ScrollView's clip. Keep it in a stationary viewport and size it to the visible part of the slot. */}
-    {android && quickCamera && <Animated.View pointerEvents="none" style={[styles.cameraViewport, cameraViewport]}>
+    {fittedPreview && quickCamera && <Animated.View pointerEvents="none" style={[styles.cameraViewport, cameraViewport]}>
       {quickCamera}
     </Animated.View>}
     {!!initialSwitchQr && apparatus && <WorkerInitialOrderSwitch session={session} apparatus={apparatus} apparatusCatalog={apparatusCatalog} orderId={orderId}
@@ -1353,6 +1361,8 @@ const iosStyles = StyleSheet.create({
   success: { color: PlatformColor('systemGreen'), fontSize: 14, lineHeight: 20, paddingTop: 12, paddingBottom: 4 },
 });
 const styles = StyleSheet.create({
+  clippedScroll: { overflow: 'hidden' },
+  textureFrame: { width: '100%', maxWidth: QUICK_CAMERA_SIZE, maxHeight: QUICK_CAMERA_SIZE, aspectRatio: 1, borderRadius: QUICK_CAMERA_RADIUS, overflow: 'hidden' },
   cameraSlot: { width: QUICK_CAMERA_SIZE, height: QUICK_CAMERA_SIZE },
   cameraViewport: { position: 'absolute', alignSelf: 'center', width: QUICK_CAMERA_SIZE, overflow: 'hidden' },
   screen:{flex:1},content:{padding:4,gap:8,paddingBottom:32},host:{width:'100%'},muted:{fontSize:14,color:'#52617a',lineHeight:21},small:{fontSize:13,color:'#52617a',lineHeight:20},card:{borderRadius:18,padding:14,gap:10,elevation:2},sectionGroup:{gap:10,paddingTop:8},label:{fontSize:13,color:'#52617a'},error:{color:'#a52626',fontSize:14},success:{color:'#1d7544',fontSize:14},cameraScreen:{flex:1,backgroundColor:'#10182b',justifyContent:'center',padding:16,gap:12},camera:{height:380,borderRadius:18,overflow:'hidden'},cameraText:{color:'#fff',textAlign:'center',fontSize:16},scannerPanel:{borderRadius:18,padding:QUICK_SCANNER_PADDING,alignItems:'center',gap:10},quickCamera:{width:QUICK_CAMERA_SIZE,height:QUICK_CAMERA_SIZE,borderRadius:24,overflow:'hidden'},scannerText:{fontSize:14,textAlign:'center'},manualToggle:{alignSelf:'flex-end',padding:8},manualRow:{width:'100%',flexDirection:'row',alignItems:'center',gap:8},expansion:{flexDirection:'row',alignItems:'center',gap:8,minHeight:40},expansionTitle:{flex:1,fontSize:16,fontWeight:'500'},detailRow:{borderRadius:12,padding:10,gap:3},detailText:{fontSize:14,fontWeight:'500'},actionRow:{flexDirection:'row',gap:8},paintHeader:{flexDirection:'row',alignItems:'center',padding:8,gap:6},paintPreview:{height:170,borderRadius:12},paintContent:{padding:14,gap:12,paddingBottom:24},flex:{flex:1}});

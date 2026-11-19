@@ -36,6 +36,7 @@ All Expo paths below are relative to `src/`; platform leaves use `.android.tsx` 
 | features/aparatchi/presentation/aparatchi_paddons_screen* | brigader/BrigaderPaddons*, brigaderPaddonListModel | composed; genuine non-operator all-apparatus branch |
 | features/aparatchi/presentation/aparatchi_paddon_detail_screen* | existing WorkerPaddonDetail, brigader/BrigaderPaddonPrimary, BrigaderApparatusDock | composed; real controller actions, scan/back guards, print/selection |
 | core/scanner/reliable_mobile_scanner*; vendored mobile_scanner | brigader/brigaderCameraSession, useBrigaderCamera, shared CameraSurface | real readiness, two starts, 8s/4s timeouts, platform detection policy, raw scan window |
+| features/admin/presentation/raw_material_scan_dialog_models_part_02.dart; order detail ListView | OrderScreen.tsx and the Android Expo Camera patch | order and roll merge fill the same clipped square in a rebuilt Android app; Expo Go retains its fitted preview |
 
 ## Verification and limits
 

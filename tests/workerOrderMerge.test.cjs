@@ -136,9 +136,9 @@ test('lineage comparison ignores transport ordering; merge labels use only serve
     h.p('worker.merge_state.current', { batch: '3-rulon' }), h.p('worker.merge_state.count', { count: 3 })]);
   assert.deepEqual(merge.workerMergeStateLines(links.slice(0, 1), h.p), []);
 });
-for (const platform of ['ios', 'android']) test(`${platform}: the real order sheet wires Merge → camera → confirmation → exact queue body`, async () => {
+for (const [platform, texturePreview] of [['ios', false], ['android', false], ['android', true]]) test(`${platform}${texturePreview ? ' with texture preview' : ''}: the real order sheet wires Merge → camera → confirmation → exact queue body`, async () => {
   const f = fixture(), h = harness(platform, { apparatus: { operation: 'cut' }, control: structuredClone(f.control),
-    interaction: structuredClone(f.control.interaction), mergeReads: f.reads });
+    interaction: structuredClone(f.control.interaction), mergeReads: f.reads, texturePreview });
   const mergeButton = buttons(h.render()).find(button => button.props.label === h.p('worker.action.merge'));
   assert.ok(mergeButton); mergeButton.props.onPress();
   const camera = nodes(h.render(), node => node.type === 'CameraView')[0]; assert.ok(camera);
@@ -153,20 +153,24 @@ for (const platform of ['ios', 'android']) test(`${platform}: the real order she
   tree = h.render(); assert.equal(nodes(tree, node => node.type === 'CameraView').length, 0);
   assert.equal(buttons(tree).length, 0, 'an acknowledged mutation retires the old presentation until fresh controls arrive');
 });
-for (const flow of ['order opening', 'roll merge']) test(`Android ${flow}: the live camera stays within the sheet viewport while scrolling`, () => {
+function renderAndroidScanner(flow, texturePreview) {
   const f = fixture();
   const h = flow === 'roll merge'
-    ? harness('android', { apparatus: { operation: 'cut' }, control: f.control, interaction: f.control.interaction, mergeReads: f.reads })
-    : harness('android', { control: { allowed_actions: ['start'] }, interaction: {
+    ? harness('android', { texturePreview, apparatus: { operation: 'cut' }, control: f.control, interaction: f.control.interaction, mergeReads: f.reads })
+    : harness('android', { texturePreview, control: { allowed_actions: ['start'] }, interaction: {
       mode: 'fresh_start', blocking_reason_code: '', start_materials_mode: 'scan_required', material_scan_required: true,
     }, requirements: { requires_material: true, scan_satisfied: false } });
   if (flow === 'roll merge') buttons(h.render()).find(button => button.props.label === h.p('worker.action.merge')).props.onPress();
+  return h.render();
+}
 
-  const tree = h.render(), scroll = main(tree);
+for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in Expo Go: the fitted camera stays within the sheet while scrolling`, () => {
+  const tree = renderAndroidScanner(flow, undefined), scroll = main(tree);
   const panel = nodes(scroll, node => node.type === 'View' && node.props.onLayout)[0];
   const viewport = nodes(tree, node => node.type === 'AnimatedView' && node.props.children?.type === 'CameraView')[0];
   assert.ok(panel && viewport);
   assert.equal(nodes(scroll, node => node.type === 'CameraView').length, 0);
+  assert.equal(viewport.props.children.props.accordTexturePreview, undefined);
   assert.equal(viewport.props.children.props.ratio, '4:3', 'request native preview fitting while the height is clipped');
   const bounds = () => {
     const { top, height } = viewport.props.style[1].calculate();
@@ -186,6 +190,19 @@ for (const flow of ['order opening', 'roll merge']) test(`Android ${flow}: the l
   assert.equal(viewport.props.style[1].calculate().display, 'flex');
   scroll.props.onLayout({ nativeEvent: { layout: { height: 240 } } });
   assert.deepEqual(bounds(), [104, 136]);
+});
+for (const flow of ['order opening', 'roll merge']) test(`Android ${flow} in an Accord build: the texture fills a clipped square inside the scroll view`, () => {
+  const tree = renderAndroidScanner(flow, true), scroll = main(tree);
+  const [camera] = nodes(scroll, node => node.type === 'CameraView');
+  const [frame] = nodes(scroll, node => node.type === 'View' && node.props.children === camera);
+
+  assert.ok(camera && frame);
+  assert.equal(camera.props.accordTexturePreview, true);
+  assert.equal(camera.props.ratio, undefined);
+  assert.deepEqual(frame.props.style, { width: '100%', maxWidth: 218, maxHeight: 218, aspectRatio: 1, borderRadius: 24, overflow: 'hidden' });
+  assert.equal(scroll.props.style.overflow, 'hidden');
+  assert.equal(scroll.props.removeClippedSubviews, false);
+  assert.equal(nodes(tree, node => node.type === 'AnimatedView').length, 0);
 });
 for (const platform of ['ios', 'android']) test(`${platform}: a missing queue acknowledgement shows no merge success and waits for fresh authority before scanning`, async () => {
   const f = fixture(), h = harness(platform, { apparatus: { operation: 'cut' }, control: structuredClone(f.control),

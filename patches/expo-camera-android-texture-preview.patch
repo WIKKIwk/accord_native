@@ -1,0 +1,55 @@
+--- a/android/src/main/java/expo/modules/camera/CameraViewModule.kt
++++ b/android/src/main/java/expo/modules/camera/CameraViewModule.kt
+@@ -85,6 +85,8 @@
+
+     Events("onModernBarcodeScanned")
+
++    Property("supportsAccordTexturePreview") { true }
++
+     // Aligned with iOS which has the same property. True when ML Kit is available.
+     // False on Horizon OS (Quest devices) and devices without Google Play Services.
+     Property("isModernBarcodeScannerAvailable") {
+@@ -308,6 +310,10 @@
+     View(ExpoCameraView::class) {
+       Events(cameraEvents)
+
++      Prop("accordTexturePreview") { view, enabled: Boolean? ->
++        view.accordTexturePreview = enabled == true
++      }
++
+       Prop("facing") { view, facing: CameraType? ->
+         facing?.let {
+           if (view.lensFacing != it) {
+--- a/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
++++ b/android/src/main/java/expo/modules/camera/ExpoCameraView.kt
+@@ -199,6 +199,13 @@
+       shouldCreateCamera = true
+     }
+
++  internal var accordTexturePreview = false
++    set(value) {
++      if (field == value) return
++      field = value
++      shouldCreateCamera = true
++    }
++
+   var ratio: CameraRatio? = null
+     set(value) {
+       field = value
+@@ -470,7 +477,15 @@
+   private suspend fun configureAndBindCamera() {
+     val cameraProvider = ProcessCameraProvider.awaitInstance(context)
+
+-    ratio?.let {
++    // The square order scanner needs a texture that follows its scroll parent's clip.
++    previewView.implementationMode = if (accordTexturePreview) {
++      PreviewView.ImplementationMode.COMPATIBLE
++    } else {
++      PreviewView.ImplementationMode.PERFORMANCE
++    }
++    if (accordTexturePreview) {
++      previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
++    } else if (ratio != null) {
+       previewView.scaleType =
+         if (ratio == CameraRatio.FOUR_THREE || ratio == CameraRatio.SIXTEEN_NINE) {
+           PreviewView.ScaleType.FIT_CENTER
