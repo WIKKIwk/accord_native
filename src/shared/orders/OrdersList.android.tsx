@@ -10,7 +10,9 @@ import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
 import type { OrdersListGeometry, OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, refreshEnabled, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, onGeometryChange, scrollEnabled, scrollResetKey, headerFollowsContent, userScrollPagination, keyboardShouldPersistTaps }: OrdersListProps<T>) {
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, refreshEnabled, hideRefreshIndicator,
+  active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, onGeometryChange,
+  scrollEnabled, scrollResetKey, scrollEventThrottle, headerFollowsContent, userScrollPagination, keyboardShouldPersistTaps }: OrdersListProps<T>) {
   const [refreshPending, setRefreshPending] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -112,9 +114,11 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     onEndReached={onEndReached} onEndReachedThreshold={0.5}
     onContentSizeChange={(_width, height) => { contentHeight.set(height);
       if (onGeometryChange) { const next = { ...geometry.current, contentHeight: height }; geometry.current = next; onGeometryChange(next); } }}
-    onScroll={onScroll} scrollEventThrottle={onScrollMetrics ? 100 : 16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
+    onScroll={onScroll} scrollEventThrottle={scrollEventThrottle ?? (onScrollMetrics ? 100 : 16)} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     scrollEnabled={scrollEnabled} keyboardShouldPersistTaps={keyboardShouldPersistTaps}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
-    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing ?? refreshPending} enabled={refreshEnabled} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
+    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing ?? refreshPending} enabled={refreshEnabled} progressViewOffset={topInset}
+      {...(hideRefreshIndicator ? { tintColor: 'transparent', colors: ['transparent'], progressBackgroundColor: 'transparent' } : {})}
+      onRefresh={() => { void refresh(); }} /> : undefined}
     renderItem={renderItem} /></GestureDetector></WorkerOrderPalette.Provider>;
 }

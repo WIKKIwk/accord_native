@@ -148,6 +148,29 @@ Apparatus filter checkpoint. The profile-local store preserves selection during 
 
 Secondary lists checkpoint. 109 targeted tests, both configured platform type checks, changed-file ESLint and both Expo exports passed. Inactive Suppliers retains the source's scroll-extent refresh rule using two optional OrdersList callbacks. Native Android interactions and the iOS list presentation remain to be checked.
 
+## Users and item catalog list mapping
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| Users catalog search field | OrdersHeader with localized controls, original account action and caller-owned debounce |
+| Users role filter and item group filter | Keep the existing expanded Compose FilterChip groups required by §5.1 |
+| User and item ListView rows, refresh and pagination | OrdersList keyed rows, preserving the Users viewport-based prefetch and the Catalog 420 dp scroll rule, hidden refresh indicator and measured tail |
+| Segmented user and catalog rows | WorkerQueueCard with existing Admin row content, animation, separate item selection and detail actions |
+
+- [x] Verify role and group filters, scroll resets, exact paging inputs, refresh, selection and guarded navigation bindings.
+- [ ] Admin Users and item creation admission require the original Hub destinations and native presentation capability. Bundled route checks can exercise the existing Android UI contracts.
+
+Users and item catalog checkpoint. 258 focused tests, configured Android and iOS type checks, ESLint, and both Expo exports passed. Rechecked the original window and session guards against the updated Android list contracts. Android device gestures and the iOS catalog UI remain to be checked.
+
+## Apparatus and warehouse roll sheets
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| Factory apparatus selection, search, headings and confirm | PickerSheetContent with its OrdersList, passive group headings, original multi-selection and a WorkerSheetButton; keep the WorkerOrderSheet result owner |
+| Warehouse roll ListView.separated and segmented rows | OrdersList and WorkerQueueCard, preserving original spacing, roll identity and nested details |
+
+- [ ] Verify search, toggle and confirm, passive headings, roll detail selection, loading and close.
+
 ## Decisions
 
 - Existing V4 components may fill a listed gap when V2 behavior is preserved. Retry surfaces can use FeatureError, cards can use the mapped card composition, and metadata/status/actions can use their mapped role components where those contracts fit.

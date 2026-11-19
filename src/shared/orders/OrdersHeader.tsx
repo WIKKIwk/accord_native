@@ -19,12 +19,17 @@ type Props = {
   actions?: ReactNode;
   onSearchFocus?: () => void; onSearchBlur?: () => void;
   enabled?: boolean;
+  hasSearchText?: boolean;
+  blurOnSearchSubmit?: boolean;
+  controlLabels?: { back: string; close: string; clear: string };
+  testID?: string;
 } & ({ onMenu: () => void; onBack?: never } | { onMenu?: never; onBack: () => void });
 
 export type { Props as OrdersHeaderProps };
 
 /** The worker queue uses the same menu and search layout as V2. */
-export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, profileAction, trailing, actions, onSearchFocus, onSearchBlur, searchPlaceholder = 'Buyurtmani izlash', enabled = true }: Props) {
+export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile, showProfile = true, profileAction, trailing, actions, onSearchFocus, onSearchBlur,
+  searchPlaceholder = 'Buyurtmani izlash', enabled = true, hasSearchText = search.length > 0, blurOnSearchSubmit, controlLabels, testID }: Props) {
   const colors = useWorkerColors();
   const [searchFocused, setSearchFocused] = useState(false);
   const input = useRef<OrdersSearchInputHandle>(null);
@@ -42,13 +47,16 @@ export function OrdersHeader({ search, onSearchChange, onMenu, onBack, onProfile
 
   return (
     <RoleHeaderRow>
-      {!searchFocused && <RoleHeaderButton icon={onBack ? 'back' : 'menu'} label={onBack ? 'Orqaga' : 'Bo‘limlar'} onPress={onBack ?? onMenu!} tintColor={colors.icon} />}
+      {!searchFocused && <RoleHeaderButton icon={onBack ? 'back' : 'menu'} label={onBack ? controlLabels?.back ?? 'Orqaga' : 'Bo‘limlar'}
+        onPress={onBack ?? onMenu!} tintColor={colors.icon} testID={testID && `${testID}-back`} />}
       <RoleHeaderSearchField focused={searchFocused}>
         <OrdersSearchInput inputRef={input} value={nativeSearch} onChangeText={changeSearch} enabled={enabled}
           onFocus={() => { setSearchFocused(true); onSearchFocus?.(); }} onBlur={() => { setSearchFocused(false); onSearchBlur?.(); }}
-          placeholder={searchPlaceholder} color={colors.text} placeholderColor={colors.muted} />
-        {(searchFocused || search.length > 0) && (
-          <Pressable accessibilityRole="button" disabled={!enabled} accessibilityLabel={searchFocused ? 'Yopish' : 'Qidiruvni tozalash'} onPress={() => {
+          placeholder={searchPlaceholder} color={colors.text} placeholderColor={colors.muted} testID={testID && `${testID}-search`}
+          onSubmit={blurOnSearchSubmit ? () => input.current?.blur() : undefined} />
+        {(searchFocused || hasSearchText) && (
+          <Pressable accessibilityRole="button" disabled={!enabled} testID={testID && `${testID}-search-close`}
+            accessibilityLabel={searchFocused ? controlLabels?.close ?? 'Yopish' : controlLabels?.clear ?? 'Qidiruvni tozalash'} onPress={() => {
             if (searchFocused) input.current?.blur();
             else { nativeSearch.set(''); changeSearch(''); }
           }} style={styles.clear} hitSlop={5}>

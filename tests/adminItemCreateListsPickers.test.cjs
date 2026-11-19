@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const s = require('./adminItemCreateNativeSupport.cjs');
+const androidTailPadding = tree => s.nativeId(tree, 'admin-items-list-tail').props.style.at(-1).paddingBottom;
 for (const platform of ['android', 'ios']) {
   test(`${platform} catalog retains duplicate raw items/selection, source first-page retry word and original callbacks`, () => {
     const row = s.item(' RAW ', { name: ' Raw Name ', uom: ' kg ', item_group: ' G ' }), fixture = s.catalogModel({ items: [row, row], selectedCodes: [' RAW '], group: ' G ', error: Error('next page'), groupExpanded: true }), f = s.leaf('List', platform, fixture), tree = f.render();
@@ -12,7 +13,7 @@ for (const platform of ['android', 'ios']) {
   test(`${platform} missing actual Scaffold metrics holds retained catalog body and never substitutes a zero tail`, () => {
     const f = s.leaf('List', platform, s.catalogModel({ items: [s.item('A')] }), { bottomPadding: null }), tree = f.render(), body = s.nativeId(tree, 'admin-item-create-list-layout');
     assert.equal(body.props.pointerEvents, 'none'); assert.equal(body.props.accessibilityState.busy, true); assert.ok(s.text(tree).includes('Name A'));
-    if (platform === 'android') assert.equal(s.nodes(tree, node => node.type === 'FlatList')[0].props.contentContainerStyle.paddingBottom, undefined);
+    if (platform === 'android') assert.equal(androidTailPadding(tree), undefined);
   });
   test(`${platform} genuine customer picker keeps .66 native sheet/search58, visible plus on blank query, and Source no scan/AI controls`, () => {
     const f = s.leaf('Picker', platform, s.pickerModel()), tree = f.render(); assert.ok(s.nativeId(tree, 'admin-item-create-picker-add')); assert.equal(s.nativeId(tree, 'admin-item-create-picker-empty-add'), undefined);
@@ -33,7 +34,11 @@ for (const platform of ['android', 'ios']) {
 }
 test('Android catalog source exact420 extent dispatch and scroll reset do not jump on ordinary selection renders', () => {
   const f = s.leaf('List', 'android', s.catalogModel({ items: [s.item('A')] })), tree = f.render(), flat = s.nodes(tree, node => node.type === 'FlatList')[0];
-  assert.equal(flat.props.contentContainerStyle.paddingBottom, 439); flat.props.onScroll({ nativeEvent: { contentSize: { height: 1000 }, contentOffset: { y: 80 }, layoutMeasurement: { height: 500 } } }); assert.deepEqual(f.calls, [['scroll', 420]]);
+  assert.equal(androidTailPadding(tree), 439); assert.equal(flat.props.scrollEventThrottle, 16);
+  assert.deepEqual(flat.props.refreshControl.props.colors, ['transparent']); assert.equal(flat.props.refreshControl.props.refreshing, false);
+  assert.equal(flat.props.keyExtractor(f.model.state.list.items[0], 0), 'row:0:A');
+  assert.ok(s.nodes(tree, node => node.type === 'WorkerQueueCard').length === 1);
+  flat.props.onScroll.onScroll({ contentSize: { height: 1000 }, contentOffset: { y: 80 }, layoutMeasurement: { height: 500 } }, {}); assert.deepEqual(f.calls, [['scroll', 420]]);
   assert.equal(f.scrolls.length, 1); f.model.state.list = { ...f.model.state.list, selectedCodes: ['A'] }; f.render(); assert.equal(f.scrolls.length, 1);
   f.model.state.list = { ...f.model.state.list, scrollReset: 1 }; f.render(); assert.equal(f.scrolls.length, 2);
 });
@@ -59,7 +64,7 @@ test('actual shared Scaffold inherited-bottom proof reaches native list tail for
     const bottomPadding = layout.adminItemCreateListBottom({ metrics, hostHeight }); assert.equal(bottomPadding, expected);
     const f = s.leaf('List', 'android', s.catalogModel({ items: [s.item('A')] }), { bottomPadding }), tree = f.render();
     assert.equal(s.nativeId(tree, 'admin-item-create-list-layout').props.accessibilityState.busy, expected === null);
-    assert.equal(s.nodes(tree, node => node.type === 'FlatList')[0].props.contentContainerStyle.paddingBottom, expected ?? undefined);
+    assert.equal(androidTailPadding(tree), expected ?? undefined);
   }
 });
 test('iOS native row selection and row-open are genuine sibling hit areas; no Button contains another Button', () => {

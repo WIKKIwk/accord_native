@@ -5,19 +5,19 @@ const root = tree => s.nodes(tree, node => node.props.testID === 'admin-item-cre
 async function started(platform, overrides) { const f = s.fixture(platform, overrides); f.render(); await s.flush(); f.render(); return f; }
 
 for (const platform of ['android', 'ios']) {
-  test(`${platform} screen composes real source header+3, inline Messenger banner, clipped body/list, absolute dock, original primary and native overlays`, async () => {
+  test(`${platform} screen composes real header, inline Messenger banner, clipped body/list, absolute dock, original primary and native overlays`, async () => {
     const f = await started(platform); try {
       const tree = f.render(), children = root(tree).props.children.flat(Infinity).filter(Boolean), types = children.map(value => value.type);
-      assert.equal(s.flattenStyle(root(tree).props.style).backgroundColor, s.colors.surfaceContainerHigh); assert.equal(s.flattenStyle(f.leaf.notice.inlineInsets).position, undefined);
+      assert.equal(s.flattenStyle(root(tree).props.style).backgroundColor, platform === 'android' ? s.colors.surfaceContainerLow : s.colors.surface); assert.equal(s.flattenStyle(f.leaf.notice.inlineInsets).position, undefined);
       assert.equal(types.indexOf('GenuineInlineTopNoticeHost') < types.indexOf('SourceBodyFrame'), true); assert.equal(f.leaf.notice.scaffold.messenger, f.messenger); assert.deepEqual(f.leaf.notice.inlineInsets, { left: 11, right: 23 });
       assert.equal(f.leaf.notice.dismissLabel, f.props.topNoticeDismissLabel);
       assert.equal(f.leaf.header.model, f.model()); for (const key of ['session', 'witness', 'isCurrent', 'canInteract', 'profileAction', 'onBack']) assert.equal(f.leaf.header.props[key], f.props[key]);
       assert.equal(f.leaf.primary.model, f.model()); assert.equal(f.leaf.primary.render, f.props.renderPrimaryAction); assert.equal(f.leaf.overlays.model, f.model());
       assert.equal(f.leaf.list.bottomPadding, 439); const footer = children.find(value => value.type === 'View' && value.props.children?.type === 'GenuineDock'); assert.equal(s.flattenStyle(footer.props.style).position, 'absolute'); assert.equal(s.flattenStyle(footer.props.style).bottom, 0);
       assert.equal(f.fixedHosts.at(-1).sourceLayout, f.sourceLayout); assert.equal(f.fixedHosts.at(-1).scaffold.messenger, f.messenger); assert.equal(f.fixedHosts.at(-1).isCurrent, f.model().current);
-      assert.ok(s.nodes(tree, node => node.type === 'View' && s.flattenStyle(node.props.style).height === 3).length);
+      assert.equal(s.nodes(tree, node => node.type === 'View' && s.flattenStyle(node.props.style).height === 3).length, platform === 'ios' ? 1 : 0);
       if (platform === 'android') { assert.equal(s.flattenStyle(root(tree).props.style).paddingTop, 24); assert.deepEqual(s.nodes(tree, node => node.type === 'SafeAreaView')[0].props.edges, ['left', 'right']); assert.equal(f.leaf.overlays.portal, f.props.dialogPortal); assert.equal(f.leaf.overlays.observer, f.props.windowObserver); }
-      else assert.equal(s.nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerStyle.backgroundColor, s.colors.surfaceContainerHigh);
+      else assert.equal(s.nodes(tree, node => node.type === 'Stack.Screen')[0].props.options.headerStyle.backgroundColor, s.colors.surface);
     } finally { f.cleanup(); }
   });
   test(`${platform} missing genuine boundary/provider/ancestor never reaches the domain hook or starts original reads`, async () => {

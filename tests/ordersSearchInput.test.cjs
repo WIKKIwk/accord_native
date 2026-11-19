@@ -1,3 +1,4 @@
+/* global __dirname */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -47,9 +48,9 @@ function headerHarness(initial = '') {
   });
   return {
     writes, changes, get text() { return text; },
-    render(search) {
+    render(search, options = {}) {
       cursor = 0;
-      const tree = OrdersHeader({ search, onSearchChange: value => changes.push(value), onMenu() {}, onProfile() {}, actions: jsx.jsx('CutActions', {}) });
+      const tree = OrdersHeader({ search, onSearchChange: value => changes.push(value), onMenu() {}, onProfile() {}, actions: jsx.jsx('CutActions', {}), ...options });
       while (effects.length) effects.shift()();
       return tree;
     },
@@ -94,7 +95,7 @@ test('Android narrow search uses one native editable line and a separately bound
   // Component functions carry their native decoration slots.
   function Basic() {}
   Object.assign(Basic, field);
-  const modifiers = Object.fromEntries(['fillMaxSize', 'fillMaxWidth', 'height'].map(name => [name, value => ({ name, value })]));
+  const modifiers = Object.fromEntries(['fillMaxSize', 'fillMaxWidth', 'height', 'semantics', 'testID'].map(name => [name, value => ({ name, value })]));
   const { OrdersSearchInput } = load('OrdersSearchInput.android.tsx', {
     'react/jsx-runtime': jsx,
     react: { useRef: value => ({ current: value }), useImperativeHandle() {} },
@@ -103,10 +104,12 @@ test('Android narrow search uses one native editable line and a separately bound
     'react-native': { StyleSheet: { create: value => value } },
   });
   const changes = [], value = { get: () => 'Mitti brownie' };
-  const tree = OrdersSearchInput({ value, onChangeText: text => changes.push(text), placeholder: 'Buyurtmani izlash' });
+  const tree = OrdersSearchInput({ value, onChangeText: text => changes.push(text), placeholder: 'Buyurtmani izlash', testID: 'search-input', onSubmit: () => changes.push('submit') });
   const input = nodes(tree, Basic)[0];
   assert.equal(input.props.value, value); assert.equal(input.props.singleLine, true);
   input.props.onValueChange('0304'); assert.deepEqual(changes, ['0304']);
+  input.props.keyboardActions.onSearch(); assert.deepEqual(changes, ['0304', 'submit']);
+  assert.ok(input.props.modifiers.some(modifier => modifier.name === 'testID' && modifier.value === 'search-input'));
   const placeholder = nodes(tree, 'Text')[0];
   assert.equal(placeholder.props.maxLines, 1); assert.equal(placeholder.props.softWrap, false);
   assert.equal(placeholder.props.overflow, 'ellipsis');
@@ -128,4 +131,19 @@ test('focused rezka search reclaims menu and profile space while keeping paddon 
   nodes(focused, 'Pressable')[0].props.onPress();
   assert.equal(blurred, true); assert.deepEqual(x.writes, []);
   assert.equal(nodes(x.render(''), 'RoleHeaderButton').length, 2);
+});
+
+test('catalog header localizes controls and submitting closes the keyboard with search intact', () => {
+  const x = headerHarness('name'), calls = [];
+  const props = { onMenu: undefined, onBack() {}, controlLabels: { back: 'Назад', close: 'Закрыть', clear: 'Очистить' },
+    blurOnSearchSubmit: true, testID: 'admin-users', onSearchFocus: () => calls.push('focus'), onSearchBlur: () => calls.push('blur') };
+  const header = x.render('name', props);
+  assert.equal(nodes(header, 'RoleHeaderButton')[0].props.label, 'Назад');
+  assert.equal(nodes(header, 'Pressable')[0].props.accessibilityLabel, 'Очистить');
+  nodes(header, 'OrdersSearchInput')[0].props.onFocus();
+  const focused = x.render('name', props), input = nodes(focused, 'OrdersSearchInput')[0];
+  assert.equal(input.props.testID, 'admin-users-search');
+  assert.equal(nodes(focused, 'RoleHeaderButton').length, 0); assert.equal(nodes(focused, 'Pressable')[0].props.accessibilityLabel, 'Закрыть');
+  input.props.inputRef.current = { blur: input.props.onBlur }; input.props.onSubmit();
+  assert.deepEqual(calls, ['focus', 'blur']); assert.equal(x.text, 'name'); assert.deepEqual(x.writes, []);
 });

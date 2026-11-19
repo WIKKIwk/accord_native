@@ -14,6 +14,7 @@ export type OrdersListProps<T = never> = {
   onRefresh?: () => Promise<void>;
   refreshing?: boolean;
   refreshEnabled?: boolean;
+  hideRefreshIndicator?: boolean;
   active: boolean;
   pagerGesture?: PanGesture;
   headerOffset: SharedValue<number>;
@@ -23,7 +24,8 @@ export type OrdersListProps<T = never> = {
   onScrollMetrics?: (metrics: OrdersListScrollMetrics) => void;
   onGeometryChange?: (geometry: OrdersListGeometry) => void;
   scrollEnabled?: boolean;
-  scrollResetKey?: number;
+  scrollEventThrottle?: number;
+  scrollResetKey?: number | object;
   headerFollowsContent?: boolean;
   userScrollPagination?: { distance: number; loadMore: () => void };
   passthrough?: (item: ReactNode) => boolean;

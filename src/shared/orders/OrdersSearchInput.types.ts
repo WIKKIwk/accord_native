@@ -10,8 +10,10 @@ export type OrdersSearchInputProps = {
   onChangeText: (value: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
+  onSubmit?: () => void;
   placeholder: string;
   color: ColorValue;
   placeholderColor: ColorValue;
   enabled?: boolean;
+  testID?: string;
 };

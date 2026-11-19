@@ -56,6 +56,20 @@ function leaf(kind, platform, fixture = catalogModel(), options = {}, r = base.r
     './AdminTextFields.android': { AdminBasicTextField: component('BasicTextField') }, './AdminTypography.android': { AdminText: 'Text' }, './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' },
     './AdminItemCreateNative.android': { ItemCreateIcon: 'ItemCreateIcon', itemCreateRounded: radius => ({ radius }) }, './adminItemCreateModel': source.model, './dartJsonString': source.strings, './adminItemCreatePickerPresentation': pickerPresentation,
     './useAdminPresentationWindow': windowHook, './adminPresentationWindowTicket': { createAdminPresentationWindowTicket: () => `item-create-test:${++ticket}` } };
+  if (kind === 'List' && platform === 'android') {
+    const { react } = r;
+    const useSharedValue = value => react.useMemo(() => ({ get: () => value, set: next => { value = next; } }), []);
+    mocks['react-native-reanimated'] = { __esModule: true, default: { FlatList: flat }, useSharedValue, useAnimatedRef: () => react.useRef(null),
+      useAnimatedScrollHandler: events => events, useAnimatedReaction() {}, scrollTo() {} };
+    mocks['../components/WorkerQueueCard.android'] = { WorkerQueueCard: 'WorkerQueueCard' };
+    mocks['../shared/orders/OrdersList'] = base.compile(path.resolve(__dirname, '../src/shared/orders/OrdersList.android.tsx'), {
+      ...mocks, react: { ...react, Children: { toArray: elements => [elements].flat(Infinity).filter(Boolean) }, isValidElement: node => !!node?.type },
+      'react-native-gesture-handler': { GestureDetector: 'GestureDetector', useNativeGesture: () => undefined },
+      'react-native-worklets': { scheduleOnRN: (callback, args) => callback(args) },
+      '../../components/useBaseTheme': mocks['../components/useBaseTheme'], '../../components/BaseHost.android': mocks['../components/BaseHost.android'],
+      '../../components/workerOrderPalette': { WorkerOrderPalette: { Provider: 'Palette' } }, './OrderListItem': { OrderListItem: 'OrderListItem' },
+    });
+  }
   const module = base.compile(path.resolve(__dirname, `../src/admin/AdminItemCreate${kind}.${platform}.tsx`), mocks);
   return { ...fixture, r, scrolls, render: () => r.render(() => base.expand(module[`AdminItemCreate${kind}`]({ model: fixture.model, observer, bottomPadding: options.bottomPadding === undefined ? 439 : options.bottomPadding }))) };
 }
