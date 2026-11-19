@@ -101,7 +101,7 @@ for (const platform of ['ios', 'android']) {
   test(`${platform} Settings applies real side-safe shell/frame/dock reserve and source12/14 content padding to every phase`, () => {
     for (const phase of ['content', 'loading', 'error']) {
       const f = fixture(platform, { phase }), body = nodes(f.tree, node => node.props.testID === 'admin-settings-body-frame')[0], reserve = nodes(f.tree, node => node.props.testID === 'admin-settings-body-frame-reserve')[0];
-      assert.equal(flattenStyle(reserve.props.style).marginHorizontal, 6); assert.equal(flattenStyle(reserve.props.style).marginBottom, 92);
+      assert.equal(flattenStyle(reserve.props.style).marginHorizontal, undefined); assert.equal(flattenStyle(reserve.props.style).marginBottom, 92);
       assert.equal(flattenStyle(body.props.style).backgroundColor, 'low');
       const content = nodes(body, node => flattenStyle(node.props.style).paddingStart === 12 && flattenStyle(node.props.style).paddingEnd === 14)[0]; assert.ok(content);
       assert.equal(text(body).includes('real-dock'), false); assert.equal(text(f.tree).includes('real-dock'), true);

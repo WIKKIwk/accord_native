@@ -73,8 +73,8 @@ for (const platform of ['android', 'ios']) {
     assert.equal(nodes(tree, node => node.type === 'AdminCreateMenu')[0].props.actions, f.model.actions);
     const dock = nodes(tree, node => node.type === 'View' && node.props.children?.type === 'RealDock')[0]; assert.equal(dock.props.style.position, 'absolute'); assert.equal(dock.props.style.bottom, 0);
     const reserve = nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0], frame = nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0];
-    assert.equal(flattenStyle(reserve.props.style).marginHorizontal, 6); assert.equal(flattenStyle(reserve.props.style).marginBottom, 92);
-    assert.equal(flattenStyle(frame.props.style).borderTopLeftRadius, 18); assert.equal(flattenStyle(frame.props.style).borderBottomRightRadius, 18);
+    assert.equal(flattenStyle(reserve.props.style).marginHorizontal, undefined); assert.equal(flattenStyle(reserve.props.style).marginBottom, 92);
+    assert.equal(flattenStyle(frame.props.style).borderTopLeftRadius, undefined); assert.equal(flattenStyle(frame.props.style).borderBottomRightRadius, undefined);
   });
   test(`${platform} source main page words stay literal while material/worker branches receive only their real children`, () => {
     for (const locale of ['uz', 'en', 'ru', 'ur']) { const f = fixture(platform, { locale }), tree = f.render(); assert.ok(text(tree).includes('Mahsulotlar')); assert.ok(text(tree).includes('Sozlamalar')); }
@@ -125,7 +125,7 @@ for (const platform of ['android', 'ios']) {
     assert.equal(flattenStyle(frame.props.style).opacity, 0); assert.equal(frame.props.pointerEvents, 'none'); assert.ok(nodes(frame, node => node.type === (platform === 'android' ? 'PagerView' : 'TabView')).length);
     const f = fixture(platform); f.props.footer = null; const tree = f.render();
     assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame-reserve')[0].props.style).marginBottom, 0);
-    assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0].props.style).borderBottomRightRadius, 0);
+    assert.equal(flattenStyle(nodes(tree, node => node.props.testID === 'admin-warehouse-main-body-frame')[0].props.style).borderBottomRightRadius, undefined);
   });
 }
 test('Android main keeps source63 toolbar,58 search,61 row, segmented corners,4 body and420 pagination threshold', async () => {

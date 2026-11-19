@@ -151,10 +151,10 @@ test('ios Cancel preserves the latest native edit even when React props have not
   search.onChangeText({ nativeEvent: { text: 'Two' } }); search.onCancelButtonPress(); search.onChangeText({ nativeEvent: { text: '' } });
   assert.deepEqual(restored, ['Two', 'Two']); assert.deepEqual(m.calls, [['search', 'Two'], ['focus', false]]);
 });
-for (const platform of ['android', 'ios']) test(`${platform} Users uses actual source clipped frame with reserve outside and keeps genuine dock outside the body`, () => {
+for (const platform of ['android', 'ios']) test(`${platform} Users fills the Admin body and keeps the genuine dock outside it`, () => {
   const { tree } = render(platform, model()), reserve = nodes(tree, node => node.props.testID === 'admin-users-body-frame-reserve')[0], frame = nodes(tree, node => node.props.testID === 'admin-users-body-frame')[0];
-  assert.equal(reserve.props.style[1].marginHorizontal, 6); assert.equal(reserve.props.style[1].marginBottom, 92);
-  assert.equal(frame.props.style[1].borderTopLeftRadius, 18); assert.equal(frame.props.style[1].borderBottomLeftRadius, 18); assert.equal(frame.props.style[2], false);
+  assert.equal(reserve.props.style[1].marginHorizontal, undefined); assert.equal(reserve.props.style[1].marginBottom, 92);
+  assert.equal(frame.props.style[1].borderTopLeftRadius, undefined); assert.equal(frame.props.style[1].borderBottomLeftRadius, undefined); assert.equal(frame.props.style[2], false);
   assert.equal(nodes(frame, node => node.type === 'ExistingDock').length, 0); assert.equal(nodes(tree, node => node.props.testID === 'admin-users-body-frame-safe-area')[0].props.edges.join(), 'left,right');
   if (platform === 'android') {
     assert.equal(nodes(tree, node => node.props.testID === 'admin-users-header-safe-area')[0].props.edges.join(), 'left,right');

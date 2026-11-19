@@ -72,7 +72,7 @@ for (const platform of ['android', 'ios']) {
     for (const phase of ['loading', 'error', 'content']) {
       const f = s.model({ phase, detail: phase === 'content' ? s.detail() : null }), view = s.view(platform, f.model); view.props.bodySafeAreaBottom = 199;
       let tree = view.render(), inner = s.nodes(tree, node => node.props.testID === 'admin-supplier-detail-inner-safe-area')[0]; assert.equal(inner.props.style[1].paddingBottom, 199);
-      const reserve = s.nodes(tree, node => node.props.testID === 'admin-supplier-detail-body-frame-reserve')[0]; assert.equal(reserve.props.style[1].marginHorizontal, 6); assert.equal(reserve.props.style[1].marginBottom, 92);
+      const reserve = s.nodes(tree, node => node.props.testID === 'admin-supplier-detail-body-frame-reserve')[0]; assert.equal(reserve.props.style[1].marginHorizontal, undefined); assert.equal(reserve.props.style[1].marginBottom, 92);
       assert.equal(s.nodes(inner, node => node.type === 'ActualDock').length, 0); const count = s.nodes(inner, () => true).length;
       if (phase === 'content') {
         if (platform === 'android') assert.equal(s.nodes(inner, node => node.type === 'RN.ScrollView')[0].props.contentContainerStyle.paddingBottom, 116);

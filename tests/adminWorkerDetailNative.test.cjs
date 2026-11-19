@@ -86,7 +86,7 @@ for (const platform of ['android', 'ios']) {
     assert.equal(nodes(tree, n => n.type === 'RealAvatar').length, 1); assert.equal(avatar.isCurrent(), true); assert.equal(avatar.canInteract(), false);
     assert.equal(nodes(tree, n => ['BottomSheet', 'ModalBottomSheet'].includes(n.type)).length, 0);
     const outer = nodes(tree, n => n.props.testID === 'admin-worker-detail-body-frame-reserve')[0], frame = nodes(tree, n => n.props.testID === 'admin-worker-detail-body-frame')[0];
-    const flat = require('./adminShellFrameViewSupport.cjs').flattenStyle; assert.equal(flat(outer.props.style).marginHorizontal, 6); assert.equal(flat(frame.props.style).borderTopLeftRadius, 18); assert.equal(flat(frame.props.style).borderBottomLeftRadius, 18);
+    const flat = require('./adminShellFrameViewSupport.cjs').flattenStyle; assert.equal(flat(outer.props.style).marginHorizontal, undefined); assert.equal(flat(frame.props.style).borderTopLeftRadius, undefined); assert.equal(flat(frame.props.style).borderBottomLeftRadius, undefined);
     f.valid(false); assert.equal(avatar.isCurrent(), false); assert.equal(f.render(), null);
   });
   test(`${platform} source phone remains editable during save; independent code/copy have no code_locked or retry cooldown gate`, () => {

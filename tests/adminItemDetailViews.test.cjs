@@ -116,7 +116,7 @@ for (const [platform, facts, reserve] of [
   ['android', { metrics: { platform: 'android', width: 390, height: 844, viewPaddingBottom: 24, systemGestureInsetsBottom: 32, viewInsetsBottom: 300 }, thinGestureBottom: false }, 0],
 ]) test(`${platform} real footer frame reserve${reserve} never adds raw body bottom SafeArea a second time`, async () => {
   const f = v.fixture(platform, { frameFacts: () => facts }); f.renderRead(); await s.flush(); const tree = f.renderRead(), flatten = require('./adminShellFrameViewSupport.cjs').flattenStyle;
-  const outer = byID(tree, 'admin-item-detail-body-frame-reserve'), frame = byID(tree, 'admin-item-detail-body-frame'); assert.equal(flatten(outer.props.style).marginBottom, reserve); assert.equal(flatten(outer.props.style).marginHorizontal, 6); assert.equal(flatten(frame.props.style).borderBottomLeftRadius, 18);
+  const outer = byID(tree, 'admin-item-detail-body-frame-reserve'), frame = byID(tree, 'admin-item-detail-body-frame'); assert.equal(flatten(outer.props.style).marginBottom, reserve); assert.equal(flatten(outer.props.style).marginHorizontal, undefined); assert.equal(flatten(frame.props.style).borderBottomLeftRadius, undefined);
   assert.equal(nodes(frame.props.children, node => node.type === 'SafeAreaView' && (!node.props.edges || node.props.edges.includes('bottom'))).length, 0);
   const list = nodes(frame, node => node.type === 'ScrollView')[0]; assert.equal(list.props.contentContainerStyle.paddingBottom, 120); f.cleanup(); await s.flush();
 });

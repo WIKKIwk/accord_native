@@ -39,14 +39,15 @@ function setup(family, platform) {
 }
 
 for (const [family, id] of Object.entries(families)) for (const platform of ['android', 'ios']) {
-  test(`${platform} ${family} uses a real outer dock reserve and source Low clipped frame, with IME/no-footer/unavailable transitions`, () => {
+  test(`${platform} ${family} fills the Admin body and reserves space for the dock until the keyboard opens`, () => {
     const f = setup(family, platform), frameID = `admin-${id}-body-frame`;
     const parts = () => { const tree = f.render(), outer = nodes(tree, node => node.props.testID === `${frameID}-reserve`)[0], body = nodes(tree, node => node.props.testID === frameID)[0]; return { tree, outer, body, outside: flattenStyle(outer.props.style), inside: flattenStyle(body.props.style) }; };
     f.set({ metrics: metrics({ platform, viewPaddingBottom: 40, systemGestureInsetsBottom: 48 }), thinGestureBottom: platform === 'android' });
-    let p = parts(); assert.equal(p.outside.marginHorizontal, 6); assert.equal(p.outside.marginBottom, 75); assert.equal(p.outside.backgroundColor, undefined);
+    let p = parts(); assert.equal(p.outside.marginHorizontal, undefined); assert.equal(p.outside.marginBottom, 75); assert.equal(p.outside.backgroundColor, undefined);
     const safe = nodes(p.tree, node => node.props.testID === `${frameID}-safe-area`)[0];
     assert.equal(safe.type, 'SafeAreaView'); assert.deepEqual(safe.props.edges, ['left', 'right']);
-    assert.equal(flattenStyle(safe.props.style).flex, 1); assert.equal(nodes(safe, node => node === p.outer).length, 1);
+    assert.equal(flattenStyle(safe.props.style).flex, 1); assert.equal(flattenStyle(safe.props.style).backgroundColor, colors.surfaceContainerLow);
+    assert.equal(nodes(safe, node => node === p.outer).length, 1);
     assert.equal(nodes(safe, node => node.type === 'GenuineDock').length, 0);
     if (platform === 'android') {
       const header = nodes(p.tree, node => node.props.testID === 'admin-header-safe-area')[0];
@@ -54,15 +55,16 @@ for (const [family, id] of Object.entries(families)) for (const platform of ['an
       assert.equal(nodes(header, node => node.type === 'AdminTopBar').length, 1);
       assert.equal(nodes(header, node => node.props.testID === frameID).length, 0);
     } else assert.equal(nodes(p.tree, node => node.props.testID === 'admin-header-safe-area').length, 0);
-    assert.equal(p.inside.backgroundColor, colors.surfaceContainerLow); assert.equal(p.inside.borderTopLeftRadius, 18); assert.equal(p.inside.borderTopRightRadius, 18); assert.equal(p.inside.borderBottomLeftRadius, 18); assert.equal(p.inside.borderBottomRightRadius, 18); assert.equal(p.inside.overflow, 'hidden');
+    assert.equal(p.inside.backgroundColor, colors.surfaceContainerLow); assert.equal(p.inside.overflow, 'hidden');
+    for (const corner of ['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight']) assert.equal(p.inside[`border${corner}Radius`], undefined);
     assert.equal(p.inside.paddingBottom ?? 0, 0); assert.equal(p.inside.opacity, 1); assert.equal(p.body.props.pointerEvents, 'auto');
     assert.ok(nodes(p.tree, node => flattenStyle(node.props.style).backgroundColor === colors.surfaceContainerHigh).length);
     assert.equal(nodes(p.body, node => node.type === 'GenuineDock').length, 0); assert.equal(nodes(p.tree, node => node.type === 'GenuineDock').length, 1);
     f.set({ metrics: metrics({ platform, width: platform === 'ios' ? 1024 : 390, height: 1366, viewPaddingBottom: 24, systemGestureInsetsBottom: 32 }), thinGestureBottom: false });
     p = parts(); assert.equal(p.outside.marginBottom, 92); assert.equal(p.inside.paddingBottom ?? 0, 0);
     f.set({ metrics: metrics({ platform, viewInsetsBottom: 300 }), thinGestureBottom: true });
-    p = parts(); assert.equal(p.outside.marginBottom, 0); assert.equal(p.inside.borderBottomLeftRadius, 18);
-    f.props.footer = null; p = parts(); assert.equal(p.outside.marginBottom, 0); assert.equal(p.inside.borderBottomLeftRadius, 0); assert.equal(p.inside.borderBottomRightRadius, 0); assert.equal(p.inside.borderTopLeftRadius, 18);
+    p = parts(); assert.equal(p.outside.marginBottom, 0); assert.equal(p.inside.borderBottomLeftRadius, undefined);
+    f.props.footer = null; p = parts(); assert.equal(p.outside.marginBottom, 0); assert.equal(p.inside.borderTopLeftRadius, undefined);
     f.props.footer = { type: 'GenuineDock', props: {} }; f.set({ metrics: null, thinGestureBottom: false });
     p = parts(); assert.equal(p.outside.marginBottom, undefined); assert.equal(p.inside.opacity, 0); assert.equal(p.body.props.pointerEvents, 'none'); assert.equal(p.body.props.accessibilityElementsHidden, true); assert.equal(p.body.props.importantForAccessibility, 'no-hide-descendants'); assert.deepEqual(p.body.props.accessibilityState, { busy: true });
     assert.notEqual(p.body.props.children, null); assert.equal(f.hookReads, 5);
@@ -83,6 +85,17 @@ for (const [family, id] of Object.entries(families)) for (const platform of ['an
     }
   });
 }
+
+test('Brigader retains the rounded body when rendering shared Admin screens', () => {
+  const { AdminShellBodyFrame } = frameModule(colors, () => ({ role: 'brigader', metrics: metrics(), thinGestureBottom: false }));
+  const tree = AdminShellBodyFrame({ hasFooter: true, testID: 'brigader-body', children: 'Content' });
+  const reserve = nodes(tree, node => node.props.testID === 'brigader-body-reserve')[0];
+  const body = nodes(reserve, node => node.props.testID === 'brigader-body')[0];
+  assert.equal(flattenStyle(tree.props.style).backgroundColor, undefined);
+  assert.equal(flattenStyle(reserve.props.style).marginHorizontal, 6);
+  assert.equal(flattenStyle(body.props.style).borderTopLeftRadius, 18);
+  assert.equal(flattenStyle(body.props.style).borderBottomRightRadius, 18);
+});
 
 test('Expo Go Home remains interactive without native measurements, except inside a source window', () => {
   const facts = { metrics: null, thinGestureBottom: false, sourceWindow: false, metricsReady: true };

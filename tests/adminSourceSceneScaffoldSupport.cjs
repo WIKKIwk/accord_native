@@ -107,7 +107,8 @@ function nativeFixture(platform = 'android', options = {}) {
   const shellContext = compile('AdminShellSourceWindowLayoutContext.tsx'), inline = compile('AdminShellInlineSafeArea.tsx', { './AdminShellSourceWindowLayoutContext': shellContext });
   const shellHook = compile('useAdminShellLayout.ts', { expo: { isRunningInExpoGo: () => false }, './AdminShellSourceWindowLayoutContext': shellContext, './adminShellLayoutPolicy': shellPolicy,
     './adminShellLayoutRuntime': { AdminShellLayoutController: class { constructor() { throw Error('No Activity controller'); } } }, '../../modules/accord-admin-layout/src/AccordAdminLayoutModule': { subscribeAdminSystemInsets() { throw Error('No Activity metrics'); } } });
-  const frame = compile('AdminShellBodyFrame.tsx', { './useAdminShellLayout': shellHook, './adminShellLayoutPolicy': shellPolicy });
+  const frame = compile('AdminShellBodyFrame.tsx', { './useAdminShellLayout': shellHook, './adminShellLayoutPolicy': shellPolicy,
+    './AdminShellContext': { useOptionalAdminShell: () => ({ session: { profile: { role: 'admin' } } }) } });
   const bodyLayout = source.load('admin/adminItemCreateNativeLayout', { './adminSupplierScaffoldLayout': source.load('admin/adminSupplierScaffoldLayout') });
   const itemScaffold = compile('AdminItemCreateScaffold.tsx', { './AdminCreateHubProvider': hub, './AdminShellBodyFrame': frame, './adminItemCreateNativeLayout': bodyLayout });
   const sourceHook = compile('useAdminSourceDockScaffold.ts', { './AdminCreateHubProvider': hub, './AdminSourceDockScaffoldOwner': source.domain });

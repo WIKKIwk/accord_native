@@ -22,6 +22,7 @@ function frameModule(colors = { surfaceContainerLow: '#dddddd' }, facts = () => 
     'react-native': { View: 'View', StyleSheet: { create: value => value } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) }, './adminShellLayoutPolicy': policy,
+    './AdminShellContext': { useOptionalAdminShell: () => ({ session: { profile: { role: facts().role ?? 'admin' } } }) },
     './useAdminShellLayout': { useAdminShellLayout: hasFooter => {
       const state = facts(); return { ...policy.adminShellFrameLayout(state.metrics, hasFooter, state.thinGestureBottom), metricsReady: state.metricsReady ?? state.metrics !== null, sourceWindow: state.sourceWindow, safeInsets: state.safeInsets };
     } },

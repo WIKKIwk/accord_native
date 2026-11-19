@@ -32,8 +32,12 @@ export function AdminShellProvider({ session, witness, onLogout, children }: { s
     [session, witness, store, onLogout, isCurrent, destination, isRouteAvailable, activityBinding]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
+export function useOptionalAdminShell() {
+  return useContext(Context);
+}
+
 export function useAdminShell() {
-  const value = useContext(Context);
+  const value = useOptionalAdminShell();
   if (!value) throw new Error('Admin session unavailable');
   return value;
 }
