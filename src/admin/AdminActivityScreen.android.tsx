@@ -1,23 +1,27 @@
 import { useBaseTheme } from '../components/useBaseTheme';
 import { useAdminShellTheme } from './useAdminShellTheme';
 import { BaseHost } from '../components/BaseHost.android';
-import { Column, IconButton, RNHostView, Text as ComposeText, TextButton } from '@expo/ui/jetpack-compose';
+import { Column, IconButton, RNHostView, TextButton } from '@expo/ui/jetpack-compose';
 import { defaultMinSize, semantics, size } from '@expo/ui/jetpack-compose/modifiers';
 import { SymbolView } from 'expo-symbols';
 import { useSyncExternalStore } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkerQueueCard } from '../components/WorkerQueueCard.android';
 import { localizedGetter } from '../shared/localization';
 import { localeController } from '../shared/localization/runtime';
+import { OrdersList } from '../shared/orders/OrdersList';
 import { AdminScreenHeader } from './AdminTopBar.android';
 import { adminActivityScreenModel, type AdminActivityRow } from './adminActivityScreenModel';
 import type { AdminActivityScreenProps } from './adminActivityScreenTypes';
 import { AdminLoadingIndicator } from './AdminLoadingIndicator.android';
 import { AdminShellBodyFrame } from './AdminShellBodyFrame';
+import { AdminText as ComposeText } from './AdminTypography.android';
 
 const subscribeLocale = (listener: () => void) => localeController.addListener(listener);
 const currentLocale = () => localeController.locale;
+const passthrough = () => true;
 function ActivityRow({ row, first, last }: { row: AdminActivityRow; first: boolean; last: boolean }) {
   const colors = useBaseTheme().colors;
   return <WorkerQueueCard first={first} last={last} backgroundColor={colors.surfaceContainerLowest}
@@ -38,6 +42,7 @@ function ActivityRow({ row, first, last }: { row: AdminActivityRow; first: boole
 /** Unconnected content; the owning shell supplies scoped state and the real confirmation. */
 export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, profileAction, onRefresh, onRequestClear }: AdminActivityScreenProps) {
   const locale = useSyncExternalStore(subscribeLocale, currentLocale, currentLocale), { colors, chromeBackground } = useAdminShellTheme(), insets = useSafeAreaInsets();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
   const retryWidth = Math.min(360, Math.max(280, useWindowDimensions().width * 0.88));
   const { view, rows } = adminActivityScreenModel(snapshot, hiddenIds, locale);
   return <View style={[styles.screen, { backgroundColor: chromeBackground, paddingTop: insets.top }]}>
@@ -58,14 +63,14 @@ export function AdminActivityScreen({ snapshot, hiddenIds, navigation, footer, p
         </Column>
       </BaseHost></View> :
         view === 'empty' ? <View style={styles.center}><Text style={[styles.empty, { color: colors.onSurface }]}>{localizedGetter('adminNoActivity', locale)}</Text></View> :
-          <FlatList data={rows} keyExtractor={(item, index) => `${item.id}:${index}`} style={styles.content}
-            contentContainerStyle={{ paddingTop: 4 }}
-            refreshControl={<RefreshControl refreshing={snapshot.loadingActivity} onRefresh={() => { void onRefresh(); }} />}
-            renderItem={({ item, index }) => <ActivityRow row={item} first={index === 0} last={index === rows.length - 1} />} />}
+          <OrdersList rows={rows} rowKey={(item, index) => `${item.id}:${index}`} active passthrough={passthrough}
+            headerOffset={headerOffset} headerHeight={headerHeight} topInset={4}
+            onRefresh={onRefresh} refreshing={snapshot.loadingActivity}
+            renderRow={(item, index) => <ActivityRow row={item} first={index === 0} last={index === rows.length - 1} />}>{null}</OrdersList>}
     </AdminShellBodyFrame><View pointerEvents="box-none" style={styles.footer}>{footer}</View>
   </View>;
 }
-const styles = StyleSheet.create({ screen: { flex: 1 }, content: { flex: 1 },
+const styles = StyleSheet.create({ screen: { flex: 1 },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0 }, empty: { fontSize: 16, fontWeight: '500', lineHeight: 24 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' }, error: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 16 },
   row: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingStart: 16, paddingEnd: 12 },

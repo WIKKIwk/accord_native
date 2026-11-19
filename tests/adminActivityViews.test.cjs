@@ -1,3 +1,4 @@
+/* global __dirname */
 const { adminShellThemeFixture } = require('./support/adminShellTheme.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -37,13 +38,14 @@ function render(platform, changes = {}, hidden = new Set(['hidden']), nav = true
   const mocks = { './AdminTopBar.android': { AdminScreenHeader: 'AdminScreenHeader' }, react: { useSyncExternalStore: (_subscribe, get) => get() }, '@expo/ui/swift-ui': swift,
     '@expo/ui/swift-ui/modifiers': modifiers, '@expo/ui/jetpack-compose/modifiers': modifiers, '@expo/ui/jetpack-compose': { Host: 'Host', IconButton: 'IconButton', RNHostView: 'RNHostView', Text: 'ComposeText', TextButton: 'TextButton', Column: 'Column', useMaterialColors: () => colors },
     'react-native': native, 'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 24, bottom: 16 }) },
+    'react-native-reanimated': { useSharedValue: value => ({ value }) }, '../shared/orders/OrdersList': { OrdersList: 'OrdersList' },
     'expo-router': { Stack: { Screen: 'Stack.Screen' } }, 'expo-symbols': { SymbolView: 'SymbolView' },
     '../components/BaseHost.ios': { BaseHost: 'BaseHost' }, '../components/useBaseTheme': { useBaseTheme: () => ({ colors }) },
     '../components/WorkerQueueCard.android': { WorkerQueueCard: 'WorkerQueueCard' }, '../shared/localization': l10n,
     '../shared/localization/runtime': { localeController: { locale, addListener() {} } },
     '../shared/navigation/RoleHeaderButton': { RoleHeaderButton: 'RoleHeaderButton' }, '../shared/navigation/RoleHeader.android': { RoleHeader: 'RoleHeader' },
     './adminActivityScreenModel': screenModel, './AdminShellBodyFrame': { AdminShellBodyFrame: 'AdminShellBodyFrame' },
-    './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' } };
+    './AdminLoadingIndicator.android': { AdminLoadingIndicator: 'AdminLoadingIndicator' }, './AdminTypography.android': { AdminText: 'ComposeText' } };
   const screen = load(`admin/AdminActivityScreen.${platform}.tsx`, mocks).AdminActivityScreen;
   const navigation = nav ? { icon: 'back', label: 'Back', onPress: () => calls.push('back') } : null;
   const props = { snapshot: { ...initial, ...changes }, hiddenIds: hidden, navigation, footer: { type: 'ExistingDock', props: {} },
@@ -87,7 +89,7 @@ for (const platform of ['ios', 'android']) {
     const loadedEmpty = render(platform, { activityItems: [] }, new Set()).tree;
     assert.equal(nodes(loadedEmpty, n => n.props?.children === l10n.localizedGetter('adminNoActivity', 'en')).length, 1);
     const laterError = render(platform, { activityError: new Error('later failure') }).tree;
-    assert.equal(nodes(laterError, n => n.type === (platform === 'ios' ? 'List' : 'FlatList')).length, 1);
+    assert.equal(nodes(laterError, n => n.type === (platform === 'ios' ? 'List' : 'OrdersList')).length, 1);
   });
   test(`${platform} visible rows keep source order and no fake row action; refresh is delegated`, async () => {
     const { tree, calls } = render(platform, { loadingActivity: true }); let entries;
@@ -96,9 +98,9 @@ for (const platform of ['ios', 'android']) {
       await list.props.modifiers.find(m => m.name === 'refreshable').args[0]();
       entries = nodes(list, n => typeof n.type === 'function' && n.type.name === 'ActivityRow');
     } else {
-      const list = nodes(tree, n => n.type === 'FlatList')[0];
-      assert.equal(list.props.refreshControl.props.refreshing, true); list.props.refreshControl.props.onRefresh();
-      entries = list.props.data.map((value, index) => list.props.renderItem({ item: value, index }));
+      const list = nodes(tree, n => n.type === 'OrdersList')[0];
+      assert.equal(list.props.refreshing, true); await list.props.onRefresh();
+      entries = list.props.rows.map(list.props.renderRow);
       assert.equal(entries[0].props.first, true); assert.equal(entries[1].props.last, true);
     }
     assert.deepEqual(entries.map(e => e.props.row.id), ['first', 'last']);
@@ -117,9 +119,9 @@ for (const platform of ['ios', 'android']) {
       const label = platform === 'ios' ? nodes(tree, n => n.type === 'Stack.Screen')[0].props.options.title :
         nodes(tree, n => n.type === 'AdminScreenHeader')[0].props.title;
       assert.equal(label, l10n.localizedGetter('adminActivityTitle', locale));
-      const list = platform === 'android' ? nodes(tree, n => n.type === 'FlatList')[0] : null;
+      const list = platform === 'android' ? nodes(tree, n => n.type === 'OrdersList')[0] : null;
       const element = platform === 'ios' ? nodes(tree, n => typeof n.type === 'function' && n.type.name === 'ActivityRow')[0] :
-        list.props.renderItem({ item: list.props.data[0], index: 0 });
+        list.props.renderRow(list.props.rows[0], 0);
       const row = element.type(element.props);
       assert.ok(nodes(row, n => n.props?.children === model.adminActivityMetricLine(item, locale)).length);
     }
@@ -128,9 +130,10 @@ for (const platform of ['ios', 'android']) {
 
 test('Android Activity keeps V2 segment spacing, card padding and status dimensions', () => {
   const { tree } = render('android');
-  const list = nodes(tree, n => n.type === 'FlatList')[0];
-  assert.deepEqual(list.props.contentContainerStyle, { paddingTop: 4 });
-  const entry = list.props.renderItem({ item: list.props.data[0], index: 0 });
+  const list = nodes(tree, n => n.type === 'OrdersList')[0];
+  assert.equal(list.props.topInset, 4);
+  assert.deepEqual(list.props.rows.map(list.props.rowKey), ['first:0', 'last:1']);
+  const entry = list.props.renderRow(list.props.rows[0], 0);
   const card = entry.type(entry.props);
   assert.deepEqual(card.props.containerStyle, { paddingHorizontal: 4, paddingTop: 0, paddingBottom: 0 });
   assert.equal(card.props.style.borderTopLeftRadius, 18);

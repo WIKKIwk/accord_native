@@ -10,8 +10,8 @@ import { BaseHost } from '../../components/BaseHost.android';
 import { useBaseTheme } from '../../components/useBaseTheme';
 import type { OrdersListProps } from './OrdersList.types';
 
-export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, keyboardShouldPersistTaps }: OrdersListProps<T>) {
-  const [refreshing, setRefreshing] = useState(false);
+export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKey, onRefresh, refreshing, active, pagerGesture, headerOffset, headerHeight, topInset, passthrough, onEndReached, onScrollMetrics, keyboardShouldPersistTaps }: OrdersListProps<T>) {
+  const [refreshPending, setRefreshPending] = useState(false);
   const [imagesReady, setImagesReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
   const { colors } = useBaseTheme();
@@ -51,8 +51,8 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
   );
   const refresh = useCallback(async () => {
     if (!onRefresh) return;
-    setRefreshing(true);
-    try { await onRefresh(); } finally { setRefreshing(false); }
+    setRefreshPending(true);
+    try { await onRefresh(); } finally { setRefreshPending(false); }
   }, [onRefresh]);
   const onScroll = useAnimatedScrollHandler<{ previous?: number; dragging?: boolean; momentum?: boolean }>({
     onBeginDrag: (event, context) => {
@@ -103,6 +103,6 @@ export function OrdersList<T = never>({ children, footer, rows, renderRow, rowKe
     onScroll={onScroll} scrollEventThrottle={onScrollMetrics ? 100 : 16} nestedScrollEnabled removeClippedSubviews={false} windowSize={9}
     keyboardShouldPersistTaps={keyboardShouldPersistTaps}
     onViewableItemsChanged={onViewableItemsChanged} extraData={imagesReady}
-    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
+    refreshControl={onRefresh ? <RefreshControl refreshing={refreshing ?? refreshPending} progressViewOffset={topInset} onRefresh={() => { void refresh(); }} /> : undefined}
     renderItem={renderItem} /></GestureDetector></WorkerOrderPalette.Provider>;
 }

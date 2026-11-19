@@ -38,6 +38,19 @@ A partial entry has a route, implementation, or tag to check against V2. Missing
 - The keyed list uses the V2 index and code together because the server can repeat a code across pages.
 - 56 focused tests, both platform type checks, changed-file ESLint, and both Expo exports passed. Plain `tsc --noEmit` does not resolve platform-only imports with the root config. No Android device or emulator was available.
 
+## Activity mapping
+
+| V2 widget or behavior | V4 implementation |
+| --- | --- |
+| AppShell, AdminDock and clear confirmation | AdminScreenHeader, AdminShellBodyFrame, owning dock and existing AdminActivityPending confirmation |
+| ListView.builder and AppRefreshIndicator | OrdersList keyed rows and onRefresh, with the scoped Activity busy state |
+| AdminSummaryCard and activity badge | Existing WorkerQueueCard with Activity alignment, segment corners and status metadata |
+| AppLoadingIndicator, AppRetryState and empty view | AdminLoadingIndicator and existing centered text/retry with source dimensions and localized copy |
+
+- [x] Keep server order, all dispatch statuses, hidden IDs, deferred clear confirmation and first-load error/empty behavior.
+
+Activity checkpoint: 56 focused tests, both platform type checks, changed-file lint and the iOS export passed. The existing dispatch API and confirmation controller are the source of truth for the list. Android device verification remains open.
+
 ## Decisions
 
 - Existing V4 components may fill a listed gap when V2 behavior is preserved. Retry surfaces can use FeatureError, cards can use the mapped card composition, and metadata/status/actions can use their mapped role components where those contracts fit.
@@ -678,3 +691,4 @@ A partial entry has a route, implementation, or tag to check against V2. Missing
 ## iOS TODO
 
 - Item Groups tabs and item list (`src/admin/ItemGroupsRoute.android.tsx`).
+- Activity list and retry typography (`src/admin/AdminActivityScreen.android.tsx`).

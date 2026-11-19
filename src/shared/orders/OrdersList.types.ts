@@ -11,6 +11,7 @@ export type OrdersListProps<T = never> = {
   renderRow?: (row: T, index: number) => ReactNode;
   rowKey?: (row: T, index: number) => string;
   onRefresh?: () => Promise<void>;
+  refreshing?: boolean;
   active: boolean;
   pagerGesture?: PanGesture;
   headerOffset: SharedValue<number>;
