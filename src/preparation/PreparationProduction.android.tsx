@@ -1,10 +1,10 @@
 import { Image } from 'expo-image';
 import { useMaterialColors } from '@expo/ui/jetpack-compose';
-import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import qrFactory from 'qrcode-generator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, ScrollView, StyleSheet, Text as NativeText, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text as NativeText, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeSessionToken, registerSessionResetHook, type Session } from '../auth';
@@ -14,10 +14,12 @@ import { useNativeSheet } from '../nativeSheet';
 import { DropdownFilter } from '../shared/filters/DropdownFilter.android';
 import { OrdersHeader } from '../shared/orders/OrdersHeader';
 import { OrdersList } from '../shared/orders/OrdersList';
+import { OrdersWorkspace } from '../shared/orders/OrdersWorkspace';
+import { ORDERS_TAB_BAR_HEIGHT } from '../shared/orders/ordersWorkspaceTypes';
 import { sessionReadScope } from '../sessionReadScope';
 import { usePreparationContext } from './PreparationContext.android';
 import { type JournalState, PreparationJournal } from './preparationJournal';
-import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, createPreparationProductionOrdersJournal } from './preparationJournalFactory';
+import { createPreparationProductionBatchJournal, createPreparationProductionOrderJournal, productionRowKey, productionViews } from './preparationJournalFactory';
 import { preparationProductionBatchCard, preparationProductionDate, preparationProductionMetrics, preparationProductionOrderCard,
   preparationProductionRecipeLines, preparationProductionRollCard } from './preparationProductionPresentation';
 import { selectPreparationDevice } from './preparationDevicePicker.android';
@@ -26,7 +28,8 @@ import { PreparationReprintCancelled } from './preparationReprint';
 import { PreparationButton, PreparationDialogs, PreparationPage, PreparationRow, PreparationText, usePreparationDialogs, usePreparationText } from './PreparationUI.android';
 import type { preparationProductionBatchFromJson, preparationProductionOrderFromJson, preparationProductionRollFromJson } from './preparationProductionModel';
 import { PreparationProductionNoteDialog } from './PreparationProductionNoteDialog';
-import { usePreparationProductionNote } from './usePreparationProductionNote';
+import { usePreparationOutputNotes } from './usePreparationOutputNotes';
+import { productionSearchPlaceholder, productionStatuses, usePreparationJournal, usePreparationProductionWorkspace } from './usePreparationProductionWorkspace';
 
 type Order = ReturnType<typeof preparationProductionOrderFromJson>;
 type Batch = ReturnType<typeof preparationProductionBatchFromJson>;
@@ -44,8 +47,8 @@ function ProductionOrderRow({ order, last }: { order: Order; last: boolean }) {
       <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{`${card.subtitle}\n${card.metrics}`}</NativeText></View>
   </WorkerQueueCard>;
 }
-function ProductionBatchRow({ batch, first, last }: { batch: Batch; first: boolean; last: boolean }) {
-  const colors = useMaterialColors(), card = preparationProductionBatchCard(batch);
+function ProductionBatchRow({ batch, first, last, showOrder }: { batch: Batch; first: boolean; last: boolean; showOrder?: boolean }) {
+  const colors = useMaterialColors(), card = preparationProductionBatchCard(batch, showOrder);
   return <WorkerQueueCard backgroundColor={colors.surface} first={first} last={last} onPress={() => router.push({
     pathname: '/android-preparation/production-batch', params: { id: batch.batch_id },
   } as unknown as Href)}>
@@ -56,28 +59,30 @@ function ProductionBatchRow({ batch, first, last }: { batch: Batch; first: boole
       <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{`${card.subtitle}\n${card.metrics}`}</NativeText></View>
   </WorkerQueueCard>;
 }
-const empty = <T, S,>(): JournalState<T, S> => ({ items: [], loading: true, error: null, has_more: false, next_offset: null, summary: null });
 
-function useJournal<T, S>(factory: (change: (state: JournalState<T, S>) => void) => PreparationJournal<T, S>) {
-  const [state, setState] = useState<JournalState<T, S>>(empty);
-  const group = useMemo(() => {
-    const journal = factory(next => setState({ ...next }));
-    let mounts = 0;
-    return { journal, mount() {
-      mounts++; journal.start();
-      return () => { mounts--; queueMicrotask(() => { if (!mounts) journal.dispose(); }); };
-    } };
-  }, [factory]);
-  const journal = group.journal;
-  useEffect(() => group.mount(), [group]);
-  useEffect(() => registerSessionResetHook(async () => { journal.invalidate(); }), [journal]);
-  useFocusEffect(useCallback(() => { journal.setVisible(true); return () => journal.setVisible(false); }, [journal]));
-  useEffect(() => {
-    journal.setResumed(AppState.currentState === 'active');
-    const listener = AppState.addEventListener('change', state => journal.setResumed(state === 'active'));
-    return () => listener.remove();
-  }, [journal]);
-  return { state, journal };
+function ProductionRollRow({ roll, showMaterial, selecting, selected, first, last, onOpen, onSelect }: {
+  roll: Roll; showMaterial?: boolean; selecting: boolean; selected: boolean; first: boolean; last: boolean;
+  onOpen: () => void; onSelect: () => void;
+}) {
+  const colors = useMaterialColors(), card = preparationProductionRollCard(roll, showMaterial);
+  return <WorkerQueueCard first={first} last={last} backgroundColor={selected ? colors.secondaryContainer : colors.surface}
+    selected={selecting ? selected : undefined} onPress={selecting ? onSelect : onOpen}
+    onLongPress={roll.receipt_name ? selecting ? undefined : onSelect : undefined}>
+    <View accessible={false} style={[styles.icon, { backgroundColor: colors.surfaceContainerHighest }]}>
+      <SymbolView name={{ android: selected ? 'check' : selecting ? 'radio_button_unchecked' : 'qr_code' }}
+        size={20} tintColor={colors.onSurfaceVariant} />
+    </View>
+    <View style={styles.rowText}><NativeText style={[styles.headline, { color: colors.onSurface }]}>{card.title}</NativeText>
+      <NativeText style={[styles.supporting, { color: colors.onSurfaceVariant }]}>{`${card.subtitle}\n${card.metrics}`}</NativeText></View>
+  </WorkerQueueCard>;
+}
+
+function SelectionActions({ count, apply, cancel }: { count: number; apply: () => void; cancel: () => void }) {
+  if (!count) return null;
+  return <View style={styles.selectionActions}>
+    <PreparationButton label={`${count} ta rulonga eslatma`} onPress={apply} />
+    <PreparationButton label="Bekor qilish" onPress={cancel} />
+  </View>;
 }
 
 function JournalHeader<T, S>({ state, journal }: { state: JournalState<T, S>; journal: PreparationJournal<T, S> }) {
@@ -96,41 +101,45 @@ function JournalFooter<T, S>({ state, journal, emptyText }: { state: JournalStat
 // @v2 PreparationProductionScreen
 export function PreparationProductionScreen() {
   const { session } = usePreparationContext(), t = usePreparationText();
-  const [query, setQuery] = useState(''), [status, setStatus] = useState('all');
-  const colors = useMaterialColors(), insets = useSafeAreaInsets();
-  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(0);
-  const filters = useRef({ query: '', status: 'all' });
-  const createJournal = useCallback((change: (state: JournalState<Order>) => void) =>
-    createPreparationProductionOrdersJournal(session, () => filters.current, change), [session]);
-  const { state, journal } = useJournal(createJournal);
-  const firstFilter = useRef(true), searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (firstFilter.current) { firstFilter.current = false; return; }
-    searchTimer.current = setTimeout(() => { searchTimer.current = null; filters.current = { ...filters.current, query: query.trim() }; void journal.load(); }, 350);
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); searchTimer.current = null; };
-  }, [query, journal]);
-  const chooseStatus = (value: string) => {
-    if (searchTimer.current) clearTimeout(searchTimer.current); searchTimer.current = null;
-    setStatus(value); filters.current = { query: query.trim(), status: value }; void journal.load();
-  };
-  const accountChanged = state.error === 'Akkaunt o‘zgargan. Sahifani qayta oching';
-  return <View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
-    <OrdersHeader search={query} searchPlaceholder={t('Qidirish')} onSearchChange={value => { if (!accountChanged) setQuery(value); }}
+  const { view, query, status, state, journal, notes, accountChanged, selectView, changeQuery, changeStatus, loadMore, openRollNotes } =
+    usePreparationProductionWorkspace(session);
+  const colors = useMaterialColors(), insets = useSafeAreaInsets(), sheet = useNativeSheet();
+  const headerOffset = useSharedValue(0), headerHeight = useSharedValue(70);
+  const [headerSize, setHeaderSize] = useState(70);
+  const header = <View onLayout={event => {
+    const height = event.nativeEvent.layout.height;
+    if (height > 0) { headerHeight.set(height); setHeaderSize(height); }
+  }}><OrdersHeader search={query} searchPlaceholder={t(productionSearchPlaceholder)} onSearchChange={changeQuery}
       onBack={() => { if (router.canGoBack()) router.back(); else router.replace('/android-preparation' as Href); }}
-      onProfile={() => router.navigate('/android-preparation/profile' as Href)} />
-    <OrdersList active headerOffset={headerOffset} headerHeight={headerHeight} topInset={0} passthrough={passthroughListItems}
-      onRefresh={() => journal.load()} onEndReached={() => { if (state.has_more && !state.error) void journal.load({ append: true }); }}>
-    <DropdownFilter label={t('Holat')} selectedLabel={t(status === 'active' ? 'Davom etmoqda' : status === 'completed' ? 'Yakunlangan' : 'Barchasi')}
-      enabled={!accountChanged} backgroundColor={colors.surface} options={[
-        { value: 'all', label: t('Barchasi') }, { value: 'active', label: t('Davom etmoqda') }, { value: 'completed', label: t('Yakunlangan') },
-      ]} onChange={chooseStatus} last={!state.items.length} />
-    {state.error ? <View style={styles.status}><PreparationText>{state.error}</PreparationText>{!accountChanged &&
-      <PreparationButton label="Qayta urinish" onPress={() => void journal.load()} />}</View> : null}
-    {!state.loading && !state.error && !state.items.length ? <View style={styles.status}><PreparationText>{t('Hali ishlab chiqarish yozuvlari yo‘q.')}</PreparationText></View> : null}
-    {state.items.map((order, index) => <ProductionOrderRow key={order.order_id} order={order} last={index === state.items.length - 1} />)}
-    {state.loading ? <ActivityIndicator style={styles.status} /> : null}
-    </OrdersList>
-  </View>;
+      onProfile={() => router.navigate('/android-preparation/profile' as Href)} /></View>;
+  return <><View style={{ flex: 1, backgroundColor: colors.surfaceContainerLow, paddingTop: insets.top }}>
+    <OrdersWorkspace session={session} tabs={productionViews.map(tab => ({ ...tab, name: t(tab.name) }))}
+      selected={view} onSelect={selectView} header={header} headerOffset={headerOffset} distributeTabs>
+      {(id, pagerGesture) => <OrdersList active={id === view} pagerGesture={pagerGesture}
+        headerOffset={headerOffset} headerHeight={headerHeight} topInset={headerSize + ORDERS_TAB_BAR_HEIGHT} passthrough={passthroughListItems}
+        onRefresh={() => journal.load()} onEndReached={id === view ? loadMore : undefined}
+        rows={id === view ? state.items : []} rowKey={productionRowKey}
+        renderRow={(row, index) => {
+          const first = index === 0, last = index === state.items.length - 1;
+          if (row.kind === 'order') return <ProductionOrderRow order={row.order} last={last} />;
+          if (row.kind === 'batch') return <ProductionBatchRow batch={row.batch} first={first} last={last} showOrder />;
+          return <ProductionRollRow roll={row.roll} showMaterial first={first} last={last}
+            selecting={notes.selected.size > 0} selected={notes.selected.has(row.roll.receipt_name)}
+            onSelect={() => notes.toggle(row.roll)} onOpen={() => sheet.open(<PreparationDialogs>
+              <RollPreview roll={notes.rollWithNotes(row.roll)} session={session} orderId={row.roll.order_id} />
+            </PreparationDialogs>, { dismissible: true })} />;
+        }} footer={id === view && state.loading ? <ActivityIndicator style={styles.status} /> : null}>
+        {id === view && <DropdownFilter label={t('Holat')} selectedLabel={t(productionStatuses.find(item => item.value === status)?.label ?? 'Barchasi')}
+          enabled={!accountChanged} backgroundColor={colors.surface} options={productionStatuses.map(item => ({ ...item, label: t(item.label) }))}
+          onChange={changeStatus} last={!state.items.length} />}
+        {id === view && state.error ? <View style={styles.status}><PreparationText>{state.error}</PreparationText>{!accountChanged &&
+          <PreparationButton label="Qayta urinish" onPress={() => void journal.load()} />}</View> : null}
+        {id === view && !state.loading && !state.error && !state.items.length ? <View style={styles.status}>
+          <PreparationText>{t('Ishlab chiqarish yozuvlari topilmadi.')}</PreparationText></View> : null}
+      </OrdersList>}
+    </OrdersWorkspace>
+    <SelectionActions count={notes.selected.size} apply={openRollNotes} cancel={notes.clearSelection} />
+  </View><PreparationProductionNoteDialog editor={notes.editor} title={notes.title} description={notes.description} /></>;
 }
 
 const styles = StyleSheet.create({
@@ -140,6 +149,7 @@ const styles = StyleSheet.create({
   headline: { fontSize: 16, lineHeight: 24, includeFontPadding: false, fontWeight: '500' },
   supporting: { fontSize: 14, lineHeight: 20, includeFontPadding: false },
   status: { padding: 16 },
+  selectionActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, padding: 8 },
 });
 
 // @v2 PreparationProductionOrderScreen
@@ -147,19 +157,18 @@ export function PreparationProductionOrderScreen() {
   const { id = '' } = useLocalSearchParams<{ id: string }>(), { session } = usePreparationContext();
   const createJournal = useCallback((change: (state: JournalState<Batch, Order>) => void) =>
     createPreparationProductionOrderJournal(session, id, change), [session, id]);
-  const { state, journal } = useJournal(createJournal);
+  const { state, journal } = usePreparationJournal(createJournal);
   const t = usePreparationText(), order = state.summary;
-  const editor = usePreparationProductionNote(session, id, order?.preparation_note, () => { void journal.load({ silent: true }); });
-  return <><PreparationPage title={order ? `${t('Buyurtma')}: ${order.order_code || order.order_id}` : 'Buyurtma ishlab chiqarishi'}
+  return <PreparationPage title={order ? `${t('Buyurtma')}: ${order.order_code || order.order_id}` : 'Buyurtma ishlab chiqarishi'}
     refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
     <JournalHeader state={state} journal={journal} />
     {order ? <PreparationRow title={order.order_title} subtitle={[order.customer_name, preparationProductionMetrics(order.roll_count, order.total_net_kg, order.total_length_m),
-      editor.note.text ? `${t('Eslatma')}: ${editor.note.text}` : ''].filter(Boolean).join('\n')}
-      trailing={<WorkerIconButton icon="edit" label={t('Buyurtma eslatmasini tahrirlash')} onPress={editor.open} />} /> : null}
+    ].filter(Boolean).join('\n')} /> : null}
+    {order?.preparation_note.text ? <PreparationRow title={t('Buyurtma eslatmasi')} subtitle={order.preparation_note.text} /> : null}
     {state.items.length ? <View style={styles.list}>{state.items.map((batch, index) => <ProductionBatchRow key={batch.batch_id} batch={batch}
       first={index === 0} last={index === state.items.length - 1} />)}</View> : null}
     <JournalFooter state={state} journal={journal} emptyText="Bu buyurtma bo‘yicha ishlab chiqarish yozuvi yo‘q." />
-  </PreparationPage><PreparationProductionNoteDialog editor={editor} /></>;
+  </PreparationPage>;
 }
 
 // @v2 RpsQrReprintSheet
@@ -189,7 +198,8 @@ function RollPreview({ roll, session, orderId }: { roll: Roll; session: Session;
     <PreparationText title>{t('Chop etilgan QR')}</PreparationText><PreparationText>{roll.item_name || roll.item_code}</PreparationText>
     {image ? <Image source={{ uri: image }} style={{ width: 208, height: 208, alignSelf: 'center', backgroundColor: '#fff' }} contentFit="contain" /> : null}
     <PreparationText>{roll.epc}</PreparationText>
-    {roll.preparation_note?.text ? <PreparationText>{`${t('Buyurtma eslatmasi')}: ${roll.preparation_note.text}`}</PreparationText> : null}
+    {roll.batch_note?.text ? <PreparationText>{`${t('Batch eslatmasi')}: ${roll.batch_note.text}`}</PreparationText> : null}
+    {roll.roll_note?.text ? <PreparationText>{`${t('Rulon eslatmasi')}: ${roll.roll_note.text}`}</PreparationText> : null}
     {preparationProductionRecipeLines(roll.preparation_formula).map((line, index) => <PreparationText key={index}>{t(line)}</PreparationText>)}
     {notice ? <PreparationText>{t(notice)}</PreparationText> : null}
     <PreparationButton label="Qayta chop etish" disabled={printing || !orderId} onPress={() => void reprint()} id="preparation-roll-reprint" />
@@ -201,18 +211,26 @@ export function PreparationProductionBatchScreen() {
   const { id = '' } = useLocalSearchParams<{ id: string }>(), { session } = usePreparationContext();
   const createJournal = useCallback((change: (state: JournalState<Roll, Batch>) => void) =>
     createPreparationProductionBatchJournal(session, id, change), [session, id]);
-  const { state, journal } = useJournal(createJournal);
+  const { state, journal } = usePreparationJournal(createJournal);
   const sheet = useNativeSheet(), t = usePreparationText(), batch = state.summary;
-  return <PreparationPage title={batch?.item_name || batch?.item_code || 'Ishlab chiqarish'} refreshing={state.loading && !!state.items.length} onRefresh={() => void journal.load()}>
+  const notes = usePreparationOutputNotes(session, () => { void journal.load(); });
+  const batchNote = batch && notes.latest('batch', batch.batch_id, batch.batch_note);
+  return <><PreparationPage title={batch?.item_name || batch?.item_code || 'Ishlab chiqarish'} refreshing={state.loading && !!state.items.length}
+    onRefresh={() => void journal.load()} footer={<SelectionActions count={notes.selected.size}
+      apply={() => notes.openSelection(state.items)} cancel={notes.clearSelection} />}>
     <JournalHeader state={state} journal={journal} />
     {batch ? <>
       <PreparationRow title={t(batch.active ? 'Davom etmoqda' : 'Yakunlangan')}
         subtitle={`${batch.warehouse}\n${t('Boshlangan')}: ${preparationProductionDate(batch.started_at)}${batch.ended_at ? `\n${t('Tugagan')}: ${preparationProductionDate(batch.ended_at)}` : ''}\n${preparationProductionMetrics(batch.roll_count, batch.total_net_kg, batch.total_length_m)}`} />
       <View>{preparationProductionRecipeLines(batch.preparation_formula).map((line, index) => <PreparationText key={index}>{t(line)}</PreparationText>)}</View>
-      {batch.preparation_note.text ? <PreparationRow title={t('Buyurtma eslatmasi')} subtitle={batch.preparation_note.text} /> : null}
+      {batch.batch_id.startsWith('batch:') ? <PreparationRow title={t('Batch eslatmasi')} subtitle={batchNote?.text}
+        trailing={<WorkerIconButton icon="edit" label={t('Batchga eslatma')} onPress={() => notes.openBatch(batch.batch_id, batchNote)} />} /> : null}
     </> : null}
-    {state.items.map(roll => { const card = preparationProductionRollCard(roll); return <PreparationRow key={roll.epc} title={card.title}
-      subtitle={`${card.subtitle}\n${card.metrics}`} onPress={() => sheet.open(<PreparationDialogs><RollPreview roll={roll} session={session} orderId={batch?.order_id ?? ''} /></PreparationDialogs>, { dismissible: true })} />; })}
+    {state.items.map((roll, index) => <ProductionRollRow key={roll.receipt_name || roll.epc} roll={roll}
+      first={index === 0} last={index === state.items.length - 1} selecting={notes.selected.size > 0} selected={notes.selected.has(roll.receipt_name)}
+      onSelect={() => notes.toggle(roll)} onOpen={() => sheet.open(<PreparationDialogs>
+        <RollPreview roll={notes.rollWithNotes(roll)} session={session} orderId={roll.order_id || batch?.order_id || ''} />
+      </PreparationDialogs>, { dismissible: true })} />)}
     <JournalFooter state={state} journal={journal} emptyText="Hali rulon kirim qilinmagan." />
-  </PreparationPage>;
+  </PreparationPage><PreparationProductionNoteDialog editor={notes.editor} title={notes.title} description={notes.description} /></>;
 }

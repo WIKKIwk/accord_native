@@ -60,3 +60,21 @@ test('journal rejects invalid filters and unconfirmed response identities', asyn
   await assert.rejects(api.preparationProductionOrders(session, { status: 'invalid' }), /filtri/);
   await assert.rejects(api.preparationProductionOrder(session, 'wanted'), /mos kelmadi/);
 });
+
+test('independent batch and roll reads send the shared search and allow unassigned production', async () => {
+  const sent = [], session = { baseUrl: 'https://example.test', profile: { role: 'tayyorlov_masteri', ref: 'prep' }, capabilities: ['preparation.access'] };
+  const api = load('preparationProductionApi', { '../workerControlsApi': { WorkerControlException: class extends Error {} },
+    '../authorizedFetch': { authorizedFetch: async (_session, path, _init, guard) => {
+      guard(); sent.push(path);
+      const row = path.includes('/batches?')
+        ? { batches: [{ batch_id: 'batch:a', order_id: '', roll_count: 1, total_net_kg: '12', total_length_m: '100' }] }
+        : { rolls: [{ epc: 'EPC1', receipt_name: 'receipt-EPC1', order_id: '', net_kg: '12' }] };
+      return new Response(JSON.stringify({ ...row, has_more: false, next_offset: null }));
+    } } });
+  const batches = await api.preparationProductionBatches(session, { query: ' EPC1 ', status: 'active' });
+  assert.equal(batches.batches[0].order_id, '');
+  const rolls = await api.preparationProductionRolls(session, { query: 'EPC1', status: 'completed', offset: 50 });
+  assert.equal(rolls.rolls[0].receipt_name, 'receipt-EPC1');
+  assert.deepEqual(sent, ['/v1/mobile/preparation/production/batches?q=EPC1&status=active&offset=0&limit=50',
+    '/v1/mobile/preparation/production/rolls?q=EPC1&status=completed&offset=50&limit=50']);
+});

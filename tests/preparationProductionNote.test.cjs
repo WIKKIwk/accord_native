@@ -74,12 +74,14 @@ test('expired account or invalidated editor discards a late response and cannot 
 function apiSetup(send) {
   let current = true, sends = 0;
   class ApiError extends Error { constructor(code, message, statusCode) { super(message); this.code = code; this.statusCode = statusCode; } }
-  const api = load('preparation/preparationProductionNoteApi', {
+  const mocks = {
     '../auth': { captureSessionWitness: () => ({}), isSessionWitnessCurrent: () => current },
     '../authorizedFetch': { authorizedFetch: async (session, url, init, guard) => { guard(); sends++; return send({ session, url, init, guard, expire: () => { current = false; } }); } },
     '../workerControlsApi': { WorkerControlException: ApiError },
-  });
-  return { api, expire: () => { current = false; }, sends: () => sends,
+  };
+  const api = load('preparation/preparationProductionNoteApi', mocks);
+  const output = load('preparation/preparationOutputNoteApi', mocks);
+  return { api, output, expire: () => { current = false; }, sends: () => sends,
     session: { baseUrl: 'https://example.test', profile: { role: 'tayyorlov_masteri', ref: 'master' }, capabilities: ['preparation.access'] } };
 }
 test('API sends normalized PATCH with expected revision and validates its confirmation', async () => {
@@ -119,4 +121,30 @@ test('production journal and inventory decode the same original-order note, inde
   const inventory = load('inventoryModels', { './workerControlsApi': { isCanonicalApparatusId: () => true } });
   const asset = inventory.inventoryAssetFromJson({ asset_ref: 'raw:1', order_assignment: { order_id: 'order-b', order_label: 'Other order' }, preparation_note: saved });
   assert.deepEqual(asset.preparation_note, saved); assert.equal(asset.order_assignment.order_id, 'order-b');
+});
+
+test('batch and selected-roll writes send distinct scopes and verify every saved revision', async () => {
+  const batch = { id: 'batch:one', note: null };
+  const refs = [{ id: 'receipt-1', note: null }, { id: 'receipt-3', note: { revision: 2 } }];
+  const payload = (text, revision) => ({ text, revision, updated_by_name: 'Master', updated_at: '2026-11-17T06:00:00Z' });
+  const calls = [];
+  const env = apiSetup(async ({ url, init }) => {
+    assert.equal(url, '/v1/mobile/preparation/production/notes');
+    assert.equal(init.method, 'PATCH');
+    const request = JSON.parse(init.body);
+    calls.push(request);
+    return new Response(JSON.stringify({ notes: request.scope === 'batch' ? { 'batch:one': payload('Butun batch', 1) }
+      : { 'receipt-1': payload('Tekshiring', 1), 'receipt-3': payload('Tekshiring', 3) } }));
+  });
+  await env.output.savePreparationOutputNotes(env.session, 'batch', [batch], 'Butun batch');
+  const saved = await env.output.savePreparationOutputNotes(env.session, 'rolls', refs, '  Tekshiring  ');
+  assert.equal(saved.get('receipt-3').revision, 3);
+  assert.deepEqual(calls, [
+    { scope: 'batch', batch_id: 'batch:one', text: 'Butun batch', expected_revision: 0 },
+    { scope: 'rolls', text: 'Tekshiring', rolls: [{ receipt_name: 'receipt-1', expected_revision: 0 }, { receipt_name: 'receipt-3', expected_revision: 2 }] },
+  ]);
+  await assert.rejects(env.output.savePreparationOutputNotes(env.session, 'rolls', [refs[0], refs[0]], 'Duplicate'));
+  assert.equal(env.sends(), 2);
+  const partial = apiSetup(async () => new Response(JSON.stringify({ notes: { 'receipt-1': payload('Tekshiring', 1) } })));
+  await assert.rejects(partial.output.savePreparationOutputNotes(partial.session, 'rolls', refs, 'Tekshiring'), /tasdiqlanmadi/);
 });

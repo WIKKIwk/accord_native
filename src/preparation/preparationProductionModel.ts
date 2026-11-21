@@ -1,5 +1,6 @@
 import { jsonObject } from './preparationModel';
 import { emptyProductionOrderNote, productionOrderNoteFromJson } from '../shared/productionOrderNote';
+import { preparationOutputNoteFromJson } from '../shared/preparationOutputNote';
 type ObjectValue = Record<string, unknown>;
 const text = (row: ObjectValue, key: string): string => row[key] == null ? '' : String(row[key]);
 function identity(row: ObjectValue, key: string) {
@@ -46,21 +47,36 @@ export function preparationProductionOrderFromJson(value: unknown) {
 /** @v2 PreparationProductionBatch */
 export function preparationProductionBatchFromJson(value: unknown) {
   const row = jsonObject(value);
-  return { batch_id: identity(row, 'batch_id'), order_id: identity(row, 'order_id'), item_code: text(row, 'item_code'),
+  const orderId = text(row, 'order_id').trim();
+  return { batch_id: identity(row, 'batch_id'), batch_code: text(row, 'batch_code'), order_id: orderId,
+    order_code: text(row, 'order_code'), order_title: text(row, 'order_title'), item_code: text(row, 'item_code'),
     item_name: text(row, 'item_name'), warehouse: text(row, 'warehouse'), active: row.active === true, started_at: text(row, 'started_at'),
     ended_at: text(row, 'ended_at'), last_activity_at: text(row, 'last_activity_at'), roll_count: count(row, 'roll_count'),
     total_net_kg: amount(row, 'total_net_kg'), total_length_m: amount(row, 'total_length_m'), preparation_formula: recipe(row),
-    preparation_note: row.preparation_note == null ? emptyProductionOrderNote(identity(row, 'order_id'))
-      : productionOrderNoteFromJson(row.preparation_note, identity(row, 'order_id')) };
+    preparation_note: row.preparation_note == null ? emptyProductionOrderNote(orderId)
+      : productionOrderNoteFromJson(row.preparation_note, orderId),
+    batch_note: preparationOutputNoteFromJson(row.batch_note) };
 }
 /** @v2 PreparationProductionRoll */
 export function preparationProductionRollFromJson(value: unknown) {
   const row = jsonObject(value);
   return { epc: identity(row, 'epc'), receipt_name: text(row, 'receipt_name'), item_code: text(row, 'item_code'), item_name: text(row, 'item_name'),
+    batch_id: text(row, 'batch_id'), order_id: text(row, 'order_id'), order_code: text(row, 'order_code'), order_title: text(row, 'order_title'),
     warehouse: text(row, 'warehouse'), net_kg: amount(row, 'net_kg'), gross_kg: row.gross_kg == null ? null : amount(row, 'gross_kg'),
     length_m: row.length_m == null ? null : amount(row, 'length_m'), width_mm: row.width_mm == null ? null : amount(row, 'width_mm'),
     micron: row.micron == null ? null : amount(row, 'micron'), printed_at: text(row, 'printed_at'), preparation_formula: recipe(row),
-    preparation_note: row.preparation_note == null ? null : productionOrderNoteFromJson(row.preparation_note) };
+    preparation_note: row.preparation_note == null ? null : productionOrderNoteFromJson(row.preparation_note),
+    batch_note: preparationOutputNoteFromJson(row.batch_note), roll_note: preparationOutputNoteFromJson(row.roll_note) };
+}
+
+export function preparationProductionBatchesPageFromJson(value: unknown) {
+  const row = jsonObject(value);
+  return { ...page(row), batches: items(row, 'batches', preparationProductionBatchFromJson) };
+}
+
+export function preparationProductionRollsPageFromJson(value: unknown) {
+  const row = jsonObject(value);
+  return { ...page(row), rolls: items(row, 'rolls', preparationProductionRollFromJson) };
 }
 /** @v2 PreparationProductionPage */
 function page(row: ObjectValue) {

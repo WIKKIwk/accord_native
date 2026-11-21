@@ -5,15 +5,15 @@ import { ActivityIndicator, PlatformColor, StyleSheet, View } from 'react-native
 import { WorkerProfileButton } from '../../components/WorkerProfileButton.ios';
 import { visibleOrdersTabs, type OrdersWorkspaceProps } from './ordersWorkspaceTypes';
 
-export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, loading, search, onSearchChange, onMenu, onBack, onProfile, toolbarActions, children, title = 'Buyurtmalar', searchPlaceholder = 'Buyurtmani izlash' }: OrdersWorkspaceProps & { onBack?: () => void }) {
+export function OrdersWorkspace({ session, tabs: tabsInput, selected, onSelect, loading, search, onSearchChange, onMenu, onBack, onProfile, toolbarActions, children, title = 'Buyurtmalar', searchPlaceholder = 'Buyurtmani izlash', tabPickerStyle = 'menu', tabPickerLabel = 'Apparat' }: OrdersWorkspaceProps & { onBack?: () => void }) {
   const query = useNativeState(search ?? '');
   const tabs = visibleOrdersTabs(tabsInput);
   const selectedTab = tabs.find(tab => tab.id === selected) ?? tabs[0];
   const machinePicker = <Picker label="" selection={selectedTab.id} onSelectionChange={id => {
     if (typeof id === 'string' && tabs.some(tab => tab.id === id)) onSelect(id);
   }} modifiers={[
-    pickerStyle('menu'), accessibilityLabel(`Apparat: ${selectedTab.name}`),
-    lineLimit(1), truncationMode('tail'), frame({ minWidth: 60 }), layoutPriority(-1),
+    pickerStyle(tabPickerStyle), accessibilityLabel(`${tabPickerLabel}: ${selectedTab.name}`),
+    ...(tabPickerStyle === 'menu' ? [lineLimit(1), truncationMode('tail'), frame({ minWidth: 60 }), layoutPriority(-1)] : []),
   ]}>
     {tabs.map(tab => <Text key={tab.id} modifiers={[tag(tab.id)]}>{tab.name}</Text>)}
   </Picker>;

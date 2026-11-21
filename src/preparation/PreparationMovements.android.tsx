@@ -251,7 +251,8 @@ function AssetDetail({ asset, inventory, assigned }: { asset: PreparationInvento
   const details = <>
     <InventoryDetailRow label="Identifikator" value={showQr ? barcode : asset.identifier} />
     <InventoryDetailRow label="Miqdor" value={`${preparationInventoryQuantity(asset.qty)} ${asset.uom}`} />
-    {asset.preparation_note?.text ? <InventoryDetailRow label="Buyurtma eslatmasi" value={asset.preparation_note.text} /> : null}
+    {asset.batch_note?.text ? <InventoryDetailRow label="Batch eslatmasi" value={asset.batch_note.text} /> : null}
+    {asset.roll_note?.text ? <InventoryDetailRow label="Rulon eslatmasi" value={asset.roll_note.text} /> : null}
     {location}
   </>;
   if (showQr) return <View style={sheetStyle}>

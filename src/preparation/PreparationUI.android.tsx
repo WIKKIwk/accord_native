@@ -75,8 +75,8 @@ export function PreparationDock({ profile = false, chat = false, avoidKeyboard =
   }} />;
 }
 
-export function PreparationPage({ title, subtitle, children, refreshing, onRefresh, root = false, drawer = false, fabActions, onFabSelect }: {
-  title: string; subtitle?: string; children: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean;
+export function PreparationPage({ title, subtitle, children, footer, refreshing, onRefresh, root = false, drawer = false, fabActions, onFabSelect }: {
+  title: string; subtitle?: string; children: ReactNode; footer?: ReactNode; refreshing?: boolean; onRefresh?: () => void; root?: boolean; drawer?: boolean;
   fabActions?: readonly RoleFabAction[]; onFabSelect?: (id: string) => void;
 }) {
   const colors = useMaterialColors(), insets = useSafeAreaInsets(), t = usePreparationText();
@@ -99,6 +99,7 @@ export function PreparationPage({ title, subtitle, children, refreshing, onRefre
       refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} /> : undefined}>
       {children}
     </ScrollView>
+    {footer}
     {!root && <View onLayout={event => setDockHeight(event.nativeEvent.layout.height)}><PreparationDock /></View>}
   </View>;
 }

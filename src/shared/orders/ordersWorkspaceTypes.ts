@@ -18,6 +18,8 @@ export type OrdersWorkspaceProps = {
   headerOffset?: SharedValue<number>;
   fontFamily?: string;
   distributeTabs?: boolean;
+  tabPickerStyle?: 'menu' | 'segmented';
+  tabPickerLabel?: string;
   swipeEnabled?: boolean;
   search?: string;
   onSearchChange?: (value: string) => void;

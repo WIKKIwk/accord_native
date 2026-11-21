@@ -23,18 +23,25 @@ export function preparationProductionOrderCard(order: Order) {
     metrics: preparationProductionMetrics(order.roll_count, order.total_net_kg, order.total_length_m) };
 }
 
-export function preparationProductionBatchCard(batch: Batch) {
+function orderLabel(item: { order_code: string; order_id: string; order_title: string }) {
+  return [item.order_code || item.order_id, item.order_title].filter(Boolean).join(' • ');
+}
+
+export function preparationProductionBatchCard(batch: Batch, showOrder = false) {
   return { title: batch.item_name || batch.item_code,
-    subtitle: `${String(batch.preparation_formula?.variant_name ?? 'Formula qayd etilmagan')}\n${batch.active ? 'Davom etmoqda' : 'Yakunlangan'} • ${batch.warehouse} • ${preparationProductionDate(batch.last_activity_at)}`,
+    subtitle: [showOrder ? orderLabel(batch) : '', String(batch.preparation_formula?.variant_name ?? 'Formula qayd etilmagan'),
+      `${batch.active ? 'Davom etmoqda' : 'Yakunlangan'} • ${batch.warehouse} • ${preparationProductionDate(batch.last_activity_at)}`].filter(Boolean).join('\n'),
     metrics: preparationProductionMetrics(batch.roll_count, batch.total_net_kg, batch.total_length_m) };
 }
 
-export function preparationProductionRollCard(roll: Roll) {
+export function preparationProductionRollCard(roll: Roll, showMaterial = false) {
   const metrics = [`${preparationDisplay(roll.net_kg)} kg`];
   if (roll.length_m !== null) metrics.push(`${preparationDisplay(roll.length_m)} m`);
   if (roll.width_mm !== null) metrics.push(`${preparationDisplay(roll.width_mm)} mm`);
   if (roll.micron !== null) metrics.push(`${preparationDisplay(roll.micron)} mkm`);
-  return { title: roll.epc, subtitle: `${preparationProductionDate(roll.printed_at)} • ${roll.warehouse}`, metrics: metrics.join(' • ') };
+  return { title: showMaterial ? roll.item_name || roll.item_code || roll.epc : roll.epc,
+    subtitle: [showMaterial ? roll.epc : '', showMaterial ? orderLabel(roll) : '',
+      `${preparationProductionDate(roll.printed_at)} • ${roll.warehouse}`].filter(Boolean).join('\n'), metrics: metrics.join(' • ') };
 }
 
 export function preparationProductionRecipeLines(recipe: Readonly<Record<string, unknown>> | null) {
